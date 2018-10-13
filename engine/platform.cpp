@@ -48,10 +48,18 @@ namespace
 		// Handle any messages the switch statement didn't.
 		return DefWindowProc(hWnd, message, wParam, lParam);
 	}
+
+	//global variable with the current hwnd, needed for specicif win32 and dx12 init
+	HWND m_current_hwnd;
 }
 
 namespace platform
 {
+	HWND GetHwnd()
+	{
+		return m_current_hwnd;
+	}
+
 	char Run(const char* name, void* param, size_t width, size_t height, Game* game)
 	{
 		HINSTANCE hInstance = *(reinterpret_cast<HINSTANCE*>(param));

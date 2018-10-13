@@ -21,10 +21,16 @@ namespace display
 	//Device
 	struct Device;
 
-	Device* CreateDevice();
-	void DestroyDevice(Device* device);
+	struct DeviceInitParams
+	{
+		size_t num_frames;
+		size_t width;
+		size_t height;
+		bool debug;
+	};
 
-	//Swap chain
+	Device* CreateDevice(const DeviceInitParams& params);
+	void DestroyDevice(Device* device);
 
 
 }
