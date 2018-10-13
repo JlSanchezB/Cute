@@ -15,13 +15,14 @@ namespace display
 	using TextureHandle = core::Handle<Texture, uint16_t>;
 	using RenderTargetHandle = core::Handle<RenderTarget, uint16_t>;
 	using ShaderHandle = core::Handle<Shader, uint16_t>;
-	
-	//Adaptor
-	
+
+	//TODO: Access to adaptors
 
 	//Device
 	struct Device;
 
+	Device* CreateDevice();
+	void DestroyDevice(Device* device);
 
 	//Swap chain
 
