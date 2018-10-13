@@ -10,17 +10,19 @@
 namespace core
 {
 	//Handle of a resource, specialised by a enum TYPE and the size
-	template <enum TYPE, typename SIZE>
+	template <typename ENUM, typename TYPE>
 	class Handle
 	{
-		using SIZE size_param;
-		using TYPE type_param;
+		using type_param = TYPE;
 
 		//Index inside the handlepool to access the data associated to this handle 
-		SIZE m_index;
+		TYPE m_index;
+
+		//Invalid handle
+		static const TYPE kInvalid = -1;
 
 		//Private constructor of a handle
-		Handle(SIZE index) : m_index(index)
+		Handle(TYPE index) : m_index(index)
 		{
 		}
 
@@ -37,6 +39,7 @@ namespace core
 		//Init pool with a list of free slots avaliable
 		void Init(size_t max_size, size_t init_size)
 		{
+			assert(max_size < std::numeric_limits<HANDLE::type_param>::max() - 1);
 			m_max_size = max_size;
 
 			//Reserve the data
@@ -66,20 +69,28 @@ namespace core
 				size_t old_size = m_data.size();
 				//We duplicate the size
 				size_t new_allocate_size = old_size;
-				size_t new_size = old_size * 2;
+				size_t new_size = std::min(m_max_size, old_size * 2);
 				
-				//Reserve the data
-				m_free_slots.resize(new_size);
-
-				//Create the free slots
-				m_free_slots.resize(new_allocate_size);
-				for (size_t i = 0; i <= new_allocate_size; ++i)
+				if (old_size < new_size)
 				{
-					//Add slots in reverse, so it will allocate first the begining of the pool
-					m_free_slots[i] = old_size + new_allocate_size - i - 1;
-				}
+					//Reserve the data
+					m_free_slots.resize(new_size);
 
-				return HANDLE(m_free_slots.pop_back());
+					//Create the free slots
+					m_free_slots.resize(new_allocate_size);
+					for (size_t i = 0; i <= new_allocate_size; ++i)
+					{
+						//Add slots in reverse, so it will allocate first the begining of the pool
+						m_free_slots[i] = old_size + new_allocate_size - i - 1;
+					}
+
+					return HANDLE(m_free_slots.pop_back());
+				}
+				else
+				{
+					//No more free handles, error
+					return HANDLE(HANDLE::kInvalid);
+				}
 			}
 		}
 

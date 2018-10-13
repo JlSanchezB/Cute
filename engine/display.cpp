@@ -3,9 +3,8 @@
 namespace
 {
 
-}
+};
 
 namespace display
 {
-
 }

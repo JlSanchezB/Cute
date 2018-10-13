@@ -4,33 +4,27 @@
 #ifndef DISPLAY_H_
 #define DISPLAY_H_
 
-//TODO: Move desc outside of display
+#include "handle_pool.h"
 
 namespace display
 {
-	//Types of resource handles
-	enum class HandleType
-	{
-		Device,
-		Adaptor,
-		Texture,
-		RenderTarget,
-		Shader,
-	};
+	struct Texture;
+	struct RenderTarget;
+	struct Shader;
 
-
-	//Init, allocate system
-	void Init();
-	//Destroy
-	void Destroy();
-
+	using TextureHandle = core::Handle<Texture, uint16_t>;
+	using RenderTargetHandle = core::Handle<RenderTarget, uint16_t>;
+	using ShaderHandle = core::Handle<Shader, uint16_t>;
+	
 	//Adaptor
 	
 
 	//Device
-	
+	struct Device;
+
+
 	//Swap chain
 
 
 }
-#endif GFX_H_
+#endif DISPLAY_H_
