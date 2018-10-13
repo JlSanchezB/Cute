@@ -164,8 +164,7 @@ namespace display
 			&swapChain
 		));
 
-		// This sample does not support fullscreen transitions.
-		ThrowIfFailed(factory->MakeWindowAssociation(platform::GetHwnd(), DXGI_MWA_NO_ALT_ENTER));
+		ThrowIfFailed(factory->MakeWindowAssociation(platform::GetHwnd(), 0));
 
 		ThrowIfFailed(swapChain.As(&device->m_swapChain));
 		device->m_frameIndex = device->m_swapChain->GetCurrentBackBufferIndex();
