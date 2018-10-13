@@ -115,10 +115,11 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="gfx.h" />
+    <ClInclude Include="display.h" />
+    <ClInclude Include="handle_pool.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="gfx.cpp" />
+    <ClCompile Include="display.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
