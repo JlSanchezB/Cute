@@ -1,4 +1,5 @@
 #include "display.h"
+#include "d3dx12.h"
 
 #include <windows.h>
 #include <d3d12.h>
@@ -8,7 +9,6 @@
 #include <string>
 #include <wrl.h>
 #include <shellapi.h>
-#include "d3dx12.h"
 
 //TODO: Added tearing fullscreen mode
 
