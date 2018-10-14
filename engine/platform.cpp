@@ -83,7 +83,7 @@ namespace platform
 		AdjustWindowRect(&windowRect, WS_OVERLAPPEDWINDOW, FALSE);
 
 		// Create the window and store a handle to it.
-		HWND hwnd = CreateWindow(
+		m_current_hwnd = CreateWindow(
 			windowClass.lpszClassName,
 			name,
 			WS_OVERLAPPEDWINDOW,
@@ -96,10 +96,11 @@ namespace platform
 			hInstance,
 			game);
 
+
+		ShowWindow(m_current_hwnd, true);
+
 		//Init callback
 		game->OnInit();
-
-		ShowWindow(hwnd, true);
 
 		// Main sample loop.
 		MSG msg = {};
