@@ -10,6 +10,8 @@
 #include <shellapi.h>
 #include "d3dx12.h"
 
+//TODO: Added tearing fullscreen mode
+
 using namespace DirectX;
 
 // Note that while ComPtr is used to manage the lifetime of resources on the CPU,
@@ -163,8 +165,6 @@ namespace display
 			nullptr,
 			&swapChain
 		));
-
-		ThrowIfFailed(factory->MakeWindowAssociation(platform::GetHwnd(), 0));
 
 		ThrowIfFailed(swapChain.As(&device->m_swapChain));
 		device->m_frameIndex = device->m_swapChain->GetCurrentBackBufferIndex();
