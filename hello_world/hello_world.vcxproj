@@ -77,7 +77,6 @@
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>..\engine</AdditionalIncludeDirectories>
-      <AdditionalOptions>/permissive %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link />
     <Link>
@@ -91,7 +90,6 @@
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>..\engine</AdditionalIncludeDirectories>
-      <AdditionalOptions>/permissive %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link />
     <Link>
@@ -107,7 +105,6 @@
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>..\engine</AdditionalIncludeDirectories>
-      <AdditionalOptions>/permissive %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
@@ -124,7 +121,6 @@
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>..\engine</AdditionalIncludeDirectories>
-      <AdditionalOptions>/permissive %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
