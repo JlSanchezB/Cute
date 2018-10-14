@@ -1,6 +1,10 @@
 #include "display.h"
 #include "d3dx12.h"
 
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN             // Exclude rarely-used stuff from Windows headers.
+#endif
+
 #include <windows.h>
 #include <d3d12.h>
 #include <dxgi1_4.h>
@@ -173,7 +177,7 @@ namespace display
 		{
 			// Describe and create a render target view (RTV) descriptor heap.
 			D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = {};
-			rtvHeapDesc.NumDescriptors = params.num_frames;
+			rtvHeapDesc.NumDescriptors = static_cast<UINT>(params.num_frames);
 			rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
 			rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
 			ThrowIfFailed(device->m_native_device->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&device->m_rtvHeap)));

@@ -25,21 +25,22 @@ namespace core
 		Handle(TYPE index) : m_index(index)
 		{
 		}
-
+		
+		template<typename HANDLE, typename DATA>
 		friend class HandlePool;
 	};
 
 	//Pool of resources
-	template<class HANDLE, typename DATA>
+	template<typename HANDLE, typename DATA>
 	class HandlePool
 	{
-		static_assert(std::is_default_constructible<DATA>::value);
+		//static_assert(std::is_default_constructible<DATA>::value);
 
 	public:
 		//Init pool with a list of free slots avaliable
 		void Init(size_t max_size, size_t init_size)
 		{
-			assert(max_size < std::numeric_limits<HANDLE::type_param>::max() - 1);
+			assert(max_size < std::numeric_limits<typename HANDLE::type_param>::max() - 1);
 			m_max_size = max_size;
 
 			//Reserve the data
@@ -117,7 +118,7 @@ namespace core
 		size_t m_max_size;
 
 		//List of free slots
-		std::vector<HANDLE.type_param> m_free_slots;
+		std::vector<typename HANDLE::type_param> m_free_slots;
 
 		//Vector of the data associated to this pool
 		std::vector<DATA> m_data;

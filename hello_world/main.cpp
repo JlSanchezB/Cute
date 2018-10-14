@@ -1,7 +1,11 @@
-#include <windows.h>
-
 #include <platform.h>
 #include <display.h>
+
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN             // Exclude rarely-used stuff from Windows headers.
+#endif
+#include <windows.h>
+
 
 class HelloWorldGame : public platform::Game
 {
@@ -24,7 +28,7 @@ public:
 	}
 	void OnDestroy() override
 	{
-		display::DestroyDevice(device);
+		display::DestroyDevice(m_device);
 	}
 	void OnTick() override
 	{
