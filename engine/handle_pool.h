@@ -43,6 +43,7 @@ namespace core
 		{
 			assert(max_size < std::numeric_limits<typename HANDLE::type_param>::max() - 1);
 			m_max_size = max_size;
+			m_first_free_allocated = -1;
 
 			GrowDataStorage(init_size);
 		}
@@ -96,6 +97,7 @@ namespace core
 				GetNextFreeSlot(handle.m_index) = m_first_free_allocated;
 				m_first_free_allocated = handle.m_index;
 			}
+			//Reset handle to an invalid, it will avoid it keep the index
 			handle.m_index = HANDLE::kInvalid;
 		}
 
@@ -118,6 +120,8 @@ namespace core
 
 		void GrowDataStorage(size_t new_size)
 		{
+			assert(m_first_free_allocated == 1);
+
 			//Old size
 			size_t old_size = m_data.size();
 
