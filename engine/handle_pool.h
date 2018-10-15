@@ -6,6 +6,7 @@
 #define HANDLE_POOL_H_
 
 #include <vector>
+#include <algorithm>
 
 namespace core
 {
@@ -34,7 +35,7 @@ namespace core
 	template<typename HANDLE, typename DATA>
 	class HandlePool
 	{
-		//static_assert(std::is_default_constructible<DATA>::value);
+		static_assert(std::is_default_constructible<DATA>::value);
 
 	public:
 		//Init pool with a list of free slots avaliable
@@ -43,49 +44,23 @@ namespace core
 			assert(max_size < std::numeric_limits<typename HANDLE::type_param>::max() - 1);
 			m_max_size = max_size;
 
-			//Reserve the data
-			m_data.resize(init_size);
-
-			//Create all as free slots
-			m_free_slots.resize(init_size);
-			for (size_t i = 0; i <= init_size; ++i)
-			{
-				//Add slots in reverse, so it will allocate first the begining of the pool
-				m_free_slots[i] = init_size - i - 1;
-			}
-
+			GrowDataStorage(init_size);
 		}
 
 		//Allocate a handle
-		HANDLE Alloc()
+		template<typename ...Args>
+		HANDLE Alloc(Args&&... args)
 		{
 			//If there is free slots, it will use the last one free
-			if (m_free_slots.size() > 0)
-			{
-				return HANDLE(m_free_slots.pop_back());
-			}
-			else
+			if (m_first_free_allocated == -1)
 			{
 				//Needs to allocate more
 				size_t old_size = m_data.size();
-				//We duplicate the size
-				size_t new_allocate_size = old_size;
 				size_t new_size = std::min(m_max_size, old_size * 2);
 				
 				if (old_size < new_size)
 				{
-					//Reserve the data
-					m_free_slots.resize(new_size);
-
-					//Create the free slots
-					m_free_slots.resize(new_allocate_size);
-					for (size_t i = 0; i <= new_allocate_size; ++i)
-					{
-						//Add slots in reverse, so it will allocate first the begining of the pool
-						m_free_slots[i] = old_size + new_allocate_size - i - 1;
-					}
-
-					return HANDLE(m_free_slots.pop_back());
+					GrowDataStorage(new_size);
 				}
 				else
 				{
@@ -93,35 +68,92 @@ namespace core
 					return HANDLE(HANDLE::kInvalid);
 				}
 			}
+
+			//Our handle will be allocated in m_first_free_allocated
+			auto handle_slot = m_first_free_allocated;
+			//Get next free slot
+			m_first_free_allocated = GetNextFreeSlot(m_first_free_allocated);
+			
+			//Create DATA
+			new(&m_data[handle_slot]) DATA(std::forward<Args>(args)...);
+
+			return HANDLE(handle_slot);
 		}
 
 		//Free unused handle
-		void Free(HANDLE handle)
+		void Free(HANDLE& handle)
 		{
-			//Just add the handle to the free slots
-			m_free_slots.push_back(handle.m_index);
+			//Destroy DATA
+			reinterpret_cast<DATA*>(m_data[handle.m_index])->~DATA();
+
+			//Add it in the free list
+			if (m_first_free_allocated == -1)
+			{
+				m_first_free_allocated = handle.m_index;
+			}
+			else
+			{
+				GetNextFreeSlot(handle.m_index) = m_first_free_allocated;
+				m_first_free_allocated = handle.m_index;
+			}
+			handle.m_index = HANDLE::kInvalid;
 		}
 
 		//Accessors
 		DATA& operator[](HANDLE handle)
 		{
-			m_data[handle.m_index];
+			return *reinterpret_cast<DATA*>(m_data[handle.m_index]);
 		}
 
 		const DATA& operator[](HANDLE handle)
 		{
-			m_data[handle.m_index];
+			return *reinterpret_cast<const DATA*>(m_data[handle.m_index]);
 		}
 
 	private:
+		typename HANDLE::type_param& GetNextFreeSlot(const typename HANDLE::type_param& index)
+		{
+			return *reinterpret_cast<typename HANDLE::type_param>(m_data[index]);
+		}
+
+		void GrowDataStorage(size_t new_size)
+		{
+			//Old size
+			size_t old_size = m_data.size();
+
+			//Reserve the data
+			m_data.resize(new_size);
+
+			//Fill all the free slots
+			for (size_t i = old_size; i < new_size; ++i)
+			{
+				typename HANDLE::type_param& next_free_slot = *reinterpret_cast<typename HANDLE::type_param>(m_data[i]);
+
+				if (i < (new_size - 1))
+				{
+					next_free_slot = i + 1;
+				}
+				else
+				{
+					//Close linked list
+					next_free_slot = -1;
+				}
+			}
+
+			m_first_free_allocated = old_size;
+		}
+
 		//Max size the pool can grow
 		size_t m_max_size;
 
+		//Data storage of our DATA and free list
+		using DataStorage = typename std::aligned_storage<std::max(sizeof(DATA), sizeof(typename HANDLE::type_param)), alignof(DATA)>::type;
+
 		//List of free slots
-		std::vector<typename HANDLE::type_param> m_free_slots;
+		typename HANDLE::type_param m_first_free_allocated;
 
 		//Vector of the data associated to this pool
-		std::vector<DATA> m_data;
+		std::vector<DataStorage> m_data;
 
 	};
 
