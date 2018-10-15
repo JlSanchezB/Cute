@@ -32,6 +32,7 @@ namespace display
 	Device* CreateDevice(const DeviceInitParams& params);
 	void DestroyDevice(Device* device);
 
-
+	//Present
+	void Present(Device* device);
 }
 #endif DISPLAY_H_

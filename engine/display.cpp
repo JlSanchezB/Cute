@@ -24,69 +24,6 @@ using namespace DirectX;
 // referenced by the GPU.
 using Microsoft::WRL::ComPtr;
 
-namespace
-{
-inline std::string HrToString(HRESULT hr)
-{
-	char s_str[64] = {};
-	sprintf_s(s_str, "HRESULT of 0x%08X", static_cast<UINT>(hr));
-	return std::string(s_str);
-}
-
-class HrException : public std::runtime_error
-{
-public:
-	HrException(HRESULT hr) : std::runtime_error(HrToString(hr)), m_hr(hr) {}
-	HRESULT Error() const { return m_hr; }
-private:
-	const HRESULT m_hr;
-};
-
-inline void ThrowIfFailed(HRESULT hr)
-{
-	if (FAILED(hr))
-	{
-		throw HrException(hr);
-	}
-}
-_Use_decl_annotations_
-void GetHardwareAdapter(IDXGIFactory2* pFactory, IDXGIAdapter1** ppAdapter)
-{
-	ComPtr<IDXGIAdapter1> adapter;
-	*ppAdapter = nullptr;
-
-	for (UINT adapterIndex = 0; DXGI_ERROR_NOT_FOUND != pFactory->EnumAdapters1(adapterIndex, &adapter); ++adapterIndex)
-	{
-		DXGI_ADAPTER_DESC1 desc;
-		adapter->GetDesc1(&desc);
-
-		if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
-		{
-			// Don't select the Basic Render Driver adapter.
-			// If you want a software adapter, pass in "/warp" on the command line.
-			continue;
-		}
-
-		// Check to see if the adapter supports Direct3D 12, but don't create the
-		// actual device yet.
-		if (SUCCEEDED(D3D12CreateDevice(adapter.Get(), D3D_FEATURE_LEVEL_11_0, _uuidof(ID3D12Device), nullptr)))
-		{
-			break;
-		}
-	}
-
-	*ppAdapter = adapter.Detach();
-}
-}
-
-#define SAFE_RELEASE(p) if (p) (p)->Release()
-
-//Access to platform::GetHwnd()
-namespace platform
-{
-	extern HWND GetHwnd();
-}
-
 namespace display
 {
 	//Device internal implementation
@@ -103,14 +40,115 @@ namespace display
 		ComPtr<ID3D12DescriptorHeap> m_rtvHeap;
 		UINT m_rtvDescriptorSize;
 
-
 		// Synchronization objects.
 		UINT m_frameIndex;
 		HANDLE m_fenceEvent;
 		ComPtr<ID3D12Fence> m_fence;
-		UINT64 m_fenceValue;
+		std::vector <UINT64> m_fenceValues;
+	};
+}
+
+namespace
+{
+	inline std::string HrToString(HRESULT hr)
+	{
+		char s_str[64] = {};
+		sprintf_s(s_str, "HRESULT of 0x%08X", static_cast<UINT>(hr));
+		return std::string(s_str);
+	}
+
+	class HrException : public std::runtime_error
+	{
+	public:
+		HrException(HRESULT hr) : std::runtime_error(HrToString(hr)), m_hr(hr) {}
+		HRESULT Error() const { return m_hr; }
+	private:
+		const HRESULT m_hr;
 	};
 
+	inline void ThrowIfFailed(HRESULT hr)
+	{
+		if (FAILED(hr))
+		{
+			throw HrException(hr);
+		}
+	}
+	_Use_decl_annotations_
+	void GetHardwareAdapter(IDXGIFactory2* pFactory, IDXGIAdapter1** ppAdapter)
+	{
+		ComPtr<IDXGIAdapter1> adapter;
+		*ppAdapter = nullptr;
+
+		for (UINT adapterIndex = 0; DXGI_ERROR_NOT_FOUND != pFactory->EnumAdapters1(adapterIndex, &adapter); ++adapterIndex)
+		{
+			DXGI_ADAPTER_DESC1 desc;
+			adapter->GetDesc1(&desc);
+
+			if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
+			{
+				// Don't select the Basic Render Driver adapter.
+				// If you want a software adapter, pass in "/warp" on the command line.
+				continue;
+			}
+
+			// Check to see if the adapter supports Direct3D 12, but don't create the
+			// actual device yet.
+			if (SUCCEEDED(D3D12CreateDevice(adapter.Get(), D3D_FEATURE_LEVEL_11_0, _uuidof(ID3D12Device), nullptr)))
+			{
+				break;
+			}
+		}
+
+		*ppAdapter = adapter.Detach();
+	}
+
+	// Wait for pending GPU work to complete.
+	void WaitForGpu(display::Device* device)
+	{
+		// Schedule a Signal command in the queue.
+		ThrowIfFailed(device->m_commandQueue->Signal(device->m_fence.Get(), device->m_fenceValues[device->m_frameIndex]));
+
+		// Wait until the fence has been processed.
+		ThrowIfFailed(device->m_fence->SetEventOnCompletion(device->m_fenceValues[device->m_frameIndex], device->m_fenceEvent));
+		WaitForSingleObjectEx(device->m_fenceEvent, INFINITE, FALSE);
+
+		// Increment the fence value for the current frame.
+		device->m_fenceValues[device->m_frameIndex]++;
+	}
+
+	// Prepare to render the next frame.
+	void MoveToNextFrame(display::Device* device)
+	{
+		// Schedule a Signal command in the queue.
+		const UINT64 currentFenceValue = device->m_fenceValues[device->m_frameIndex];
+		ThrowIfFailed(device->m_commandQueue->Signal(device->m_fence.Get(), currentFenceValue));
+
+		// Update the frame index.
+		device->m_frameIndex = device->m_swapChain->GetCurrentBackBufferIndex();
+
+		// If the next frame is not ready to be rendered yet, wait until it is ready.
+		if (device->m_fence->GetCompletedValue() < device->m_fenceValues[device->m_frameIndex])
+		{
+			ThrowIfFailed(device->m_fence->SetEventOnCompletion(device->m_fenceValues[device->m_frameIndex], device->m_fenceEvent));
+			WaitForSingleObjectEx(device->m_fenceEvent, INFINITE, FALSE);
+		}
+
+		// Set the fence value for the next frame.
+		device->m_fenceValues[device->m_frameIndex] = currentFenceValue + 1;
+	}
+
+}
+
+#define SAFE_RELEASE(p) if (p) (p)->Release()
+
+//Access to platform::GetHwnd()
+namespace platform
+{
+	extern HWND GetHwnd();
+}
+
+namespace display
+{
 	Device* CreateDevice(const DeviceInitParams& params)
 	{
 		Device* device = new Device;
@@ -203,11 +241,44 @@ namespace display
 
 		ThrowIfFailed(device->m_native_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&device->m_commandAllocator)));
 
+		// Create synchronization objects and wait until assets have been uploaded to the GPU.
+		{
+			device->m_fenceValues.resize(params.num_frames);
+			ThrowIfFailed(device->m_native_device->CreateFence(device->m_fenceValues[device->m_frameIndex], D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&device->m_fence)));
+			device->m_fenceValues[device->m_frameIndex]++;
+
+			// Create an event handle to use for frame synchronization.
+			device->m_fenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+			if (device->m_fenceEvent == nullptr)
+			{
+				ThrowIfFailed(HRESULT_FROM_WIN32(GetLastError()));
+			}
+
+			// Wait for the command list to execute; we are reusing the same command 
+			// list in our main loop but for now, we just want to wait for setup to 
+			// complete before continuing.
+			WaitForGpu(device);
+		}
+
 		return device;
 	}
 
 	void DestroyDevice(Device* device)
 	{
+		// Ensure that the GPU is no longer referencing resources that are about to be
+		// cleaned up by the destructor.
+		WaitForGpu(device);
+
+		CloseHandle(device->m_fenceEvent);
+
 		delete device;
+	}
+
+	void Present(Device* device)
+	{
+		// Present the frame.
+		ThrowIfFailed(device->m_swapChain->Present(1, 0));
+
+		MoveToNextFrame(device);
 	}
 }
