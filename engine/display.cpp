@@ -34,7 +34,7 @@ namespace display
 
 		//Device resources
 
-		//Per frame
+		//Per frame system resources
 		struct FrameResources
 		{
 			ComPtr<ID3D12CommandAllocator> command_allocator;
@@ -43,7 +43,7 @@ namespace display
 		};
 		std::vector< FrameResources> m_frame_resources;
 		
-		//Global
+		//Global resources
 		ComPtr<ID3D12CommandQueue> m_command_queue;
 		ComPtr<IDXGISwapChain3> m_swap_chain;
 		ComPtr<ID3D12DescriptorHeap> m_rtv_heap;
@@ -53,6 +53,9 @@ namespace display
 		UINT m_frame_index;
 		HANDLE m_fence_event;
 		ComPtr<ID3D12Fence> m_fence;
+
+		//Pool of resources
+		core::HandlePool<ContextHandle, ComPtr<ID3D12GraphicsCommandList>> m_context_pool;
 	};
 }
 
@@ -283,11 +286,43 @@ namespace display
 		delete device;
 	}
 
+	//Present
 	void Present(Device* device)
 	{
 		// Present the frame.
 		ThrowIfFailed(device->m_swap_chain->Present(1, 0));
 
 		MoveToNextFrame(device);
+	}
+
+	//Begin/End Frame
+	void BeginFrame(Device* device)
+	{
+
+	}
+	void EndFrame(Device* device)
+	{
+
+	}
+
+	//Context
+	ContextHandle CreateContext(Device* device)
+	{
+		return device->m_context_pool.Alloc();
+	}
+	void DestroyContext(Device* device, ContextHandle& handle)
+	{
+		device->m_context_pool.Free(handle);
+	}
+
+	//Open context, begin recording
+	void OpenContext(Device* device, ContextHandle handle)
+	{
+
+	}
+	//Close context, stop recording
+	void CloseContext(Device* device, ContextHandle handle)
+	{
+
 	}
 }

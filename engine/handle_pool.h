@@ -85,7 +85,7 @@ namespace core
 		void Free(HANDLE& handle)
 		{
 			//Destroy DATA
-			reinterpret_cast<DATA*>(m_data[handle.m_index])->~DATA();
+			(reinterpret_cast<DATA*>(&m_data[handle.m_index]))->~DATA();
 
 			//Add it in the free list
 			if (m_first_free_allocated == -1)
@@ -107,7 +107,7 @@ namespace core
 			return *reinterpret_cast<DATA*>(m_data[handle.m_index]);
 		}
 
-		const DATA& operator[](HANDLE handle)
+		const DATA& operator[](const HANDLE handle) const
 		{
 			return *reinterpret_cast<const DATA*>(m_data[handle.m_index]);
 		}
@@ -115,12 +115,12 @@ namespace core
 	private:
 		typename HANDLE::type_param& GetNextFreeSlot(const typename HANDLE::type_param& index)
 		{
-			return *reinterpret_cast<typename HANDLE::type_param>(m_data[index]);
+			return *reinterpret_cast<typename HANDLE::type_param*>(&m_data[index]);
 		}
 
 		void GrowDataStorage(size_t new_size)
 		{
-			assert(m_first_free_allocated == 1);
+			//assert(m_first_free_allocated == 1);
 
 			//Old size
 			size_t old_size = m_data.size();
@@ -131,11 +131,11 @@ namespace core
 			//Fill all the free slots
 			for (size_t i = old_size; i < new_size; ++i)
 			{
-				typename HANDLE::type_param& next_free_slot = *reinterpret_cast<typename HANDLE::type_param>(m_data[i]);
+				typename HANDLE::type_param& next_free_slot = *reinterpret_cast<typename HANDLE::type_param*>(&m_data[i]);
 
 				if (i < (new_size - 1))
 				{
-					next_free_slot = i + 1;
+					next_free_slot = static_cast<typename HANDLE::type_param>(i + 1);
 				}
 				else
 				{
@@ -144,7 +144,7 @@ namespace core
 				}
 			}
 
-			m_first_free_allocated = old_size;
+			m_first_free_allocated = static_cast<typename HANDLE::type_param>(old_size);
 		}
 
 		//Max size the pool can grow
