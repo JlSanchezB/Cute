@@ -24,27 +24,6 @@ namespace
 			}
 			return 0;
 
-		case WM_KEYDOWN:
-			//if (game)
-			//{
-			//	pSample->OnKeyDown(static_cast<UINT8>(wParam));
-			//}
-			return 0;
-
-		case WM_KEYUP:
-			//if (pSample)
-			//{
-			//	pSample->OnKeyUp(static_cast<UINT8>(wParam));
-			//}
-			return 0;
-
-		case WM_PAINT:
-			if (game)
-			{
-				game->OnTick();
-			}
-			return 0;
-
 		case WM_DESTROY:
 			PostQuitMessage(0);
 			return 0;
@@ -112,6 +91,9 @@ namespace platform
 				TranslateMessage(&msg);
 				DispatchMessage(&msg);
 			}
+
+			//Render
+			game->OnTick();
 		}
 
 		//Destroy callback
