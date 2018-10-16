@@ -17,9 +17,6 @@ namespace platform
 	};
 
 	char Run(const char* name, void* param, size_t width, size_t height, Game* game);
-
-	//Time counters
-
 }
 
 #endif PLATFORM_H_

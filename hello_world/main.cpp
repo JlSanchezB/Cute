@@ -32,6 +32,14 @@ public:
 	}
 	void OnTick() override
 	{
+		//Create context
+
+		//Set BackBuffer
+
+		//Clear it
+
+		//Present
+		Present(m_device);
 	}
 };
 

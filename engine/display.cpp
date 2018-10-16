@@ -33,18 +33,26 @@ namespace display
 		ComPtr<ID3D12Device> m_native_device;
 
 		//Device resources
-		ComPtr<ID3D12CommandAllocator> m_commandAllocator;
-		ComPtr<ID3D12CommandQueue> m_commandQueue;
-		ComPtr<IDXGISwapChain3> m_swapChain;
-		std::vector<ComPtr<ID3D12Resource>> m_renderTargets;
-		ComPtr<ID3D12DescriptorHeap> m_rtvHeap;
-		UINT m_rtvDescriptorSize;
+
+		//Per frame
+		struct FrameResources
+		{
+			ComPtr<ID3D12CommandAllocator> command_allocator;
+			UINT64 fence_value;
+			ComPtr<ID3D12Resource> render_target;
+		};
+		std::vector< FrameResources> m_frame_resources;
+		
+		//Global
+		ComPtr<ID3D12CommandQueue> m_command_queue;
+		ComPtr<IDXGISwapChain3> m_swap_chain;
+		ComPtr<ID3D12DescriptorHeap> m_rtv_heap;
+		UINT m_rtv_descriptor_size;
 
 		// Synchronization objects.
-		UINT m_frameIndex;
-		HANDLE m_fenceEvent;
+		UINT m_frame_index;
+		HANDLE m_fence_event;
 		ComPtr<ID3D12Fence> m_fence;
-		std::vector <UINT64> m_fenceValues;
 	};
 }
 
@@ -106,35 +114,35 @@ namespace
 	void WaitForGpu(display::Device* device)
 	{
 		// Schedule a Signal command in the queue.
-		ThrowIfFailed(device->m_commandQueue->Signal(device->m_fence.Get(), device->m_fenceValues[device->m_frameIndex]));
+		ThrowIfFailed(device->m_command_queue->Signal(device->m_fence.Get(), device->m_frame_resources[device->m_frame_index].fence_value));
 
 		// Wait until the fence has been processed.
-		ThrowIfFailed(device->m_fence->SetEventOnCompletion(device->m_fenceValues[device->m_frameIndex], device->m_fenceEvent));
-		WaitForSingleObjectEx(device->m_fenceEvent, INFINITE, FALSE);
+		ThrowIfFailed(device->m_fence->SetEventOnCompletion(device->m_frame_resources[device->m_frame_index].fence_value, device->m_fence_event));
+		WaitForSingleObjectEx(device->m_fence_event, INFINITE, FALSE);
 
 		// Increment the fence value for the current frame.
-		device->m_fenceValues[device->m_frameIndex]++;
+		device->m_frame_resources[device->m_frame_index].fence_value++;
 	}
 
 	// Prepare to render the next frame.
 	void MoveToNextFrame(display::Device* device)
 	{
 		// Schedule a Signal command in the queue.
-		const UINT64 currentFenceValue = device->m_fenceValues[device->m_frameIndex];
-		ThrowIfFailed(device->m_commandQueue->Signal(device->m_fence.Get(), currentFenceValue));
+		const UINT64 currentFenceValue = device->m_frame_resources[device->m_frame_index].fence_value;
+		ThrowIfFailed(device->m_command_queue->Signal(device->m_fence.Get(), currentFenceValue));
 
 		// Update the frame index.
-		device->m_frameIndex = device->m_swapChain->GetCurrentBackBufferIndex();
+		device->m_frame_index = device->m_swap_chain->GetCurrentBackBufferIndex();
 
 		// If the next frame is not ready to be rendered yet, wait until it is ready.
-		if (device->m_fence->GetCompletedValue() < device->m_fenceValues[device->m_frameIndex])
+		if (device->m_fence->GetCompletedValue() < device->m_frame_resources[device->m_frame_index].fence_value)
 		{
-			ThrowIfFailed(device->m_fence->SetEventOnCompletion(device->m_fenceValues[device->m_frameIndex], device->m_fenceEvent));
-			WaitForSingleObjectEx(device->m_fenceEvent, INFINITE, FALSE);
+			ThrowIfFailed(device->m_fence->SetEventOnCompletion(device->m_frame_resources[device->m_frame_index].fence_value, device->m_fence_event));
+			WaitForSingleObjectEx(device->m_fence_event, INFINITE, FALSE);
 		}
 
 		// Set the fence value for the next frame.
-		device->m_fenceValues[device->m_frameIndex] = currentFenceValue + 1;
+		device->m_frame_resources[device->m_frame_index].fence_value = currentFenceValue + 1;
 	}
 
 }
@@ -186,7 +194,7 @@ namespace display
 		queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
 		queueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
 
-		ThrowIfFailed(device->m_native_device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&device->m_commandQueue)));
+		ThrowIfFailed(device->m_native_device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&device->m_command_queue)));
 
 		// Describe and create the swap chain.
 		DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
@@ -198,18 +206,18 @@ namespace display
 		swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
 		swapChainDesc.SampleDesc.Count = 1;
 
-		ComPtr<IDXGISwapChain1> swapChain;
+		ComPtr<IDXGISwapChain1> swap_chain;
 		ThrowIfFailed(factory->CreateSwapChainForHwnd(
-			device->m_commandQueue.Get(),		// Swap chain needs the queue so that it can force a flush on it.
+			device->m_command_queue.Get(),		// Swap chain needs the queue so that it can force a flush on it.
 			platform::GetHwnd(),
 			&swapChainDesc,
 			nullptr,
 			nullptr,
-			&swapChain
+			&swap_chain
 		));
 
-		ThrowIfFailed(swapChain.As(&device->m_swapChain));
-		device->m_frameIndex = device->m_swapChain->GetCurrentBackBufferIndex();
+		ThrowIfFailed(swap_chain.As(&device->m_swap_chain));
+		device->m_frame_index = device->m_swap_chain->GetCurrentBackBufferIndex();
 
 		// Create descriptor heaps.
 		{
@@ -218,38 +226,39 @@ namespace display
 			rtvHeapDesc.NumDescriptors = static_cast<UINT>(params.num_frames);
 			rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
 			rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-			ThrowIfFailed(device->m_native_device->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&device->m_rtvHeap)));
+			ThrowIfFailed(device->m_native_device->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&device->m_rtv_heap)));
 
-			device->m_rtvDescriptorSize = device->m_native_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+			device->m_rtv_descriptor_size = device->m_native_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 		}
 
-		// Create frame resources.
+		//Create frame resources
+		device->m_frame_resources.resize(params.num_frames);
+
+		for (size_t i = 0; i < params.num_frames; ++i)
 		{
-			CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(device->m_rtvHeap->GetCPUDescriptorHandleForHeapStart());
+			auto& frame_resource = device->m_frame_resources[i];
 
-			//Alloc rendertargets
-			device->m_renderTargets.resize(params.num_frames);
-
-			// Create a RTV for each frame.
-			for (UINT n = 0; n < params.num_frames; n++)
+			//Create back buffer for each frame
 			{
-				ThrowIfFailed(device->m_swapChain->GetBuffer(n, IID_PPV_ARGS(&device->m_renderTargets[n])));
-				device->m_native_device->CreateRenderTargetView(device->m_renderTargets[n].Get(), nullptr, rtvHandle);
-				rtvHandle.Offset(1, device->m_rtvDescriptorSize);
-			}
-		}
+				CD3DX12_CPU_DESCRIPTOR_HANDLE rtv_handle(device->m_rtv_heap->GetCPUDescriptorHandleForHeapStart());
 
-		ThrowIfFailed(device->m_native_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&device->m_commandAllocator)));
+				ThrowIfFailed(device->m_swap_chain->GetBuffer(static_cast<UINT>(i), IID_PPV_ARGS(&frame_resource.render_target)));
+				device->m_native_device->CreateRenderTargetView(frame_resource.render_target.Get(), nullptr, rtv_handle);
+				rtv_handle.Offset(1, device->m_rtv_descriptor_size);
+			}
+
+			ThrowIfFailed(device->m_native_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&frame_resource.command_allocator)));
+		}
 
 		// Create synchronization objects and wait until assets have been uploaded to the GPU.
 		{
-			device->m_fenceValues.resize(params.num_frames);
-			ThrowIfFailed(device->m_native_device->CreateFence(device->m_fenceValues[device->m_frameIndex], D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&device->m_fence)));
-			device->m_fenceValues[device->m_frameIndex]++;
+			//Create sync fences
+			ThrowIfFailed(device->m_native_device->CreateFence(device->m_frame_resources[device->m_frame_index].fence_value, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&device->m_fence)));
+			device->m_frame_resources[device->m_frame_index].fence_value++;
 
 			// Create an event handle to use for frame synchronization.
-			device->m_fenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
-			if (device->m_fenceEvent == nullptr)
+			device->m_fence_event = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+			if (device->m_fence_event == nullptr)
 			{
 				ThrowIfFailed(HRESULT_FROM_WIN32(GetLastError()));
 			}
@@ -269,7 +278,7 @@ namespace display
 		// cleaned up by the destructor.
 		WaitForGpu(device);
 
-		CloseHandle(device->m_fenceEvent);
+		CloseHandle(device->m_fence_event);
 
 		delete device;
 	}
@@ -277,7 +286,7 @@ namespace display
 	void Present(Device* device)
 	{
 		// Present the frame.
-		ThrowIfFailed(device->m_swapChain->Present(1, 0));
+		ThrowIfFailed(device->m_swap_chain->Present(1, 0));
 
 		MoveToNextFrame(device);
 	}

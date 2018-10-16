@@ -5,6 +5,7 @@
 #endif
 
 #include <windows.h>
+#include <chrono>
 
 namespace
 {
@@ -34,14 +35,17 @@ namespace
 	}
 
 	//global variable with the current hwnd, needed for specicif win32 and dx12 init
-	HWND m_current_hwnd;
+	HWND g_current_hwnd;
+
+	//Frecuency for the perfomance timer
+	LARGE_INTEGER g_frequency;
 }
 
 namespace platform
 {
 	HWND GetHwnd()
 	{
-		return m_current_hwnd;
+		return g_current_hwnd;
 	}
 
 	char Run(const char* name, void* param, size_t width, size_t height, Game* game)
@@ -62,7 +66,7 @@ namespace platform
 		AdjustWindowRect(&windowRect, WS_OVERLAPPEDWINDOW, FALSE);
 
 		// Create the window and store a handle to it.
-		m_current_hwnd = CreateWindow(
+		g_current_hwnd = CreateWindow(
 			windowClass.lpszClassName,
 			name,
 			WS_OVERLAPPEDWINDOW,
@@ -76,7 +80,10 @@ namespace platform
 			game);
 
 
-		ShowWindow(m_current_hwnd, true);
+		ShowWindow(g_current_hwnd, true);
+
+		//Calculate frecuency for timer
+		QueryPerformanceFrequency(&g_frequency);
 
 		//Init callback
 		game->OnInit();
