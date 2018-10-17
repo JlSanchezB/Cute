@@ -8,7 +8,7 @@
 
 namespace display
 {
-	using ContextHandle = core::Handle<struct Context, uint16_t>;
+	using CommandListHandle = core::Handle<struct CommandList, uint16_t>;
 	using TextureHandle = core::Handle<struct Texture, uint16_t>;
 	using RenderTargetHandle = core::Handle<struct RenderTarget, uint16_t>;
 	using ShaderHandle = core::Handle<struct Shader, uint16_t>;
@@ -37,14 +37,24 @@ namespace display
 	void BeginFrame(Device* device);
 	void EndFrame(Device* device);
 
-	//Contexts
-	ContextHandle CreateContext(Device* device);
-	void DestroyContext(Device* device, ContextHandle& handle);
+	//Command List
+	CommandListHandle CreateCommandList(Device* device);
+	void DestroyCommandList(Device* device, CommandListHandle& handle);
 
-	//Open context, begin recording
-	void OpenContext(Device* device, ContextHandle handle);
-	//Close context, stop recording
-	void CloseContext(Device* device, ContextHandle handle);
+	//Open command list, begin recording
+	void OpenCommandList(Device* device, CommandListHandle handle);
+	//Close command list, stop recording
+	void CloseCommandList(Device* device, CommandListHandle handle);
+
+	//Back buffer access
+	RenderTargetHandle GetBackBuffer(Device* device);
+
+	//Context
+	struct Context
+	{
+		Device* device;
+		CommandListHandle command_list;
+	};
 
 }
 #endif DISPLAY_H_

@@ -55,7 +55,7 @@ namespace display
 		ComPtr<ID3D12Fence> m_fence;
 
 		//Pool of resources
-		core::HandlePool<ContextHandle, ComPtr<ID3D12GraphicsCommandList>> m_context_pool;
+		core::HandlePool<CommandListHandle, ComPtr<ID3D12GraphicsCommandList>> m_command_list_pool;
 		core::HandlePool<RenderTargetHandle, ComPtr<ID3D12Resource>> m_render_target_pool;
 	};
 }
@@ -151,7 +151,7 @@ namespace
 
 	inline ComPtr<ID3D12CommandAllocator>& GetCommandAllocator(display::Device* device)
 	{
-		device->m_frame_resources[device->m_frame_index].command_allocator;
+		return device->m_frame_resources[device->m_frame_index].command_allocator;
 	}
 }
 
@@ -171,7 +171,7 @@ namespace display
 
 		//Alloc pools
 		device->m_render_target_pool.Init(500, 10);
-		device->m_context_pool.Init(500, 10);
+		device->m_command_list_pool.Init(500, 10);
 
 		UINT dxgiFactoryFlags = 0;
 
@@ -323,26 +323,26 @@ namespace display
 	}
 
 	//Context
-	ContextHandle CreateContext(Device* device)
+	CommandListHandle CreateCommandList(Device* device)
 	{
-		ContextHandle handle = device->m_context_pool.Alloc();
-		ThrowIfFailed(device->m_native_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, GetCommandAllocator(device).Get(), nullptr, IID_PPV_ARGS(&device->m_context_pool[handle])));
+		CommandListHandle handle = device->m_command_list_pool.Alloc();
+		ThrowIfFailed(device->m_native_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, GetCommandAllocator(device).Get(), nullptr, IID_PPV_ARGS(&device->m_command_list_pool[handle])));
 
 		// Command lists are created in the recording state, but there is nothing
 		// to record yet. The main loop expects it to be closed, so close it now.
-		ThrowIfFailed(device->m_context_pool[handle]->Close());
+		ThrowIfFailed(device->m_command_list_pool[handle]->Close());
 
 		return handle;
 	}
-	void DestroyContext(Device* device, ContextHandle& handle)
+	void DestroyCommandList(Device* device, CommandListHandle& handle)
 	{
-		device->m_context_pool.Free(handle);
+		device->m_command_list_pool.Free(handle);
 	}
 
 	//Open context, begin recording
-	void OpenContext(Device* device, ContextHandle handle)
+	void OpenCommandList(Device* device, CommandListHandle handle)
 	{
-		auto& context = device->m_context_pool[handle];
+		auto& context = device->m_command_list_pool[handle];
 		// However, when ExecuteCommandList() is called on a particular command 
 		// list, that command list can then be reset at any time and must be before 
 		// re-recording.
@@ -350,8 +350,14 @@ namespace display
 
 	}
 	//Close context, stop recording
-	void CloseContext(Device* device, ContextHandle handle)
+	void CloseCommandList(Device* device, CommandListHandle handle)
 	{
-		device->m_context_pool[handle]->Close();
+		device->m_command_list_pool[handle]->Close();
+	}
+
+	//Get back buffer
+	RenderTargetHandle GetBackBuffer(Device* device)
+	{
+		return device->m_frame_resources[device->m_frame_index].render_target;
 	}
 }
