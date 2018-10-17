@@ -247,6 +247,8 @@ namespace display
 		//Create frame resources
 		device->m_frame_resources.resize(params.num_frames);
 
+		CD3DX12_CPU_DESCRIPTOR_HANDLE rtv_handle(device->m_rtv_heap->GetCPUDescriptorHandleForHeapStart());
+
 		for (size_t i = 0; i < params.num_frames; ++i)
 		{
 			auto& frame_resource = device->m_frame_resources[i];
@@ -256,8 +258,6 @@ namespace display
 
 			//Create back buffer for each frame
 			{
-				CD3DX12_CPU_DESCRIPTOR_HANDLE rtv_handle(device->m_rtv_heap->GetCPUDescriptorHandleForHeapStart());
-
 				auto& render_target_resource = device->m_render_target_pool[frame_resource.render_target];
 
 				ThrowIfFailed(device->m_swap_chain->GetBuffer(static_cast<UINT>(i), IID_PPV_ARGS(&render_target_resource)));

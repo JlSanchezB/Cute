@@ -55,7 +55,7 @@ public:
 		display::CloseCommandList(m_device, m_command_list);
 
 		//Execute command list
-
+		display::ExecuteCommandList(m_device, m_command_list);
 
 		//Present
 		display::Present(m_device);
