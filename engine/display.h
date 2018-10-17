@@ -8,15 +8,10 @@
 
 namespace display
 {
-	struct Texture;
-	struct RenderTarget;
-	struct Shader;
-	struct Context;
-
-	using ContextHandle = core::Handle<Context, uint16_t>;
-	using TextureHandle = core::Handle<Texture, uint16_t>;
-	using RenderTargetHandle = core::Handle<RenderTarget, uint16_t>;
-	using ShaderHandle = core::Handle<Shader, uint16_t>;
+	using ContextHandle = core::Handle<struct Context, uint16_t>;
+	using TextureHandle = core::Handle<struct Texture, uint16_t>;
+	using RenderTargetHandle = core::Handle<struct RenderTarget, uint16_t>;
+	using ShaderHandle = core::Handle<struct Shader, uint16_t>;
 
 	//TODO: Access to adaptors
 

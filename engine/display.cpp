@@ -39,7 +39,7 @@ namespace display
 		{
 			ComPtr<ID3D12CommandAllocator> command_allocator;
 			UINT64 fence_value;
-			ComPtr<ID3D12Resource> render_target;
+			RenderTargetHandle render_target;
 		};
 		std::vector< FrameResources> m_frame_resources;
 		
@@ -56,6 +56,7 @@ namespace display
 
 		//Pool of resources
 		core::HandlePool<ContextHandle, ComPtr<ID3D12GraphicsCommandList>> m_context_pool;
+		core::HandlePool<RenderTargetHandle, ComPtr<ID3D12Resource>> m_render_target_pool;
 	};
 }
 
@@ -164,6 +165,10 @@ namespace display
 	{
 		Device* device = new Device;
 
+		//Alloc pools
+		device->m_render_target_pool.Init(500, 10);
+		device->m_context_pool.Init(500, 10);
+
 		UINT dxgiFactoryFlags = 0;
 
 		// Enable the debug layer (requires the Graphics Tools "optional feature").
@@ -241,12 +246,17 @@ namespace display
 		{
 			auto& frame_resource = device->m_frame_resources[i];
 
+			//Alloc handle for the back buffer
+			frame_resource.render_target = device->m_render_target_pool.Alloc();
+
 			//Create back buffer for each frame
 			{
 				CD3DX12_CPU_DESCRIPTOR_HANDLE rtv_handle(device->m_rtv_heap->GetCPUDescriptorHandleForHeapStart());
 
-				ThrowIfFailed(device->m_swap_chain->GetBuffer(static_cast<UINT>(i), IID_PPV_ARGS(&frame_resource.render_target)));
-				device->m_native_device->CreateRenderTargetView(frame_resource.render_target.Get(), nullptr, rtv_handle);
+				auto& render_target_resource = device->m_render_target_pool[frame_resource.render_target];
+
+				ThrowIfFailed(device->m_swap_chain->GetBuffer(static_cast<UINT>(i), IID_PPV_ARGS(&render_target_resource)));
+				device->m_native_device->CreateRenderTargetView(render_target_resource.Get(), nullptr, rtv_handle);
 				rtv_handle.Offset(1, device->m_rtv_descriptor_size);
 			}
 
