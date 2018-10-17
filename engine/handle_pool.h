@@ -65,6 +65,11 @@ namespace core
 			return *reinterpret_cast<const DATA*>(&m_data[handle.m_index]);
 		}
 
+		size_t GetIndex(const HANDLE handle) const
+		{
+			return handle.m_index;
+		}
+
 	private:
 		typename HANDLE::type_param& GetNextFreeSlot(const typename HANDLE::type_param& index)
 		{

@@ -360,4 +360,25 @@ namespace display
 	{
 		return device->m_frame_resources[device->m_frame_index].render_target;
 	}
+
+	//Context commands
+	void SetRenderTargets(Context* context, size_t num_targets, RenderTargetHandle* render_target_array, RenderTargetHandle * depth_stencil)
+	{
+		auto& command_list = context->device->m_command_list_pool[context->command_list];
+
+		CD3DX12_CPU_DESCRIPTOR_HANDLE render_target_handles[8];
+
+		//Transfert resources to render target and calculate the handles in the render target heap
+		for (size_t i = 0; i < num_targets; ++i)
+		{
+			auto& render_target = context->device->m_render_target_pool[render_target_array[i]];
+			command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(render_target.Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET));
+
+			render_target_handles[i] = CD3DX12_CPU_DESCRIPTOR_HANDLE(context->device->m_rtv_heap->GetCPUDescriptorHandleForHeapStart(),
+				static_cast<UINT>(context->device->m_render_target_pool.GetIndex(render_target_array[i])),
+				static_cast<UINT>(context->device->m_rtv_descriptor_size));
+		}
+
+		command_list->OMSetRenderTargets(static_cast<UINT>(num_targets), render_target_handles, FALSE, nullptr);
+	}
 }
