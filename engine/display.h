@@ -46,6 +46,9 @@ namespace display
 	//Close command list, stop recording
 	void CloseCommandList(Device* device, CommandListHandle handle);
 
+	//Execute command list
+	void ExecuteCommandList(Device* device, CommandListHandle handle);
+
 	//Back buffer access
 	RenderTargetHandle GetBackBuffer(Device* device);
 
@@ -59,6 +62,6 @@ namespace display
 	//Context commands
 	void SetRenderTargets(Context* context, size_t num_targets, RenderTargetHandle* render_target_array, RenderTargetHandle* depth_stencil);
 
-	void ClearRenderTargetColour(Context* context, RenderTargetHandle render_target, float colour[4]);
+	void ClearRenderTargetColour(Context* context, RenderTargetHandle render_target, const float colour[4]);
 }
 #endif DISPLAY_H_

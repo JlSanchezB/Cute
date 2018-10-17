@@ -48,6 +48,7 @@ namespace display
 		ComPtr<IDXGISwapChain3> m_swap_chain;
 		ComPtr<ID3D12DescriptorHeap> m_rtv_heap;
 		UINT m_rtv_descriptor_size;
+		CommandListHandle m_present_command_list;
 
 		// Synchronization objects.
 		UINT m_frame_index;
@@ -286,6 +287,11 @@ namespace display
 			WaitForGpu(device);
 		}
 
+		//Create present command list
+		{
+			device->m_present_command_list = CreateCommandList(device);
+		}
+
 		return device;
 	}
 
@@ -303,6 +309,19 @@ namespace display
 	//Present
 	void Present(Device* device)
 	{
+		OpenCommandList(device, device->m_present_command_list);
+
+		auto& command_list = device->m_command_list_pool[device->m_present_command_list];
+
+		// Indicate that the back buffer will now be used to present.
+		auto& back_buffer = device->m_render_target_pool[device->m_frame_resources[device->m_frame_index].render_target];
+		command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(back_buffer.Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
+
+		CloseCommandList(device, device->m_present_command_list);
+
+		//Execute command list
+		ExecuteCommandList(device, device->m_present_command_list);
+
 		// Present the frame.
 		ThrowIfFailed(device->m_swap_chain->Present(1, 0));
 
@@ -317,6 +336,7 @@ namespace display
 		// fences to determine GPU execution progress.
 		ThrowIfFailed(GetCommandAllocator(device)->Reset());
 	}
+
 	void EndFrame(Device* device)
 	{
 
@@ -342,17 +362,26 @@ namespace display
 	//Open context, begin recording
 	void OpenCommandList(Device* device, CommandListHandle handle)
 	{
-		auto& context = device->m_command_list_pool[handle];
+		auto& command_list = device->m_command_list_pool[handle];
 		// However, when ExecuteCommandList() is called on a particular command 
 		// list, that command list can then be reset at any time and must be before 
 		// re-recording.
-		ThrowIfFailed(context->Reset(GetCommandAllocator(device).Get(), nullptr));
+		ThrowIfFailed(command_list->Reset(GetCommandAllocator(device).Get(), nullptr));
 
 	}
 	//Close context, stop recording
 	void CloseCommandList(Device* device, CommandListHandle handle)
 	{
 		device->m_command_list_pool[handle]->Close();
+	}
+
+	void ExecuteCommandList(Device * device, CommandListHandle handle)
+	{
+		auto& command_list = device->m_command_list_pool[handle];
+
+		// Execute the command list.
+		ID3D12CommandList* ppCommandLists[] = { command_list.Get()};
+		device->m_command_queue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
 	}
 
 	//Get back buffer
@@ -382,7 +411,7 @@ namespace display
 		command_list->OMSetRenderTargets(static_cast<UINT>(num_targets), render_target_handles, FALSE, nullptr);
 	}
 
-	void ClearRenderTargetColour(Context * context, RenderTargetHandle render_target, float colour[4])
+	void ClearRenderTargetColour(Context * context, RenderTargetHandle render_target, const float colour[4])
 	{
 		CD3DX12_CPU_DESCRIPTOR_HANDLE render_target_handle = CD3DX12_CPU_DESCRIPTOR_HANDLE(context->device->m_rtv_heap->GetCPUDescriptorHandleForHeapStart(),
 			static_cast<UINT>(context->device->m_render_target_pool.GetIndex(render_target)),
