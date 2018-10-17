@@ -58,5 +58,7 @@ namespace display
 
 	//Context commands
 	void SetRenderTargets(Context* context, size_t num_targets, RenderTargetHandle* render_target_array, RenderTargetHandle* depth_stencil);
+
+	void ClearRenderTargetColour(Context* context, RenderTargetHandle render_target, float colour[4]);
 }
 #endif DISPLAY_H_

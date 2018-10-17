@@ -381,4 +381,15 @@ namespace display
 
 		command_list->OMSetRenderTargets(static_cast<UINT>(num_targets), render_target_handles, FALSE, nullptr);
 	}
+
+	void ClearRenderTargetColour(Context * context, RenderTargetHandle render_target, float colour[4])
+	{
+		CD3DX12_CPU_DESCRIPTOR_HANDLE render_target_handle = CD3DX12_CPU_DESCRIPTOR_HANDLE(context->device->m_rtv_heap->GetCPUDescriptorHandleForHeapStart(),
+			static_cast<UINT>(context->device->m_render_target_pool.GetIndex(render_target)),
+			static_cast<UINT>(context->device->m_rtv_descriptor_size));
+
+		auto& command_list = context->device->m_command_list_pool[context->command_list];
+
+		command_list->ClearRenderTargetView(render_target_handle, colour, 0, nullptr);
+	}
 }
