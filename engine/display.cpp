@@ -149,6 +149,10 @@ namespace
 		device->m_frame_resources[device->m_frame_index].fence_value = currentFenceValue + 1;
 	}
 
+	inline ComPtr<ID3D12CommandAllocator>& GetCommandAllocator(display::Device* device)
+	{
+		device->m_frame_resources[device->m_frame_index].command_allocator;
+	}
 }
 
 #define SAFE_RELEASE(p) if (p) (p)->Release()
@@ -308,7 +312,10 @@ namespace display
 	//Begin/End Frame
 	void BeginFrame(Device* device)
 	{
-
+		// Command list allocators can only be reset when the associated 
+		// command lists have finished execution on the GPU; apps should use 
+		// fences to determine GPU execution progress.
+		ThrowIfFailed(GetCommandAllocator(device)->Reset());
 	}
 	void EndFrame(Device* device)
 	{
@@ -318,7 +325,14 @@ namespace display
 	//Context
 	ContextHandle CreateContext(Device* device)
 	{
-		return device->m_context_pool.Alloc();
+		ContextHandle handle = device->m_context_pool.Alloc();
+		ThrowIfFailed(device->m_native_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, GetCommandAllocator(device).Get(), nullptr, IID_PPV_ARGS(&device->m_context_pool[handle])));
+
+		// Command lists are created in the recording state, but there is nothing
+		// to record yet. The main loop expects it to be closed, so close it now.
+		ThrowIfFailed(device->m_context_pool[handle]->Close());
+
+		return handle;
 	}
 	void DestroyContext(Device* device, ContextHandle& handle)
 	{
@@ -328,11 +342,16 @@ namespace display
 	//Open context, begin recording
 	void OpenContext(Device* device, ContextHandle handle)
 	{
+		auto& context = device->m_context_pool[handle];
+		// However, when ExecuteCommandList() is called on a particular command 
+		// list, that command list can then be reset at any time and must be before 
+		// re-recording.
+		ThrowIfFailed(context->Reset(GetCommandAllocator(device).Get(), nullptr));
 
 	}
 	//Close context, stop recording
 	void CloseContext(Device* device, ContextHandle handle)
 	{
-
+		device->m_context_pool[handle]->Close();
 	}
 }
