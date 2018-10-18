@@ -322,7 +322,7 @@ namespace display
 		}
 
 		//Destroy present command list
-		device->m_command_list_pool.Free(device->m_present_command_list);
+		//device->m_command_list_pool.Free(device->m_present_command_list);
 
 		delete device;
 	}
@@ -385,7 +385,7 @@ namespace display
 	}
 
 	//Open context, begin recording
-	void OpenCommandList(Device* device, CommandListHandle handle)
+	void OpenCommandList(Device* device, const CommandListHandle& handle)
 	{
 		auto& command_list = device->m_command_list_pool[handle];
 		// However, when ExecuteCommandList() is called on a particular command 
@@ -395,12 +395,12 @@ namespace display
 
 	}
 	//Close context, stop recording
-	void CloseCommandList(Device* device, CommandListHandle handle)
+	void CloseCommandList(Device* device, const CommandListHandle& handle)
 	{
 		device->m_command_list_pool[handle]->Close();
 	}
 
-	void ExecuteCommandList(Device * device, CommandListHandle handle)
+	void ExecuteCommandList(Device * device, const CommandListHandle& handle)
 	{
 		auto& command_list = device->m_command_list_pool[handle];
 
@@ -416,9 +416,9 @@ namespace display
 	}
 
 	//Context commands
-	void SetRenderTargets(Device* device, CommandListHandle command_list_handle, size_t num_targets, RenderTargetHandle* render_target_array, RenderTargetHandle * depth_stencil)
+	void SetRenderTargets(Device* device, const CommandListHandle& command_list_handle, size_t num_targets, RenderTargetHandle* render_target_array, RenderTargetHandle * depth_stencil)
 	{
-		auto& command_list = device->m_command_list_pool[command_list_handle];
+		const auto& command_list = device->m_command_list_pool[command_list_handle];
 
 		CD3DX12_CPU_DESCRIPTOR_HANDLE render_target_handles[8];
 
@@ -438,7 +438,7 @@ namespace display
 		command_list->OMSetRenderTargets(static_cast<UINT>(num_targets), render_target_handles, FALSE, nullptr);
 	}
 
-	void ClearRenderTargetColour(Device* device, CommandListHandle command_list_handle, RenderTargetHandle render_target_handle, const float colour[4])
+	void ClearRenderTargetColour(Device* device, const CommandListHandle& command_list_handle, const RenderTargetHandle& render_target_handle, const float colour[4])
 	{
 		auto& render_target = device->m_render_target_pool[render_target_handle];
 		auto& command_list = device->m_command_list_pool[command_list_handle];

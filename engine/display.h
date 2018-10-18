@@ -42,19 +42,19 @@ namespace display
 	void DestroyCommandList(Device* device, CommandListHandle& handle);
 
 	//Open command list, begin recording
-	void OpenCommandList(Device* device, CommandListHandle handle);
+	void OpenCommandList(Device* device, const CommandListHandle& handle);
 	//Close command list, stop recording
-	void CloseCommandList(Device* device, CommandListHandle handle);
+	void CloseCommandList(Device* device, const CommandListHandle& handle);
 
 	//Execute command list
-	void ExecuteCommandList(Device* device, CommandListHandle handle);
+	void ExecuteCommandList(Device* device, const CommandListHandle& handle);
 
 	//Back buffer access
 	RenderTargetHandle GetBackBuffer(Device* device);
 
 	//Context commands
-	void SetRenderTargets(Device* device, CommandListHandle handle, size_t num_targets, RenderTargetHandle* render_target_array, RenderTargetHandle* depth_stencil);
+	void SetRenderTargets(Device* device, const CommandListHandle& handle, size_t num_targets, RenderTargetHandle* render_target_array, RenderTargetHandle* depth_stencil);
 
-	void ClearRenderTargetColour(Device* device, CommandListHandle handle, RenderTargetHandle render_target, const float colour[4]);
+	void ClearRenderTargetColour(Device* device, const CommandListHandle& handle, const RenderTargetHandle& render_target, const float colour[4]);
 }
 #endif DISPLAY_H_

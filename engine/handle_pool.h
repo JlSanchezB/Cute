@@ -4,6 +4,7 @@
 
 #ifndef HANDLE_POOL_H_
 #define HANDLE_POOL_H_
+#include "log.h"
 
 #include <vector>
 #include <algorithm>
@@ -35,6 +36,39 @@ namespace core
 		Handle() : m_index(kInvalid)
 		{
 		}
+
+		Handle(const Handle& a)
+		{
+			m_index = a.m_index;
+		}
+
+		Handle(Handle&& a)
+		{
+			m_index = a.m_index;
+			a.m_index = kInvalid;
+		}
+
+		Handle& operator=(const Handle& a)
+		{
+			m_index = a.m_index;
+			return *this;
+		}
+
+		Handle& operator=(Handle&& a)
+		{
+			m_index = a.m_index;
+			a.m_index = kInvalid;
+			return *this;
+		}
+
+		~Handle()
+		{
+		}
+
+		bool isValid() const
+		{
+			return m_index != kInvalid;
+		}
 	};
 
 	//Pool of resources
@@ -55,19 +89,14 @@ namespace core
 		void Free(HANDLE& handle);
 
 		//Accessors
-		DATA& operator[](HANDLE handle)
+		DATA& operator[](const HANDLE& handle)
 		{
 			return *reinterpret_cast<DATA*>(&m_data[handle.m_index]);
 		}
 
-		const DATA& operator[](const HANDLE handle) const
+		const DATA& operator[](const HANDLE& handle) const
 		{
 			return *reinterpret_cast<const DATA*>(&m_data[handle.m_index]);
-		}
-
-		size_t GetIndex(const HANDLE handle) const
-		{
-			return handle.m_index;
 		}
 
 	private:

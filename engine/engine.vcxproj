@@ -122,6 +122,7 @@
     <ClInclude Include="d3dx12.h" />
     <ClInclude Include="display.h" />
     <ClInclude Include="handle_pool.h" />
+    <ClInclude Include="log.h" />
     <ClInclude Include="platform.h" />
   </ItemGroup>
   <ItemGroup>

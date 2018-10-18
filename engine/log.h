@@ -1,0 +1,18 @@
+//////////////////////////////////////////////////////////////////////////
+// Cute engine - Log system
+//////////////////////////////////////////////////////////////////////////
+
+#ifndef LOG_H_
+#define LOG_H_
+
+#include <string>
+#include <iostream>
+
+namespace core
+{
+	inline void log(const std::string& message)
+	{
+		std::cout << message << std::endl;
+	}
+}
+#endif //LOG_H
