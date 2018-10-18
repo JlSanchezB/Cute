@@ -31,6 +31,9 @@ public:
 	}
 	void OnDestroy() override
 	{
+		//Free handles
+		display::DestroyCommandList(m_device, m_command_list);
+
 		display::DestroyDevice(m_device);
 	}
 	void OnTick() override

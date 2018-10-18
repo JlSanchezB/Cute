@@ -315,6 +315,15 @@ namespace display
 
 		CloseHandle(device->m_fence_event);
 
+		//Destroy back buffers
+		for (auto& frame_resource : device->m_frame_resources)
+		{
+			device->m_render_target_pool.Free(frame_resource.render_target);
+		}
+
+		//Destroy present command list
+		device->m_command_list_pool.Free(device->m_present_command_list);
+
 		delete device;
 	}
 
