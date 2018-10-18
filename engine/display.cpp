@@ -322,7 +322,7 @@ namespace display
 		}
 
 		//Destroy present command list
-		//device->m_command_list_pool.Free(device->m_present_command_list);
+		device->m_command_list_pool.Free(device->m_present_command_list);
 
 		delete device;
 	}

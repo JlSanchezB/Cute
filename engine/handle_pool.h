@@ -78,6 +78,8 @@ namespace core
 		static_assert(std::is_default_constructible<DATA>::value);
 
 	public:
+		~HandlePool();
+
 		//Init pool with a list of free slots avaliable
 		void Init(size_t max_size, size_t init_size);
 
@@ -91,18 +93,18 @@ namespace core
 		//Accessors
 		DATA& operator[](const HANDLE& handle)
 		{
-			return *reinterpret_cast<DATA*>(&m_data[handle.m_index]);
+			return *reinterpret_cast<DATA*>(&m_data[handle.m_index].data);
 		}
 
 		const DATA& operator[](const HANDLE& handle) const
 		{
-			return *reinterpret_cast<const DATA*>(&m_data[handle.m_index]);
+			return *reinterpret_cast<const DATA*>(&m_data[handle.m_index].data);
 		}
 
 	private:
 		typename HANDLE::type_param& GetNextFreeSlot(const typename HANDLE::type_param& index)
 		{
-			return *reinterpret_cast<typename HANDLE::type_param*>(&m_data[index]);
+			return m_data[index].next_free_slot;
 		}
 
 		void GrowDataStorage(size_t new_size);
@@ -111,7 +113,11 @@ namespace core
 		size_t m_max_size;
 
 		//Data storage of our DATA and free list
-		using DataStorage = typename std::aligned_storage<std::max(sizeof(DATA), sizeof(typename HANDLE::type_param)), alignof(DATA)>::type;
+		using DataStorage = union
+		{
+			typename std::aligned_storage<sizeof(DATA), alignof(DATA)>::type data;
+			typename HANDLE::type_param next_free_slot;
+		};
 
 		//List of free slots
 		typename HANDLE::type_param m_first_free_allocated;
@@ -121,13 +127,43 @@ namespace core
 
 	};
 
+	template<typename HANDLE, typename DATA>
+	inline HandlePool<HANDLE, DATA>::~HandlePool()
+	{
+		//Report leaks
+		std::vector<bool> allocated;
+
+		allocated.resize(m_data.size());
+
+		for (auto& it : allocated) it = true;
+		
+		typename HANDLE::type_param free_index = m_first_free_allocated;
+		while (free_index != HANDLE::kInvalid)
+		{
+			allocated[free_index] = false;
+			free_index = GetNextFreeSlot(free_index);
+		}
+
+		//Report
+		size_t num_allocated_handles = 0;
+		for (auto& it : allocated)
+		{
+			if (it) num_allocated_handles++;
+		}
+
+		if (num_allocated_handles > 0)
+		{
+			core::log("Pool still has some allocated handles, it will produce leaks" );
+		}
+	}
+
 	//Init pool with a list of free slots avaliable
 	template<typename HANDLE, typename DATA>
 	inline void HandlePool<HANDLE, DATA>::Init(size_t max_size, size_t init_size)
 	{
 		//assert(max_size < std::numeric_limits<typename HANDLE::type_param>::max() - 1);
 		m_max_size = max_size;
-		m_first_free_allocated = -1;
+		m_first_free_allocated = HANDLE::kInvalid;
 
 		GrowDataStorage(init_size);
 	}
@@ -139,7 +175,7 @@ namespace core
 	inline HANDLE HandlePool<HANDLE, DATA>::Alloc(Args && ...args)
 	{
 		//If there is free slots, it will use the last one free
-		if (m_first_free_allocated == -1)
+		if (m_first_free_allocated == HANDLE::kInvalid)
 		{
 			//Needs to allocate more
 			size_t old_size = m_data.size();
@@ -175,7 +211,7 @@ namespace core
 		(reinterpret_cast<DATA*>(&m_data[handle.m_index]))->~DATA();
 
 		//Add it in the free list
-		if (m_first_free_allocated == -1)
+		if (m_first_free_allocated == HANDLE::kInvalid)
 		{
 			m_first_free_allocated = handle.m_index;
 		}
@@ -217,7 +253,6 @@ namespace core
 
 		m_first_free_allocated = static_cast<typename HANDLE::type_param>(old_size);
 	}
-
 }
 
 #endif //HANDLE_POOL_H_
