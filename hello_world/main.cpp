@@ -6,7 +6,6 @@
 #endif
 #include <windows.h>
 
-
 class HelloWorldGame : public platform::Game
 {
 public:
@@ -36,7 +35,6 @@ public:
 	}
 	void OnTick() override
 	{
-		display::Context context = { m_device, m_command_list };
 
 		display::BeginFrame(m_device);
 
@@ -45,11 +43,11 @@ public:
 
 		//Set BackBuffer
 		display::RenderTargetHandle back_buffer = display::GetBackBuffer(m_device);
-		display::SetRenderTargets(&context, 1, &back_buffer, nullptr);
+		display::SetRenderTargets(m_device, m_command_list, 1, &back_buffer, nullptr);
 
 		//Clear
-		const float clear_colour[] = { 0.0f, 0.2f, 0.4f, 1.0f };
-		display::ClearRenderTargetColour(&context, back_buffer, clear_colour);
+		const float clear_colour[] = { rand() / (RAND_MAX + 1.f) , 0.2f, 0.4f, 1.0f };
+		display::ClearRenderTargetColour(m_device, m_command_list, back_buffer, clear_colour);
 
 		//Close command list
 		display::CloseCommandList(m_device, m_command_list);

@@ -52,16 +52,9 @@ namespace display
 	//Back buffer access
 	RenderTargetHandle GetBackBuffer(Device* device);
 
-	//Context
-	struct Context
-	{
-		Device* device;
-		CommandListHandle command_list;
-	};
-
 	//Context commands
-	void SetRenderTargets(Context* context, size_t num_targets, RenderTargetHandle* render_target_array, RenderTargetHandle* depth_stencil);
+	void SetRenderTargets(Device* device, CommandListHandle handle, size_t num_targets, RenderTargetHandle* render_target_array, RenderTargetHandle* depth_stencil);
 
-	void ClearRenderTargetColour(Context* context, RenderTargetHandle render_target, const float colour[4]);
+	void ClearRenderTargetColour(Device* device, CommandListHandle handle, RenderTargetHandle render_target, const float colour[4]);
 }
 #endif DISPLAY_H_
