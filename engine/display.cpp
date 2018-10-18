@@ -43,11 +43,14 @@ namespace display
 		};
 		std::vector< FrameResources> m_frame_resources;
 		
+		//Heaps
+		const static size_t kRenderTargetHeapSize = 100;
+		ComPtr<ID3D12DescriptorHeap> m_render_target_heap;
+		UINT m_render_target_descriptor_size;
+
 		//Global resources
 		ComPtr<ID3D12CommandQueue> m_command_queue;
 		ComPtr<IDXGISwapChain3> m_swap_chain;
-		ComPtr<ID3D12DescriptorHeap> m_rtv_heap;
-		UINT m_rtv_descriptor_size;
 		CommandListHandle m_present_command_list;
 
 		// Synchronization objects.
@@ -56,8 +59,14 @@ namespace display
 		ComPtr<ID3D12Fence> m_fence;
 
 		//Pool of resources
+		struct RenderTarget
+		{
+			ComPtr<ID3D12Resource> resource;
+			CD3DX12_CPU_DESCRIPTOR_HANDLE descriptor_handle;
+			D3D12_RESOURCE_STATES current_state;
+		};
 		core::HandlePool<CommandListHandle, ComPtr<ID3D12GraphicsCommandList>> m_command_list_pool;
-		core::HandlePool<RenderTargetHandle, ComPtr<ID3D12Resource>> m_render_target_pool;
+		core::HandlePool<RenderTargetHandle, RenderTarget> m_render_target_pool;
 	};
 }
 
@@ -171,7 +180,7 @@ namespace display
 		Device* device = new Device;
 
 		//Alloc pools
-		device->m_render_target_pool.Init(500, 10);
+		device->m_render_target_pool.Init(Device::kRenderTargetHeapSize, 10);
 		device->m_command_list_pool.Init(500, 10);
 
 		UINT dxgiFactoryFlags = 0;
@@ -236,18 +245,18 @@ namespace display
 		{
 			// Describe and create a render target view (RTV) descriptor heap.
 			D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = {};
-			rtvHeapDesc.NumDescriptors = static_cast<UINT>(params.num_frames);
+			rtvHeapDesc.NumDescriptors = static_cast<UINT>(Device::kRenderTargetHeapSize);
 			rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
 			rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-			ThrowIfFailed(device->m_native_device->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&device->m_rtv_heap)));
+			ThrowIfFailed(device->m_native_device->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&device->m_render_target_heap)));
 
-			device->m_rtv_descriptor_size = device->m_native_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+			device->m_render_target_descriptor_size = device->m_native_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 		}
 
 		//Create frame resources
 		device->m_frame_resources.resize(params.num_frames);
 
-		CD3DX12_CPU_DESCRIPTOR_HANDLE rtv_handle(device->m_rtv_heap->GetCPUDescriptorHandleForHeapStart());
+		CD3DX12_CPU_DESCRIPTOR_HANDLE rtv_handle(device->m_render_target_heap->GetCPUDescriptorHandleForHeapStart());
 
 		for (size_t i = 0; i < params.num_frames; ++i)
 		{
@@ -258,11 +267,14 @@ namespace display
 
 			//Create back buffer for each frame
 			{
-				auto& render_target_resource = device->m_render_target_pool[frame_resource.render_target];
+				auto& render_target = device->m_render_target_pool[frame_resource.render_target];
 
-				ThrowIfFailed(device->m_swap_chain->GetBuffer(static_cast<UINT>(i), IID_PPV_ARGS(&render_target_resource)));
-				device->m_native_device->CreateRenderTargetView(render_target_resource.Get(), nullptr, rtv_handle);
-				rtv_handle.Offset(1, device->m_rtv_descriptor_size);
+				ThrowIfFailed(device->m_swap_chain->GetBuffer(static_cast<UINT>(i), IID_PPV_ARGS(&render_target.resource)));
+				device->m_native_device->CreateRenderTargetView(render_target.resource.Get(), nullptr, rtv_handle);
+				render_target.descriptor_handle = rtv_handle;
+				render_target.current_state = D3D12_RESOURCE_STATE_PRESENT;
+
+				rtv_handle.Offset(1, device->m_render_target_descriptor_size);
 			}
 
 			ThrowIfFailed(device->m_native_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&frame_resource.command_allocator)));
@@ -315,7 +327,11 @@ namespace display
 
 		// Indicate that the back buffer will now be used to present.
 		auto& back_buffer = device->m_render_target_pool[device->m_frame_resources[device->m_frame_index].render_target];
-		command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(back_buffer.Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
+		if (back_buffer.current_state != D3D12_RESOURCE_STATE_PRESENT)
+		{
+			command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(back_buffer.resource.Get(), back_buffer.current_state, D3D12_RESOURCE_STATE_PRESENT));
+			back_buffer.current_state = D3D12_RESOURCE_STATE_PRESENT;
+		}
 
 		CloseCommandList(device, device->m_present_command_list);
 
@@ -401,24 +417,23 @@ namespace display
 		for (size_t i = 0; i < num_targets; ++i)
 		{
 			auto& render_target = device->m_render_target_pool[render_target_array[i]];
-			command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(render_target.Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET));
+			if (render_target.current_state != D3D12_RESOURCE_STATE_RENDER_TARGET)
+			{
+				command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(render_target.resource.Get(), render_target.current_state, D3D12_RESOURCE_STATE_RENDER_TARGET));
+				render_target.current_state = D3D12_RESOURCE_STATE_RENDER_TARGET;
+			}
 
-			render_target_handles[i] = CD3DX12_CPU_DESCRIPTOR_HANDLE(device->m_rtv_heap->GetCPUDescriptorHandleForHeapStart(),
-				static_cast<UINT>(device->m_render_target_pool.GetIndex(render_target_array[i])),
-				static_cast<UINT>(device->m_rtv_descriptor_size));
+			render_target_handles[i] = render_target.descriptor_handle;
 		}
 
 		command_list->OMSetRenderTargets(static_cast<UINT>(num_targets), render_target_handles, FALSE, nullptr);
 	}
 
-	void ClearRenderTargetColour(Device* device, CommandListHandle command_list_handle, RenderTargetHandle render_target, const float colour[4])
+	void ClearRenderTargetColour(Device* device, CommandListHandle command_list_handle, RenderTargetHandle render_target_handle, const float colour[4])
 	{
-		CD3DX12_CPU_DESCRIPTOR_HANDLE render_target_handle = CD3DX12_CPU_DESCRIPTOR_HANDLE(device->m_rtv_heap->GetCPUDescriptorHandleForHeapStart(),
-			static_cast<UINT>(device->m_render_target_pool.GetIndex(render_target)),
-			static_cast<UINT>(device->m_rtv_descriptor_size));
-
+		auto& render_target = device->m_render_target_pool[render_target_handle];
 		auto& command_list = device->m_command_list_pool[command_list_handle];
 
-		command_list->ClearRenderTargetView(render_target_handle, colour, 0, nullptr);
+		command_list->ClearRenderTargetView(render_target.descriptor_handle, colour, 0, nullptr);
 	}
 }
