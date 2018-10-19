@@ -5,6 +5,7 @@
 #define WIN32_LEAN_AND_MEAN             // Exclude rarely-used stuff from Windows headers.
 #endif
 #include <windows.h>
+#include <fstream>
 
 class HelloWorldGame : public platform::Game
 {
@@ -15,6 +16,8 @@ public:
 	display::Device* m_device;
 
 	display::CommandListHandle m_command_list;
+
+	display::RootSignatureHandle m_root_signature;
 
 	void OnInit() override
 	{
@@ -28,11 +31,31 @@ public:
 		m_device = display::CreateDevice(device_init_params);
 
 		m_command_list = display::CreateCommandList(m_device);
+
+		{
+			std::ifstream root_signature_file("root_signature.fxo", std::ios::binary | std::ios::ate);
+			if (root_signature_file.good())
+			{
+				std::streamsize size = root_signature_file.tellg();
+				root_signature_file.seekg(0, std::ios::beg);
+
+				std::vector<char> buffer(size);
+				root_signature_file.read(buffer.data(), size);
+
+				if (root_signature_file.good())
+				{
+					//Create the root signature
+					m_root_signature = display::CreateRootSignature(m_device, reinterpret_cast<void*>(buffer.data()), size);
+				}
+			}
+		}
+		
 	}
 	void OnDestroy() override
 	{
 		//Free handles
 		display::DestroyCommandList(m_device, m_command_list);
+		display::DestroyRootSignature(m_device, m_root_signature);
 
 		display::DestroyDevice(m_device);
 	}

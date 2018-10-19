@@ -6,7 +6,7 @@
 "UAV(u0, visibility = SHADER_VISIBILITY_GEOMETRY), " \
 "DescriptorTable( CBV(b0), " \
 "UAV(u1, numDescriptors = 2), " \
-"SRV(t1, numDescriptors = unbounded)), " \
+"SRV(t1, numDescriptors = 8)), " \
 "DescriptorTable(Sampler(s0, numDescriptors = 2)), " \
 "RootConstants(num32BitConstants=1, b9), " \
 "DescriptorTable( UAV(u3), " \
