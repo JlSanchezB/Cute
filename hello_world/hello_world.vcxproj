@@ -135,6 +135,19 @@
   <ItemGroup>
     <ClCompile Include="main.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="root_signature.hlsl">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">fxc /T rootsig_1_0 %(Identity) /E ROOTSIGNATURE /Fo "$(OutDir)%(Filename).fxo"</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">fxc /T rootsig_1_0 %(Identity) /E ROOTSIGNATURE /Fo "$(OutDir)%(Filename).fxo"</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">fxc /T rootsig_1_0 %(Identity) /E ROOTSIGNATURE /Fo "$(OutDir)%(Filename).fxo"</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">fxc /T rootsig_1_0 %(Identity) /E ROOTSIGNATURE /Fo "$(OutDir)%(Filename).fxo"</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(OutDir)%(Filename).fxo</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename).fxo</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OutDir)%(Filename).fxo</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)%(Filename).fxo</Outputs>
+    </CustomBuild>
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

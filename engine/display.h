@@ -11,7 +11,8 @@ namespace display
 	using CommandListHandle = core::Handle<struct CommandList, uint16_t>;
 	using TextureHandle = core::Handle<struct Texture, uint16_t>;
 	using RenderTargetHandle = core::Handle<struct RenderTarget, uint16_t>;
-	using ShaderHandle = core::Handle<struct Shader, uint16_t>;
+	using RootSignatureHandle = core::Handle<struct RootSignature, uint16_t>;
+	using PSOHandle = core::Handle<struct PSO, uint16_t>;
 
 	//TODO: Access to adaptors
 
@@ -51,6 +52,12 @@ namespace display
 
 	//Back buffer access
 	RenderTargetHandle GetBackBuffer(Device* device);
+
+	//Create root signature from a raw data
+	RootSignatureHandle CreateRootSignature(Device* device, void* data, size_t size);
+	//Destroy root signature
+	void DestroyRootSignature(Device * device, RootSignatureHandle& root_signature_handle);
+
 
 	//Context commands
 	void SetRenderTargets(Device* device, const CommandListHandle& handle, size_t num_targets, RenderTargetHandle* render_target_array, RenderTargetHandle* depth_stencil);

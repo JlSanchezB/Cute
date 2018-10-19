@@ -67,6 +67,7 @@ namespace display
 		};
 		core::HandlePool<CommandListHandle, ComPtr<ID3D12GraphicsCommandList>> m_command_list_pool;
 		core::HandlePool<RenderTargetHandle, RenderTarget> m_render_target_pool;
+		core::HandlePool<RootSignatureHandle, ComPtr<ID3D12RootSignature>> m_root_signature_pool;
 	};
 }
 
@@ -182,6 +183,7 @@ namespace display
 		//Alloc pools
 		device->m_render_target_pool.Init(Device::kRenderTargetHeapSize, 10);
 		device->m_command_list_pool.Init(500, 10);
+		device->m_root_signature_pool.Init(10, 10);
 
 		UINT dxgiFactoryFlags = 0;
 
@@ -413,6 +415,21 @@ namespace display
 	RenderTargetHandle GetBackBuffer(Device* device)
 	{
 		return device->m_frame_resources[device->m_frame_index].render_target;
+	}
+
+	RootSignatureHandle CreateRootSignature(Device * device, void * data, size_t size)
+	{
+		RootSignatureHandle handle = device->m_root_signature_pool.Alloc();
+
+		//Create root signature		
+		ThrowIfFailed(device->m_native_device->CreateRootSignature(0, data, size, IID_PPV_ARGS(&device->m_root_signature_pool[handle])));
+		
+		return handle;
+	}
+
+	void DestroyRootSignature(Device * device, RootSignatureHandle & root_signature_handle)
+	{
+		device->m_root_signature_pool.Free(root_signature_handle);
 	}
 
 	//Context commands
