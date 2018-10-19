@@ -4,10 +4,12 @@
 
 #ifndef HANDLE_POOL_H_
 #define HANDLE_POOL_H_
+
 #include "log.h"
 
 #include <vector>
 #include <algorithm>
+#include <cassert>
 
 namespace core
 {
@@ -146,14 +148,20 @@ namespace core
 
 		//Report
 		size_t num_allocated_handles = 0;
-		for (auto& it : allocated)
+		for (size_t i = 0; i < allocated.size(); ++i)
 		{
-			if (it) num_allocated_handles++;
-		}
+			//Check if it is allocated
+			if (allocated[i])
+			{
+				//Destroy DATA
+				(reinterpret_cast<DATA*>(&m_data[i]))->~DATA();
 
+				num_allocated_handles++;
+			}
+		}
 		if (num_allocated_handles > 0)
 		{
-			core::log("Pool still has some allocated handles, it will produce leaks" );
+			core::log("Pool still has some allocated handles, force deleted all handles\n");
 		}
 	}
 
@@ -161,7 +169,7 @@ namespace core
 	template<typename HANDLE, typename DATA>
 	inline void HandlePool<HANDLE, DATA>::Init(size_t max_size, size_t init_size)
 	{
-		//assert(max_size < std::numeric_limits<typename HANDLE::type_param>::max() - 1);
+		assert(max_size < std::numeric_limits<typename HANDLE::type_param>::max() - 1);
 		m_max_size = max_size;
 		m_first_free_allocated = HANDLE::kInvalid;
 
