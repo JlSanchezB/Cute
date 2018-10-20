@@ -5,6 +5,7 @@
 #define DISPLAY_H_
 
 #include "handle_pool.h"
+#include "display_enum.h"
 
 namespace display
 {
