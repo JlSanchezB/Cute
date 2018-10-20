@@ -68,7 +68,7 @@ public:
 		display::OpenCommandList(m_device, m_command_list);
 
 		//Set BackBuffer
-		display::RenderTargetHandle back_buffer = display::GetBackBuffer(m_device);
+		display::WeakRenderTargetHandle back_buffer = display::GetBackBuffer(m_device);
 		display::SetRenderTargets(m_device, m_command_list, 1, &back_buffer, nullptr);
 
 		//Clear

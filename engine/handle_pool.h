@@ -13,10 +13,12 @@
 
 namespace core
 {
-	//Handle of a resource, specialised by a enum TYPE and the size
+
+	//Handles can only be created from a pool and they can not be copied, only moved
 	template <typename ENUM, typename TYPE>
 	class Handle
 	{
+	protected:
 		using type_param = TYPE;
 
 		//Index inside the handlepool to access the data associated to this handle 
@@ -25,13 +27,19 @@ namespace core
 		//Invalid handle
 		static const TYPE kInvalid = -1;
 
+		template<typename HANDLE, typename DATA>
+		friend class HandlePool;
+
 		//Private constructor of a handle, only a pool can create valid handles
 		Handle(TYPE index) : m_index(index)
 		{
 		}
-		
-		template<typename HANDLE, typename DATA>
-		friend class HandlePool;
+
+		//Used from the weak handle to init
+		void InitWeakHandle(const Handle& handle)
+		{
+			m_index = handle.m_index;
+		}
 
 	public:
 		//Public constructor
@@ -39,10 +47,9 @@ namespace core
 		{
 		}
 
-		Handle(const Handle& a)
-		{
-			m_index = a.m_index;
-		}
+		//Disable copy construction and copy assing, only is allowed to move
+
+		Handle(const Handle& a) = delete;
 
 		Handle(Handle&& a)
 		{
@@ -50,11 +57,7 @@ namespace core
 			a.m_index = kInvalid;
 		}
 
-		Handle& operator=(const Handle& a)
-		{
-			m_index = a.m_index;
-			return *this;
-		}
+		Handle& operator=(const Handle& a) = delete;
 
 		Handle& operator=(Handle&& a)
 		{
@@ -70,6 +73,24 @@ namespace core
 		bool isValid() const
 		{
 			return m_index != kInvalid;
+		}
+	};
+
+	//Weak handle only can be create from a handle
+	//They can be copied
+	template <typename ENUM, typename TYPE>
+	class WeakHandle : public Handle<ENUM, TYPE>
+	{
+	public:
+		//Default constructor
+		WeakHandle()
+		{
+		}
+
+		//A weak handle can be created from a handle
+		WeakHandle(const Handle<ENUM, TYPE>& handle)
+		{
+			Handle<ENUM, TYPE>::InitWeakHandle(handle);
 		}
 	};
 

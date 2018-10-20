@@ -387,7 +387,7 @@ namespace display
 	}
 
 	//Open context, begin recording
-	void OpenCommandList(Device* device, const CommandListHandle& handle)
+	void OpenCommandList(Device* device, const WeakCommandListHandle& handle)
 	{
 		auto& command_list = device->m_command_list_pool[handle];
 		// However, when ExecuteCommandList() is called on a particular command 
@@ -397,12 +397,12 @@ namespace display
 
 	}
 	//Close context, stop recording
-	void CloseCommandList(Device* device, const CommandListHandle& handle)
+	void CloseCommandList(Device* device, const WeakCommandListHandle& handle)
 	{
 		device->m_command_list_pool[handle]->Close();
 	}
 
-	void ExecuteCommandList(Device * device, const CommandListHandle& handle)
+	void ExecuteCommandList(Device * device, const WeakCommandListHandle& handle)
 	{
 		auto& command_list = device->m_command_list_pool[handle];
 
@@ -412,7 +412,7 @@ namespace display
 	}
 
 	//Get back buffer
-	RenderTargetHandle GetBackBuffer(Device* device)
+	WeakRenderTargetHandle GetBackBuffer(Device* device)
 	{
 		return device->m_frame_resources[device->m_frame_index].render_target;
 	}
@@ -433,7 +433,7 @@ namespace display
 	}
 
 	//Context commands
-	void SetRenderTargets(Device* device, const CommandListHandle& command_list_handle, size_t num_targets, RenderTargetHandle* render_target_array, RenderTargetHandle * depth_stencil)
+	void SetRenderTargets(Device* device, const WeakCommandListHandle& command_list_handle, size_t num_targets, WeakRenderTargetHandle* render_target_array, WeakRenderTargetHandle * depth_stencil)
 	{
 		const auto& command_list = device->m_command_list_pool[command_list_handle];
 
@@ -455,7 +455,7 @@ namespace display
 		command_list->OMSetRenderTargets(static_cast<UINT>(num_targets), render_target_handles, FALSE, nullptr);
 	}
 
-	void ClearRenderTargetColour(Device* device, const CommandListHandle& command_list_handle, const RenderTargetHandle& render_target_handle, const float colour[4])
+	void ClearRenderTargetColour(Device* device, const WeakCommandListHandle& command_list_handle, const WeakRenderTargetHandle& render_target_handle, const float colour[4])
 	{
 		auto& render_target = device->m_render_target_pool[render_target_handle];
 		auto& command_list = device->m_command_list_pool[command_list_handle];
