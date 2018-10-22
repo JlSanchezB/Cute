@@ -441,19 +441,51 @@ namespace display
 
 		//Fill the DX12 structs using our data
 		D3D12_GRAPHICS_PIPELINE_STATE_DESC DX12_pipeline_state_desc = {};
-		/*psoDesc.InputLayout = { inputElementDescs, _countof(inputElementDescs) };
-		psoDesc.pRootSignature = m_rootSignature.Get();
-		psoDesc.VS = CD3DX12_SHADER_BYTECODE(vertexShader.Get());
-		psoDesc.PS = CD3DX12_SHADER_BYTECODE(pixelShader.Get());
-		psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
-		psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
-		psoDesc.DepthStencilState.DepthEnable = FALSE;
-		psoDesc.DepthStencilState.StencilEnable = FALSE;
-		psoDesc.SampleMask = UINT_MAX;
-		psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-		psoDesc.NumRenderTargets = 1;
-		psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
-		psoDesc.SampleDesc.Count = 1;*/
+
+		std::vector<D3D12_INPUT_ELEMENT_DESC> input_elements(pipeline_state_desc.input_layout.elements.size());
+		for (size_t i = 0; i < pipeline_state_desc.input_layout.elements.size(); i++)
+		{
+			auto& source_input_element = pipeline_state_desc.input_layout.elements[i];
+			input_elements[i].SemanticName = source_input_element.semantic_name;
+			input_elements[i].SemanticIndex = static_cast<UINT>(source_input_element.semantic_index);
+			input_elements[i].Format = Convert(source_input_element.format);
+			input_elements[i].InputSlot = static_cast<UINT>(source_input_element.input_slot);
+			input_elements[i].AlignedByteOffset = static_cast<UINT>(source_input_element.aligned_offset);
+			input_elements[i].InputSlotClass = Convert(source_input_element.input_type);
+			input_elements[i].InstanceDataStepRate = static_cast<UINT>(source_input_element.instance_step_rate);
+		}
+		DX12_pipeline_state_desc.InputLayout = { input_elements.data(), input_elements.size()};
+
+		DX12_pipeline_state_desc.pRootSignature = device->m_root_signature_pool[pipeline_state_desc.root_signature].Get();
+
+		DX12_pipeline_state_desc.VS.pShaderBytecode = pipeline_state_desc.vertex_shader.data;
+		DX12_pipeline_state_desc.VS.BytecodeLength = pipeline_state_desc.vertex_shader.size;
+
+		DX12_pipeline_state_desc.PS.pShaderBytecode = pipeline_state_desc.pixel_shader.data;
+		DX12_pipeline_state_desc.PS.BytecodeLength = pipeline_state_desc.pixel_shader.size;		
+		
+		D3D12_RASTERIZER_DESC rasterizer_state;
+		rasterizer_state.FillMode = Convert(pipeline_state_desc.rasteritation_state.fill_mode);
+		rasterizer_state.CullMode = Convert(pipeline_state_desc.rasteritation_state.cull_mode);
+		rasterizer_state.FrontCounterClockwise = true;
+		rasterizer_state.DepthBias = static_cast<UINT>(pipeline_state_desc.rasteritation_state.depth_bias);
+		rasterizer_state.DepthBiasClamp = pipeline_state_desc.rasteritation_state.depth_bias_clamp;
+		rasterizer_state.SlopeScaledDepthBias = pipeline_state_desc.rasteritation_state.slope_depth_bias;
+		rasterizer_state.DepthClipEnable = pipeline_state_desc.rasteritation_state.depth_clip_enable;
+		rasterizer_state.MultisampleEnable = pipeline_state_desc.rasteritation_state.depth_clip_enable;
+		rasterizer_state.AntialiasedLineEnable = false;
+		rasterizer_state.ForcedSampleCount = static_cast<UINT>(pipeline_state_desc.rasteritation_state.forced_sample_count);
+		rasterizer_state.ConservativeRaster = (pipeline_state_desc.rasteritation_state.convervative_mode) ? D3D12_CONSERVATIVE_RASTERIZATION_MODE_ON : D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF;					
+		DX12_pipeline_state_desc.RasterizerState = rasterizer_state;
+
+		DX12_pipeline_state_desc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+		DX12_pipeline_state_desc.DepthStencilState.DepthEnable = FALSE;
+		DX12_pipeline_state_desc.DepthStencilState.StencilEnable = FALSE;
+		DX12_pipeline_state_desc.SampleMask = UINT_MAX;
+		DX12_pipeline_state_desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+		DX12_pipeline_state_desc.NumRenderTargets = 1;
+		DX12_pipeline_state_desc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
+		DX12_pipeline_state_desc.SampleDesc.Count = 1;*/
 
 		//Create pipeline state
 		ThrowIfFailed(device->m_native_device->CreateGraphicsPipelineState(&DX12_pipeline_state_desc, IID_PPV_ARGS(&device->m_pipeline_state_pool[handle])));

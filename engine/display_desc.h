@@ -12,7 +12,7 @@ namespace display
 {
 	struct InputElementDesc
 	{
-		char* name;
+		char* semantic_name;
 		uint32_t semantic_index;
 		Format format;
 		uint32_t input_slot;
@@ -23,18 +23,19 @@ namespace display
 
 	struct InputLayoutDesc
 	{
-		InputElementDesc elements;
-		size_t size;
+		std::vector<InputElementDesc> elements;
 	};
 
 	struct RasterizationDesc
 	{
 		FillMode fill_mode;
 		CullMode cull_mode;
-		float depth_bias = 0.f;
+		int32_t depth_bias = 0.f;
 		float depth_bias_clamp = 0.f;
 		float slope_depth_bias = 0.f;
+		bool depth_clip_enable = true;
 		bool multisample_enable = false;
+		uint32_t forced_sample_count = 1;
 		bool convervative_mode = false;
 	};
 
@@ -69,9 +70,6 @@ namespace display
 		
 		ShaderDesc vertex_shader;
 		ShaderDesc pixel_shader;
-		ShaderDesc domain_shader;
-		ShaderDesc hull_shader;
-		ShaderDesc geometry_shader;
 		
 		InputLayoutDesc input_layout;
 		RasterizationDesc rasteritation_state;
