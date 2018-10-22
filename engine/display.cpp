@@ -454,7 +454,7 @@ namespace display
 			input_elements[i].InputSlotClass = Convert(source_input_element.input_type);
 			input_elements[i].InstanceDataStepRate = static_cast<UINT>(source_input_element.instance_step_rate);
 		}
-		DX12_pipeline_state_desc.InputLayout = { input_elements.data(), input_elements.size()};
+		DX12_pipeline_state_desc.InputLayout = { input_elements.data(), static_cast<UINT>(input_elements.size())};
 
 		DX12_pipeline_state_desc.pRootSignature = device->m_root_signature_pool[pipeline_state_desc.root_signature].Get();
 

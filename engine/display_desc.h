@@ -30,7 +30,7 @@ namespace display
 	{
 		FillMode fill_mode;
 		CullMode cull_mode;
-		int32_t depth_bias = 0.f;
+		int32_t depth_bias = 0;
 		float depth_bias_clamp = 0.f;
 		float slope_depth_bias = 0.f;
 		bool depth_clip_enable = true;
