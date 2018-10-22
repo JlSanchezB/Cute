@@ -31,7 +31,7 @@ namespace display
 		Zero,
 		One,
 		SrcAlpha,
-		DestAlpha
+		InvSrcAlpha
 	};
 
 	enum class ComparationFunction

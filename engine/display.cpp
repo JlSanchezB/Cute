@@ -1,5 +1,6 @@
 #include "display.h"
 #include "d3dx12.h"
+#include "display_convert.h"
 
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN             // Exclude rarely-used stuff from Windows headers.

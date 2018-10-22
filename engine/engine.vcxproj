@@ -121,6 +121,7 @@
   <ItemGroup>
     <ClInclude Include="d3dx12.h" />
     <ClInclude Include="display.h" />
+    <ClInclude Include="display_convert.h" />
     <ClInclude Include="display_desc.h" />
     <ClInclude Include="display_enum.h" />
     <ClInclude Include="display_handle.h" />
