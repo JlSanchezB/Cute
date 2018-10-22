@@ -33,6 +33,12 @@
     <ClInclude Include="display_enum.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="display_desc.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="display_handle.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="display.cpp">

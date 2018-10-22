@@ -51,11 +51,16 @@ namespace display
 		Triangle
 	};
 
-
 	enum class BlendOp
 	{
 		Add,
 		Substract
+	};
+
+	enum class InputType
+	{
+		Vertex,
+		Instance
 	};
 }
 
