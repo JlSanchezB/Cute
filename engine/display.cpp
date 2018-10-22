@@ -68,6 +68,7 @@ namespace display
 		core::HandlePool<CommandListHandle, ComPtr<ID3D12GraphicsCommandList>> m_command_list_pool;
 		core::HandlePool<RenderTargetHandle, RenderTarget> m_render_target_pool;
 		core::HandlePool<RootSignatureHandle, ComPtr<ID3D12RootSignature>> m_root_signature_pool;
+		core::HandlePool<PipelineStateHandle, ComPtr<ID3D12PipelineState>> m_pipeline_state_pool;
 	};
 }
 
@@ -184,6 +185,7 @@ namespace display
 		device->m_render_target_pool.Init(Device::kRenderTargetHeapSize, 10);
 		device->m_command_list_pool.Init(500, 10);
 		device->m_root_signature_pool.Init(10, 10);
+		device->m_pipeline_state_pool.Init(2000, 100);
 
 		UINT dxgiFactoryFlags = 0;
 
@@ -430,6 +432,37 @@ namespace display
 	void DestroyRootSignature(Device * device, RootSignatureHandle & root_signature_handle)
 	{
 		device->m_root_signature_pool.Free(root_signature_handle);
+	}
+
+	PipelineStateHandle CreatePipelineState(Device * device, const PipelineStateDesc & pipeline_state_desc)
+	{
+		PipelineStateHandle handle = device->m_pipeline_state_pool.Alloc();
+
+		//Fill the DX12 structs using our data
+		D3D12_GRAPHICS_PIPELINE_STATE_DESC DX12_pipeline_state_desc = {};
+		/*psoDesc.InputLayout = { inputElementDescs, _countof(inputElementDescs) };
+		psoDesc.pRootSignature = m_rootSignature.Get();
+		psoDesc.VS = CD3DX12_SHADER_BYTECODE(vertexShader.Get());
+		psoDesc.PS = CD3DX12_SHADER_BYTECODE(pixelShader.Get());
+		psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+		psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+		psoDesc.DepthStencilState.DepthEnable = FALSE;
+		psoDesc.DepthStencilState.StencilEnable = FALSE;
+		psoDesc.SampleMask = UINT_MAX;
+		psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+		psoDesc.NumRenderTargets = 1;
+		psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
+		psoDesc.SampleDesc.Count = 1;*/
+
+		//Create pipeline state
+		ThrowIfFailed(device->m_native_device->CreateGraphicsPipelineState(&DX12_pipeline_state_desc, IID_PPV_ARGS(&device->m_pipeline_state_pool[handle])));
+
+		return handle;
+	}
+
+	void DestroyPipelineState(Device * device, PipelineStateHandle & handle)
+	{
+		device->m_pipeline_state_pool.Free(handle);
 	}
 
 	//Context commands

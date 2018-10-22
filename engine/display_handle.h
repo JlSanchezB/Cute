@@ -18,9 +18,6 @@ namespace display
 	using RootSignatureHandle = core::Handle<struct RootSignature, uint16_t>;
 	using WeakRootSignatureHandle = core::WeakHandle<struct RootSignature, uint16_t>;
 
-	using ShaderHandle = core::Handle<struct Shader, uint16_t>;
-	using WeakShaderHandle = core::WeakHandle<struct Shader, uint16_t>;
-
 	using PipelineStateHandle = core::Handle<struct PSO, uint16_t>;
 	using WeakPipelineStateOHandle = core::WeakHandle<struct PSO, uint16_t>;
 }

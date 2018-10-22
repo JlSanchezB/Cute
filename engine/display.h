@@ -55,6 +55,10 @@ namespace display
 	//Destroy root signature
 	void DestroyRootSignature(Device * device, RootSignatureHandle& root_signature_handle);
 
+	//Create pipeline state
+	PipelineStateHandle CreatePipelineState(Device* device, const PipelineStateDesc& pipeline_state_desc);
+	//Destroy pipeline state
+	void DestroyPipelineState(Device* device, PipelineStateHandle& handle);
 
 	//Context commands
 	void SetRenderTargets(Device* device, const WeakCommandListHandle& handle, size_t num_targets, WeakRenderTargetHandle* render_target_array, WeakRenderTargetHandle* depth_stencil);

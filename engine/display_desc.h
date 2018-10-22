@@ -31,41 +31,47 @@ namespace display
 	{
 		FillMode fill_mode;
 		CullMode cull_mode;
-		float depth_bias;
-		float depth_bias_clamp;
-		float slope_depth_bias;
-		bool multisample_enable;
-		bool convervative_mode;
+		float depth_bias = 0.f;
+		float depth_bias_clamp = 0.f;
+		float slope_depth_bias = 0.f;
+		bool multisample_enable = false;
+		bool convervative_mode = false;
 	};
 
 	struct RenderTargetBlendDesc
 	{
-		bool blend_enable;
+		bool blend_enable = false;
 		Blend src_blend;
 		Blend dest_blend;
 		BlendOp blend_op;
 		Blend alpha_src_blend;
 		Blend alpha_dest_blend;
 		BlendOp alpha_blend_op;
-		uint8_t write_mask;
+		uint8_t write_mask = 0xFF;
 	};
 
 	struct BlendDesc
 	{
-		bool alpha_to_coverage_enable;
-		bool independent_blend_enable;
+		bool alpha_to_coverage_enable = false;
+		bool independent_blend_enable = false;
 		RenderTargetBlendDesc render_target_blend[8];
+	};
+
+	struct ShaderDesc
+	{
+		void* data = nullptr;
+		size_t size = 0;
 	};
 
 	struct PipelineStateDesc
 	{
 		WeakRootSignatureHandle root_signature;
 		
-		WeakShaderHandle vertex_shader;
-		WeakShaderHandle pixel_shader;
-		WeakShaderHandle domain_shader;
-		WeakShaderHandle hull_shader;
-		WeakShaderHandle geometry_shader;
+		ShaderDesc vertex_shader;
+		ShaderDesc pixel_shader;
+		ShaderDesc domain_shader;
+		ShaderDesc hull_shader;
+		ShaderDesc geometry_shader;
 		
 		InputLayoutDesc input_layout;
 		RasterizationDesc rasteritation_state;
