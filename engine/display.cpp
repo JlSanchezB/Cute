@@ -478,14 +478,42 @@ namespace display
 		rasterizer_state.ConservativeRaster = (pipeline_state_desc.rasteritation_state.convervative_mode) ? D3D12_CONSERVATIVE_RASTERIZATION_MODE_ON : D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF;					
 		DX12_pipeline_state_desc.RasterizerState = rasterizer_state;
 
-		DX12_pipeline_state_desc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
-		DX12_pipeline_state_desc.DepthStencilState.DepthEnable = FALSE;
-		DX12_pipeline_state_desc.DepthStencilState.StencilEnable = FALSE;
+		D3D12_BLEND_DESC blend_desc;
+		blend_desc.AlphaToCoverageEnable = pipeline_state_desc.blend_desc.alpha_to_coverage_enable;
+		blend_desc.IndependentBlendEnable = pipeline_state_desc.blend_desc.independent_blend_enable;
+		for (size_t i = 0; i < 8; i++)
+		{
+			auto& dest = blend_desc.RenderTarget[i];
+			const auto& source = pipeline_state_desc.blend_desc.render_target_blend[i];
+			
+			dest.BlendEnable = source.blend_enable;
+			dest.LogicOpEnable = false;
+			dest.SrcBlend = Convert(source.src_blend);
+			dest.DestBlend = Convert(source.dest_blend);
+			dest.BlendOp = Convert(source.blend_op);
+			dest.SrcBlendAlpha = Convert(source.alpha_src_blend);
+			dest.DestBlendAlpha = Convert(source.alpha_dest_blend);
+			dest.BlendOpAlpha = Convert(source.alpha_blend_op);
+			dest.LogicOp = D3D12_LOGIC_OP_NOOP;
+			dest.RenderTargetWriteMask = source.write_mask;
+		}
+		DX12_pipeline_state_desc.BlendState = blend_desc;
+
+		DX12_pipeline_state_desc.DepthStencilState.DepthEnable = pipeline_state_desc.depth_enable;
+		
+		DX12_pipeline_state_desc.DepthStencilState.StencilEnable = pipeline_state_desc.stencil_enable;
+		
 		DX12_pipeline_state_desc.SampleMask = UINT_MAX;
-		DX12_pipeline_state_desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-		DX12_pipeline_state_desc.NumRenderTargets = 1;
-		DX12_pipeline_state_desc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
-		DX12_pipeline_state_desc.SampleDesc.Count = 1;*/
+		
+		DX12_pipeline_state_desc.PrimitiveTopologyType = Convert(pipeline_state_desc.primitive_topology);
+
+		DX12_pipeline_state_desc.NumRenderTargets = static_cast<UINT>(pipeline_state_desc.num_render_targets);
+		for (size_t i = 0; i < 8; i++)
+		{
+			DX12_pipeline_state_desc.RTVFormats[i] = Convert(pipeline_state_desc.render_target_format[i]);
+		}
+		 
+		DX12_pipeline_state_desc.SampleDesc.Count = static_cast<UINT>(pipeline_state_desc.sample_count);
 
 		//Create pipeline state
 		ThrowIfFailed(device->m_native_device->CreateGraphicsPipelineState(&DX12_pipeline_state_desc, IID_PPV_ARGS(&device->m_pipeline_state_pool[handle])));

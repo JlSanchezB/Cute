@@ -73,14 +73,17 @@ namespace display
 		
 		InputLayoutDesc input_layout;
 		RasterizationDesc rasteritation_state;
+		BlendDesc blend_desc;
 
-		bool depth_enable;
-		bool stencil_enable;
+		bool depth_enable = false;
+		bool stencil_enable = false;
 
 		Topology primitive_topology;
 
-		uint8_t num_render_targets;
+		uint8_t num_render_targets = 0;
 		Format render_target_format[8];
+
+		uint8_t sample_count = 1;
 	};
 }
 #endif
