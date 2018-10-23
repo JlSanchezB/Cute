@@ -1,57 +1,56 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="Source Files">
-      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
-      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
-    </Filter>
-    <Filter Include="Header Files">
-      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
-      <Extensions>h;hh;hpp;hxx;hm;inl;inc;ipp;xsd</Extensions>
-    </Filter>
     <Filter Include="Resource Files">
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="core">
+      <UniqueIdentifier>{c8afb658-95cb-443d-9465-824b92e83563}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="display">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="display.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="display\display.h">
+      <Filter>display</Filter>
     </ClInclude>
-    <ClInclude Include="handle_pool.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="display\display_desc.h">
+      <Filter>display</Filter>
     </ClInclude>
-    <ClInclude Include="platform.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="display\display_enum.h">
+      <Filter>display</Filter>
     </ClInclude>
-    <ClInclude Include="d3dx12.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="display\display_handle.h">
+      <Filter>display</Filter>
     </ClInclude>
-    <ClInclude Include="log.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="display\pc_dx12\d3dx12.h">
+      <Filter>display</Filter>
     </ClInclude>
-    <ClInclude Include="display_enum.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="display\pc_dx12\display_convert.h">
+      <Filter>display</Filter>
     </ClInclude>
-    <ClInclude Include="display_desc.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="core\platform.h">
+      <Filter>core</Filter>
     </ClInclude>
-    <ClInclude Include="display_handle.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="core\log.h">
+      <Filter>core</Filter>
     </ClInclude>
-    <ClInclude Include="display_convert.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="core\handle_pool.h">
+      <Filter>core</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="display.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="display\pc_dx12\display.cpp">
+      <Filter>display</Filter>
     </ClCompile>
-    <ClCompile Include="platform.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="core\pc\log.cpp">
+      <Filter>core</Filter>
     </ClCompile>
-    <ClCompile Include="log.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="core\pc\platform.cpp">
+      <Filter>core</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

@@ -1,4 +1,4 @@
-#include "display.h"
+#include <display\display.h>
 #include "d3dx12.h"
 #include "display_convert.h"
 

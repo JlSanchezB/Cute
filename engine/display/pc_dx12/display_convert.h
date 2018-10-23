@@ -4,7 +4,7 @@
 #ifndef DISPLAY_CONVERT_H_
 #define DISPLAY_CONVERT_H_
 
-#include "display_enum.h"
+#include <display/display_enum.h>
 #include <d3d12.h>
 
 namespace display

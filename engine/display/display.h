@@ -4,7 +4,7 @@
 #ifndef DISPLAY_H_
 #define DISPLAY_H_
 
-#include "handle_pool.h"
+#include <core/handle_pool.h>
 #include "display_handle.h"
 #include "display_enum.h"
 #include "display_desc.h"
