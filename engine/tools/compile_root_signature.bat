@@ -1,0 +1,1 @@
+fxc /T rootsig_1_0 %1 /E ROOTSIGNATURE /Fo %2

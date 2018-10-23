@@ -12,6 +12,9 @@
       <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
       <Extensions>h;hh;hpp;hxx;hm;inl;inc;ipp;xsd</Extensions>
     </Filter>
+    <Filter Include="tools">
+      <UniqueIdentifier>{01b83e91-8355-430c-94cb-94630f5cb37c}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="display\display.h">
@@ -52,5 +55,13 @@
     <ClCompile Include="core\pc\platform.cpp">
       <Filter>core</Filter>
     </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="tools\compile_root_signature.bat">
+      <Filter>tools</Filter>
+    </None>
+    <None Include="tools\compile_shader.bat">
+      <Filter>tools</Filter>
+    </None>
   </ItemGroup>
 </Project>

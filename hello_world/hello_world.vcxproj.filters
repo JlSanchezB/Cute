@@ -23,8 +23,9 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="root_signature.hlsl">
+    <CustomBuild Include="root_signature.hlsl" />
+    <CustomBuild Include="colour_shader.hlsl">
       <Filter>Assets</Filter>
-    </FxCompile>
+    </CustomBuild>
   </ItemGroup>
 </Project>
