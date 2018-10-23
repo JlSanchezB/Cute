@@ -12,13 +12,18 @@ namespace display
 {
 	struct InputElementDesc
 	{
-		char* semantic_name;
+		const char* semantic_name;
 		uint32_t semantic_index;
 		Format format;
 		uint32_t input_slot;
 		size_t aligned_offset;
-		InputType input_type;
-		uint32_t instance_step_rate;
+		InputType input_type = InputType::Vertex;
+		uint32_t instance_step_rate = 0;
+
+		InputElementDesc(const char* _semantic_name, uint32_t _semantic_index, Format _format, uint32_t _input_slot, size_t _aligned_offset) :
+			semantic_name(_semantic_name), semantic_index(_semantic_index), format(_format), input_slot(_input_slot), aligned_offset(_aligned_offset)
+		{
+		}
 	};
 
 	struct InputLayoutDesc
@@ -28,8 +33,8 @@ namespace display
 
 	struct RasterizationDesc
 	{
-		FillMode fill_mode;
-		CullMode cull_mode;
+		FillMode fill_mode = FillMode::Solid;
+		CullMode cull_mode = CullMode::Front;
 		int32_t depth_bias = 0;
 		float depth_bias_clamp = 0.f;
 		float slope_depth_bias = 0.f;
@@ -42,13 +47,13 @@ namespace display
 	struct RenderTargetBlendDesc
 	{
 		bool blend_enable = false;
-		Blend src_blend;
-		Blend dest_blend;
-		BlendOp blend_op;
-		Blend alpha_src_blend;
-		Blend alpha_dest_blend;
-		BlendOp alpha_blend_op;
-		uint8_t write_mask = 0xFF;
+		Blend src_blend = Blend::Zero;
+		Blend dest_blend = Blend::One;
+		BlendOp blend_op = BlendOp::Add;
+		Blend alpha_src_blend = Blend::Zero;
+		Blend alpha_dest_blend = Blend::One;
+		BlendOp alpha_blend_op = BlendOp::Add;
+		uint8_t write_mask = 0b1111;
 	};
 
 	struct BlendDesc

@@ -9,6 +9,7 @@ namespace display
 	enum class Format
 	{
 		R32G32B32_FLOAT,
+		R32G32B32A32_FLOAT,
 		R8G8B8A8_UNORM,
 		R8G8B8A8_UNORM_SRGB
 	};

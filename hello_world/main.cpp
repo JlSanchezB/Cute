@@ -7,6 +7,28 @@
 #include <windows.h>
 #include <fstream>
 
+namespace
+{
+	std::vector<char> ReadFileToBuffer(const char* file)
+	{
+		std::ifstream root_signature_file(file, std::ios::binary | std::ios::ate);
+		if (root_signature_file.good())
+		{
+			std::streamsize size = root_signature_file.tellg();
+			root_signature_file.seekg(0, std::ios::beg);
+
+			std::vector<char> buffer(size);
+			root_signature_file.read(buffer.data(), size);
+
+			return buffer;
+		}
+		else
+		{
+			return std::vector<char>(0);
+		}
+	}
+}
+
 class HelloWorldGame : public platform::Game
 {
 public:
@@ -18,6 +40,7 @@ public:
 	display::CommandListHandle m_command_list;
 
 	display::RootSignatureHandle m_root_signature;
+	display::PipelineStateHandle m_pipeline_state;
 
 	void OnInit() override
 	{
@@ -33,21 +56,39 @@ public:
 		m_command_list = display::CreateCommandList(m_device);
 
 		{
-			std::ifstream root_signature_file("root_signature.fxo", std::ios::binary | std::ios::ate);
-			if (root_signature_file.good())
+			std::vector<char> root_signature_buffer = ReadFileToBuffer("root_signature.fxo");
+			
+			if (root_signature_buffer.size() > 0)
 			{
-				std::streamsize size = root_signature_file.tellg();
-				root_signature_file.seekg(0, std::ios::beg);
-
-				std::vector<char> buffer(size);
-				root_signature_file.read(buffer.data(), size);
-
-				if (root_signature_file.good())
-				{
-					//Create the root signature
-					m_root_signature = display::CreateRootSignature(m_device, reinterpret_cast<void*>(buffer.data()), size);
-				}
+				//Create the root signature
+				m_root_signature = display::CreateRootSignature(m_device, reinterpret_cast<void*>(root_signature_buffer.data()), root_signature_buffer.size());
 			}
+
+			//Read pixel and vertex shader
+			std::vector<char> pixel_shader_buffer = ReadFileToBuffer("colour_shader_ps.fxo");
+			std::vector<char> vertex_shader_buffer = ReadFileToBuffer("colour_shader_vs.fxo");
+
+			//Create pipeline state
+			display::PipelineStateDesc pipeline_state_desc;
+			pipeline_state_desc.root_signature = m_root_signature;
+
+			//Add input layouts
+			pipeline_state_desc.input_layout.elements.emplace_back("POSITION", 0, display::Format::R32G32B32A32_FLOAT, 0, 0);
+			pipeline_state_desc.input_layout.elements.emplace_back("COLOR", 0, display::Format::R32G32B32A32_FLOAT, 0, 16);
+
+			//Add shaders
+			pipeline_state_desc.pixel_shader.data = reinterpret_cast<void*>(pixel_shader_buffer.data());
+			pipeline_state_desc.pixel_shader.size = pixel_shader_buffer.size();
+
+			pipeline_state_desc.vertex_shader.data = reinterpret_cast<void*>(vertex_shader_buffer.data());
+			pipeline_state_desc.vertex_shader.size = vertex_shader_buffer.size();
+
+			//Add render targets
+			pipeline_state_desc.num_render_targets = 1;
+			pipeline_state_desc.render_target_format[0] = display::Format::R8G8B8A8_UNORM;
+
+			//Create
+			m_pipeline_state = display::CreatePipelineState(m_device, pipeline_state_desc);
 		}
 		
 	}
@@ -56,6 +97,7 @@ public:
 		//Free handles
 		display::DestroyCommandList(m_device, m_command_list);
 		display::DestroyRootSignature(m_device, m_root_signature);
+		display::DestroyPipelineState(m_device, m_pipeline_state);
 
 		display::DestroyDevice(m_device);
 	}

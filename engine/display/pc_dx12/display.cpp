@@ -472,7 +472,7 @@ namespace display
 		rasterizer_state.DepthBiasClamp = pipeline_state_desc.rasteritation_state.depth_bias_clamp;
 		rasterizer_state.SlopeScaledDepthBias = pipeline_state_desc.rasteritation_state.slope_depth_bias;
 		rasterizer_state.DepthClipEnable = pipeline_state_desc.rasteritation_state.depth_clip_enable;
-		rasterizer_state.MultisampleEnable = pipeline_state_desc.rasteritation_state.depth_clip_enable;
+		rasterizer_state.MultisampleEnable = pipeline_state_desc.rasteritation_state.multisample_enable;
 		rasterizer_state.AntialiasedLineEnable = false;
 		rasterizer_state.ForcedSampleCount = static_cast<UINT>(pipeline_state_desc.rasteritation_state.forced_sample_count);
 		rasterizer_state.ConservativeRaster = (pipeline_state_desc.rasteritation_state.convervative_mode) ? D3D12_CONSERVATIVE_RASTERIZATION_MODE_ON : D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF;					
@@ -510,7 +510,14 @@ namespace display
 		DX12_pipeline_state_desc.NumRenderTargets = static_cast<UINT>(pipeline_state_desc.num_render_targets);
 		for (size_t i = 0; i < 8; i++)
 		{
-			DX12_pipeline_state_desc.RTVFormats[i] = Convert(pipeline_state_desc.render_target_format[i]);
+			if (i < pipeline_state_desc.num_render_targets)
+			{
+				DX12_pipeline_state_desc.RTVFormats[i] = Convert(pipeline_state_desc.render_target_format[i]);
+			}
+			else
+			{
+				DX12_pipeline_state_desc.RTVFormats[i] = DXGI_FORMAT_UNKNOWN;
+			}
 		}
 		 
 		DX12_pipeline_state_desc.SampleDesc.Count = static_cast<UINT>(pipeline_state_desc.sample_count);
