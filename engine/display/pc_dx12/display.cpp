@@ -53,6 +53,7 @@ namespace display
 		ComPtr<ID3D12CommandQueue> m_command_queue;
 		ComPtr<IDXGISwapChain3> m_swap_chain;
 		CommandListHandle m_present_command_list;
+		CommandListHandle m_resource_command_list;
 
 		// Synchronization objects.
 		UINT m_frame_index;
@@ -66,10 +67,25 @@ namespace display
 			CD3DX12_CPU_DESCRIPTOR_HANDLE descriptor_handle;
 			D3D12_RESOURCE_STATES current_state;
 		};
+		struct VertexBuffer
+		{
+			ComPtr<ID3D12Resource> resource;
+			ComPtr<ID3D12Resource> upload_resource;
+			D3D12_VERTEX_BUFFER_VIEW view;
+		};
+		struct IndexBuffer
+		{
+			ComPtr<ID3D12Resource> resource;
+			ComPtr<ID3D12Resource> upload_resource;
+			D3D12_INDEX_BUFFER_VIEW view;
+		};
+
 		core::HandlePool<CommandListHandle, ComPtr<ID3D12GraphicsCommandList>> m_command_list_pool;
 		core::HandlePool<RenderTargetHandle, RenderTarget> m_render_target_pool;
 		core::HandlePool<RootSignatureHandle, ComPtr<ID3D12RootSignature>> m_root_signature_pool;
 		core::HandlePool<PipelineStateHandle, ComPtr<ID3D12PipelineState>> m_pipeline_state_pool;
+		core::HandlePool<VertexBufferHandle, VertexBuffer> m_vertex_buffer_pool;
+		core::HandlePool<IndexBufferHandle, IndexBuffer> m_index_buffer_pool;
 	};
 }
 
@@ -304,9 +320,10 @@ namespace display
 			WaitForGpu(device);
 		}
 
-		//Create present command list
+		//Create command lists
 		{
 			device->m_present_command_list = CreateCommandList(device);
+			device->m_resource_command_list = CreateCommandList(device);
 		}
 
 		return device;
@@ -326,8 +343,9 @@ namespace display
 			device->m_render_target_pool.Free(frame_resource.render_target);
 		}
 
-		//Destroy present command list
+		//Destroy  command lists
 		device->m_command_list_pool.Free(device->m_present_command_list);
+		device->m_command_list_pool.Free(device->m_resource_command_list);
 
 		delete device;
 	}
@@ -531,6 +549,63 @@ namespace display
 	void DestroyPipelineState(Device * device, PipelineStateHandle & handle)
 	{
 		device->m_pipeline_state_pool.Free(handle);
+	}
+
+	VertexBufferHandle CreateVertexBuffer(Device * device, void* data, size_t stride, size_t size)
+	{
+		VertexBufferHandle handle = device->m_vertex_buffer_pool.Alloc();
+
+		auto& vertex_buffer = device->m_vertex_buffer_pool[handle];
+
+		ThrowIfFailed(device->m_native_device->CreateCommittedResource(
+			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+			D3D12_HEAP_FLAG_NONE,
+			&CD3DX12_RESOURCE_DESC::Buffer(size),
+			D3D12_RESOURCE_STATE_COPY_DEST,
+			nullptr,
+			IID_PPV_ARGS(&vertex_buffer.resource)));
+
+		ThrowIfFailed(device->m_native_device->CreateCommittedResource(
+			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
+			D3D12_HEAP_FLAG_NONE,
+			&CD3DX12_RESOURCE_DESC::Buffer(size),
+			D3D12_RESOURCE_STATE_GENERIC_READ,
+			nullptr,
+			IID_PPV_ARGS(&vertex_buffer.upload_resource)));
+
+		// Copy data to the intermediate upload heap and then schedule a copy 
+		// from the upload heap to the vertex buffer.
+		D3D12_SUBRESOURCE_DATA vertexData = {};
+		vertexData.pData = data;
+		vertexData.RowPitch = size;
+		vertexData.SlicePitch = size;
+
+		//Command list
+		auto& command_list = device->m_command_list_pool[device->m_resource_command_list];
+
+		UpdateSubresources<1>(command_list.Get(), vertex_buffer.resource.Get(), vertex_buffer.upload_resource.Get(), 0, 0, 1, &vertexData);
+		command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(vertex_buffer.resource.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER));
+
+		// Initialize the vertex buffer view.
+		vertex_buffer.view.BufferLocation = vertex_buffer.resource->GetGPUVirtualAddress();
+		vertex_buffer.view.StrideInBytes = static_cast<UINT>(stride);
+		vertex_buffer.view.SizeInBytes = static_cast<UINT>(size);
+
+		return handle;
+	}
+
+	void DestroyVertexBuffer(Device * device, VertexBufferHandle & handle)
+	{
+		device->m_vertex_buffer_pool.Free(handle);
+	}
+
+	IndexBufferHandle CreateIndexBuffer(Device * device, void* data, size_t size, Format format)
+	{
+		return IndexBufferHandle();
+	}
+
+	void DestroyIndexBuffer(Device * device, IndexBufferHandle & handle)
+	{
 	}
 
 	//Context commands

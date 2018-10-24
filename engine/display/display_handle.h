@@ -18,8 +18,14 @@ namespace display
 	using RootSignatureHandle = core::Handle<struct RootSignature, uint16_t>;
 	using WeakRootSignatureHandle = core::WeakHandle<struct RootSignature, uint16_t>;
 
-	using PipelineStateHandle = core::Handle<struct PSO, uint16_t>;
-	using WeakPipelineStateOHandle = core::WeakHandle<struct PSO, uint16_t>;
+	using PipelineStateHandle = core::Handle<struct PipelineState, uint16_t>;
+	using WeakPipelineStateHandle = core::WeakHandle<struct PipelineState, uint16_t>;
+
+	using VertexBufferHandle = core::Handle<struct VertexBuffer, uint16_t>;
+	using WeakVertexBufferHandle = core::WeakHandle<struct VertexBuffer, uint16_t>;
+
+	using IndexBufferHandle = core::Handle<struct IndexBuffer, uint16_t>;
+	using WeakIndexBufferOHandle = core::WeakHandle<struct IndexBuffer, uint16_t>;
 }
 
 #endif //DISPLAY_HANDLE_H_

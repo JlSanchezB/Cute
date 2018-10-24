@@ -60,6 +60,16 @@ namespace display
 	//Destroy pipeline state
 	void DestroyPipelineState(Device* device, PipelineStateHandle& handle);
 
+	//Create vertex buffer
+	VertexBufferHandle CreateVertexBuffer(Device* device, void* data, size_t stride, size_t size);
+	//Destroy vertex buffer
+	void DestroyVertexBuffer(Device* device, VertexBufferHandle& handle);
+
+	//Create vertex buffer
+	IndexBufferHandle CreateIndexBuffer(Device* device, void* data, size_t size, Format format);
+	//Destroy vertex buffer
+	void DestroyIndexBuffer(Device* device, IndexBufferHandle& handle);
+
 	//Context commands
 	void SetRenderTargets(Device* device, const WeakCommandListHandle& handle, size_t num_targets, WeakRenderTargetHandle* render_target_array, WeakRenderTargetHandle* depth_stencil);
 
