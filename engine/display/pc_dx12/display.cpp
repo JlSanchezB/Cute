@@ -76,7 +76,6 @@ namespace display
 		struct IndexBuffer
 		{
 			ComPtr<ID3D12Resource> resource;
-			ComPtr<ID3D12Resource> upload_resource;
 			D3D12_INDEX_BUFFER_VIEW view;
 		};
 
@@ -574,8 +573,8 @@ namespace display
 		//Fill the DX12 structs using our data
 		D3D12_GRAPHICS_PIPELINE_STATE_DESC DX12_pipeline_state_desc = {};
 
-		std::vector<D3D12_INPUT_ELEMENT_DESC> input_elements(pipeline_state_desc.input_layout.elements.size());
-		for (size_t i = 0; i < pipeline_state_desc.input_layout.elements.size(); i++)
+		std::vector<D3D12_INPUT_ELEMENT_DESC> input_elements(kMaxNumInputLayoutElements);
+		for (size_t i = 0; i < pipeline_state_desc.input_layout.num_elements; i++)
 		{
 			auto& source_input_element = pipeline_state_desc.input_layout.elements[i];
 			input_elements[i].SemanticName = source_input_element.semantic_name;
@@ -613,7 +612,7 @@ namespace display
 		D3D12_BLEND_DESC blend_desc;
 		blend_desc.AlphaToCoverageEnable = pipeline_state_desc.blend_desc.alpha_to_coverage_enable;
 		blend_desc.IndependentBlendEnable = pipeline_state_desc.blend_desc.independent_blend_enable;
-		for (size_t i = 0; i < 8; i++)
+		for (size_t i = 0; i < kMaxNumRenderTargets; i++)
 		{
 			auto& dest = blend_desc.RenderTarget[i];
 			const auto& source = pipeline_state_desc.blend_desc.render_target_blend[i];
@@ -640,7 +639,7 @@ namespace display
 		DX12_pipeline_state_desc.PrimitiveTopologyType = Convert(pipeline_state_desc.primitive_topology);
 
 		DX12_pipeline_state_desc.NumRenderTargets = static_cast<UINT>(pipeline_state_desc.num_render_targets);
-		for (size_t i = 0; i < 8; i++)
+		for (size_t i = 0; i < kMaxNumRenderTargets; i++)
 		{
 			if (i < pipeline_state_desc.num_render_targets)
 			{
@@ -804,7 +803,7 @@ namespace display
 	{
 		const auto& command_list = device->m_command_list_pool[command_list_handle];
 
-		CD3DX12_CPU_DESCRIPTOR_HANDLE render_target_handles[8];
+		CD3DX12_CPU_DESCRIPTOR_HANDLE render_target_handles[kMaxNumRenderTargets];
 
 		//Transfert resources to render target and calculate the handles in the render target heap
 		for (size_t i = 0; i < num_targets; ++i)
@@ -828,5 +827,45 @@ namespace display
 		auto& command_list = device->m_command_list_pool[command_list_handle];
 
 		command_list->ClearRenderTargetView(render_target.descriptor_handle, colour, 0, nullptr);
+	}
+	void SetRootSignature(Device * device, const WeakCommandListHandle & command_list_handle, const WeakRootSignatureHandle & root_signature_handle)
+	{
+		auto& command_list = device->m_command_list_pool[command_list_handle];
+		auto& root_signature = device->m_root_signature_pool[root_signature_handle];
+
+		command_list->SetGraphicsRootSignature(root_signature.Get());
+	}
+	void SetPipelineState(Device * device, const WeakCommandListHandle & command_list_handle, const WeakPipelineStateHandle & pipeline_state_handle)
+	{
+		auto& command_list = device->m_command_list_pool[command_list_handle];
+		auto& pipeline_state = device->m_pipeline_state_pool[pipeline_state_handle];
+
+		command_list->SetPipelineState(pipeline_state.Get());
+	}
+	void SetVertexBuffers(Device * device, const WeakCommandListHandle & command_list_handle, size_t start_slot_index, size_t num_vertex_buffers, WeakVertexBufferHandle * vertex_buffer_handles)
+	{
+		std::array<D3D12_VERTEX_BUFFER_VIEW, 32> vertex_buffer_views;
+
+		for (size_t i = 0; i < num_vertex_buffers; i++)
+		{
+			vertex_buffer_views[i] = device->m_vertex_buffer_pool[vertex_buffer_handles[i]].view;
+		}
+
+		auto& command_list = device->m_command_list_pool[command_list_handle];
+		command_list->IASetVertexBuffers(static_cast<UINT>(start_slot_index), static_cast<UINT>(num_vertex_buffers), vertex_buffer_views.data());
+	}
+	void SetIndexBuffer(Device * device, const WeakCommandListHandle & command_list_handle, const WeakIndexBufferOHandle & index_buffer_handle)
+	{
+		auto& command_list = device->m_command_list_pool[command_list_handle];
+		auto& index_buffer = device->m_index_buffer_pool[index_buffer_handle];
+
+		command_list->IASetIndexBuffer(&index_buffer.view);
+	}
+	void Draw(Device * device, const WeakCommandListHandle & command_list_handle, size_t start_vertex, size_t vertex_count, PrimitiveTopology primitive_topology)
+	{
+		auto& command_list = device->m_command_list_pool[command_list_handle];
+		command_list->IASetPrimitiveTopology(Convert(primitive_topology));
+
+		command_list->DrawInstanced(static_cast<UINT>(vertex_count), 1, static_cast<UINT>(start_vertex), 0);
 	}
 }

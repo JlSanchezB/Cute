@@ -71,8 +71,27 @@ namespace display
 	void DestroyIndexBuffer(Device* device, IndexBufferHandle& handle);
 
 	//Context commands
-	void SetRenderTargets(Device* device, const WeakCommandListHandle& handle, size_t num_targets, WeakRenderTargetHandle* render_target_array, WeakRenderTargetHandle* depth_stencil);
 
-	void ClearRenderTargetColour(Device* device, const WeakCommandListHandle& handle, const WeakRenderTargetHandle& render_target, const float colour[4]);
+	//Set render target
+	void SetRenderTargets(Device* device, const WeakCommandListHandle& command_list, size_t num_targets, WeakRenderTargetHandle* render_target_array, WeakRenderTargetHandle* depth_stencil);
+
+	//Clear
+	void ClearRenderTargetColour(Device* device, const WeakCommandListHandle& command_list, const WeakRenderTargetHandle& render_target, const float colour[4]);
+
+	//Set root signature
+	void SetRootSignature(Device* device, const WeakCommandListHandle& command_list, const WeakRootSignatureHandle& root_signature);
+
+	//Set pipeline state
+	void SetPipelineState(Device* device, const WeakCommandListHandle& command_list, const WeakPipelineStateHandle& pipeline_state);
+
+	//Set Vertex buffers
+	void SetVertexBuffers(Device* device, const WeakCommandListHandle& command_list, size_t start_slot_index, size_t num_vertex_buffers, WeakVertexBufferHandle* vertex_buffers);
+
+	//Set Index Buffer
+	void SetIndexBuffer(Device* device, const WeakCommandListHandle& command_list, const WeakIndexBufferOHandle& index_buffer);
+
+	//Draw
+	void Draw(Device* device, const WeakCommandListHandle& command_list, size_t start_vertex, size_t vertex_count, PrimitiveTopology primitive_topology);
+
 }
 #endif DISPLAY_H_

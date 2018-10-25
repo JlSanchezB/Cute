@@ -89,6 +89,15 @@ namespace display
 		}
 	}
 
+	D3D_PRIMITIVE_TOPOLOGY Convert(PrimitiveTopology primitive_topology)
+	{
+		switch (primitive_topology)
+		{
+		default:
+		case PrimitiveTopology::TriangleList: return D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+		}
+	}
+
 	D3D12_INPUT_CLASSIFICATION Convert(InputType input_type)
 	{
 		switch (input_type)

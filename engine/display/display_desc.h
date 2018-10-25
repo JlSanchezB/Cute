@@ -7,9 +7,13 @@
 #include "display_enum.h"
 
 #include <cstdint>
+#include <array>
 
 namespace display
 {
+	static const size_t kMaxNumRenderTargets = 8;
+	static const size_t kMaxNumInputLayoutElements = 32;
+
 	struct InputElementDesc
 	{
 		const char* semantic_name;
@@ -19,7 +23,10 @@ namespace display
 		size_t aligned_offset;
 		InputType input_type = InputType::Vertex;
 		uint32_t instance_step_rate = 0;
-
+		
+		InputElementDesc()
+		{
+		}
 		InputElementDesc(const char* _semantic_name, uint32_t _semantic_index, Format _format, uint32_t _input_slot, size_t _aligned_offset) :
 			semantic_name(_semantic_name), semantic_index(_semantic_index), format(_format), input_slot(_input_slot), aligned_offset(_aligned_offset)
 		{
@@ -28,7 +35,8 @@ namespace display
 
 	struct InputLayoutDesc
 	{
-		std::vector<InputElementDesc> elements;
+		std::array<InputElementDesc, kMaxNumInputLayoutElements> elements;
+		size_t num_elements = 0;
 	};
 
 	struct RasterizationDesc
@@ -60,7 +68,7 @@ namespace display
 	{
 		bool alpha_to_coverage_enable = false;
 		bool independent_blend_enable = false;
-		RenderTargetBlendDesc render_target_blend[8];
+		std::array <RenderTargetBlendDesc, kMaxNumRenderTargets> render_target_blend;
 	};
 
 	struct ShaderDesc
@@ -86,7 +94,7 @@ namespace display
 		Topology primitive_topology;
 
 		uint8_t num_render_targets = 0;
-		Format render_target_format[8];
+		std::array<Format, kMaxNumRenderTargets> render_target_format;
 
 		uint8_t sample_count = 1;
 	};

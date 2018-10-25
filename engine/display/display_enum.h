@@ -52,6 +52,11 @@ namespace display
 		Triangle
 	};
 
+	enum class PrimitiveTopology
+	{
+		TriangleList
+	};
+
 	enum class BlendOp
 	{
 		Add,

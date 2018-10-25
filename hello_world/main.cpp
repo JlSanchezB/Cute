@@ -79,8 +79,10 @@ public:
 			pipeline_state_desc.root_signature = m_root_signature;
 
 			//Add input layouts
-			pipeline_state_desc.input_layout.elements.emplace_back("POSITION", 0, display::Format::R32G32B32A32_FLOAT, 0, 0);
-			pipeline_state_desc.input_layout.elements.emplace_back("COLOR", 0, display::Format::R32G32B32A32_FLOAT, 0, 16);
+			pipeline_state_desc.input_layout.elements[0] = display::InputElementDesc("POSITION", 0, display::Format::R32G32B32A32_FLOAT, 0, 0);
+			pipeline_state_desc.input_layout.elements[1] = display::InputElementDesc("COLOR", 0, display::Format::R32G32B32A32_FLOAT, 0, 16);
+			pipeline_state_desc.input_layout.num_elements = 2;
+
 
 			//Add shaders
 			pipeline_state_desc.pixel_shader.data = reinterpret_cast<void*>(pixel_shader_buffer.data());
