@@ -1,6 +1,7 @@
 #include <display\display.h>
 #include "d3dx12.h"
 #include "display_convert.h"
+#include <core/ring_buffer.h>
 
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN             // Exclude rarely-used stuff from Windows headers.
@@ -86,6 +87,24 @@ namespace display
 		core::HandlePool<PipelineStateHandle, ComPtr<ID3D12PipelineState>> m_pipeline_state_pool;
 		core::HandlePool<VertexBufferHandle, VertexBuffer> m_vertex_buffer_pool;
 		core::HandlePool<IndexBufferHandle, IndexBuffer> m_index_buffer_pool;
+
+		//Deferred delete resource ring buffer
+		struct DeferredResourceDelete
+		{
+			//Resource to delete
+			ComPtr<ID3D12Resource> resource;
+			//Value signal to the fence
+			UINT64 fence_value;
+		};
+		core::RingBuffer<DeferredResourceDelete, 1000> m_deferred_resource_delete_ring_buffer;
+		
+		//This fence represent the index of the resource to be deleted
+		//Each time a resource needs to be deleted, it will get added into the ring with the current fence value
+		//The resource needs to be alive until the GPU update the fence value
+		ComPtr<ID3D12Fence> m_resource_deferred_delete_fence;
+
+		//Current CPU fence value
+		UINT64 m_resource_deferred_delete_index = 0;
 	};
 }
 
@@ -590,6 +609,9 @@ namespace display
 		vertex_buffer.view.BufferLocation = vertex_buffer.resource->GetGPUVirtualAddress();
 		vertex_buffer.view.StrideInBytes = static_cast<UINT>(stride);
 		vertex_buffer.view.SizeInBytes = static_cast<UINT>(size);
+
+		//Execute the command list
+		ExecuteCommandList(device, device->m_resource_command_list);
 
 		return handle;
 	}

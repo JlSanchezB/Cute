@@ -44,6 +44,9 @@
     <ClInclude Include="core\handle_pool.h">
       <Filter>core</Filter>
     </ClInclude>
+    <ClInclude Include="core\ring_buffer.h">
+      <Filter>core</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="display\pc_dx12\display.cpp">
