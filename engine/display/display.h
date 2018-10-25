@@ -90,6 +90,12 @@ namespace display
 	//Set Index Buffer
 	void SetIndexBuffer(Device* device, const WeakCommandListHandle& command_list, const WeakIndexBufferOHandle& index_buffer);
 
+	//Set Viewport
+	void SetViewport(Device* device, const WeakCommandListHandle& command_list, const Viewport& viewport);
+
+	//Set Viewport
+	void SetScissorRect(Device* device, const WeakCommandListHandle& command_list, const Rect scissor_rect);
+
 	//Draw
 	void Draw(Device* device, const WeakCommandListHandle& command_list, size_t start_vertex, size_t vertex_count, PrimitiveTopology primitive_topology);
 

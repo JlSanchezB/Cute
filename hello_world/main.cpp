@@ -144,6 +144,25 @@ public:
 		const float clear_colour[] = { rand() / (RAND_MAX + 1.f) , 0.2f, 0.4f, 1.0f };
 		display::ClearRenderTargetColour(m_device, m_command_list, back_buffer, clear_colour);
 
+		//Set root signature
+		display::SetRootSignature(m_device, m_command_list, m_root_signature);
+
+		//Set viewport
+		display::SetViewport(m_device, m_command_list, display::Viewport(500.f, 500.f));
+
+		//Set Scissor Rect
+		display::SetScissorRect(m_device, m_command_list, display::Rect(0, 0, 500, 500));
+
+		//Set pipeline state
+		display::SetPipelineState(m_device, m_command_list, m_pipeline_state);
+
+		//Set vertex buffer
+		display::WeakVertexBufferHandle weak_vertex_buffer = m_vertex_buffer;
+		display::SetVertexBuffers(m_device, m_command_list, 0, 1, &weak_vertex_buffer);
+
+		//Draw
+		display::Draw(m_device, m_command_list, 0, 3, display::PrimitiveTopology::TriangleList);
+
 		//Close command list
 		display::CloseCommandList(m_device, m_command_list);
 

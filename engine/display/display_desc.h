@@ -98,6 +98,33 @@ namespace display
 
 		uint8_t sample_count = 1;
 	};
+
+	struct Viewport
+	{
+		float top_left_x = 0.f;
+		float top_left_y = 0.f;
+		float width;
+		float height;
+		float min_depth = 0.f;
+		float max_depth = 1.f;
+
+		Viewport(float _width, float _height) : width(_width), height(_height)
+		{
+		}
+	};
+
+	struct Rect
+	{
+		size_t left;
+		size_t top;
+		size_t right;
+		size_t bottom;
+
+		Rect(size_t _left, size_t _top, size_t _right, size_t _bottom) :
+			left(_left), top(_top), right(_right), bottom(_bottom)
+		{
+		}
+	};
 }
 #endif
 

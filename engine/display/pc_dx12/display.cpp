@@ -861,6 +861,32 @@ namespace display
 
 		command_list->IASetIndexBuffer(&index_buffer.view);
 	}
+	void SetViewport(Device * device, const WeakCommandListHandle & command_list_handle, const Viewport & viewport)
+	{
+		auto& command_list = device->m_command_list_pool[command_list_handle];
+
+		D3D12_VIEWPORT dx12_viewport;
+		dx12_viewport.TopLeftX = viewport.top_left_x;
+		dx12_viewport.TopLeftY = viewport.top_left_y;
+		dx12_viewport.Width = viewport.width;
+		dx12_viewport.Height = viewport.height;
+		dx12_viewport.MinDepth = viewport.min_depth;
+		dx12_viewport.MaxDepth = viewport.max_depth;
+
+		command_list->RSSetViewports(1, &dx12_viewport);
+	}
+	void SetScissorRect(Device * device, const WeakCommandListHandle & command_list_handle, const Rect scissor_rect)
+	{
+		auto& command_list = device->m_command_list_pool[command_list_handle];
+
+		D3D12_RECT dx12_rect;
+		dx12_rect.left = static_cast<LONG>(scissor_rect.left);
+		dx12_rect.top = static_cast<LONG>(scissor_rect.top);
+		dx12_rect.right = static_cast<LONG>(scissor_rect.right);
+		dx12_rect.bottom = static_cast<LONG>(scissor_rect.bottom);
+
+		command_list->RSSetScissorRects(1, &dx12_rect);
+	}
 	void Draw(Device * device, const WeakCommandListHandle & command_list_handle, size_t start_vertex, size_t vertex_count, PrimitiveTopology primitive_topology)
 	{
 		auto& command_list = device->m_command_list_pool[command_list_handle];
