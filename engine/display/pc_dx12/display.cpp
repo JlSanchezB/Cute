@@ -71,7 +71,6 @@ namespace display
 		struct VertexBuffer
 		{
 			ComPtr<ID3D12Resource> resource;
-			ComPtr<ID3D12Resource> upload_resource;
 			D3D12_VERTEX_BUFFER_VIEW view;
 		};
 		struct IndexBuffer
@@ -95,16 +94,27 @@ namespace display
 			ComPtr<ID3D12Resource> resource;
 			//Value signal to the fence
 			UINT64 fence_value;
+
+			DeferredResourceDelete()
+			{
+			}
+
+			DeferredResourceDelete(ComPtr<ID3D12Resource>& _resource, UINT64 _fence_value) : resource(_resource), fence_value(_fence_value)
+			{
+			}
 		};
-		core::RingBuffer<DeferredResourceDelete, 1000> m_deferred_resource_delete_ring_buffer;
+		core::RingBuffer<DeferredResourceDelete, 1000> m_resource_deferred_delete_ring_buffer;
 		
 		//This fence represent the index of the resource to be deleted
 		//Each time a resource needs to be deleted, it will get added into the ring with the current fence value
 		//The resource needs to be alive until the GPU update the fence value
 		ComPtr<ID3D12Fence> m_resource_deferred_delete_fence;
 
+		//Event in case we need to wait for the GPU if the ring buffer is full
+		HANDLE m_resource_deferred_delete_event;
+
 		//Current CPU fence value
-		UINT64 m_resource_deferred_delete_index = 0;
+		UINT64 m_resource_deferred_delete_index = 1;
 	};
 }
 
@@ -201,6 +211,63 @@ namespace
 	{
 		return device->m_frame_resources[device->m_frame_index].command_allocator;
 	}
+
+	//Delete resources that are not needed by the GPU
+	size_t DeletePendingResources(display::Device* device)
+	{
+		size_t count = 0;
+		for(;;)
+		{
+			//Get the head of the ring buffer
+			auto& head = device->m_resource_deferred_delete_ring_buffer.head();
+			//Check if the GPU got the fence
+			if (head.fence_value <= device->m_resource_deferred_delete_fence->GetCompletedValue())
+			{
+				//This resource is out of scope, the GPU doens't need it anymore, delete it
+				device->m_resource_deferred_delete_ring_buffer.pop();
+				count++;
+			}
+			else
+			{
+				//We don't have anything more to delete, the GPU still needs the resource
+				break;
+			}
+		}
+		return count;
+	}
+
+	//Add a resource to be deleted, only to be called if you are sure that you don't need the resource
+	void AddDeferredDeleteResource(display::Device* device, ComPtr<ID3D12Resource>& resource)
+	{
+		//Look if there is space
+		if (device->m_resource_deferred_delete_ring_buffer.full())
+		{
+			//BAD, the ring buffer is full, we need to make space deleted resources that the GPU doesn't need
+			size_t count = DeletePendingResources(device);
+
+			if (count == 0)
+			{
+				//really BAD, the GPU still needs all the resources
+				//Sync to a event and wait
+				UINT64 fence_value_to_wait = device->m_resource_deferred_delete_ring_buffer.head().fence_value;
+
+				ThrowIfFailed(device->m_resource_deferred_delete_fence->SetEventOnCompletion(fence_value_to_wait, device->m_resource_deferred_delete_event));
+				WaitForSingleObjectEx(device->m_resource_deferred_delete_event, INFINITE, FALSE);
+
+				//Delete the resource
+				DeletePendingResources(device);
+			}
+		}
+
+		//At this moment we have space in the ring
+
+		//Add the resource to the ring buffer
+		device->m_resource_deferred_delete_ring_buffer.emplace(resource, device->m_resource_deferred_delete_index);
+		//Signal the GPU, so the GPU will update the fence when it reach here
+		device->m_command_queue->Signal(device->m_resource_deferred_delete_fence.Get(), device->m_resource_deferred_delete_index);
+		//Increase the fence value
+		device->m_resource_deferred_delete_index++;
+	}
 }
 
 #define SAFE_RELEASE(p) if (p) (p)->Release()
@@ -222,6 +289,8 @@ namespace display
 		device->m_command_list_pool.Init(500, 10);
 		device->m_root_signature_pool.Init(10, 10);
 		device->m_pipeline_state_pool.Init(2000, 100);
+		device->m_vertex_buffer_pool.Init(2000, 100);
+		device->m_index_buffer_pool.Init(2000, 100);
 
 		UINT dxgiFactoryFlags = 0;
 
@@ -320,6 +389,24 @@ namespace display
 			ThrowIfFailed(device->m_native_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&frame_resource.command_allocator)));
 		}
 
+		// Create synchronization objects for deferred delete resources
+		{
+			ThrowIfFailed(device->m_native_device->CreateFence(device->m_resource_deferred_delete_index, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&device->m_resource_deferred_delete_fence)));
+			device->m_resource_deferred_delete_index++;
+
+			device->m_resource_deferred_delete_event = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+			if (device->m_fence_event == nullptr)
+			{
+				ThrowIfFailed(HRESULT_FROM_WIN32(GetLastError()));
+			}
+		}
+
+		//Create command lists
+		{
+			device->m_present_command_list = CreateCommandList(device);
+			device->m_resource_command_list = CreateCommandList(device);
+		}
+
 		// Create synchronization objects and wait until assets have been uploaded to the GPU.
 		{
 			//Create sync fences
@@ -339,12 +426,7 @@ namespace display
 			WaitForGpu(device);
 		}
 
-		//Create command lists
-		{
-			device->m_present_command_list = CreateCommandList(device);
-			device->m_resource_command_list = CreateCommandList(device);
-		}
-
+	
 		return device;
 	}
 
@@ -355,6 +437,7 @@ namespace display
 		WaitForGpu(device);
 
 		CloseHandle(device->m_fence_event);
+		CloseHandle(device->m_resource_deferred_delete_event);
 
 		//Destroy back buffers
 		for (auto& frame_resource : device->m_frame_resources)
@@ -402,6 +485,9 @@ namespace display
 		// command lists have finished execution on the GPU; apps should use 
 		// fences to determine GPU execution progress.
 		ThrowIfFailed(GetCommandAllocator(device)->Reset());
+
+		//Delete deferred resources
+		DeletePendingResources(device);
 	}
 
 	void EndFrame(Device* device)
@@ -584,13 +670,16 @@ namespace display
 			nullptr,
 			IID_PPV_ARGS(&vertex_buffer.resource)));
 
+		//Upload resource
+		ComPtr<ID3D12Resource> upload_resource;
+
 		ThrowIfFailed(device->m_native_device->CreateCommittedResource(
 			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
 			D3D12_HEAP_FLAG_NONE,
 			&CD3DX12_RESOURCE_DESC::Buffer(size),
 			D3D12_RESOURCE_STATE_GENERIC_READ,
 			nullptr,
-			IID_PPV_ARGS(&vertex_buffer.upload_resource)));
+			IID_PPV_ARGS(&upload_resource)));
 
 		// Copy data to the intermediate upload heap and then schedule a copy 
 		// from the upload heap to the vertex buffer.
@@ -602,8 +691,11 @@ namespace display
 		//Command list
 		auto& command_list = device->m_command_list_pool[device->m_resource_command_list];
 
-		UpdateSubresources<1>(command_list.Get(), vertex_buffer.resource.Get(), vertex_buffer.upload_resource.Get(), 0, 0, 1, &vertexData);
+		UpdateSubresources<1>(command_list.Get(), vertex_buffer.resource.Get(), upload_resource.Get(), 0, 0, 1, &vertexData);
 		command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(vertex_buffer.resource.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER));
+
+		//The upload resource is not needed, add to the deferred resource buffer
+		AddDeferredDeleteResource(device, upload_resource);
 
 		// Initialize the vertex buffer view.
 		vertex_buffer.view.BufferLocation = vertex_buffer.resource->GetGPUVirtualAddress();

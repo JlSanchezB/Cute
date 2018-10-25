@@ -153,36 +153,38 @@ namespace core
 	template<typename HANDLE, typename DATA>
 	inline HandlePool<HANDLE, DATA>::~HandlePool()
 	{
-		//Report leaks
-		std::vector<bool> allocated;
-
-		allocated.resize(m_data.size());
-
-		for (auto& it : allocated) it = true;
-		
-		typename HANDLE::type_param free_index = m_first_free_allocated;
-		while (free_index != HANDLE::kInvalid)
+		if (m_data.size())
 		{
-			allocated[free_index] = false;
-			free_index = GetNextFreeSlot(free_index);
-		}
+			//Report leaks
+			std::vector<bool> allocated;
+			allocated.resize(m_data.size());
 
-		//Report
-		size_t num_allocated_handles = 0;
-		for (size_t i = 0; i < allocated.size(); ++i)
-		{
-			//Check if it is allocated
-			if (allocated[i])
+			for (auto& it : allocated) it = true;
+
+			typename HANDLE::type_param free_index = m_first_free_allocated;
+			while (free_index != HANDLE::kInvalid)
 			{
-				//Destroy DATA
-				(reinterpret_cast<DATA*>(&m_data[i]))->~DATA();
-
-				num_allocated_handles++;
+				allocated[free_index] = false;
+				free_index = GetNextFreeSlot(free_index);
 			}
-		}
-		if (num_allocated_handles > 0)
-		{
-			core::log("Pool still has some allocated handles, force deleted all handles\n");
+
+			//Report
+			size_t num_allocated_handles = 0;
+			for (size_t i = 0; i < allocated.size(); ++i)
+			{
+				//Check if it is allocated
+				if (allocated[i])
+				{
+					//Destroy DATA
+					(reinterpret_cast<DATA*>(&m_data[i]))->~DATA();
+
+					num_allocated_handles++;
+				}
+			}
+			if (num_allocated_handles > 0)
+			{
+				core::log("Pool still has some allocated handles, force deleted all handles\n");
+			}
 		}
 	}
 

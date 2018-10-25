@@ -20,19 +20,25 @@ namespace core
 		//Return if it is full
 		bool full() const;
 
-		//emplace
+		//Return if it is empty
+		bool empty() const;
+
+		//emplace to the tail
 		template<typename ...Args>
 		void emplace(Args&&... args);
 
-		//pop
-		DATA pop();
+		//Get the head
+		DATA& head();
+
+		//pop head
+		void pop();
 
 	private:
 		static_assert(SIZE >= 2);
 
 		//Indexes
-		size_t m_head;
-		size_t m_tail;
+		size_t m_head_index;
+		size_t m_tail_index;
 
 		//Data
 		std::array<DATA, SIZE> m_buffer;
@@ -41,14 +47,20 @@ namespace core
 	template<typename DATA, size_t SIZE>
 	inline RingBuffer<DATA, SIZE>::RingBuffer()
 	{
-		m_head = 0;
-		m_tail = 1;
+		m_head_index = 0;
+		m_tail_index = 1;
 	}
 
 	template<typename DATA, size_t SIZE>
 	inline bool RingBuffer<DATA, SIZE>::full() const
 	{
-		return m_tail == m_head;
+		return m_tail_index == m_head_index;
+	}
+
+	template<typename DATA, size_t SIZE>
+	inline bool RingBuffer<DATA, SIZE>::empty() const
+	{
+		return m_head_index == (m_tail_index - 1 + SIZE) % SIZE;
 	}
 
 	template<typename DATA, size_t SIZE>
@@ -57,24 +69,28 @@ namespace core
 	{
 		assert(!full());
 
-		//Create in tail
-		m_buffer[m_tail] = DATA(args...);
+		new(&m_buffer[m_tail_index]) DATA(std::forward<Args>(args)...);
 
 		//Increase tail
-		m_tail = (m_tail + 1) % SIZE;
+		m_tail_index = (m_tail_index + 1) % SIZE;
 	}
 
 	template<typename DATA, size_t SIZE>
-	inline DATA RingBuffer<DATA, SIZE>::pop()
+	inline DATA & RingBuffer<DATA, SIZE>::head()
 	{
-		assert(m_head != (m_tail - 1 + SIZE) % SIZE);
-		//Get data
-		DATA ret = m_buffer[m_head];
+		return m_buffer[m_head_index];
+	}
+
+	template<typename DATA, size_t SIZE>
+	inline void RingBuffer<DATA, SIZE>::pop()
+	{
+		assert(!empty());
+		
+		//Destroy the head
+		m_buffer[m_head_index].~DATA();
 
 		//Increase the head
-		m_head = (m_head + 1) % SIZE;
-
-		return ret;
+		m_head_index = (m_head_index + 1) % SIZE;
 	}
 }
 
