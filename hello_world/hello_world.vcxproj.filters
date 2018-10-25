@@ -23,8 +23,10 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="root_signature.hlsl" />
     <CustomBuild Include="colour_shader.hlsl">
+      <Filter>Assets</Filter>
+    </CustomBuild>
+    <CustomBuild Include="root_signature.hlsl">
       <Filter>Assets</Filter>
     </CustomBuild>
   </ItemGroup>

@@ -48,19 +48,19 @@ namespace core
 	inline RingBuffer<DATA, SIZE>::RingBuffer()
 	{
 		m_head_index = 0;
-		m_tail_index = 1;
+		m_tail_index = 0;
 	}
 
 	template<typename DATA, size_t SIZE>
 	inline bool RingBuffer<DATA, SIZE>::full() const
 	{
-		return m_tail_index == m_head_index;
+		return (m_tail_index + 1 + SIZE) % SIZE == m_head_index;
 	}
 
 	template<typename DATA, size_t SIZE>
 	inline bool RingBuffer<DATA, SIZE>::empty() const
 	{
-		return m_head_index == (m_tail_index - 1 + SIZE) % SIZE;
+		return m_head_index == m_tail_index;
 	}
 
 	template<typename DATA, size_t SIZE>

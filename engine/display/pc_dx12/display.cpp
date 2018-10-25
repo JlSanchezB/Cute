@@ -215,13 +215,22 @@ namespace
 	//Delete resources that are not needed by the GPU
 	size_t DeletePendingResources(display::Device* device)
 	{
+		if (device->m_resource_deferred_delete_ring_buffer.empty())
+		{
+			return 0;
+		}
+
 		size_t count = 0;
-		for(;;)
+		for(; !device->m_resource_deferred_delete_ring_buffer.empty();)
 		{
 			//Get the head of the ring buffer
 			auto& head = device->m_resource_deferred_delete_ring_buffer.head();
+
+			//Current GPU fence value
+			UINT64 gpu_fence_value = device->m_resource_deferred_delete_fence->GetCompletedValue();
+
 			//Check if the GPU got the fence
-			if (head.fence_value <= device->m_resource_deferred_delete_fence->GetCompletedValue())
+			if (head.fence_value <= gpu_fence_value)
 			{
 				//This resource is out of scope, the GPU doens't need it anymore, delete it
 				device->m_resource_deferred_delete_ring_buffer.pop();
@@ -691,19 +700,25 @@ namespace display
 		//Command list
 		auto& command_list = device->m_command_list_pool[device->m_resource_command_list];
 
+		//Open command list
+		OpenCommandList(device, device->m_resource_command_list);
+
 		UpdateSubresources<1>(command_list.Get(), vertex_buffer.resource.Get(), upload_resource.Get(), 0, 0, 1, &vertex_data);
 		command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(vertex_buffer.resource.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER));
-
-		//The upload resource is not needed, add to the deferred resource buffer
-		AddDeferredDeleteResource(device, upload_resource);
 
 		// Initialize the vertex buffer view.
 		vertex_buffer.view.BufferLocation = vertex_buffer.resource->GetGPUVirtualAddress();
 		vertex_buffer.view.StrideInBytes = static_cast<UINT>(stride);
 		vertex_buffer.view.SizeInBytes = static_cast<UINT>(size);
 
+		//Close command list
+		CloseCommandList(device, device->m_resource_command_list);
+
 		//Execute the command list
 		ExecuteCommandList(device, device->m_resource_command_list);
+
+		//The upload resource is not needed, add to the deferred resource buffer
+		AddDeferredDeleteResource(device, upload_resource);
 
 		return handle;
 	}
@@ -752,19 +767,25 @@ namespace display
 		//Command list
 		auto& command_list = device->m_command_list_pool[device->m_resource_command_list];
 
+		//Open command list
+		OpenCommandList(device, device->m_resource_command_list);
+
 		UpdateSubresources<1>(command_list.Get(), index_buffer.resource.Get(), upload_resource.Get(), 0, 0, 1, &index_data);
 		command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(index_buffer.resource.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER));
-
-		//The upload resource is not needed, add to the deferred resource buffer
-		AddDeferredDeleteResource(device, upload_resource);
 
 		// Initialize the vertex buffer view.
 		index_buffer.view.BufferLocation = index_buffer.resource->GetGPUVirtualAddress();
 		index_buffer.view.Format = Convert(format);
 		index_buffer.view.SizeInBytes = static_cast<UINT>(size);
 
+		//Close command list
+		CloseCommandList(device, device->m_resource_command_list);
+
 		//Execute the command list
 		ExecuteCommandList(device, device->m_resource_command_list);
+
+		//The upload resource is not needed, add to the deferred resource buffer
+		AddDeferredDeleteResource(device, upload_resource);
 
 		return handle;
 	}

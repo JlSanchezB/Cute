@@ -41,6 +41,8 @@ public:
 
 	display::RootSignatureHandle m_root_signature;
 	display::PipelineStateHandle m_pipeline_state;
+	display::VertexBufferHandle m_vertex_buffer;
+
 
 	void OnInit() override
 	{
@@ -55,15 +57,19 @@ public:
 
 		m_command_list = display::CreateCommandList(m_device);
 
+		//Root signature
 		{
 			std::vector<char> root_signature_buffer = ReadFileToBuffer("root_signature.fxo");
-			
+
 			if (root_signature_buffer.size() > 0)
 			{
 				//Create the root signature
 				m_root_signature = display::CreateRootSignature(m_device, reinterpret_cast<void*>(root_signature_buffer.data()), root_signature_buffer.size());
 			}
+		}
 
+		//Pipeline state
+		{
 			//Read pixel and vertex shader
 			std::vector<char> pixel_shader_buffer = ReadFileToBuffer("colour_shader_ps.fxo");
 			std::vector<char> vertex_shader_buffer = ReadFileToBuffer("colour_shader_vs.fxo");
@@ -90,6 +96,24 @@ public:
 			//Create
 			m_pipeline_state = display::CreatePipelineState(m_device, pipeline_state_desc);
 		}
+
+		//Vertex buffer
+		{
+			struct VertexData
+			{
+				float position[4];
+				float colour[4];
+			};
+
+			VertexData vertex_data[3] =
+			{
+				{{0.f, 2.f, 1.f, 1.f},{0.f, 0.f, 0.f, 0.f}},
+				{{2.f, 0.f, 1.f, 1.f},{0.f, 0.f, 0.f, 0.f}},
+				{{0.f, 0.f, 1.f, 1.f},{0.f, 0.f, 0.f, 0.f}}
+			};
+
+			m_vertex_buffer = display::CreateVertexBuffer(m_device, vertex_data, sizeof(VertexData), sizeof(vertex_data));
+		}
 		
 	}
 	void OnDestroy() override
@@ -98,6 +122,7 @@ public:
 		display::DestroyCommandList(m_device, m_command_list);
 		display::DestroyRootSignature(m_device, m_root_signature);
 		display::DestroyPipelineState(m_device, m_pipeline_state);
+		display::DestroyVertexBuffer(m_device, m_vertex_buffer);
 
 		display::DestroyDevice(m_device);
 	}
