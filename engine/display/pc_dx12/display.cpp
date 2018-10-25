@@ -683,15 +683,15 @@ namespace display
 
 		// Copy data to the intermediate upload heap and then schedule a copy 
 		// from the upload heap to the vertex buffer.
-		D3D12_SUBRESOURCE_DATA vertexData = {};
-		vertexData.pData = data;
-		vertexData.RowPitch = size;
-		vertexData.SlicePitch = size;
+		D3D12_SUBRESOURCE_DATA vertex_data = {};
+		vertex_data.pData = data;
+		vertex_data.RowPitch = size;
+		vertex_data.SlicePitch = size;
 
 		//Command list
 		auto& command_list = device->m_command_list_pool[device->m_resource_command_list];
 
-		UpdateSubresources<1>(command_list.Get(), vertex_buffer.resource.Get(), upload_resource.Get(), 0, 0, 1, &vertexData);
+		UpdateSubresources<1>(command_list.Get(), vertex_buffer.resource.Get(), upload_resource.Get(), 0, 0, 1, &vertex_data);
 		command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(vertex_buffer.resource.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER));
 
 		//The upload resource is not needed, add to the deferred resource buffer
@@ -715,11 +715,59 @@ namespace display
 
 	IndexBufferHandle CreateIndexBuffer(Device * device, void* data, size_t size, Format format)
 	{
-		return IndexBufferHandle();
+		IndexBufferHandle handle = device->m_index_buffer_pool.Alloc();
+
+		auto& index_buffer = device->m_index_buffer_pool[handle];
+
+		ThrowIfFailed(device->m_native_device->CreateCommittedResource(
+			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+			D3D12_HEAP_FLAG_NONE,
+			&CD3DX12_RESOURCE_DESC::Buffer(size),
+			D3D12_RESOURCE_STATE_COPY_DEST,
+			nullptr,
+			IID_PPV_ARGS(&index_buffer.resource)));
+
+		//Upload resource
+		ComPtr<ID3D12Resource> upload_resource;
+
+		ThrowIfFailed(device->m_native_device->CreateCommittedResource(
+			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
+			D3D12_HEAP_FLAG_NONE,
+			&CD3DX12_RESOURCE_DESC::Buffer(size),
+			D3D12_RESOURCE_STATE_GENERIC_READ,
+			nullptr,
+			IID_PPV_ARGS(&upload_resource)));
+
+		// Copy data to the intermediate upload heap and then schedule a copy 
+		// from the upload heap to the vertex buffer.
+		D3D12_SUBRESOURCE_DATA index_data = {};
+		index_data.pData = data;
+		index_data.RowPitch = size;
+		index_data.SlicePitch = size;
+
+		//Command list
+		auto& command_list = device->m_command_list_pool[device->m_resource_command_list];
+
+		UpdateSubresources<1>(command_list.Get(), index_buffer.resource.Get(), upload_resource.Get(), 0, 0, 1, &index_data);
+		command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(index_buffer.resource.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER));
+
+		//The upload resource is not needed, add to the deferred resource buffer
+		AddDeferredDeleteResource(device, upload_resource);
+
+		// Initialize the vertex buffer view.
+		index_buffer.view.BufferLocation = index_buffer.resource->GetGPUVirtualAddress();
+		index_buffer.view.Format = Convert(format);
+		index_buffer.view.SizeInBytes = static_cast<UINT>(size);
+
+		//Execute the command list
+		ExecuteCommandList(device, device->m_resource_command_list);
+
+		return handle;
 	}
 
 	void DestroyIndexBuffer(Device * device, IndexBufferHandle & handle)
 	{
+		device->m_index_buffer_pool.Free(handle);
 	}
 
 	//Context commands
