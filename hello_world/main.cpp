@@ -109,9 +109,9 @@ public:
 
 			VertexData vertex_data[3] =
 			{
-				{{0.f, 2.f, 1.f, 1.f},{0.f, 0.f, 0.f, 0.f}},
-				{{2.f, 0.f, 1.f, 1.f},{0.f, 0.f, 0.f, 0.f}},
-				{{0.f, 0.f, 1.f, 1.f},{0.f, 0.f, 0.f, 0.f}}
+				{{-1.f, 1.f, 1.f, 1.f},{0.f, 0.f, 0.f, 0.f}},
+				{{3.f, 1.f, 1.f, 1.f},{0.f, 0.f, 0.f, 0.f}},
+				{{-1.f, -3.f, 1.f, 1.f},{0.f, 0.f, 0.f, 0.f}}
 			};
 
 			m_vertex_buffer = display::CreateVertexBuffer(m_device, vertex_data, sizeof(VertexData), sizeof(vertex_data));
