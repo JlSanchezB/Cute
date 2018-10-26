@@ -25,7 +25,7 @@ namespace display
 	using WeakVertexBufferHandle = core::WeakHandle<struct VertexBuffer, uint16_t>;
 
 	using IndexBufferHandle = core::Handle<struct IndexBuffer, uint16_t>;
-	using WeakIndexBufferOHandle = core::WeakHandle<struct IndexBuffer, uint16_t>;
+	using WeakIndexBufferHandle = core::WeakHandle<struct IndexBuffer, uint16_t>;
 }
 
 #endif //DISPLAY_HANDLE_H_

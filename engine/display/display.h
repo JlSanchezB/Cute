@@ -88,7 +88,7 @@ namespace display
 	void SetVertexBuffers(Device* device, const WeakCommandListHandle& command_list, size_t start_slot_index, size_t num_vertex_buffers, WeakVertexBufferHandle* vertex_buffers);
 
 	//Set Index Buffer
-	void SetIndexBuffer(Device* device, const WeakCommandListHandle& command_list, const WeakIndexBufferOHandle& index_buffer);
+	void SetIndexBuffer(Device* device, const WeakCommandListHandle& command_list, const WeakIndexBufferHandle& index_buffer);
 
 	//Set Viewport
 	void SetViewport(Device* device, const WeakCommandListHandle& command_list, const Viewport& viewport);
