@@ -90,7 +90,7 @@ namespace display
 		struct DeferredResourceDelete
 		{
 			//Resource to delete
-			ComPtr<ID3D12Resource> resource;
+			ComPtr<ID3D12Object> resource;
 			//Value signal to the fence
 			UINT64 fence_value;
 
@@ -98,7 +98,7 @@ namespace display
 			{
 			}
 
-			DeferredResourceDelete(ComPtr<ID3D12Resource>& _resource, UINT64 _fence_value) : resource(_resource), fence_value(_fence_value)
+			DeferredResourceDelete(ComPtr<ID3D12Object>& _resource, UINT64 _fence_value) : resource(_resource), fence_value(_fence_value)
 			{
 			}
 		};
@@ -245,7 +245,8 @@ namespace
 	}
 
 	//Add a resource to be deleted, only to be called if you are sure that you don't need the resource
-	void AddDeferredDeleteResource(display::Device* device, ComPtr<ID3D12Resource>& resource)
+	template <typename RESOURCE>
+	void AddDeferredDeleteResource(display::Device* device, RESOURCE&& resource)
 	{
 		//Look if there is space
 		if (device->m_resource_deferred_delete_ring_buffer.full())
@@ -269,8 +270,11 @@ namespace
 
 		//At this moment we have space in the ring
 
+		ComPtr<ID3D12Object> object;
+		ThrowIfFailed(resource.As(&object));
+
 		//Add the resource to the ring buffer
-		device->m_resource_deferred_delete_ring_buffer.emplace(resource, device->m_resource_deferred_delete_index);
+		device->m_resource_deferred_delete_ring_buffer.emplace(object, device->m_resource_deferred_delete_index);
 		//Signal the GPU, so the GPU will update the fence when it reach here
 		device->m_command_queue->Signal(device->m_resource_deferred_delete_fence.Get(), device->m_resource_deferred_delete_index);
 		//Increase the fence value
@@ -444,6 +448,9 @@ namespace display
 		// cleaned up by the destructor.
 		WaitForGpu(device);
 
+		//Destroy deferred delete resources
+		DeletePendingResources(device);
+
 		CloseHandle(device->m_fence_event);
 		CloseHandle(device->m_resource_deferred_delete_event);
 
@@ -563,6 +570,9 @@ namespace display
 
 	void DestroyRootSignature(Device * device, RootSignatureHandle & root_signature_handle)
 	{
+		//Move the resource to the deferred delete ring buffer
+		AddDeferredDeleteResource(device, device->m_root_signature_pool[root_signature_handle]);
+
 		device->m_root_signature_pool.Free(root_signature_handle);
 	}
 
@@ -661,6 +671,9 @@ namespace display
 
 	void DestroyPipelineState(Device * device, PipelineStateHandle & handle)
 	{
+		//Move the resource to the deferred delete ring buffer
+		AddDeferredDeleteResource(device, device->m_pipeline_state_pool[handle]);
+
 		device->m_pipeline_state_pool.Free(handle);
 	}
 
