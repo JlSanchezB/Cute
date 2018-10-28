@@ -8,6 +8,7 @@
 
 #include <cstdint>
 #include <array>
+#include <limits>
 
 namespace display
 {
@@ -124,6 +125,17 @@ namespace display
 			left(_left), top(_top), right(_right), bottom(_bottom)
 		{
 		}
+	};
+
+	struct SamplerDesc
+	{
+		Filter filter = Filter::Point;
+		TextureAddressMode address_u = TextureAddressMode::Clamp;
+		TextureAddressMode address_v = TextureAddressMode::Clamp;
+		TextureAddressMode address_w = TextureAddressMode::Clamp;
+		float mip_lod_bias = 0.f;
+		float min_lod = 0.f;
+		float max_lod = std::numeric_limits<float>::max();
 	};
 }
 #endif

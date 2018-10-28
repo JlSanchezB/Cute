@@ -68,6 +68,20 @@ namespace display
 		Vertex,
 		Instance
 	};
+
+	enum class TextureAddressMode
+	{
+		Wrap,
+		Mirror,
+		Clamp
+	};
+
+	enum class Filter
+	{
+		Point,
+		Linear,
+		Anisotropic
+	};
 }
 
 #endif
