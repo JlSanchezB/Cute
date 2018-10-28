@@ -640,12 +640,30 @@ namespace display
 		return device->m_frame_resources[device->m_frame_index].render_target;
 	}
 
-	RootSignatureHandle CreateRootSignature(Device * device, void * data, size_t size)
+	RootSignatureHandle CreateRootSignature(Device * device, const RootSignatureDesc& root_signature_desc)
 	{
 		RootSignatureHandle handle = device->m_root_signature_pool.Alloc();
 
-		//Create root signature		
-		ThrowIfFailed(device->m_native_device->CreateRootSignature(0, data, size, IID_PPV_ARGS(&device->Get(handle))));
+		D3D12_FEATURE_DATA_ROOT_SIGNATURE featureData = {};
+
+		// This is the highest version the sample supports. If CheckFeatureSupport succeeds, the HighestVersion returned will not be greater than this.
+		featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_1;
+
+		if (FAILED(device->m_native_device->CheckFeatureSupport(D3D12_FEATURE_ROOT_SIGNATURE, &featureData, sizeof(featureData))))
+		{
+			featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_0;
+		}
+
+		CD3DX12_ROOT_PARAMETER1 rootParameters[1];
+		D3D12_STATIC_SAMPLER_DESC sampler = {};
+
+		CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDesc;
+		rootSignatureDesc.Init_1_1(0, rootParameters, 0, &sampler, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+
+		ComPtr<ID3DBlob> signature;
+		ComPtr<ID3DBlob> error;
+		ThrowIfFailed(D3DX12SerializeVersionedRootSignature(&rootSignatureDesc, featureData.HighestVersion, &signature, &error));
+		ThrowIfFailed(device->m_native_device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&device->Get(handle))));
 		
 		return handle;
 	}

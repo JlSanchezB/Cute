@@ -14,6 +14,40 @@ namespace display
 {
 	static const size_t kMaxNumRenderTargets = 8;
 	static const size_t kMaxNumInputLayoutElements = 32;
+	static const size_t kMaxNumRootParameters = 32;
+	static const size_t kMaxNumStaticSamplers = 32;
+
+	struct SamplerDesc
+	{
+		Filter filter = Filter::Point;
+		TextureAddressMode address_u = TextureAddressMode::Clamp;
+		TextureAddressMode address_v = TextureAddressMode::Clamp;
+		TextureAddressMode address_w = TextureAddressMode::Clamp;
+		float mip_lod_bias = 0.f;
+		float min_lod = 0.f;
+		float max_lod = std::numeric_limits<float>::max();
+	};
+
+	struct StaticSampleDesc : SamplerDesc
+	{
+		size_t shader_register;
+		ShaderVisibility visibility;
+	};
+
+	struct RootSignatureParamater
+	{
+		RootSignatureParameterType type;
+		size_t shader_register;
+		ShaderVisibility visibility;
+	};
+
+	struct RootSignatureDesc
+	{
+		size_t num_root_parameters = 0;
+		std::array<RootSignatureParamater, kMaxNumRootParameters> root_parameters;
+		size_t num_static_samplers;
+		std::array< StaticSampleDesc, kMaxNumStaticSamplers> m_static_samplers;
+	};
 
 	struct InputElementDesc
 	{
@@ -125,17 +159,6 @@ namespace display
 			left(_left), top(_top), right(_right), bottom(_bottom)
 		{
 		}
-	};
-
-	struct SamplerDesc
-	{
-		Filter filter = Filter::Point;
-		TextureAddressMode address_u = TextureAddressMode::Clamp;
-		TextureAddressMode address_v = TextureAddressMode::Clamp;
-		TextureAddressMode address_w = TextureAddressMode::Clamp;
-		float mip_lod_bias = 0.f;
-		float min_lod = 0.f;
-		float max_lod = std::numeric_limits<float>::max();
 	};
 }
 #endif

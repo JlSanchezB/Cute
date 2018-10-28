@@ -6,6 +6,23 @@
 
 namespace display
 {
+	enum class RootSignatureParameterType
+	{
+		ConstantBuffer,
+		UnorderAccessBuffer,
+		Texture
+	};
+
+	enum class ShaderVisibility
+	{
+		All,
+		Vertex,
+		Hull,
+		Domain,
+		Geometry,
+		Pixel
+	};
+
 	enum class Format
 	{
 		R32G32B32_FLOAT,

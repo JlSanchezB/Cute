@@ -59,13 +59,10 @@ public:
 
 		//Root signature
 		{
-			std::vector<char> root_signature_buffer = ReadFileToBuffer("root_signature.fxo");
-
-			if (root_signature_buffer.size() > 0)
-			{
-				//Create the root signature
-				m_root_signature = display::CreateRootSignature(m_device, reinterpret_cast<void*>(root_signature_buffer.data()), root_signature_buffer.size());
-			}
+			display::RootSignatureDesc root_signature_desc;
+			//Create the root signature
+			m_root_signature = display::CreateRootSignature(m_device, root_signature_desc);
+			
 		}
 
 		//Pipeline state

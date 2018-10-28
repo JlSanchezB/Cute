@@ -107,5 +107,30 @@ namespace display
 		case InputType::Instance: return D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA;
 		}
 	}
+
+	D3D12_ROOT_PARAMETER_TYPE Convert(RootSignatureParameterType root_signature_parameter)
+	{
+		switch (root_signature_parameter)
+		{
+		default:
+		case RootSignatureParameterType::ConstantBuffer: return D3D12_ROOT_PARAMETER_TYPE_CBV;
+		case RootSignatureParameterType::Texture: return D3D12_ROOT_PARAMETER_TYPE_SRV;
+		case RootSignatureParameterType::UnorderAccessBuffer: return D3D12_ROOT_PARAMETER_TYPE_UAV;
+		}
+	}
+
+	D3D12_SHADER_VISIBILITY Convert(ShaderVisibility shader_visibility)
+	{
+		switch (shader_visibility)
+		{
+		default:
+		case ShaderVisibility::All: return D3D12_SHADER_VISIBILITY_ALL;
+		case ShaderVisibility::Vertex: return D3D12_SHADER_VISIBILITY_VERTEX;
+		case ShaderVisibility::Hull: return D3D12_SHADER_VISIBILITY_HULL;
+		case ShaderVisibility::Domain: return D3D12_SHADER_VISIBILITY_DOMAIN;
+		case ShaderVisibility::Geometry: return D3D12_SHADER_VISIBILITY_GEOMETRY;
+		case ShaderVisibility::Pixel: return D3D12_SHADER_VISIBILITY_PIXEL;
+		}
+	}
 }
 #endif //DISPLAY_CONVERT_H_

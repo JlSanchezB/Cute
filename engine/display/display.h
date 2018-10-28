@@ -50,8 +50,8 @@ namespace display
 	//Back buffer access
 	WeakRenderTargetHandle GetBackBuffer(Device* device);
 
-	//Create root signature from a raw data
-	RootSignatureHandle CreateRootSignature(Device* device, void* data, size_t size);
+	//Create root signature
+	RootSignatureHandle CreateRootSignature(Device* device, const RootSignatureDesc& root_signature_desc);
 	//Destroy root signature
 	void DestroyRootSignature(Device * device, RootSignatureHandle& root_signature_handle);
 
