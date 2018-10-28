@@ -24,11 +24,12 @@ namespace display
 		TextureAddressMode address_v = TextureAddressMode::Clamp;
 		TextureAddressMode address_w = TextureAddressMode::Clamp;
 		float mip_lod_bias = 0.f;
+		uint32_t max_anisotropy = 0;
 		float min_lod = 0.f;
 		float max_lod = std::numeric_limits<float>::max();
 	};
 
-	struct StaticSampleDesc : SamplerDesc
+	struct StaticSamplerDesc : SamplerDesc
 	{
 		size_t shader_register;
 		ShaderVisibility visibility;
@@ -46,7 +47,7 @@ namespace display
 		size_t num_root_parameters = 0;
 		std::array<RootSignatureParamater, kMaxNumRootParameters> root_parameters;
 		size_t num_static_samplers;
-		std::array< StaticSampleDesc, kMaxNumStaticSamplers> m_static_samplers;
+		std::array< StaticSamplerDesc, kMaxNumStaticSamplers> static_samplers;
 	};
 
 	struct InputElementDesc

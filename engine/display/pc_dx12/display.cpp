@@ -654,11 +654,16 @@ namespace display
 			featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_0;
 		}
 
-		CD3DX12_ROOT_PARAMETER1 rootParameters[1];
-		D3D12_STATIC_SAMPLER_DESC sampler = {};
+		CD3DX12_ROOT_PARAMETER1 root_parameters[1];
+
+		D3D12_STATIC_SAMPLER_DESC static_samplers[kMaxNumStaticSamplers] = {};
+		for (size_t i = 0; i < root_signature_desc.num_static_samplers; ++i)
+		{
+			static_samplers[i] = Convert(root_signature_desc.static_samplers[i]);
+		}
 
 		CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDesc;
-		rootSignatureDesc.Init_1_1(0, rootParameters, 0, &sampler, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+		rootSignatureDesc.Init_1_1(0, root_parameters, static_cast<UINT>(root_signature_desc.num_static_samplers), static_samplers, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
 		ComPtr<ID3DBlob> signature;
 		ComPtr<ID3DBlob> error;

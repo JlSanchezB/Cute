@@ -132,5 +132,65 @@ namespace display
 		case ShaderVisibility::Pixel: return D3D12_SHADER_VISIBILITY_PIXEL;
 		}
 	}
+
+	D3D12_FILTER Convert(Filter filter)
+	{
+		switch (filter)
+		{
+		default:
+		case Filter::Point: return D3D12_FILTER_MIN_MAG_MIP_POINT;
+		case Filter::Linear: return D3D12_FILTER_MIN_MAG_MIP_LINEAR;
+		case Filter::Anisotropic: return D3D12_FILTER_ANISOTROPIC;
+		}
+	}
+
+	D3D12_TEXTURE_ADDRESS_MODE Convert(TextureAddressMode texture_address_mode)
+	{
+		switch (texture_address_mode)
+		{
+		default:
+		case TextureAddressMode::Wrap: return D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+		case TextureAddressMode::Mirror: return D3D12_TEXTURE_ADDRESS_MODE_MIRROR;
+		case TextureAddressMode::Clamp: return D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+		}
+	}
+
+
+	D3D12_STATIC_SAMPLER_DESC Convert(StaticSamplerDesc static_sample_desc)
+	{
+		D3D12_STATIC_SAMPLER_DESC ret;
+		ret.Filter = Convert(static_sample_desc.filter);
+		ret.AddressU = Convert(static_sample_desc.address_u);
+		ret.AddressV = Convert(static_sample_desc.address_v);
+		ret.AddressW = Convert(static_sample_desc.address_w);
+		ret.MipLODBias = static_sample_desc.mip_lod_bias;
+		ret.MaxAnisotropy = static_cast<UINT>(static_sample_desc.max_anisotropy);
+		ret.MinLOD = static_sample_desc.min_lod;
+		ret.MaxLOD = static_sample_desc.max_lod;
+		ret.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
+		ret.BorderColor = D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK;
+		ret.ShaderRegister = static_cast<UINT>(static_sample_desc.shader_register);
+		ret.RegisterSpace = 0;
+		ret.ShaderVisibility = Convert(static_sample_desc.visibility);
+
+		return ret;
+	}
+
+	D3D12_SAMPLER_DESC Convert(SamplerDesc sample_desc)
+	{
+		D3D12_SAMPLER_DESC ret;
+		ret.Filter = Convert(sample_desc.filter);
+		ret.AddressU = Convert(sample_desc.address_u);
+		ret.AddressV = Convert(sample_desc.address_v);
+		ret.AddressW = Convert(sample_desc.address_w);
+		ret.MipLODBias = sample_desc.mip_lod_bias;
+		ret.MaxAnisotropy = static_cast<UINT>(sample_desc.max_anisotropy);
+		ret.MinLOD = sample_desc.min_lod;
+		ret.MaxLOD = sample_desc.max_lod;
+		ret.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
+		ret.BorderColor[0] = ret.BorderColor[1] = ret.BorderColor[2] = ret.BorderColor[3] = 0;
+
+		return ret;
+	}
 }
 #endif //DISPLAY_CONVERT_H_
