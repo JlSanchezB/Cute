@@ -17,6 +17,9 @@ namespace core
 		//Default constructor
 		RingBuffer();
 
+		//Free all memory
+		~RingBuffer();
+
 		//Return if it is full
 		bool full() const;
 
@@ -41,7 +44,7 @@ namespace core
 		size_t m_tail_index;
 
 		//Data
-		std::array<DATA, SIZE> m_buffer;
+		std::array<typename std::aligned_storage<sizeof(DATA), alignof(DATA)>::type, SIZE> m_buffer;
 	};
 
 	template<typename DATA, size_t SIZE>
@@ -49,6 +52,15 @@ namespace core
 	{
 		m_head_index = 0;
 		m_tail_index = 0;
+	}
+
+	template<typename DATA, size_t SIZE>
+	inline RingBuffer<DATA, SIZE>::~RingBuffer()
+	{
+		while (!empty())
+		{
+			pop();
+		}
 	}
 
 	template<typename DATA, size_t SIZE>
@@ -78,7 +90,7 @@ namespace core
 	template<typename DATA, size_t SIZE>
 	inline DATA & RingBuffer<DATA, SIZE>::head()
 	{
-		return m_buffer[m_head_index];
+		return *reinterpret_cast<DATA*>(&m_buffer[m_head_index]);
 	}
 
 	template<typename DATA, size_t SIZE>
@@ -87,7 +99,7 @@ namespace core
 		assert(!empty());
 		
 		//Destroy the head
-		m_buffer[m_head_index].~DATA();
+		reinterpret_cast<DATA*>(&m_buffer[m_head_index])->~DATA();
 
 		//Increase the head
 		m_head_index = (m_head_index + 1) % SIZE;
