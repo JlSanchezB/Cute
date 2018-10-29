@@ -29,19 +29,23 @@ using Microsoft::WRL::ComPtr;
 namespace display
 {
 	//State of the properties to be send to the GPU
-	struct State
+	struct GraphicsState
 	{
 		static const size_t kNumMaxProperties = 16;
 
-		std::array<D3D12_GPU_VIRTUAL_ADDRESS, kNumMaxProperties> constant_buffers;
-		std::array<D3D12_GPU_VIRTUAL_ADDRESS, kNumMaxProperties> unordered_access_buffers;
-		std::array<D3D12_GPU_VIRTUAL_ADDRESS, kNumMaxProperties> textures;
+		std::array<D3D12_GPU_VIRTUAL_ADDRESS, kNumMaxProperties> constant_buffers = {};
+		std::array<D3D12_GPU_VIRTUAL_ADDRESS, kNumMaxProperties> unordered_access_buffers = {};
+		std::array<D3D12_GPU_VIRTUAL_ADDRESS, kNumMaxProperties> textures = {};
 	};
 
 	//State of the properties that has been set in the root signature
 	struct RootSignatureState
 	{
-
+		struct Property
+		{
+			D3D12_GPU_VIRTUAL_ADDRESS address = 0;
+		};
+		std::vector<Property> properties;
 	};
 
 	//Device internal implementation
@@ -81,7 +85,9 @@ namespace display
 		struct CommandList
 		{
 			ComPtr<ID3D12GraphicsCommandList> resource;
-			State state;
+			RootSignatureState root_signature_state;
+			GraphicsState graphics_state;
+			RootSignatureDesc root_signature_desc;
 		};
 		struct RootSignature
 		{
@@ -424,6 +430,32 @@ namespace
 		device->m_command_queue->Signal(device->m_resource_deferred_delete_fence.Get(), device->m_resource_deferred_delete_index);
 		//Increase the fence value
 		device->m_resource_deferred_delete_index++;
+	}
+
+	void CreateRootSignatureGraphicsState(display::RootSignatureState& root_signature_state, display::GraphicsState& graphics_state, const display::RootSignatureDesc& root_signature)
+	{
+		//Set all null in the graphics state
+		for (auto& constant_buffer : graphics_state.constant_buffers)
+		{
+			constant_buffer = 0;
+		}
+
+		for (auto& unordered_access_buffer : graphics_state.unordered_access_buffers)
+		{
+			unordered_access_buffer = 0;
+		}
+
+		for (auto& texture : graphics_state.textures)
+		{
+			texture = 0;
+		}
+
+		//Create root signature state
+		root_signature_state.properties.resize(root_signature.num_root_parameters);
+		for (auto& property : root_signature_state.properties)
+		{
+			property.address = 0;
+		}
 	}
 }
 
@@ -1023,6 +1055,13 @@ namespace display
 		auto& root_signature = device->Get(root_signature_handle);
 
 		command_list.resource->SetGraphicsRootSignature(root_signature.resource.Get());
+
+		//Root signature desc
+		command_list.root_signature_desc = root_signature.desc;
+		
+		//Create states
+		CreateRootSignatureGraphicsState(command_list.root_signature_state, command_list.graphics_state, command_list.root_signature_desc);
+
 	}
 	void SetPipelineState(Device * device, const WeakCommandListHandle & command_list_handle, const WeakPipelineStateHandle & pipeline_state_handle)
 	{
