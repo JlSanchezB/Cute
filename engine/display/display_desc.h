@@ -46,7 +46,7 @@ namespace display
 	{
 		size_t num_root_parameters = 0;
 		std::array<RootSignatureParamater, kMaxNumRootParameters> root_parameters;
-		size_t num_static_samplers;
+		size_t num_static_samplers = 0;
 		std::array< StaticSamplerDesc, kMaxNumStaticSamplers> static_samplers;
 	};
 

@@ -28,6 +28,22 @@ using Microsoft::WRL::ComPtr;
 
 namespace display
 {
+	//State of the properties set in the GPU
+	//The state depends of the root signature
+	struct State
+	{
+		struct Property
+		{
+			UINT root_signature_index;
+			RootSignatureParameterType type;
+			D3D12_GPU_VIRTUAL_ADDRESS buffer_location;
+		};
+
+		//Each property match one property in the root signature
+		std::vector<Property> properties;
+		
+	};
+
 	//Device internal implementation
 	struct Device
 	{
@@ -62,7 +78,11 @@ namespace display
 		ComPtr<ID3D12Fence> m_fence;
 
 		//Pool of resources
-		using CommandList = ComPtr<ID3D12GraphicsCommandList>;
+		struct CommandList
+		{
+			ComPtr<ID3D12GraphicsCommandList> resource;
+			State state;
+		};
 		using RootSignature = ComPtr<ID3D12RootSignature>;
 		using PipelineState = ComPtr<ID3D12PipelineState>;
 		struct RenderTarget
@@ -551,10 +571,10 @@ namespace display
 	{
 		OpenCommandList(device, device->m_present_command_list);
 
-		auto& command_list = device->m_command_list_pool[device->m_present_command_list];
+		auto& command_list = device->Get(device->m_present_command_list).resource;
 
 		// Indicate that the back buffer will now be used to present.
-		auto& back_buffer = device->m_render_target_pool[device->m_frame_resources[device->m_frame_index].render_target];
+		auto& back_buffer = device->Get(device->m_frame_resources[device->m_frame_index].render_target);
 		if (back_buffer.current_state != D3D12_RESOURCE_STATE_PRESENT)
 		{
 			command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(back_buffer.resource.Get(), back_buffer.current_state, D3D12_RESOURCE_STATE_PRESENT));
@@ -593,18 +613,18 @@ namespace display
 	CommandListHandle CreateCommandList(Device* device)
 	{
 		CommandListHandle handle = device->m_command_list_pool.Alloc();
-		ThrowIfFailed(device->m_native_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, GetCommandAllocator(device).Get(), nullptr, IID_PPV_ARGS(&device->Get(handle))));
+		ThrowIfFailed(device->m_native_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, GetCommandAllocator(device).Get(), nullptr, IID_PPV_ARGS(&device->Get(handle).resource)));
 
 		// Command lists are created in the recording state, but there is nothing
 		// to record yet. The main loop expects it to be closed, so close it now.
-		ThrowIfFailed(device->Get(handle)->Close());
+		ThrowIfFailed(device->Get(handle).resource->Close());
 
 		return handle;
 	}
 	void DestroyCommandList(Device* device, CommandListHandle& handle)
 	{
 		//Move the resource to the deferred delete ring buffer
-		AddDeferredDeleteResource(device, device->Get(handle));
+		AddDeferredDeleteResource(device, device->Get(handle).resource);
 
 		device->m_command_list_pool.Free(handle);
 	}
@@ -612,7 +632,7 @@ namespace display
 	//Open context, begin recording
 	void OpenCommandList(Device* device, const WeakCommandListHandle& handle)
 	{
-		auto& command_list = device->Get(handle);
+		auto& command_list = device->Get(handle).resource;
 		// However, when ExecuteCommandList() is called on a particular command 
 		// list, that command list can then be reset at any time and must be before 
 		// re-recording.
@@ -622,12 +642,12 @@ namespace display
 	//Close context, stop recording
 	void CloseCommandList(Device* device, const WeakCommandListHandle& handle)
 	{
-		device->Get(handle)->Close();
+		device->Get(handle).resource->Close();
 	}
 
 	void ExecuteCommandList(Device * device, const WeakCommandListHandle& handle)
 	{
-		auto& command_list = device->Get(handle);
+		auto& command_list = device->Get(handle).resource;
 
 		// Execute the command list.
 		ID3D12CommandList* ppCommandLists[] = { command_list.Get()};
@@ -815,7 +835,7 @@ namespace display
 		vertex_data.SlicePitch = size;
 
 		//Command list
-		auto& command_list = device->m_command_list_pool[device->m_resource_command_list];
+		auto& command_list = device->Get(device->m_resource_command_list).resource;
 
 		//Open command list
 		OpenCommandList(device, device->m_resource_command_list);
@@ -882,7 +902,7 @@ namespace display
 		index_data.SlicePitch = size;
 
 		//Command list
-		auto& command_list = device->m_command_list_pool[device->m_resource_command_list];
+		auto& command_list = device->Get(device->m_resource_command_list).resource;
 
 		//Open command list
 		OpenCommandList(device, device->m_resource_command_list);
@@ -919,7 +939,7 @@ namespace display
 	//Context commands
 	void SetRenderTargets(Device* device, const WeakCommandListHandle& command_list_handle, size_t num_targets, WeakRenderTargetHandle* render_target_array, WeakRenderTargetHandle * depth_stencil)
 	{
-		const auto& command_list = device->Get(command_list_handle);
+		const auto& command_list = device->Get(command_list_handle).resource;
 
 		CD3DX12_CPU_DESCRIPTOR_HANDLE render_target_handles[kMaxNumRenderTargets];
 
@@ -942,20 +962,20 @@ namespace display
 	void ClearRenderTargetColour(Device* device, const WeakCommandListHandle& command_list_handle, const WeakRenderTargetHandle& render_target_handle, const float colour[4])
 	{
 		auto& render_target = device->Get(render_target_handle);
-		auto& command_list = device->Get(command_list_handle);
+		auto& command_list = device->Get(command_list_handle).resource;
 
 		command_list->ClearRenderTargetView(render_target.descriptor_handle, colour, 0, nullptr);
 	}
 	void SetRootSignature(Device * device, const WeakCommandListHandle & command_list_handle, const WeakRootSignatureHandle & root_signature_handle)
 	{
-		auto& command_list = device->Get(command_list_handle);
+		auto& command_list = device->Get(command_list_handle).resource;
 		auto& root_signature = device->Get(root_signature_handle);
 
 		command_list->SetGraphicsRootSignature(root_signature.Get());
 	}
 	void SetPipelineState(Device * device, const WeakCommandListHandle & command_list_handle, const WeakPipelineStateHandle & pipeline_state_handle)
 	{
-		auto& command_list = device->Get(command_list_handle);
+		auto& command_list = device->Get(command_list_handle).resource;
 		auto& pipeline_state = device->Get(pipeline_state_handle);
 
 		command_list->SetPipelineState(pipeline_state.Get());
@@ -969,19 +989,19 @@ namespace display
 			vertex_buffer_views[i] = device->Get(vertex_buffer_handles[i]).view;
 		}
 
-		auto& command_list = device->Get(command_list_handle);
+		auto& command_list = device->Get(command_list_handle).resource;
 		command_list->IASetVertexBuffers(static_cast<UINT>(start_slot_index), static_cast<UINT>(num_vertex_buffers), vertex_buffer_views.data());
 	}
 	void SetIndexBuffer(Device * device, const WeakCommandListHandle & command_list_handle, const WeakIndexBufferHandle & index_buffer_handle)
 	{
-		auto& command_list = device->Get(command_list_handle);
+		auto& command_list = device->Get(command_list_handle).resource;
 		auto& index_buffer = device->Get(index_buffer_handle);
 
 		command_list->IASetIndexBuffer(&index_buffer.view);
 	}
 	void SetViewport(Device * device, const WeakCommandListHandle & command_list_handle, const Viewport & viewport)
 	{
-		auto& command_list = device->Get(command_list_handle);
+		auto& command_list = device->Get(command_list_handle).resource;
 
 		D3D12_VIEWPORT dx12_viewport;
 		dx12_viewport.TopLeftX = viewport.top_left_x;
@@ -995,7 +1015,7 @@ namespace display
 	}
 	void SetScissorRect(Device * device, const WeakCommandListHandle & command_list_handle, const Rect scissor_rect)
 	{
-		auto& command_list = device->Get(command_list_handle);
+		auto& command_list = device->Get(command_list_handle).resource;
 
 		D3D12_RECT dx12_rect;
 		dx12_rect.left = static_cast<LONG>(scissor_rect.left);
@@ -1007,7 +1027,7 @@ namespace display
 	}
 	void Draw(Device * device, const WeakCommandListHandle & command_list_handle, size_t start_vertex, size_t vertex_count, PrimitiveTopology primitive_topology)
 	{
-		auto& command_list = device->Get(command_list_handle);
+		auto& command_list = device->Get(command_list_handle).resource;
 		command_list->IASetPrimitiveTopology(Convert(primitive_topology));
 
 		command_list->DrawInstanced(static_cast<UINT>(vertex_count), 1, static_cast<UINT>(start_vertex), 0);
