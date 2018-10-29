@@ -28,20 +28,20 @@ using Microsoft::WRL::ComPtr;
 
 namespace display
 {
-	//State of the properties set in the GPU
-	//The state depends of the root signature
+	//State of the properties to be send to the GPU
 	struct State
 	{
-		struct Property
-		{
-			UINT root_signature_index;
-			RootSignatureParameterType type;
-			D3D12_GPU_VIRTUAL_ADDRESS buffer_location;
-		};
+		static const size_t kNumMaxProperties = 16;
 
-		//Each property match one property in the root signature
-		std::vector<Property> properties;
-		
+		std::array<D3D12_GPU_VIRTUAL_ADDRESS, kNumMaxProperties> constant_buffers;
+		std::array<D3D12_GPU_VIRTUAL_ADDRESS, kNumMaxProperties> unordered_access_buffers;
+		std::array<D3D12_GPU_VIRTUAL_ADDRESS, kNumMaxProperties> textures;
+	};
+
+	//State of the properties that has been set in the root signature
+	struct RootSignatureState
+	{
+
 	};
 
 	//Device internal implementation
@@ -83,7 +83,11 @@ namespace display
 			ComPtr<ID3D12GraphicsCommandList> resource;
 			State state;
 		};
-		using RootSignature = ComPtr<ID3D12RootSignature>;
+		struct RootSignature
+		{
+			ComPtr<ID3D12RootSignature> resource;
+			RootSignatureDesc desc;
+		};
 		using PipelineState = ComPtr<ID3D12PipelineState>;
 		struct RenderTarget
 		{
@@ -101,6 +105,9 @@ namespace display
 			ComPtr<ID3D12Resource> resource;
 			D3D12_INDEX_BUFFER_VIEW view;
 		};
+		using ConstantBuffer = ComPtr<ID3D12Resource>;
+		using UnorderedAccessBuffer = ComPtr<ID3D12Resource>;
+		using TextureBuffer = ComPtr<ID3D12Resource>;
 
 		core::HandlePool<CommandListHandle, CommandList> m_command_list_pool;
 		core::HandlePool<RenderTargetHandle, RenderTarget> m_render_target_pool;
@@ -108,6 +115,9 @@ namespace display
 		core::HandlePool<PipelineStateHandle, PipelineState> m_pipeline_state_pool;
 		core::HandlePool<VertexBufferHandle, VertexBuffer> m_vertex_buffer_pool;
 		core::HandlePool<IndexBufferHandle, IndexBuffer> m_index_buffer_pool;
+		core::HandlePool<ConstantBufferHandle, ConstantBuffer> m_constant_buffer_pool;
+		core::HandlePool<UnorderedAccessBufferHandle, UnorderedAccessBuffer> m_unordered_access_buffer_pool;
+		core::HandlePool<TextureHandle, TextureBuffer> m_texture_pool;
 
 		//Accesor to the resources (we need a specialitation for each type)
 		template<typename HANDLE>
@@ -213,6 +223,42 @@ namespace display
 	inline auto& Device::Get<WeakIndexBufferHandle>(const WeakIndexBufferHandle& handle)
 	{
 		return this->m_index_buffer_pool[handle];
+	}
+
+	template<>
+	inline auto& Device::Get<ConstantBufferHandle>(const ConstantBufferHandle& handle)
+	{
+		return this->m_constant_buffer_pool[handle];
+	}
+
+	template<>
+	inline auto& Device::Get<WeakConstantBufferHandle>(const WeakConstantBufferHandle& handle)
+	{
+		return this->m_constant_buffer_pool[handle];
+	}
+
+	template<>
+	inline auto& Device::Get<UnorderedAccessBufferHandle>(const UnorderedAccessBufferHandle& handle)
+	{
+		return this->m_unordered_access_buffer_pool[handle];
+	}
+
+	template<>
+	inline auto& Device::Get<WeakUnorderedAccessBufferHandle>(const WeakUnorderedAccessBufferHandle& handle)
+	{
+		return this->m_unordered_access_buffer_pool[handle];
+	}
+
+	template<>
+	inline auto& Device::Get<TextureHandle>(const TextureHandle& handle)
+	{
+		return this->m_texture_pool[handle];
+	}
+
+	template<>
+	inline auto& Device::Get<WeakTextureHandle>(const WeakTextureHandle& handle)
+	{
+		return this->m_texture_pool[handle];
 	}
 }
 
@@ -402,6 +448,9 @@ namespace display
 		device->m_pipeline_state_pool.Init(2000, 100);
 		device->m_vertex_buffer_pool.Init(2000, 100);
 		device->m_index_buffer_pool.Init(2000, 100);
+		device->m_constant_buffer_pool.Init(2000, 100);
+		device->m_unordered_access_buffer_pool.Init(1000, 10);
+		device->m_texture_pool.Init(2000, 100);
 
 		UINT dxgiFactoryFlags = 0;
 
@@ -688,15 +737,17 @@ namespace display
 		ComPtr<ID3DBlob> signature;
 		ComPtr<ID3DBlob> error;
 		ThrowIfFailed(D3DX12SerializeVersionedRootSignature(&rootSignatureDesc, featureData.HighestVersion, &signature, &error));
-		ThrowIfFailed(device->m_native_device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&device->Get(handle))));
+		ThrowIfFailed(device->m_native_device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&device->Get(handle).resource)));
 		
+		device->Get(handle).desc = root_signature_desc;
+
 		return handle;
 	}
 
 	void DestroyRootSignature(Device * device, RootSignatureHandle & root_signature_handle)
 	{
 		//Move the resource to the deferred delete ring buffer
-		AddDeferredDeleteResource(device, device->Get(root_signature_handle));
+		AddDeferredDeleteResource(device, device->Get(root_signature_handle).resource);
 
 		device->m_root_signature_pool.Free(root_signature_handle);
 	}
@@ -722,7 +773,7 @@ namespace display
 		}
 		DX12_pipeline_state_desc.InputLayout = { input_elements.data(), static_cast<UINT>(pipeline_state_desc.input_layout.num_elements)};
 
-		DX12_pipeline_state_desc.pRootSignature = device->m_root_signature_pool[pipeline_state_desc.root_signature].Get();
+		DX12_pipeline_state_desc.pRootSignature = device->Get(pipeline_state_desc.root_signature).resource.Get();
 
 		DX12_pipeline_state_desc.VS.pShaderBytecode = pipeline_state_desc.vertex_shader.data;
 		DX12_pipeline_state_desc.VS.BytecodeLength = pipeline_state_desc.vertex_shader.size;
@@ -968,10 +1019,10 @@ namespace display
 	}
 	void SetRootSignature(Device * device, const WeakCommandListHandle & command_list_handle, const WeakRootSignatureHandle & root_signature_handle)
 	{
-		auto& command_list = device->Get(command_list_handle).resource;
+		auto& command_list = device->Get(command_list_handle);
 		auto& root_signature = device->Get(root_signature_handle);
 
-		command_list->SetGraphicsRootSignature(root_signature.Get());
+		command_list.resource->SetGraphicsRootSignature(root_signature.resource.Get());
 	}
 	void SetPipelineState(Device * device, const WeakCommandListHandle & command_list_handle, const WeakPipelineStateHandle & pipeline_state_handle)
 	{

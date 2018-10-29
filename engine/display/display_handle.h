@@ -26,6 +26,16 @@ namespace display
 
 	using IndexBufferHandle = core::Handle<struct IndexBuffer, uint16_t>;
 	using WeakIndexBufferHandle = core::WeakHandle<struct IndexBuffer, uint16_t>;
+
+	using ConstantBufferHandle = core::Handle<struct ConstantBuffer, uint16_t>;
+	using WeakConstantBufferHandle = core::WeakHandle<struct ConstantBuffer, uint16_t>;
+
+	using UnorderedAccessBufferHandle = core::Handle<struct UnorderedAccessBuffer, uint16_t>;
+	using WeakUnorderedAccessBufferHandle = core::WeakHandle<struct UnorderedAccessBuffer, uint16_t>;
+
+	using TextureHandle = core::Handle<struct Texture, uint16_t>;
+	using WeakTextureHandle = core::WeakHandle<struct Texture, uint16_t>;
+
 }
 
 #endif //DISPLAY_HANDLE_H_

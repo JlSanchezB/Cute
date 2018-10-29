@@ -93,7 +93,7 @@ namespace display
 	//Set Viewport
 	void SetViewport(Device* device, const WeakCommandListHandle& command_list, const Viewport& viewport);
 
-	//Set Viewport
+	//Set Scissor
 	void SetScissorRect(Device* device, const WeakCommandListHandle& command_list, const Rect scissor_rect);
 
 	//Draw
