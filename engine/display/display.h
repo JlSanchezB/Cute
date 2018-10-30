@@ -70,7 +70,16 @@ namespace display
 	//Destroy vertex buffer
 	void DestroyIndexBuffer(Device* device, IndexBufferHandle& handle);
 
+	//Create constant buffer
+	ConstantBufferHandle CreateConstantBuffer(Device* device, void* data, size_t size);
+	//Destroy constant buffer
+	void DestroyConstantBuffer(Device* device, ConstantBufferHandle& handle);
+
+	//Create unordered access buffer
+	UnorderedAccessBufferHandle CreateUnorderedAccessBuffer(Device* device, void* data, size_t element_size, size_t num_elements);
 	//Context commands
+	void DestroyUnorderedAccessBuffer(UnorderedAccessBufferHandle& handle);
+
 
 	//Set render target
 	void SetRenderTargets(Device* device, const WeakCommandListHandle& command_list, size_t num_targets, WeakRenderTargetHandle* render_target_array, WeakRenderTargetHandle* depth_stencil);
