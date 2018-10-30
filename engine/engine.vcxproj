@@ -132,12 +132,14 @@
     <ClInclude Include="display\display_enum.h" />
     <ClInclude Include="display\display_handle.h" />
     <ClInclude Include="display\pc_dx12\d3dx12.h" />
+    <ClInclude Include="display\pc_dx12\display_common.h" />
     <ClInclude Include="display\pc_dx12\display_convert.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="core\pc\log.cpp" />
     <ClCompile Include="core\pc\platform.cpp" />
     <ClCompile Include="display\pc_dx12\display.cpp" />
+    <ClCompile Include="display\pc_dx12\display_resource.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="tools\compile_root_signature.bat" />

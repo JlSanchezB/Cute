@@ -47,6 +47,9 @@
     <ClInclude Include="core\ring_buffer.h">
       <Filter>core</Filter>
     </ClInclude>
+    <ClInclude Include="display\pc_dx12\display_common.h">
+      <Filter>display</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="display\pc_dx12\display.cpp">
@@ -57,6 +60,9 @@
     </ClCompile>
     <ClCompile Include="core\pc\platform.cpp">
       <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="display\pc_dx12\display_resource.cpp">
+      <Filter>display</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

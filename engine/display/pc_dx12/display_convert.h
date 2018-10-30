@@ -9,7 +9,7 @@
 
 namespace display
 {
-	DXGI_FORMAT Convert(Format format)
+	inline DXGI_FORMAT Convert(Format format)
 	{
 		switch (format)
 		{
@@ -21,7 +21,7 @@ namespace display
 		}
 	}
 
-	D3D12_FILL_MODE Convert(FillMode fill_mode)
+	inline D3D12_FILL_MODE Convert(FillMode fill_mode)
 	{
 		switch (fill_mode)
 		{
@@ -31,7 +31,7 @@ namespace display
 		}
 	}
 
-	D3D12_CULL_MODE Convert(CullMode cull_mode)
+	inline D3D12_CULL_MODE Convert(CullMode cull_mode)
 	{
 		switch (cull_mode)
 		{
@@ -42,7 +42,7 @@ namespace display
 		}
 	}
 
-	D3D12_BLEND Convert(Blend blend)
+	inline D3D12_BLEND Convert(Blend blend)
 	{
 		switch (blend)
 		{
@@ -54,7 +54,7 @@ namespace display
 		}
 	}
 
-	D3D12_BLEND_OP Convert(BlendOp blend_op)
+	inline D3D12_BLEND_OP Convert(BlendOp blend_op)
 	{
 		switch (blend_op)
 		{
@@ -64,7 +64,7 @@ namespace display
 		}
 	}
 
-	D3D12_COMPARISON_FUNC Convert(ComparationFunction comparation_function)
+	inline D3D12_COMPARISON_FUNC Convert(ComparationFunction comparation_function)
 	{
 		switch (comparation_function)
 		{
@@ -80,7 +80,7 @@ namespace display
 		}
 	}
 
-	D3D12_PRIMITIVE_TOPOLOGY_TYPE Convert(Topology topology)
+	inline D3D12_PRIMITIVE_TOPOLOGY_TYPE Convert(Topology topology)
 	{
 		switch (topology)
 		{
@@ -89,7 +89,7 @@ namespace display
 		}
 	}
 
-	D3D_PRIMITIVE_TOPOLOGY Convert(PrimitiveTopology primitive_topology)
+	inline D3D_PRIMITIVE_TOPOLOGY Convert(PrimitiveTopology primitive_topology)
 	{
 		switch (primitive_topology)
 		{
@@ -98,7 +98,7 @@ namespace display
 		}
 	}
 
-	D3D12_INPUT_CLASSIFICATION Convert(InputType input_type)
+	inline D3D12_INPUT_CLASSIFICATION Convert(InputType input_type)
 	{
 		switch (input_type)
 		{
@@ -108,7 +108,7 @@ namespace display
 		}
 	}
 
-	D3D12_ROOT_PARAMETER_TYPE Convert(RootSignatureParameterType root_signature_parameter)
+	inline D3D12_ROOT_PARAMETER_TYPE Convert(RootSignatureParameterType root_signature_parameter)
 	{
 		switch (root_signature_parameter)
 		{
@@ -119,7 +119,7 @@ namespace display
 		}
 	}
 
-	D3D12_SHADER_VISIBILITY Convert(ShaderVisibility shader_visibility)
+	inline D3D12_SHADER_VISIBILITY Convert(ShaderVisibility shader_visibility)
 	{
 		switch (shader_visibility)
 		{
@@ -133,7 +133,7 @@ namespace display
 		}
 	}
 
-	D3D12_FILTER Convert(Filter filter)
+	inline D3D12_FILTER Convert(Filter filter)
 	{
 		switch (filter)
 		{
@@ -144,7 +144,7 @@ namespace display
 		}
 	}
 
-	D3D12_TEXTURE_ADDRESS_MODE Convert(TextureAddressMode texture_address_mode)
+	inline D3D12_TEXTURE_ADDRESS_MODE Convert(TextureAddressMode texture_address_mode)
 	{
 		switch (texture_address_mode)
 		{
@@ -156,7 +156,7 @@ namespace display
 	}
 
 
-	D3D12_STATIC_SAMPLER_DESC Convert(StaticSamplerDesc static_sample_desc)
+	inline D3D12_STATIC_SAMPLER_DESC Convert(StaticSamplerDesc static_sample_desc)
 	{
 		D3D12_STATIC_SAMPLER_DESC ret;
 		ret.Filter = Convert(static_sample_desc.filter);
@@ -176,7 +176,7 @@ namespace display
 		return ret;
 	}
 
-	D3D12_SAMPLER_DESC Convert(SamplerDesc sample_desc)
+	inline D3D12_SAMPLER_DESC Convert(SamplerDesc sample_desc)
 	{
 		D3D12_SAMPLER_DESC ret;
 		ret.Filter = Convert(sample_desc.filter);
