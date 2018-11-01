@@ -73,17 +73,17 @@ namespace display
 		//Set all null in the graphics state
 		for (auto& constant_buffer : graphics_state.constant_buffers)
 		{
-			constant_buffer = 0;
+			constant_buffer = display::WeakConstantBufferHandle();
 		}
 
 		for (auto& unordered_access_buffer : graphics_state.unordered_access_buffers)
 		{
-			unordered_access_buffer = 0;
+			unordered_access_buffer = display::WeakUnorderedAccessBufferHandle();
 		}
 
 		for (auto& texture : graphics_state.textures)
 		{
-			texture = 0;
+			texture = display::WeakTextureHandle();
 		}
 
 		//Create root signature state
@@ -108,15 +108,15 @@ namespace display
 		Device* device = new Device;
 
 		//Alloc pools
-		device->m_render_target_pool.Init(Device::kRenderTargetHeapSize, 10);
-		device->m_command_list_pool.Init(500, 10);
-		device->m_root_signature_pool.Init(10, 10);
-		device->m_pipeline_state_pool.Init(2000, 100);
-		device->m_vertex_buffer_pool.Init(2000, 100);
-		device->m_index_buffer_pool.Init(2000, 100);
-		device->m_constant_buffer_pool.Init(2000, 100);
-		device->m_unordered_access_buffer_pool.Init(1000, 10);
-		device->m_texture_pool.Init(2000, 100);
+		device->m_render_target_pool.Init(Device::kRenderTargetHeapSize, 10, params.num_frames);
+		device->m_command_list_pool.Init(500, 10, params.num_frames);
+		device->m_root_signature_pool.Init(10, 10, params.num_frames);
+		device->m_pipeline_state_pool.Init(2000, 100, params.num_frames);
+		device->m_vertex_buffer_pool.Init(2000, 100, params.num_frames);
+		device->m_index_buffer_pool.Init(2000, 100, params.num_frames);
+		device->m_constant_buffer_pool.Init(2000, 100, params.num_frames);
+		device->m_unordered_access_buffer_pool.Init(1000, 10, params.num_frames);
+		device->m_texture_pool.Init(2000, 100, params.num_frames);
 
 		UINT dxgiFactoryFlags = 0;
 
@@ -278,6 +278,17 @@ namespace display
 		device->m_command_list_pool.Free(device->m_present_command_list);
 		device->m_command_list_pool.Free(device->m_resource_command_list);
 
+		//Destroy pools
+		device->m_render_target_pool.Destroy();
+		device->m_command_list_pool.Destroy();
+		device->m_root_signature_pool.Destroy();
+		device->m_pipeline_state_pool.Destroy();
+		device->m_vertex_buffer_pool.Destroy();
+		device->m_index_buffer_pool.Destroy();
+		device->m_constant_buffer_pool.Destroy();
+		device->m_unordered_access_buffer_pool.Destroy();
+		device->m_texture_pool.Destroy();
+
 		delete device;
 	}
 
@@ -315,6 +326,17 @@ namespace display
 		// fences to determine GPU execution progress.
 		ThrowIfFailed(GetCommandAllocator(device)->Reset());
 
+		//Delete deferred handles
+		device->m_render_target_pool.NextFrame();
+		device->m_command_list_pool.NextFrame();
+		device->m_root_signature_pool.NextFrame();
+		device->m_pipeline_state_pool.NextFrame();
+		device->m_vertex_buffer_pool.NextFrame();
+		device->m_index_buffer_pool.NextFrame();
+		device->m_constant_buffer_pool.NextFrame();
+		device->m_unordered_access_buffer_pool.NextFrame();
+		device->m_texture_pool.NextFrame();
+
 		//Delete deferred resources
 		DeletePendingResources(device);
 	}
@@ -338,9 +360,6 @@ namespace display
 	}
 	void DestroyCommandList(Device* device, CommandListHandle& handle)
 	{
-		//Move the resource to the deferred delete ring buffer
-		AddDeferredDeleteResource(device, device->Get(handle).resource);
-
 		device->m_command_list_pool.Free(handle);
 	}
 
@@ -412,9 +431,6 @@ namespace display
 
 	void DestroyRootSignature(Device * device, RootSignatureHandle & root_signature_handle)
 	{
-		//Move the resource to the deferred delete ring buffer
-		AddDeferredDeleteResource(device, device->Get(root_signature_handle).resource);
-
 		device->m_root_signature_pool.Free(root_signature_handle);
 	}
 
@@ -513,9 +529,6 @@ namespace display
 
 	void DestroyPipelineState(Device * device, PipelineStateHandle & handle)
 	{
-		//Move the resource to the deferred delete ring buffer
-		AddDeferredDeleteResource(device, device->Get(handle));
-
 		device->m_pipeline_state_pool.Free(handle);
 	}
 

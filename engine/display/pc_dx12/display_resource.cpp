@@ -157,9 +157,6 @@ namespace display
 
 	void DestroyVertexBuffer(Device * device, VertexBufferHandle & handle)
 	{
-		//Move the resource to the deferred delete ring buffer
-		AddDeferredDeleteResource(device, device->Get(handle).resource);
-
 		//Delete handle
 		device->m_vertex_buffer_pool.Free(handle);
 	}
@@ -183,9 +180,6 @@ namespace display
 
 	void DestroyIndexBuffer(Device * device, IndexBufferHandle & handle)
 	{
-		//Move the resource to the deferred delete ring buffer
-		AddDeferredDeleteResource(device, device->m_index_buffer_pool[handle].resource);
-
 		//Delete handle
 		device->m_index_buffer_pool.Free(handle);
 	}
@@ -205,9 +199,6 @@ namespace display
 	}
 	void DestroyConstantBuffer(Device * device, ConstantBufferHandle & handle)
 	{
-		//Move the resource to the deferred delete ring buffer
-		AddDeferredDeleteResource(device, device->Get(handle));
-
 		//Delete handle
 		device->m_constant_buffer_pool.Free(handle);
 	}
