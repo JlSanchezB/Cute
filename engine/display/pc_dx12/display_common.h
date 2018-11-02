@@ -16,8 +16,6 @@
 #include <wrl.h>
 #include <shellapi.h>
 
-//TODO: Added tearing fullscreen mode
-
 using namespace DirectX;
 
 // Note that while ComPtr is used to manage the lifetime of resources on the CPU,
@@ -25,6 +23,9 @@ using namespace DirectX;
 // for the GPU lifetime of resources to avoid destroying objects that may still be
 // referenced by the GPU.
 using Microsoft::WRL::ComPtr;
+
+//Added internal classes used by display
+#include "descriptor_heap.h"
 
 namespace display
 {
@@ -100,6 +101,27 @@ namespace display
 		std::vector<std::vector<HANDLE>> m_defered_delete_handles;
 	};
 
+	//GraphicsHandlePool with descriptor heap support
+	template<typename HANDLE, typename DATA>
+	class GraphicDescriptorHandlePool : public GraphicHandlePool<HANDLE, DATA>, public DescriptorHeapPool
+	{
+	public:
+		void Init(size_t max_size, size_t init_size, size_t num_frames, Device* device, D3D12_DESCRIPTOR_HEAP_TYPE heap_type)
+		{
+			GraphicHandlePool<HANDLE, DATA>::Init(max_size, init_size, num_frames);
+			CreateHeap(device, heap_type, max_size);
+		}
+
+		~GraphicDescriptorHandlePool()
+		{
+			DestroyHeap();
+		}
+
+		CD3DX12_CPU_DESCRIPTOR_HANDLE GetDescriptor(const HANDLE& handle)
+		{
+			return DescriptorHeapPool::GetDescriptor(GraphicHandlePool<HANDLE, DATA>::GetInternalIndex(handle));
+		}
+	};
 	//Device internal implementation
 	struct Device
 	{
@@ -116,11 +138,6 @@ namespace display
 			RenderTargetHandle render_target;
 		};
 		std::vector< FrameResources> m_frame_resources;
-
-		//Heaps
-		const static size_t kRenderTargetHeapSize = 100;
-		ComPtr<ID3D12DescriptorHeap> m_render_target_heap;
-		UINT m_render_target_descriptor_size;
 
 		//Global resources
 		ComPtr<ID3D12CommandQueue> m_command_queue;
@@ -168,7 +185,7 @@ namespace display
 		using TextureBuffer = ComPtr<ID3D12Resource>;
 
 		GraphicHandlePool<CommandListHandle, CommandList> m_command_list_pool;
-		GraphicHandlePool<RenderTargetHandle, RenderTarget> m_render_target_pool;
+		GraphicDescriptorHandlePool<RenderTargetHandle, RenderTarget> m_render_target_pool;
 		GraphicHandlePool<RootSignatureHandle, RootSignature> m_root_signature_pool;
 		GraphicHandlePool<PipelineStateHandle, PipelineState> m_pipeline_state_pool;
 		GraphicHandlePool<VertexBufferHandle, VertexBuffer> m_vertex_buffer_pool;

@@ -50,6 +50,9 @@
     <ClInclude Include="display\pc_dx12\display_common.h">
       <Filter>display</Filter>
     </ClInclude>
+    <ClInclude Include="display\pc_dx12\descriptor_heap.h">
+      <Filter>display</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="display\pc_dx12\display.cpp">
@@ -62,6 +65,9 @@
       <Filter>core</Filter>
     </ClCompile>
     <ClCompile Include="display\pc_dx12\display_resource.cpp">
+      <Filter>display</Filter>
+    </ClCompile>
+    <ClCompile Include="display\pc_dx12\descriptor_heap.cpp">
       <Filter>display</Filter>
     </ClCompile>
   </ItemGroup>

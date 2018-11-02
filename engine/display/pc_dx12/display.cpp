@@ -107,17 +107,6 @@ namespace display
 	{
 		Device* device = new Device;
 
-		//Alloc pools
-		device->m_render_target_pool.Init(Device::kRenderTargetHeapSize, 10, params.num_frames);
-		device->m_command_list_pool.Init(500, 10, params.num_frames);
-		device->m_root_signature_pool.Init(10, 10, params.num_frames);
-		device->m_pipeline_state_pool.Init(2000, 100, params.num_frames);
-		device->m_vertex_buffer_pool.Init(2000, 100, params.num_frames);
-		device->m_index_buffer_pool.Init(2000, 100, params.num_frames);
-		device->m_constant_buffer_pool.Init(2000, 100, params.num_frames);
-		device->m_unordered_access_buffer_pool.Init(1000, 10, params.num_frames);
-		device->m_texture_pool.Init(2000, 100, params.num_frames);
-
 		UINT dxgiFactoryFlags = 0;
 
 		// Enable the debug layer (requires the Graphics Tools "optional feature").
@@ -176,22 +165,19 @@ namespace display
 		ThrowIfFailed(swap_chain.As(&device->m_swap_chain));
 		device->m_frame_index = device->m_swap_chain->GetCurrentBackBufferIndex();
 
-		// Create descriptor heaps.
-		{
-			// Describe and create a render target view (RTV) descriptor heap.
-			D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = {};
-			rtvHeapDesc.NumDescriptors = static_cast<UINT>(Device::kRenderTargetHeapSize);
-			rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-			rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-			ThrowIfFailed(device->m_native_device->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&device->m_render_target_heap)));
-
-			device->m_render_target_descriptor_size = device->m_native_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-		}
+		//Alloc pools
+		device->m_render_target_pool.Init(100, 10, params.num_frames, device, D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+		device->m_command_list_pool.Init(500, 10, params.num_frames);
+		device->m_root_signature_pool.Init(10, 10, params.num_frames);
+		device->m_pipeline_state_pool.Init(2000, 100, params.num_frames);
+		device->m_vertex_buffer_pool.Init(2000, 100, params.num_frames);
+		device->m_index_buffer_pool.Init(2000, 100, params.num_frames);
+		device->m_constant_buffer_pool.Init(2000, 100, params.num_frames);
+		device->m_unordered_access_buffer_pool.Init(1000, 10, params.num_frames);
+		device->m_texture_pool.Init(2000, 100, params.num_frames);
 
 		//Create frame resources
 		device->m_frame_resources.resize(params.num_frames);
-
-		CD3DX12_CPU_DESCRIPTOR_HANDLE rtv_handle(device->m_render_target_heap->GetCPUDescriptorHandleForHeapStart());
 
 		for (size_t i = 0; i < params.num_frames; ++i)
 		{
@@ -203,13 +189,10 @@ namespace display
 			//Create back buffer for each frame
 			{
 				auto& render_target = device->m_render_target_pool[frame_resource.render_target];
-
+				render_target.descriptor_handle = device->m_render_target_pool.GetDescriptor(frame_resource.render_target);
 				ThrowIfFailed(device->m_swap_chain->GetBuffer(static_cast<UINT>(i), IID_PPV_ARGS(&render_target.resource)));
-				device->m_native_device->CreateRenderTargetView(render_target.resource.Get(), nullptr, rtv_handle);
-				render_target.descriptor_handle = rtv_handle;
+				device->m_native_device->CreateRenderTargetView(render_target.resource.Get(), nullptr, render_target.descriptor_handle);
 				render_target.current_state = D3D12_RESOURCE_STATE_PRESENT;
-
-				rtv_handle.Offset(1, device->m_render_target_descriptor_size);
 			}
 
 			ThrowIfFailed(device->m_native_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&frame_resource.command_allocator)));

@@ -148,6 +148,11 @@ namespace core
 		//Vector of the data associated to this pool
 		std::vector<DataStorage> m_data;
 
+	protected:
+		typename HANDLE::type_param GetInternalIndex(const HANDLE& handle) const
+		{
+			return handle.m_index;
+		}
 	};
 
 	template<typename HANDLE, typename DATA>
