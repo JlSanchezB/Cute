@@ -13,13 +13,12 @@
 
 namespace core
 {
-
-	//Handles can only be created from a pool and they can not be copied, only moved
 	template <typename ENUM, typename TYPE>
-	class Handle
+	class HandleAccessor
 	{
 	protected:
 		using type_param = TYPE;
+		using enum_param = ENUM;
 
 		//Index inside the handlepool to access the data associated to this handle 
 		TYPE m_index;
@@ -30,20 +29,34 @@ namespace core
 		template<typename HANDLE, typename DATA>
 		friend class HandlePool;
 
+		HandleAccessor() : m_index(kInvalid)
+		{
+		}
+		HandleAccessor(type_param index) : m_index(index)
+		{
+		}
+	};
+
+	//Handles can only be created from a pool and they can not be copied, only moved
+	template <typename ENUM, typename TYPE>
+	class Handle : public HandleAccessor<ENUM, TYPE>
+	{
+		using Accessor = HandleAccessor<ENUM, TYPE>;
+
 		//Private constructor of a handle, only a pool can create valid handles
-		Handle(TYPE index) : m_index(index)
+		Handle(TYPE index) : HandleAccessor(index)
 		{
 		}
 
-		//Used from the weak handle to init
-		void InitWeakHandle(const Handle& handle)
-		{
-			m_index = handle.m_index;
-		}
+		template<typename HANDLE, typename DATA>
+		friend class HandlePool;
+
+		template<typename HANDLE, typename DATA>
+		friend class WeakHandle;
 
 	public:
 		//Public constructor
-		Handle() : m_index(kInvalid)
+		Handle()
 		{
 		}
 
@@ -53,16 +66,16 @@ namespace core
 
 		Handle(Handle&& a)
 		{
-			m_index = a.m_index;
-			a.m_index = kInvalid;
+			Accessor::m_index = a.m_index;
+			a.m_index = Accessor::kInvalid;
 		}
 
 		Handle& operator=(const Handle& a) = delete;
 
 		Handle& operator=(Handle&& a)
 		{
-			m_index = a.m_index;
-			a.m_index = kInvalid;
+			Accessor::m_index = a.m_index;
+			a.m_index = Accessor::kInvalid;
 			return *this;
 		}
 
@@ -72,15 +85,17 @@ namespace core
 
 		bool isValid() const
 		{
-			return m_index != kInvalid;
+			return Accessor::m_index != Accessor::kInvalid;
 		}
 	};
 
 	//Weak handle only can be create from a handle
 	//They can be copied
 	template <typename ENUM, typename TYPE>
-	class WeakHandle : public Handle<ENUM, TYPE>
+	class WeakHandle : public HandleAccessor<ENUM, TYPE>
 	{
+		using Accessor = HandleAccessor<ENUM, TYPE>;
+
 	public:
 		//Default constructor
 		WeakHandle()
@@ -90,7 +105,7 @@ namespace core
 		//A weak handle can be created from a handle
 		WeakHandle(const Handle<ENUM, TYPE>& handle)
 		{
-			Handle<ENUM, TYPE>::InitWeakHandle(handle);
+			Accessor::m_index = handle.m_index;
 		}
 	};
 
@@ -99,6 +114,7 @@ namespace core
 	class HandlePool
 	{
 		static_assert(std::is_default_constructible<DATA>::value);
+		using Accessor = HandleAccessor<typename HANDLE::enum_param, typename HANDLE::type_param>;
 
 	public:
 		~HandlePool();
@@ -114,12 +130,12 @@ namespace core
 		void Free(HANDLE& handle);
 
 		//Accessors
-		DATA& operator[](const HANDLE& handle)
+		DATA& operator[](const Accessor& handle)
 		{
 			return *reinterpret_cast<DATA*>(&m_data[handle.m_index].data);
 		}
 
-		const DATA& operator[](const HANDLE& handle) const
+		const DATA& operator[](const Accessor& handle) const
 		{
 			return *reinterpret_cast<const DATA*>(&m_data[handle.m_index].data);
 		}
