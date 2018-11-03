@@ -290,26 +290,53 @@ namespace display
 
 	UnorderedAccessBufferHandle CreateUnorderedAccessBuffer(Device * device, const UnorderedAccessBufferDesc& unordered_access_buffer_desc)
 	{
-		UnorderedAccessBufferHandle handle = device->m_unordered_access_buffer_pool.Alloc();
+		if (unordered_access_buffer_desc.access == Access::Static)
+		{
+			UnorderedAccessBufferHandle handle = device->m_unordered_access_buffer_pool.Alloc();
 
-		auto& unordered_access_buffer = device->Get(handle);
+			auto& unordered_access_buffer = device->Get(handle);
 
-		CreateResource(device, unordered_access_buffer_desc.init_data, unordered_access_buffer_desc.element_size * unordered_access_buffer_desc.element_count, true, unordered_access_buffer.resource);
+			CreateResource(device, unordered_access_buffer_desc.init_data, unordered_access_buffer_desc.element_size * unordered_access_buffer_desc.element_count, true, unordered_access_buffer.resource);
 
-		D3D12_UNORDERED_ACCESS_VIEW_DESC dx12_unordered_access_buffer_desc_desc = {};
-		dx12_unordered_access_buffer_desc_desc.Format = DXGI_FORMAT_UNKNOWN;
-		dx12_unordered_access_buffer_desc_desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
-		dx12_unordered_access_buffer_desc_desc.Buffer.NumElements = static_cast<UINT>(unordered_access_buffer_desc.element_count);
-		dx12_unordered_access_buffer_desc_desc.Buffer.StructureByteStride = static_cast<UINT>(unordered_access_buffer_desc.element_size);
-		dx12_unordered_access_buffer_desc_desc.Buffer.FirstElement = 0;
-		dx12_unordered_access_buffer_desc_desc.Buffer.CounterOffsetInBytes = 0;
-		dx12_unordered_access_buffer_desc_desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_NONE;
+			D3D12_UNORDERED_ACCESS_VIEW_DESC dx12_unordered_access_buffer_desc_desc = {};
+			dx12_unordered_access_buffer_desc_desc.Format = DXGI_FORMAT_UNKNOWN;
+			dx12_unordered_access_buffer_desc_desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
+			dx12_unordered_access_buffer_desc_desc.Buffer.NumElements = static_cast<UINT>(unordered_access_buffer_desc.element_count);
+			dx12_unordered_access_buffer_desc_desc.Buffer.StructureByteStride = static_cast<UINT>(unordered_access_buffer_desc.element_size);
+			dx12_unordered_access_buffer_desc_desc.Buffer.FirstElement = 0;
+			dx12_unordered_access_buffer_desc_desc.Buffer.CounterOffsetInBytes = 0;
+			dx12_unordered_access_buffer_desc_desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_NONE;
 
-		device->m_native_device->CreateUnorderedAccessView(unordered_access_buffer.resource.Get(), nullptr, &dx12_unordered_access_buffer_desc_desc, device->m_unordered_access_buffer_pool.GetDescriptor(handle));
+			device->m_native_device->CreateUnorderedAccessView(unordered_access_buffer.resource.Get(), nullptr, &dx12_unordered_access_buffer_desc_desc, device->m_unordered_access_buffer_pool.GetDescriptor(handle));
 
-		return handle;
+			return handle;
+		}
+		else if (unordered_access_buffer_desc.access == Access::Dynamic)
+		{
+			UnorderedAccessBufferHandle handle = CreateRingResources(device, unordered_access_buffer_desc.init_data, unordered_access_buffer_desc.element_size * unordered_access_buffer_desc.element_count, device->m_unordered_access_buffer_pool,
+				[&](display::Device* device, const UnorderedAccessBufferHandle& handle, display::Device::UnorderedAccessBuffer& unordered_access_buffer)
+			{
+				D3D12_UNORDERED_ACCESS_VIEW_DESC dx12_unordered_access_buffer_desc_desc = {};
+				dx12_unordered_access_buffer_desc_desc.Format = DXGI_FORMAT_UNKNOWN;
+				dx12_unordered_access_buffer_desc_desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
+				dx12_unordered_access_buffer_desc_desc.Buffer.NumElements = static_cast<UINT>(unordered_access_buffer_desc.element_count);
+				dx12_unordered_access_buffer_desc_desc.Buffer.StructureByteStride = static_cast<UINT>(unordered_access_buffer_desc.element_size);
+				dx12_unordered_access_buffer_desc_desc.Buffer.FirstElement = 0;
+				dx12_unordered_access_buffer_desc_desc.Buffer.CounterOffsetInBytes = 0;
+				dx12_unordered_access_buffer_desc_desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_NONE;
+
+				device->m_native_device->CreateUnorderedAccessView(unordered_access_buffer.resource.Get(), nullptr, &dx12_unordered_access_buffer_desc_desc, device->m_unordered_access_buffer_pool.GetDescriptor(handle));
+			});
+			return handle;
+		}
+		else
+		{
+			//Not supported
+			return UnorderedAccessBufferHandle();
+		}
 	}
-	void DestroyUnorderedAccessBuffer(UnorderedAccessBufferHandle & handle)
+	void DestroyUnorderedAccessBuffer(Device * device, UnorderedAccessBufferHandle & handle)
 	{
+		DeleteRingResource(device, handle, device->m_unordered_access_buffer_pool);
 	}
 }

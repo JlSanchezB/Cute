@@ -78,7 +78,7 @@ namespace display
 	//Create unordered access buffer
 	UnorderedAccessBufferHandle CreateUnorderedAccessBuffer(Device* device, const UnorderedAccessBufferDesc& unordered_access_buffer_desc);
 	//Context commands
-	void DestroyUnorderedAccessBuffer(UnorderedAccessBufferHandle& handle);
+	void DestroyUnorderedAccessBuffer(Device* device, UnorderedAccessBufferHandle& handle);
 
 
 	//Set render target
