@@ -106,9 +106,9 @@ public:
 
 			VertexData vertex_data[3] =
 			{
-				{{-1.f, 1.f, 1.f, 1.f},{0.f, 0.f, 0.f, 0.f}},
-				{{3.f, 1.f, 1.f, 1.f},{0.f, 0.f, 0.f, 0.f}},
-				{{-1.f, -3.f, 1.f, 1.f},{0.f, 0.f, 0.f, 0.f}}
+				{{-1.f, 1.f, 1.f, 1.f},{1.f, 0.f, 0.f, 0.f}},
+				{{3.f, 1.f, 1.f, 1.f},{0.f, 1.f, 0.f, 0.f}},
+				{{-1.f, -3.f, 1.f, 1.f},{0.f, 0.f, 1.f, 0.f}}
 			};
 
 			display::VertexBufferDesc vertex_buffer_desc;
