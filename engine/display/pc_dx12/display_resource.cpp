@@ -116,6 +116,21 @@ namespace
 			pool.Free(current_handle);
 		}
 	}
+
+	//Return the handle used in the current frame of a ring resource
+	template<typename WEAKHANDLE>
+	WEAKHANDLE GetCurrentRingResource(display::Device * device, WEAKHANDLE handle)
+	{
+		//The frame index indicate how many jumps are needed
+		size_t count = static_cast<size_t>(device->m_frame_index);
+
+		while (count)
+		{
+			handle = device->Get(handle).next_handle;
+		}
+
+		return handle;
+	}
 }
 
 namespace display
