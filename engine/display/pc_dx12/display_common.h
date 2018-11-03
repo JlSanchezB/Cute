@@ -183,7 +183,10 @@ namespace display
 		{
 			ComPtr<ID3D12Resource> resource;
 		};
-		using UnorderedAccessBuffer = ComPtr<ID3D12Resource>;
+		struct UnorderedAccessBuffer
+		{
+			ComPtr<ID3D12Resource> resource;
+		};
 		using TextureBuffer = ComPtr<ID3D12Resource>;
 
 		GraphicHandlePool<CommandListHandle, CommandList> m_command_list_pool;

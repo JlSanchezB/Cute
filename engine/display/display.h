@@ -71,12 +71,12 @@ namespace display
 	void DestroyIndexBuffer(Device* device, IndexBufferHandle& handle);
 
 	//Create constant buffer
-	ConstantBufferHandle CreateConstantBuffer(Device* device, void* data, size_t size);
+	ConstantBufferHandle CreateConstantBuffer(Device* device, const ConstantBufferDesc& constant_buffer_desc);
 	//Destroy constant buffer
 	void DestroyConstantBuffer(Device* device, ConstantBufferHandle& handle);
 
 	//Create unordered access buffer
-	UnorderedAccessBufferHandle CreateUnorderedAccessBuffer(Device* device, void* data, size_t element_size, size_t num_elements);
+	UnorderedAccessBufferHandle CreateUnorderedAccessBuffer(Device* device, const UnorderedAccessBufferDesc& unordered_access_buffer_desc);
 	//Context commands
 	void DestroyUnorderedAccessBuffer(UnorderedAccessBufferHandle& handle);
 

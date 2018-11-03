@@ -183,19 +183,19 @@ namespace display
 		//Delete handle
 		device->m_index_buffer_pool.Free(handle);
 	}
-	ConstantBufferHandle CreateConstantBuffer(Device * device, void * data, size_t size)
+	ConstantBufferHandle CreateConstantBuffer(Device * device, const ConstantBufferDesc& constant_buffer_desc)
 	{
 		ConstantBufferHandle handle = device->m_constant_buffer_pool.Alloc();
 
 		auto& constant_buffer = device->Get(handle);
 
-		CreateResource(device, data, size, true, constant_buffer.resource);
+		CreateResource(device, constant_buffer_desc.init_data, constant_buffer_desc.size, true, constant_buffer.resource);
 
 		//Size needs to be 256byte aligned
-		D3D12_CONSTANT_BUFFER_VIEW_DESC constant_buffer_desc = {};
-		constant_buffer_desc.BufferLocation = constant_buffer.resource->GetGPUVirtualAddress();
-		constant_buffer_desc.SizeInBytes = (size + 255) & ~255;	// CB size is required to be 256-byte aligned.
-		device->m_native_device->CreateConstantBufferView(&constant_buffer_desc, device->m_constant_buffer_pool.GetDescriptor(handle));
+		D3D12_CONSTANT_BUFFER_VIEW_DESC dx12_constant_buffer_desc = {};
+		dx12_constant_buffer_desc.BufferLocation = constant_buffer.resource->GetGPUVirtualAddress();
+		dx12_constant_buffer_desc.SizeInBytes = (constant_buffer_desc.size + 255) & ~255;	// CB size is required to be 256-byte aligned.
+		device->m_native_device->CreateConstantBufferView(&dx12_constant_buffer_desc, device->m_constant_buffer_pool.GetDescriptor(handle));
 
 		return handle;
 
@@ -206,9 +206,26 @@ namespace display
 		device->m_constant_buffer_pool.Free(handle);
 	}
 
-	UnorderedAccessBufferHandle CreateUnorderedAccessBuffer(Device * device, void * data, size_t element_size, size_t num_elements)
+	UnorderedAccessBufferHandle CreateUnorderedAccessBuffer(Device * device, const UnorderedAccessBufferDesc& unordered_access_buffer_desc)
 	{
-		return UnorderedAccessBufferHandle();
+		UnorderedAccessBufferHandle handle = device->m_unordered_access_buffer_pool.Alloc();
+
+		auto& unordered_access_buffer = device->Get(handle);
+
+		CreateResource(device, unordered_access_buffer_desc.init_data, unordered_access_buffer_desc.element_size * unordered_access_buffer_desc.element_count, true, unordered_access_buffer.resource);
+
+		D3D12_UNORDERED_ACCESS_VIEW_DESC dx12_unordered_access_buffer_desc_desc = {};
+		dx12_unordered_access_buffer_desc_desc.Format = DXGI_FORMAT_UNKNOWN;
+		dx12_unordered_access_buffer_desc_desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
+		dx12_unordered_access_buffer_desc_desc.Buffer.NumElements = static_cast<UINT>(unordered_access_buffer_desc.element_count);
+		dx12_unordered_access_buffer_desc_desc.Buffer.StructureByteStride = static_cast<UINT>(unordered_access_buffer_desc.element_size);
+		dx12_unordered_access_buffer_desc_desc.Buffer.FirstElement = 0;
+		dx12_unordered_access_buffer_desc_desc.Buffer.CounterOffsetInBytes = 0;
+		dx12_unordered_access_buffer_desc_desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_NONE;
+
+		device->m_native_device->CreateUnorderedAccessView(unordered_access_buffer.resource.Get(), nullptr, &dx12_unordered_access_buffer_desc_desc, device->m_unordered_access_buffer_pool.GetDescriptor(handle));
+
+		return handle;
 	}
 	void DestroyUnorderedAccessBuffer(UnorderedAccessBufferHandle & handle)
 	{

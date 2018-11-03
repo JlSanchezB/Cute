@@ -161,6 +161,21 @@ namespace display
 		{
 		}
 	};
+
+	struct ConstantBufferDesc
+	{
+		Access access = Access::Static;
+		size_t size = 0;
+		void* init_data = nullptr;
+	};
+
+	struct UnorderedAccessBufferDesc
+	{
+		Access access = Access::Static;
+		size_t element_size = 0;
+		size_t element_count = 0;
+		void* init_data = nullptr;
+	};
 }
 #endif
 
