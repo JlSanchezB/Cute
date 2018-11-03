@@ -114,6 +114,7 @@ namespace core
 	class HandlePool
 	{
 		static_assert(std::is_default_constructible<DATA>::value);
+	protected:
 		using Accessor = HandleAccessor<typename HANDLE::enum_param, typename HANDLE::type_param>;
 
 	public:
@@ -165,7 +166,7 @@ namespace core
 		std::vector<DataStorage> m_data;
 
 	protected:
-		typename HANDLE::type_param GetInternalIndex(const HANDLE& handle) const
+		typename HANDLE::type_param GetInternalIndex(const Accessor& handle) const
 		{
 			return handle.m_index;
 		}

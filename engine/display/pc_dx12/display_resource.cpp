@@ -189,10 +189,13 @@ namespace display
 
 		auto& constant_buffer = device->Get(handle);
 
-		//Size needs to be 256byte aligned
-		size = (size + 255) & ~255;
+		CreateResource(device, data, size, true, constant_buffer.resource);
 
-		CreateResource(device, data, size, true, constant_buffer);
+		//Size needs to be 256byte aligned
+		D3D12_CONSTANT_BUFFER_VIEW_DESC constant_buffer_desc = {};
+		constant_buffer_desc.BufferLocation = constant_buffer.resource->GetGPUVirtualAddress();
+		constant_buffer_desc.SizeInBytes = (size + 255) & ~255;	// CB size is required to be 256-byte aligned.
+		device->m_native_device->CreateConstantBufferView(&constant_buffer_desc, device->m_constant_buffer_pool.GetDescriptor(handle));
 
 		return handle;
 

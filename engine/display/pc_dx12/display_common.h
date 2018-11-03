@@ -117,7 +117,7 @@ namespace display
 			DestroyHeap();
 		}
 
-		CD3DX12_CPU_DESCRIPTOR_HANDLE GetDescriptor(const HANDLE& handle)
+		CD3DX12_CPU_DESCRIPTOR_HANDLE GetDescriptor(const Accessor& handle)
 		{
 			return DescriptorHeapPool::GetDescriptor(GraphicHandlePool<HANDLE, DATA>::GetInternalIndex(handle));
 		}
@@ -167,7 +167,6 @@ namespace display
 		struct RenderTarget
 		{
 			ComPtr<ID3D12Resource> resource;
-			CD3DX12_CPU_DESCRIPTOR_HANDLE descriptor_handle;
 			D3D12_RESOURCE_STATES current_state;
 		};
 		struct VertexBuffer
@@ -180,7 +179,10 @@ namespace display
 			ComPtr<ID3D12Resource> resource;
 			D3D12_INDEX_BUFFER_VIEW view;
 		};
-		using ConstantBuffer = ComPtr<ID3D12Resource>;
+		struct ConstantBuffer
+		{
+			ComPtr<ID3D12Resource> resource;
+		};
 		using UnorderedAccessBuffer = ComPtr<ID3D12Resource>;
 		using TextureBuffer = ComPtr<ID3D12Resource>;
 
@@ -190,9 +192,9 @@ namespace display
 		GraphicHandlePool<PipelineStateHandle, PipelineState> m_pipeline_state_pool;
 		GraphicHandlePool<VertexBufferHandle, VertexBuffer> m_vertex_buffer_pool;
 		GraphicHandlePool<IndexBufferHandle, IndexBuffer> m_index_buffer_pool;
-		GraphicHandlePool<ConstantBufferHandle, ConstantBuffer> m_constant_buffer_pool;
-		GraphicHandlePool<UnorderedAccessBufferHandle, UnorderedAccessBuffer> m_unordered_access_buffer_pool;
-		GraphicHandlePool<TextureHandle, TextureBuffer> m_texture_pool;
+		GraphicDescriptorHandlePool<ConstantBufferHandle, ConstantBuffer> m_constant_buffer_pool;
+		GraphicDescriptorHandlePool<UnorderedAccessBufferHandle, UnorderedAccessBuffer> m_unordered_access_buffer_pool;
+		GraphicDescriptorHandlePool<TextureHandle, TextureBuffer> m_texture_pool;
 
 		//Accesor to the resources (we need a specialitation for each type)
 		template<typename HANDLE>

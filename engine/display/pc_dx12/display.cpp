@@ -173,9 +173,9 @@ namespace display
 		device->m_pipeline_state_pool.Init(2000, 100, params.num_frames);
 		device->m_vertex_buffer_pool.Init(2000, 100, params.num_frames);
 		device->m_index_buffer_pool.Init(2000, 100, params.num_frames);
-		device->m_constant_buffer_pool.Init(2000, 100, params.num_frames);
-		device->m_unordered_access_buffer_pool.Init(1000, 10, params.num_frames);
-		device->m_texture_pool.Init(2000, 100, params.num_frames);
+		device->m_constant_buffer_pool.Init(2000, 100, params.num_frames, device, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		device->m_unordered_access_buffer_pool.Init(1000, 10, params.num_frames, device, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		device->m_texture_pool.Init(2000, 100, params.num_frames, device, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
 		//Create frame resources
 		device->m_frame_resources.resize(params.num_frames);
@@ -190,9 +190,8 @@ namespace display
 			//Create back buffer for each frame
 			{
 				auto& render_target = device->m_render_target_pool[frame_resource.render_target];
-				render_target.descriptor_handle = device->m_render_target_pool.GetDescriptor(frame_resource.render_target);
 				ThrowIfFailed(device->m_swap_chain->GetBuffer(static_cast<UINT>(i), IID_PPV_ARGS(&render_target.resource)));
-				device->m_native_device->CreateRenderTargetView(render_target.resource.Get(), nullptr, render_target.descriptor_handle);
+				device->m_native_device->CreateRenderTargetView(render_target.resource.Get(), nullptr, device->m_render_target_pool.GetDescriptor(frame_resource.render_target));
 				render_target.current_state = D3D12_RESOURCE_STATE_PRESENT;
 			}
 
@@ -533,7 +532,7 @@ namespace display
 				render_target.current_state = D3D12_RESOURCE_STATE_RENDER_TARGET;
 			}
 
-			render_target_handles[i] = render_target.descriptor_handle;
+			render_target_handles[i] = device->m_render_target_pool.GetDescriptor(render_target_array[i]);
 		}
 
 		command_list->OMSetRenderTargets(static_cast<UINT>(num_targets), render_target_handles, FALSE, nullptr);
@@ -544,7 +543,7 @@ namespace display
 		auto& render_target = device->Get(render_target_handle);
 		auto& command_list = device->Get(command_list_handle).resource;
 
-		command_list->ClearRenderTargetView(render_target.descriptor_handle, colour, 0, nullptr);
+		command_list->ClearRenderTargetView(device->m_render_target_pool.GetDescriptor(render_target_handle), colour, 0, nullptr);
 	}
 	void SetRootSignature(Device * device, const WeakCommandListHandle & command_list_handle, const WeakRootSignatureHandle & root_signature_handle)
 	{
