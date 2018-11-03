@@ -111,7 +111,12 @@ public:
 				{{-1.f, -3.f, 1.f, 1.f},{0.f, 0.f, 0.f, 0.f}}
 			};
 
-			m_vertex_buffer = display::CreateVertexBuffer(m_device, vertex_data, sizeof(VertexData), sizeof(vertex_data));
+			display::VertexBufferDesc vertex_buffer_desc;
+			vertex_buffer_desc.init_data = vertex_data;
+			vertex_buffer_desc.size = sizeof(vertex_data);
+			vertex_buffer_desc.stride = sizeof(VertexData);
+
+			m_vertex_buffer = display::CreateVertexBuffer(m_device, vertex_buffer_desc);
 		}
 		
 	}

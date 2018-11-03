@@ -162,6 +162,20 @@ namespace display
 		}
 	};
 
+	struct VertexBufferDesc
+	{
+		size_t size = 0;
+		void* init_data = nullptr;
+		size_t stride = 0;
+	};
+
+	struct IndexBufferDesc
+	{
+		size_t size = 0;
+		void* init_data = nullptr;
+		Format format = Format::R16_UINT;
+	};
+
 	struct ConstantBufferDesc
 	{
 		Access access = Access::Static;

@@ -139,18 +139,18 @@ namespace display
 		device->m_resource_deferred_delete_index++;
 	}
 
-	VertexBufferHandle CreateVertexBuffer(Device * device, void* data, size_t stride, size_t size)
+	VertexBufferHandle CreateVertexBuffer(Device * device, const VertexBufferDesc& vertex_buffer_desc)
 	{
 		VertexBufferHandle handle = device->m_vertex_buffer_pool.Alloc();
 
 		auto& vertex_buffer = device->Get(handle);
 		
-		CreateResource(device, data, size, true, vertex_buffer.resource);
+		CreateResource(device, vertex_buffer_desc.init_data, vertex_buffer_desc.size, true, vertex_buffer.resource);
 
 		// Initialize the vertex buffer view.
 		vertex_buffer.view.BufferLocation = vertex_buffer.resource->GetGPUVirtualAddress();
-		vertex_buffer.view.StrideInBytes = static_cast<UINT>(stride);
-		vertex_buffer.view.SizeInBytes = static_cast<UINT>(size);
+		vertex_buffer.view.StrideInBytes = static_cast<UINT>(vertex_buffer_desc.stride);
+		vertex_buffer.view.SizeInBytes = static_cast<UINT>(vertex_buffer_desc.size);
 
 		return handle;
 	}
@@ -161,18 +161,18 @@ namespace display
 		device->m_vertex_buffer_pool.Free(handle);
 	}
 
-	IndexBufferHandle CreateIndexBuffer(Device * device, void* data, size_t size, Format format)
+	IndexBufferHandle CreateIndexBuffer(Device * device, const IndexBufferDesc& index_buffer_desc)
 	{
 		IndexBufferHandle handle = device->m_index_buffer_pool.Alloc();
 
 		auto& index_buffer = device->Get(handle);
 
-		CreateResource(device, data, size, true, index_buffer.resource);
+		CreateResource(device, index_buffer_desc.init_data, index_buffer_desc.size, true, index_buffer.resource);
 
 		// Initialize the vertex buffer view.
 		index_buffer.view.BufferLocation = index_buffer.resource->GetGPUVirtualAddress();
-		index_buffer.view.Format = Convert(format);
-		index_buffer.view.SizeInBytes = static_cast<UINT>(size);
+		index_buffer.view.Format = Convert(index_buffer_desc.format);
+		index_buffer.view.SizeInBytes = static_cast<UINT>(index_buffer_desc.size);
 
 
 		return handle;
