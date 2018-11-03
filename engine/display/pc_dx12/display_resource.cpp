@@ -18,11 +18,6 @@ namespace
 				nullptr,
 				IID_PPV_ARGS(&resource)));
 		}
-		else
-		{
-			//The resource will be the upload_resource
-			upload_resource = resource;
-		}
 		
 		ThrowIfFailed(device->m_native_device->CreateCommittedResource(
 			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
@@ -61,12 +56,64 @@ namespace
 		}
 		else
 		{
+			//Our resource is the upload resource
+			resource = upload_resource;
+
 			//Copy to the upload heap
 			UINT8* pVertexDataBegin;
 			CD3DX12_RANGE readRange(0, 0);		// We do not intend to read from this resource on the CPU.
 			ThrowIfFailed(resource->Map(0, &readRange, reinterpret_cast<void**>(&pVertexDataBegin)));
 			memcpy(pVertexDataBegin, data, size);
 			resource->Unmap(0, nullptr);
+		}
+	}
+
+	//Helper function to create a ring resources
+	template <typename FUNCTION, typename POOL>
+	auto CreateRingResources(display::Device* device,void* data, size_t size, POOL& pool, FUNCTION&& view_create)
+	{
+		//Allocs first resource from the pool
+		auto resource_handle = pool.Alloc();
+		auto* resource = &device->Get(resource_handle);
+
+		//Create a ring of num frames of resources, starting with the first one
+		size_t count = device->m_frame_resources.size();
+
+		auto* resource_handle_ptr = &resource_handle;
+		while (count)
+		{
+			//Create a dynamic resource
+			CreateResource(device, data, size, false, resource->resource);
+
+			//Create views for it
+			view_create(device, *resource_handle_ptr, *resource);
+
+			if (count > 1)
+			{
+				//Create next handle in the ring
+				(*resource).next_handle = pool.Alloc();
+				resource_handle_ptr = &(*resource).next_handle;
+				resource = &device->Get(*resource_handle_ptr);
+			}
+			count--;
+		}
+	
+		return resource_handle;
+	}
+
+	//Delete the handle and the ring resource if exist
+	template<typename HANDLE, typename POOL>
+	void DeleteRingResource(display::Device * device, HANDLE& handle, POOL& pool)
+	{
+		HANDLE next_handle = std::move(handle);
+		while (next_handle.IsValid())
+		{
+			HANDLE current_handle = std::move(next_handle);
+			auto& resource = device->Get(current_handle);
+			next_handle = std::move(resource.next_handle);
+
+			//Delete current handle
+			pool.Free(current_handle);
 		}
 	}
 }
@@ -185,25 +232,45 @@ namespace display
 	}
 	ConstantBufferHandle CreateConstantBuffer(Device * device, const ConstantBufferDesc& constant_buffer_desc)
 	{
-		ConstantBufferHandle handle = device->m_constant_buffer_pool.Alloc();
+		size_t size = (constant_buffer_desc.size + 255) & ~255;	// CB size is required to be 256-byte aligned.
 
-		auto& constant_buffer = device->Get(handle);
+		if (constant_buffer_desc.access == Access::Static)
+		{
+			ConstantBufferHandle handle = device->m_constant_buffer_pool.Alloc();
+			auto& constant_buffer = device->Get(handle);
 
-		CreateResource(device, constant_buffer_desc.init_data, constant_buffer_desc.size, true, constant_buffer.resource);
+			CreateResource(device, constant_buffer_desc.init_data, size, true, constant_buffer.resource);
 
-		//Size needs to be 256byte aligned
-		D3D12_CONSTANT_BUFFER_VIEW_DESC dx12_constant_buffer_desc = {};
-		dx12_constant_buffer_desc.BufferLocation = constant_buffer.resource->GetGPUVirtualAddress();
-		dx12_constant_buffer_desc.SizeInBytes = (constant_buffer_desc.size + 255) & ~255;	// CB size is required to be 256-byte aligned.
-		device->m_native_device->CreateConstantBufferView(&dx12_constant_buffer_desc, device->m_constant_buffer_pool.GetDescriptor(handle));
+			//Size needs to be 256byte aligned
+			D3D12_CONSTANT_BUFFER_VIEW_DESC dx12_constant_buffer_desc = {};
+			dx12_constant_buffer_desc.BufferLocation = constant_buffer.resource->GetGPUVirtualAddress();
+			dx12_constant_buffer_desc.SizeInBytes = static_cast<UINT>(size);
+			device->m_native_device->CreateConstantBufferView(&dx12_constant_buffer_desc, device->m_constant_buffer_pool.GetDescriptor(handle));
 
-		return handle;
-
+			return handle;
+		}
+		else if (constant_buffer_desc.access == Access::Dynamic)
+		{
+			ConstantBufferHandle handle = CreateRingResources(device, constant_buffer_desc.init_data, size, device->m_constant_buffer_pool,
+				[&](display::Device* device, const ConstantBufferHandle& handle, display::Device::ConstantBuffer& constant_buffer)
+			{
+				//Size needs to be 256byte aligned
+				D3D12_CONSTANT_BUFFER_VIEW_DESC dx12_constant_buffer_desc = {};
+				dx12_constant_buffer_desc.BufferLocation = constant_buffer.resource->GetGPUVirtualAddress();
+				dx12_constant_buffer_desc.SizeInBytes = static_cast<UINT>(size);
+				device->m_native_device->CreateConstantBufferView(&dx12_constant_buffer_desc, device->m_constant_buffer_pool.GetDescriptor(handle));
+			});
+			return handle;
+		}	
+		else
+		{
+			return ConstantBufferHandle();
+		}
 	}
 	void DestroyConstantBuffer(Device * device, ConstantBufferHandle & handle)
 	{
-		//Delete handle
-		device->m_constant_buffer_pool.Free(handle);
+		//Delete handle and linked ones
+		DeleteRingResource(device, handle, device->m_constant_buffer_pool);
 	}
 
 	UnorderedAccessBufferHandle CreateUnorderedAccessBuffer(Device * device, const UnorderedAccessBufferDesc& unordered_access_buffer_desc)

@@ -43,6 +43,8 @@ public:
 	display::PipelineStateHandle m_pipeline_state;
 	display::VertexBufferHandle m_vertex_buffer;
 
+	display::ConstantBufferHandle m_constant_buffer;
+
 
 	void OnInit() override
 	{
@@ -118,6 +120,22 @@ public:
 
 			m_vertex_buffer = display::CreateVertexBuffer(m_device, vertex_buffer_desc);
 		}
+
+		//Constant buffer
+		{
+			struct SomeData
+			{
+				std::array<float, 32> data;
+			};
+
+			SomeData data;
+
+			display::ConstantBufferDesc constant_buffer_desc;
+			constant_buffer_desc.access = display::Access::Dynamic;
+			constant_buffer_desc.init_data = &data;
+			constant_buffer_desc.size = sizeof(data);
+			m_constant_buffer = display::CreateConstantBuffer(m_device, constant_buffer_desc);
+		}
 		
 	}
 	void OnDestroy() override
@@ -127,6 +145,7 @@ public:
 		display::DestroyRootSignature(m_device, m_root_signature);
 		display::DestroyPipelineState(m_device, m_pipeline_state);
 		display::DestroyVertexBuffer(m_device, m_vertex_buffer);
+		display::DestroyConstantBuffer(m_device, m_constant_buffer);
 
 		display::DestroyDevice(m_device);
 	}

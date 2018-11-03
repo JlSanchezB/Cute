@@ -122,6 +122,14 @@ namespace display
 			return DescriptorHeapPool::GetDescriptor(GraphicHandlePool<HANDLE, DATA>::GetInternalIndex(handle));
 		}
 	};
+
+	//Ring resource support, used for dynamic type of resources
+	template <typename HANDLE>
+	struct RingResourceSupport
+	{
+		HANDLE next_handle;
+	};
+
 	//Device internal implementation
 	struct Device
 	{
@@ -179,7 +187,7 @@ namespace display
 			ComPtr<ID3D12Resource> resource;
 			D3D12_INDEX_BUFFER_VIEW view;
 		};
-		struct ConstantBuffer
+		struct ConstantBuffer : RingResourceSupport<ConstantBufferHandle>
 		{
 			ComPtr<ID3D12Resource> resource;
 		};

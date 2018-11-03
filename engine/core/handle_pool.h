@@ -35,6 +35,12 @@ namespace core
 		HandleAccessor(type_param index) : m_index(index)
 		{
 		}
+
+	public:
+		bool IsValid() const
+		{
+			return m_index != kInvalid;
+		}
 	};
 
 	//Handles can only be created from a pool and they can not be copied, only moved
@@ -81,11 +87,6 @@ namespace core
 
 		~Handle()
 		{
-		}
-
-		bool isValid() const
-		{
-			return Accessor::m_index != Accessor::kInvalid;
 		}
 	};
 
