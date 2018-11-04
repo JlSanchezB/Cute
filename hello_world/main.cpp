@@ -45,6 +45,8 @@ public:
 
 	display::ConstantBufferHandle m_constant_buffer;
 
+	display::UnorderedAccessBufferHandle m_unordered_access_buffer;
+
 
 	void OnInit() override
 	{
@@ -136,6 +138,20 @@ public:
 			constant_buffer_desc.size = sizeof(data);
 			m_constant_buffer = display::CreateConstantBuffer(m_device, constant_buffer_desc);
 		}
+
+		//Unordered access buffer
+		{
+			struct SomeElement
+			{
+				std::array<float, 16> data;
+			};
+
+			display::UnorderedAccessBufferDesc unordered_access_buffer_desc;
+			unordered_access_buffer_desc.element_size = sizeof(SomeElement);
+			unordered_access_buffer_desc.element_count = 32;
+
+			m_unordered_access_buffer = display::CreateUnorderedAccessBuffer(m_device, unordered_access_buffer_desc);
+		}
 		
 	}
 	void OnDestroy() override
@@ -146,6 +162,7 @@ public:
 		display::DestroyPipelineState(m_device, m_pipeline_state);
 		display::DestroyVertexBuffer(m_device, m_vertex_buffer);
 		display::DestroyConstantBuffer(m_device, m_constant_buffer);
+		display::DestroyUnorderedAccessBuffer(m_device, m_unordered_access_buffer);
 
 		display::DestroyDevice(m_device);
 	}

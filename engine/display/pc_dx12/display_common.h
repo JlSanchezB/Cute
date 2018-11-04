@@ -191,7 +191,7 @@ namespace display
 		{
 			ComPtr<ID3D12Resource> resource;
 		};
-		struct UnorderedAccessBuffer : RingResourceSupport<UnorderedAccessBufferHandle>
+		struct UnorderedAccessBuffer
 		{
 			ComPtr<ID3D12Resource> resource;
 		};

@@ -3,7 +3,7 @@
 namespace
 {
 	//Create a commited resource
-	void CreateResource(display::Device* device, void* data, size_t size, bool static_buffer, ComPtr<ID3D12Resource>& resource)
+	void CreateResource(display::Device* device, void* data, size_t size, bool static_buffer, const D3D12_RESOURCE_DESC& resource_desc, ComPtr<ID3D12Resource>& resource)
 	{
 		//Upload resource
 		ComPtr<ID3D12Resource> upload_resource;
@@ -13,7 +13,7 @@ namespace
 			ThrowIfFailed(device->m_native_device->CreateCommittedResource(
 				&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
 				D3D12_HEAP_FLAG_NONE,
-				&CD3DX12_RESOURCE_DESC::Buffer(size),
+				&resource_desc,
 				D3D12_RESOURCE_STATE_COPY_DEST,
 				nullptr,
 				IID_PPV_ARGS(&resource)));
@@ -70,7 +70,7 @@ namespace
 
 	//Helper function to create a ring resources
 	template <typename FUNCTION, typename POOL>
-	auto CreateRingResources(display::Device* device,void* data, size_t size, POOL& pool, FUNCTION&& view_create)
+	auto CreateRingResources(display::Device* device,void* data, size_t size, const D3D12_RESOURCE_DESC& resource_desc, POOL& pool, FUNCTION&& view_create)
 	{
 		//Allocs first resource from the pool
 		auto resource_handle = pool.Alloc();
@@ -83,7 +83,7 @@ namespace
 		while (count)
 		{
 			//Create a dynamic resource
-			CreateResource(device, data, size, false, resource->resource);
+			CreateResource(device, data, size, false, resource_desc, resource->resource);
 
 			//Create views for it
 			view_create(device, *resource_handle_ptr, *resource);
@@ -207,7 +207,7 @@ namespace display
 
 		auto& vertex_buffer = device->Get(handle);
 		
-		CreateResource(device, vertex_buffer_desc.init_data, vertex_buffer_desc.size, true, vertex_buffer.resource);
+		CreateResource(device, vertex_buffer_desc.init_data, vertex_buffer_desc.size, true, CD3DX12_RESOURCE_DESC::Buffer(vertex_buffer_desc.size), vertex_buffer.resource);
 
 		// Initialize the vertex buffer view.
 		vertex_buffer.view.BufferLocation = vertex_buffer.resource->GetGPUVirtualAddress();
@@ -229,7 +229,7 @@ namespace display
 
 		auto& index_buffer = device->Get(handle);
 
-		CreateResource(device, index_buffer_desc.init_data, index_buffer_desc.size, true, index_buffer.resource);
+		CreateResource(device, index_buffer_desc.init_data, index_buffer_desc.size, true, CD3DX12_RESOURCE_DESC::Buffer(index_buffer_desc.size), index_buffer.resource);
 
 		// Initialize the vertex buffer view.
 		index_buffer.view.BufferLocation = index_buffer.resource->GetGPUVirtualAddress();
@@ -254,7 +254,7 @@ namespace display
 			ConstantBufferHandle handle = device->m_constant_buffer_pool.Alloc();
 			auto& constant_buffer = device->Get(handle);
 
-			CreateResource(device, constant_buffer_desc.init_data, size, true, constant_buffer.resource);
+			CreateResource(device, constant_buffer_desc.init_data, size, true, CD3DX12_RESOURCE_DESC::Buffer(size), constant_buffer.resource);
 
 			//Size needs to be 256byte aligned
 			D3D12_CONSTANT_BUFFER_VIEW_DESC dx12_constant_buffer_desc = {};
@@ -266,7 +266,7 @@ namespace display
 		}
 		else if (constant_buffer_desc.access == Access::Dynamic)
 		{
-			ConstantBufferHandle handle = CreateRingResources(device, constant_buffer_desc.init_data, size, device->m_constant_buffer_pool,
+			ConstantBufferHandle handle = CreateRingResources(device, constant_buffer_desc.init_data, size, CD3DX12_RESOURCE_DESC::Buffer(size), device->m_constant_buffer_pool,
 				[&](display::Device* device, const ConstantBufferHandle& handle, display::Device::ConstantBuffer& constant_buffer)
 			{
 				//Size needs to be 256byte aligned
@@ -290,53 +290,35 @@ namespace display
 
 	UnorderedAccessBufferHandle CreateUnorderedAccessBuffer(Device * device, const UnorderedAccessBufferDesc& unordered_access_buffer_desc)
 	{
-		if (unordered_access_buffer_desc.access == Access::Static)
-		{
-			UnorderedAccessBufferHandle handle = device->m_unordered_access_buffer_pool.Alloc();
+		size_t size = unordered_access_buffer_desc.element_size * unordered_access_buffer_desc.element_count;
 
-			auto& unordered_access_buffer = device->Get(handle);
+		UnorderedAccessBufferHandle handle = device->m_unordered_access_buffer_pool.Alloc();
 
-			CreateResource(device, unordered_access_buffer_desc.init_data, unordered_access_buffer_desc.element_size * unordered_access_buffer_desc.element_count, true, unordered_access_buffer.resource);
+		auto& unordered_access_buffer = device->Get(handle);
 
-			D3D12_UNORDERED_ACCESS_VIEW_DESC dx12_unordered_access_buffer_desc_desc = {};
-			dx12_unordered_access_buffer_desc_desc.Format = DXGI_FORMAT_UNKNOWN;
-			dx12_unordered_access_buffer_desc_desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
-			dx12_unordered_access_buffer_desc_desc.Buffer.NumElements = static_cast<UINT>(unordered_access_buffer_desc.element_count);
-			dx12_unordered_access_buffer_desc_desc.Buffer.StructureByteStride = static_cast<UINT>(unordered_access_buffer_desc.element_size);
-			dx12_unordered_access_buffer_desc_desc.Buffer.FirstElement = 0;
-			dx12_unordered_access_buffer_desc_desc.Buffer.CounterOffsetInBytes = 0;
-			dx12_unordered_access_buffer_desc_desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_NONE;
+		ThrowIfFailed(device->m_native_device->CreateCommittedResource(
+			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+			D3D12_HEAP_FLAG_NONE,
+			&CD3DX12_RESOURCE_DESC::Buffer(size, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS),
+			D3D12_RESOURCE_STATE_COPY_DEST,
+			nullptr,
+			IID_PPV_ARGS(&unordered_access_buffer.resource)));
 
-			device->m_native_device->CreateUnorderedAccessView(unordered_access_buffer.resource.Get(), nullptr, &dx12_unordered_access_buffer_desc_desc, device->m_unordered_access_buffer_pool.GetDescriptor(handle));
+		D3D12_UNORDERED_ACCESS_VIEW_DESC dx12_unordered_access_buffer_desc_desc = {};
+		dx12_unordered_access_buffer_desc_desc.Format = DXGI_FORMAT_UNKNOWN;
+		dx12_unordered_access_buffer_desc_desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
+		dx12_unordered_access_buffer_desc_desc.Buffer.NumElements = static_cast<UINT>(unordered_access_buffer_desc.element_count);
+		dx12_unordered_access_buffer_desc_desc.Buffer.StructureByteStride = static_cast<UINT>(unordered_access_buffer_desc.element_size);
+		dx12_unordered_access_buffer_desc_desc.Buffer.FirstElement = 0;
+		dx12_unordered_access_buffer_desc_desc.Buffer.CounterOffsetInBytes = 0;
+		dx12_unordered_access_buffer_desc_desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_NONE;
 
-			return handle;
-		}
-		else if (unordered_access_buffer_desc.access == Access::Dynamic)
-		{
-			UnorderedAccessBufferHandle handle = CreateRingResources(device, unordered_access_buffer_desc.init_data, unordered_access_buffer_desc.element_size * unordered_access_buffer_desc.element_count, device->m_unordered_access_buffer_pool,
-				[&](display::Device* device, const UnorderedAccessBufferHandle& handle, display::Device::UnorderedAccessBuffer& unordered_access_buffer)
-			{
-				D3D12_UNORDERED_ACCESS_VIEW_DESC dx12_unordered_access_buffer_desc_desc = {};
-				dx12_unordered_access_buffer_desc_desc.Format = DXGI_FORMAT_UNKNOWN;
-				dx12_unordered_access_buffer_desc_desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
-				dx12_unordered_access_buffer_desc_desc.Buffer.NumElements = static_cast<UINT>(unordered_access_buffer_desc.element_count);
-				dx12_unordered_access_buffer_desc_desc.Buffer.StructureByteStride = static_cast<UINT>(unordered_access_buffer_desc.element_size);
-				dx12_unordered_access_buffer_desc_desc.Buffer.FirstElement = 0;
-				dx12_unordered_access_buffer_desc_desc.Buffer.CounterOffsetInBytes = 0;
-				dx12_unordered_access_buffer_desc_desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_NONE;
+		device->m_native_device->CreateUnorderedAccessView(unordered_access_buffer.resource.Get(), nullptr, &dx12_unordered_access_buffer_desc_desc, device->m_unordered_access_buffer_pool.GetDescriptor(handle));
 
-				device->m_native_device->CreateUnorderedAccessView(unordered_access_buffer.resource.Get(), nullptr, &dx12_unordered_access_buffer_desc_desc, device->m_unordered_access_buffer_pool.GetDescriptor(handle));
-			});
-			return handle;
-		}
-		else
-		{
-			//Not supported
-			return UnorderedAccessBufferHandle();
-		}
+		return handle;
 	}
 	void DestroyUnorderedAccessBuffer(Device * device, UnorderedAccessBufferHandle & handle)
 	{
-		DeleteRingResource(device, handle, device->m_unordered_access_buffer_pool);
+		device->m_unordered_access_buffer_pool.Free(handle);
 	}
 }
