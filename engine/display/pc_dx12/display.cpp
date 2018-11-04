@@ -84,7 +84,7 @@ namespace display
 
 		for (auto& texture : graphics_state.textures)
 		{
-			texture = display::WeakTextureHandle();
+			texture = display::WeakShaderResourceHandle();
 		}
 
 		//Create root signature state
@@ -175,7 +175,7 @@ namespace display
 		device->m_index_buffer_pool.Init(2000, 100, params.num_frames);
 		device->m_constant_buffer_pool.Init(2000, 100, params.num_frames, device, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 		device->m_unordered_access_buffer_pool.Init(1000, 10, params.num_frames, device, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-		device->m_texture_pool.Init(2000, 100, params.num_frames, device, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		device->m_shader_resource_pool.Init(2000, 100, params.num_frames, device, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
 		//Create frame resources
 		device->m_frame_resources.resize(params.num_frames);
@@ -270,7 +270,7 @@ namespace display
 		device->m_index_buffer_pool.Destroy();
 		device->m_constant_buffer_pool.Destroy();
 		device->m_unordered_access_buffer_pool.Destroy();
-		device->m_texture_pool.Destroy();
+		device->m_shader_resource_pool.Destroy();
 
 		delete device;
 	}
@@ -318,7 +318,7 @@ namespace display
 		device->m_index_buffer_pool.NextFrame();
 		device->m_constant_buffer_pool.NextFrame();
 		device->m_unordered_access_buffer_pool.NextFrame();
-		device->m_texture_pool.NextFrame();
+		device->m_shader_resource_pool.NextFrame();
 
 		//Delete deferred resources
 		DeletePendingResources(device);

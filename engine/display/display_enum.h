@@ -108,6 +108,12 @@ namespace display
 		Dynamic, //Upload from the CPU to the GPU one per frame
 		Discard, //Old map discard, upload from the CPU to the GPU a lot of times per frame
 	};
+
+	enum class ShaderResourceType
+	{
+		Buffer,
+		Texture2D
+	};
 }
 
 #endif

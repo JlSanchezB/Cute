@@ -33,8 +33,8 @@ namespace display
 	using UnorderedAccessBufferHandle = core::Handle<struct UnorderedAccessBuffer, uint16_t>;
 	using WeakUnorderedAccessBufferHandle = core::WeakHandle<struct UnorderedAccessBuffer, uint16_t>;
 
-	using TextureHandle = core::Handle<struct Texture, uint16_t>;
-	using WeakTextureHandle = core::WeakHandle<struct Texture, uint16_t>;
+	using ShaderResourceHandle = core::Handle<struct ShaderResource, uint16_t>;
+	using WeakShaderResourceHandle = core::WeakHandle<struct ShaderResource, uint16_t>;
 
 }
 

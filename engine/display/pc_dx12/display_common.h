@@ -36,7 +36,7 @@ namespace display
 
 		std::array<WeakConstantBufferHandle, kNumMaxProperties> constant_buffers = {};
 		std::array<WeakUnorderedAccessBufferHandle, kNumMaxProperties> unordered_access_buffers = {};
-		std::array<WeakTextureHandle, kNumMaxProperties> textures = {};
+		std::array<WeakShaderResourceHandle, kNumMaxProperties> textures = {};
 	};
 
 	//State of the properties that has been set in the root signature
@@ -195,7 +195,11 @@ namespace display
 		{
 			ComPtr<ID3D12Resource> resource;
 		};
-		using TextureBuffer = ComPtr<ID3D12Resource>;
+		struct ShaderResource : RingResourceSupport<ShaderResourceHandle>
+		{
+			ComPtr<ID3D12Resource> resource;
+		};
+		
 
 		GraphicHandlePool<CommandListHandle, CommandList> m_command_list_pool;
 		GraphicDescriptorHandlePool<RenderTargetHandle, RenderTarget> m_render_target_pool;
@@ -205,7 +209,7 @@ namespace display
 		GraphicHandlePool<IndexBufferHandle, IndexBuffer> m_index_buffer_pool;
 		GraphicDescriptorHandlePool<ConstantBufferHandle, ConstantBuffer> m_constant_buffer_pool;
 		GraphicDescriptorHandlePool<UnorderedAccessBufferHandle, UnorderedAccessBuffer> m_unordered_access_buffer_pool;
-		GraphicDescriptorHandlePool<TextureHandle, TextureBuffer> m_texture_pool;
+		GraphicDescriptorHandlePool<ShaderResourceHandle, ShaderResource> m_shader_resource_pool;
 
 		//Accesor to the resources (we need a specialitation for each type)
 		template<typename HANDLE>
@@ -338,15 +342,15 @@ namespace display
 	}
 
 	template<>
-	inline auto& Device::Get<TextureHandle>(const TextureHandle& handle)
+	inline auto& Device::Get<ShaderResourceHandle>(const ShaderResourceHandle& handle)
 	{
-		return this->m_texture_pool[handle];
+		return this->m_shader_resource_pool[handle];
 	}
 
 	template<>
-	inline auto& Device::Get<WeakTextureHandle>(const WeakTextureHandle& handle)
+	inline auto& Device::Get<WeakShaderResourceHandle>(const WeakShaderResourceHandle& handle)
 	{
-		return this->m_texture_pool[handle];
+		return this->m_shader_resource_pool[handle];
 	}
 
 	//Delete resources that are not needed by the GPU

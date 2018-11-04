@@ -77,9 +77,13 @@ namespace display
 
 	//Create unordered access buffer
 	UnorderedAccessBufferHandle CreateUnorderedAccessBuffer(Device* device, const UnorderedAccessBufferDesc& unordered_access_buffer_desc);
-	//Context commands
+	//Destroy unordered access buffer
 	void DestroyUnorderedAccessBuffer(Device* device, UnorderedAccessBufferHandle& handle);
 
+	//Create shader resource
+	ShaderResourceHandle CreateShaderResource(Device* device, const ShaderResourceDesc& shader_resource_desc);
+	//Destroy shader resource
+	void DestroyShaderResource(Device * device, ShaderResourceHandle& handle);
 
 	//Set render target
 	void SetRenderTargets(Device* device, const WeakCommandListHandle& command_list, size_t num_targets, WeakRenderTargetHandle* render_target_array, WeakRenderTargetHandle* depth_stencil);

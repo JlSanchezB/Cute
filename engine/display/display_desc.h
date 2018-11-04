@@ -188,6 +188,19 @@ namespace display
 		size_t element_size = 0;
 		size_t element_count = 0;
 	};
+
+	struct ShaderResourceDesc
+	{
+		Access access = Access::Static;
+		Format format = Format::R8G8B8A8_UNORM;
+		ShaderResourceType type = ShaderResourceType::Texture2D;
+		size_t width = 0;
+		size_t heigth = 0;
+		size_t mips = 0;
+		size_t size = 0;
+		void* init_data = nullptr;
+	};
+
 }
 #endif
 

@@ -194,5 +194,25 @@ namespace display
 
 		return ret;
 	}
+
+	inline D3D12_RESOURCE_DIMENSION ConvertResource(ShaderResourceType shader_resource_type)
+	{
+		switch (shader_resource_type)
+		{
+		default:
+		case ShaderResourceType::Buffer: return D3D12_RESOURCE_DIMENSION_BUFFER;
+		case ShaderResourceType::Texture2D: return D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+		}
+	}
+
+	inline D3D12_SRV_DIMENSION ConvertView(ShaderResourceType shader_resource_type)
+	{
+		switch (shader_resource_type)
+		{
+		default:
+		case ShaderResourceType::Buffer: return D3D12_SRV_DIMENSION_BUFFER;
+		case ShaderResourceType::Texture2D: return D3D12_SRV_DIMENSION_TEXTURE2D;
+		}
+	}
 }
 #endif //DISPLAY_CONVERT_H_
