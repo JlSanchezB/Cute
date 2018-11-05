@@ -28,6 +28,17 @@ namespace
 		case WM_DESTROY:
 			PostQuitMessage(0);
 			return 0;
+
+		case WM_SIZE:
+		{
+			RECT windowRect = {};
+			GetWindowRect(hWnd, &windowRect);
+
+			RECT clientRect = {};
+			GetClientRect(hWnd, &clientRect);
+			game->OnSizeChange(clientRect.right - clientRect.left, clientRect.bottom - clientRect.top, wParam == SIZE_MINIMIZED);
+		}
+			return 0;
 		}
 
 		// Handle any messages the switch statement didn't.

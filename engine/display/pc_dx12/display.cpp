@@ -153,6 +153,14 @@ namespace display
 		swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
 		swapChainDesc.SampleDesc.Count = 1;
 
+		//Windows settings
+		device->m_tearing = params.tearing;
+		device->m_windowed = true;
+		device->m_width = params.width;
+		device->m_height = params.height;
+
+		swapChainDesc.Flags = params.tearing ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0;
+
 		ComPtr<IDXGISwapChain1> swap_chain;
 		ThrowIfFailed(factory->CreateSwapChainForHwnd(
 			device->m_command_queue.Get(),		// Swap chain needs the queue so that it can force a flush on it.
@@ -162,6 +170,13 @@ namespace display
 			nullptr,
 			&swap_chain
 		));
+
+		if (params.tearing)
+		{
+			// When tearing support is enabled we will handle ALT+Enter key presses in the
+			// window message loop rather than let DXGI handle it by calling SetFullscreenState.
+			factory->MakeWindowAssociation(platform::GetHwnd(), DXGI_MWA_NO_ALT_ENTER);
+		}
 
 		ThrowIfFailed(swap_chain.As(&device->m_swap_chain));
 		device->m_frame_index = device->m_swap_chain->GetCurrentBackBufferIndex();
@@ -275,6 +290,52 @@ namespace display
 		delete device;
 	}
 
+	//Change size
+	void ChangeWindowSize(Device * device, size_t width, size_t height, bool minimized)
+	{
+		// Determine if the swap buffers and other resources need to be resized or not.
+		if ((width != device->m_width || height != device->m_height) && !minimized)
+		{
+			// Flush all current GPU commands.
+			WaitForGpu(device);
+
+			// Release the resources holding references to the swap chain (requirement of
+			// IDXGISwapChain::ResizeBuffers) and reset the frame fence values to the
+			// current fence value.
+			for (size_t i = 0; i < device->m_frame_resources.size(); ++i)
+			{
+				device->Get(device->m_frame_resources[i].render_target).resource.Reset();
+				device->m_frame_resources[i].fence_value = device->m_frame_resources[device->m_frame_index].fence_value;
+			}
+
+			// Resize the swap chain to the desired dimensions.
+			DXGI_SWAP_CHAIN_DESC desc = {};
+			device->m_swap_chain->GetDesc(&desc);
+			ThrowIfFailed(device->m_swap_chain->ResizeBuffers(static_cast<UINT>(device->m_frame_resources.size()),
+				static_cast<UINT>(width), static_cast<UINT>(height), desc.BufferDesc.Format, desc.Flags));
+
+			BOOL fullscreenState;
+			ThrowIfFailed(device->m_swap_chain->GetFullscreenState(&fullscreenState, nullptr));
+			device->m_windowed = !fullscreenState;
+
+			//Recapture the back buffers
+			for (size_t i = 0; i < device->m_frame_resources.size(); ++i)
+			{
+				auto& frame_resource = device->m_frame_resources[i];
+				auto& render_target = device->Get(frame_resource.render_target);
+				ThrowIfFailed(device->m_swap_chain->GetBuffer(static_cast<UINT>(i), IID_PPV_ARGS(&render_target.resource)));
+				device->m_native_device->CreateRenderTargetView(render_target.resource.Get(), nullptr, device->m_render_target_pool.GetDescriptor(frame_resource.render_target));
+				render_target.current_state = D3D12_RESOURCE_STATE_PRESENT;
+			}
+
+			// Reset the frame index to the current back buffer index.
+			device->m_frame_index = device->m_swap_chain->GetCurrentBackBufferIndex();
+
+			device->m_width = width;
+			device->m_height = height;
+		}
+	}
+
 	//Present
 	void Present(Device* device)
 	{
@@ -294,6 +355,12 @@ namespace display
 
 		//Execute command list
 		ExecuteCommandList(device, device->m_present_command_list);
+
+		// When using sync interval 0, it is recommended to always pass the tearing
+		// flag when it is supported, even when presenting in windowed mode.
+		// However, this flag cannot be used if the app is in fullscreen mode as a
+		// result of calling SetFullscreenState.
+		UINT present_flags = (device->m_tearing && device->m_windowed) ? DXGI_PRESENT_ALLOW_TEARING : 0;
 
 		// Present the frame.
 		ThrowIfFailed(device->m_swap_chain->Present(1, 0));

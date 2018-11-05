@@ -157,6 +157,10 @@ namespace display
 		UINT m_frame_index;
 		HANDLE m_fence_event;
 		ComPtr<ID3D12Fence> m_fence;
+		bool m_tearing;
+		bool m_windowed;
+		size_t m_width;
+		size_t m_height;
 
 		//Pool of resources
 		struct CommandList

@@ -35,6 +35,9 @@ public:
 	const static size_t kInitWidth = 500;
 	const static size_t kInitHeight = 500;
 
+	size_t m_width;
+	size_t m_height;
+
 	display::Device* m_device;
 
 	display::CommandListHandle m_command_list;
@@ -57,7 +60,8 @@ public:
 		device_init_params.debug = true;
 		device_init_params.width = kInitWidth;
 		device_init_params.height = kInitHeight;
-		device_init_params.num_frames = 2;
+		device_init_params.tearing = false;
+		device_init_params.num_frames = 3;
 
 		m_device = display::CreateDevice(device_init_params);
 
@@ -211,10 +215,10 @@ public:
 		display::SetRootSignature(m_device, m_command_list, m_root_signature);
 
 		//Set viewport
-		display::SetViewport(m_device, m_command_list, display::Viewport(500.f, 500.f));
+		display::SetViewport(m_device, m_command_list, display::Viewport(static_cast<float>(m_width), static_cast<float>(m_height)));
 
 		//Set Scissor Rect
-		display::SetScissorRect(m_device, m_command_list, display::Rect(0, 0, 500, 500));
+		display::SetScissorRect(m_device, m_command_list, display::Rect(0, 0, m_width, m_height));
 
 		//Set pipeline state
 		display::SetPipelineState(m_device, m_command_list, m_pipeline_state);
@@ -236,6 +240,17 @@ public:
 		display::Present(m_device);
 
 		display::EndFrame(m_device);
+	}
+
+	void OnSizeChange(size_t width, size_t height, bool minimized) override
+	{
+		m_width = width;
+		m_height = height;
+		
+		if (m_device)
+		{
+			display::ChangeWindowSize(m_device, width, height, minimized);
+		}
 	}
 };
 

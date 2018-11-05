@@ -14,6 +14,7 @@ namespace platform
 		virtual void OnInit() = 0;
 		virtual void OnDestroy() = 0;
 		virtual void OnTick() = 0;
+		virtual void OnSizeChange(size_t width, size_t height, bool minimized) = 0;
 	};
 
 	char Run(const char* name, void* param, size_t width, size_t height, Game* game);
