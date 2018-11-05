@@ -29,9 +29,6 @@ namespace display
 	Device* CreateDevice(const DeviceInitParams& params);
 	void DestroyDevice(Device* device);
 
-	//Size change
-	void ChangeWindowSize(Device* device, size_t width, size_t height, bool minimized);
-
 	//Present
 	void Present(Device* device);
 

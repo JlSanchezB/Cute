@@ -336,6 +336,53 @@ namespace display
 		}
 	}
 
+	//Is tearing enabled
+	bool IsTearingEnabled(Device* device)
+	{
+		return device->m_tearing;
+	}
+
+	//Used from framework to set the correct size
+	bool IsWindowed(Device* device)
+	{
+		return device->m_windowed;
+	}
+
+	void SetWindowed(Device* device, bool windowed)
+	{
+		device->m_windowed = windowed;
+	}
+
+	//Used for the fullscreen tearing implementation
+	bool GetCurrentDisplayRect(Device* device, Rect& rect)
+	{
+		try
+		{
+			if (device->m_swap_chain)
+			{
+				RECT fullscreenWindowRect;
+				ComPtr<IDXGIOutput> pOutput;
+				ThrowIfFailed(device->m_swap_chain->GetContainingOutput(&pOutput));
+				DXGI_OUTPUT_DESC Desc;
+				ThrowIfFailed(pOutput->GetDesc(&Desc));
+				fullscreenWindowRect = Desc.DesktopCoordinates;
+
+				rect.bottom = fullscreenWindowRect.bottom;
+				rect.top = fullscreenWindowRect.top;
+				rect.left = fullscreenWindowRect.left;
+				rect.right = fullscreenWindowRect.right;
+
+				return true;
+			}
+		}
+		catch (...)
+		{
+
+		}
+
+		return false;
+	}
+
 	//Present
 	void Present(Device* device)
 	{

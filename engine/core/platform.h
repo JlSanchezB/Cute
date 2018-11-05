@@ -5,12 +5,29 @@
 #ifndef PLATFORM_H_
 #define PLATFORM_H_
 
+namespace display
+{
+	struct Device;
+}
+
 namespace platform
 {
 	//Virtual interface that implements a game
 	class Game
 	{
+		display::Device* m_device = nullptr;
+	protected:
+		void SetDevice(display::Device* device)
+		{
+			m_device = device;
+		}
 	public:
+		display::Device* GetDevice() const
+		{
+			return m_device;
+		}
+
+		//Interface
 		virtual void OnInit() = 0;
 		virtual void OnDestroy() = 0;
 		virtual void OnTick() = 0;

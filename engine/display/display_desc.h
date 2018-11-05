@@ -155,6 +155,10 @@ namespace display
 		size_t top;
 		size_t right;
 		size_t bottom;
+		
+		Rect()
+		{
+		}
 
 		Rect(size_t _left, size_t _top, size_t _right, size_t _bottom) :
 			left(_left), top(_top), right(_right), bottom(_bottom)

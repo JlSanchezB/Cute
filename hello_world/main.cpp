@@ -60,10 +60,12 @@ public:
 		device_init_params.debug = true;
 		device_init_params.width = kInitWidth;
 		device_init_params.height = kInitHeight;
-		device_init_params.tearing = false;
+		device_init_params.tearing = true;
 		device_init_params.num_frames = 3;
 
 		m_device = display::CreateDevice(device_init_params);
+
+		SetDevice(m_device);
 
 		m_command_list = display::CreateCommandList(m_device);
 
@@ -246,11 +248,6 @@ public:
 	{
 		m_width = width;
 		m_height = height;
-		
-		if (m_device)
-		{
-			display::ChangeWindowSize(m_device, width, height, minimized);
-		}
 	}
 };
 
