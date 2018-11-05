@@ -6,7 +6,7 @@
 #endif
 #include <windows.h>
 #include <fstream>
-
+#include "dds.h"
 namespace
 {
 	std::vector<char> ReadFileToBuffer(const char* file)
@@ -46,6 +46,8 @@ public:
 	display::ConstantBufferHandle m_constant_buffer;
 
 	display::UnorderedAccessBufferHandle m_unordered_access_buffer;
+
+	display::ShaderResourceHandle m_texture;
 
 
 	void OnInit() override
@@ -152,6 +154,28 @@ public:
 
 			m_unordered_access_buffer = display::CreateUnorderedAccessBuffer(m_device, unordered_access_buffer_desc);
 		}
+
+		//Texture
+		{
+			std::vector<char> texture_buffer = ReadFileToBuffer("texture.dds");
+
+			//Read header
+			DDS_HEADER* dds_head = reinterpret_cast<DDS_HEADER*>(&texture_buffer[0]);
+
+			if (dds_head->dwMagic == DDS_MAGIC_NUMBER)
+			{
+				display::ShaderResourceDesc shader_resource_desc;
+
+				shader_resource_desc.format = display::Format::R8G8B8A8_UNORM_SRGB;
+				shader_resource_desc.width = dds_head->dwWidth;
+				shader_resource_desc.heigth = dds_head->dwHeight;
+				shader_resource_desc.mips = dds_head->dwMipMapCount;
+				shader_resource_desc.init_data = reinterpret_cast<void*>(&texture_buffer[sizeof(DDS_HEADER)]);
+				shader_resource_desc.slice_pitch = shader_resource_desc.size = texture_buffer.size() - sizeof(DDS_HEADER);
+
+				m_texture = display::CreateShaderResource(m_device, shader_resource_desc);
+			}
+		}
 		
 	}
 	void OnDestroy() override
@@ -163,6 +187,7 @@ public:
 		display::DestroyVertexBuffer(m_device, m_vertex_buffer);
 		display::DestroyConstantBuffer(m_device, m_constant_buffer);
 		display::DestroyUnorderedAccessBuffer(m_device, m_unordered_access_buffer);
+		display::DestroyShaderResource(m_device, m_texture);
 
 		display::DestroyDevice(m_device);
 	}

@@ -196,6 +196,8 @@ namespace display
 		ShaderResourceType type = ShaderResourceType::Texture2D;
 		size_t width = 0;
 		size_t heigth = 0;
+		size_t pitch = 0;
+		size_t slice_pitch = 0;
 		size_t mips = 0;
 		size_t size = 0;
 		void* init_data = nullptr;

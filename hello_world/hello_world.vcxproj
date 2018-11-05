@@ -136,19 +136,6 @@
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="root_signature.hlsl">
-      <FileType>Document</FileType>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../engine/tools/compile_root_signature.bat %(Identity) "$(OutDir)%(Filename).fxo"</Command>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../engine/tools/compile_root_signature.bat %(Identity) "$(OutDir)%(Filename).fxo"</Command>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../engine/tools/compile_root_signature.bat %(Identity) "$(OutDir)%(Filename).fxo"</Command>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../engine/tools/compile_root_signature.bat %(Identity) "$(OutDir)%(Filename).fxo"</Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(OutDir)%(Filename).fxo</Outputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename).fxo</Outputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OutDir)%(Filename).fxo</Outputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)%(Filename).fxo</Outputs>
-    </CustomBuild>
-  </ItemGroup>
-  <ItemGroup>
     <CustomBuild Include="colour_shader.hlsl">
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">5.0</ShaderModel>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">5.0</ShaderModel>
@@ -158,6 +145,25 @@
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../engine/tools/compile_shader.bat %(Identity) "$(OutDir)%(Filename)"</Command>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../engine/tools/compile_shader.bat %(Identity) "$(OutDir)%(Filename)"</Command>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../engine/tools/compile_shader.bat %(Identity) "$(OutDir)%(Filename)"</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../engine/tools/compile_shader.bat %(Identity) "$(OutDir)%(Filename)"</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(OutDir)%(Filename)_ps.fxo;$(OutDir)%(Filename)_vs.fxo;%(Outputs)</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)_ps.fxo;$(OutDir)%(Filename)_vs.fxo;%(Outputs)</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OutDir)%(Filename)_ps.fxo;$(OutDir)%(Filename)_vs.fxo;%(Outputs)</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)%(Filename)_ps.fxo;$(OutDir)%(Filename)_vs.fxo;%(Outputs)</Outputs>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CopyFileToFolders Include="texture.dds" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="dds.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="texture_shader.hlsl">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../engine/tools/compile_shader.bat %(Identity) "$(OutDir)%(Filename)"</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../engine/tools/compile_shader.bat %(Identity) "$(OutDir)%(Filename)"</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../engine/tools/compile_shader.bat %(Identity) "$(OutDir)%(Filename)"</Command>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../engine/tools/compile_shader.bat %(Identity) "$(OutDir)%(Filename)"</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(OutDir)%(Filename)_ps.fxo;$(OutDir)%(Filename)_vs.fxo;%(Outputs)</Outputs>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)_ps.fxo;$(OutDir)%(Filename)_vs.fxo;%(Outputs)</Outputs>

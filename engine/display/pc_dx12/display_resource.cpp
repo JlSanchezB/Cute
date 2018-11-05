@@ -2,8 +2,25 @@
 
 namespace
 {
+	struct SourceResourceData
+	{
+		size_t size = 0;
+		size_t row_pitch = 0; //Needed for textures
+		size_t slice_pitch = 0;
+		void* data;
+
+		//It is a simple buffer
+		SourceResourceData(void* _data, size_t _size) : data(_data), size(_size), row_pitch(_size), slice_pitch(_size)
+		{
+		}
+		//Texture buffer
+		SourceResourceData(void* _data, size_t _size, size_t _row_pitch, size_t _slice_pitch) : data(_data), size(_size), row_pitch(_row_pitch), slice_pitch(_slice_pitch)
+		{
+		}
+	};
+
 	//Create a commited resource
-	void CreateResource(display::Device* device, void* data, size_t size, bool static_buffer, const D3D12_RESOURCE_DESC& resource_desc, ComPtr<ID3D12Resource>& resource)
+	void CreateResource(display::Device* device, const SourceResourceData& source_data, bool static_buffer, const D3D12_RESOURCE_DESC& resource_desc, ComPtr<ID3D12Resource>& resource, D3D12_RESOURCE_STATES resource_state)
 	{
 		//Upload resource
 		ComPtr<ID3D12Resource> upload_resource;
@@ -17,24 +34,35 @@ namespace
 				D3D12_RESOURCE_STATE_COPY_DEST,
 				nullptr,
 				IID_PPV_ARGS(&resource)));
+
+			ThrowIfFailed(device->m_native_device->CreateCommittedResource(
+				&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
+				D3D12_HEAP_FLAG_NONE,
+				&CD3DX12_RESOURCE_DESC::Buffer(source_data.size),
+				D3D12_RESOURCE_STATE_GENERIC_READ,
+				nullptr,
+				IID_PPV_ARGS(&upload_resource)));
+
 		}
-		
-		ThrowIfFailed(device->m_native_device->CreateCommittedResource(
-			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
-			D3D12_HEAP_FLAG_NONE,
-			&CD3DX12_RESOURCE_DESC::Buffer(size),
-			D3D12_RESOURCE_STATE_GENERIC_READ,
-			nullptr,
-			IID_PPV_ARGS(&upload_resource)));
+		else
+		{
+			ThrowIfFailed(device->m_native_device->CreateCommittedResource(
+				&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
+				D3D12_HEAP_FLAG_NONE,
+				&resource_desc,
+				D3D12_RESOURCE_STATE_GENERIC_READ,
+				nullptr,
+				IID_PPV_ARGS(&upload_resource)));
+		}
 
 		if (static_buffer)
 		{
 			// Copy data to the intermediate upload heap and then schedule a copy 
 			// from the upload heap to the vertex buffer.
 			D3D12_SUBRESOURCE_DATA copy_data = {};
-			copy_data.pData = data;
-			copy_data.RowPitch = size;
-			copy_data.SlicePitch = size;
+			copy_data.pData = source_data.data;
+			copy_data.RowPitch = source_data.row_pitch;
+			copy_data.SlicePitch = source_data.slice_pitch;
 
 			//Command list
 			auto& command_list = device->Get(device->m_resource_command_list).resource;
@@ -43,7 +71,7 @@ namespace
 			OpenCommandList(device, device->m_resource_command_list);
 
 			UpdateSubresources<1>(command_list.Get(), resource.Get(), upload_resource.Get(), 0, 0, 1, &copy_data);
-			command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(resource.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER));
+			command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(resource.Get(), D3D12_RESOURCE_STATE_COPY_DEST, resource_state));
 
 			//Close command list
 			CloseCommandList(device, device->m_resource_command_list);
@@ -56,21 +84,21 @@ namespace
 		}
 		else
 		{
-			//Our resource is the upload resource
+			//Our resource is the upload resource, we only support simple linear ones, no textures
 			resource = upload_resource;
 
 			//Copy to the upload heap
 			UINT8* pVertexDataBegin;
 			CD3DX12_RANGE readRange(0, 0);		// We do not intend to read from this resource on the CPU.
 			ThrowIfFailed(resource->Map(0, &readRange, reinterpret_cast<void**>(&pVertexDataBegin)));
-			memcpy(pVertexDataBegin, data, size);
+			memcpy(pVertexDataBegin, source_data.data, source_data.size);
 			resource->Unmap(0, nullptr);
 		}
 	}
 
 	//Helper function to create a ring resources
 	template <typename FUNCTION, typename POOL>
-	auto CreateRingResources(display::Device* device,void* data, size_t size, const D3D12_RESOURCE_DESC& resource_desc, POOL& pool, FUNCTION&& view_create)
+	auto CreateRingResources(display::Device* device, const SourceResourceData& source_data, const D3D12_RESOURCE_DESC& resource_desc, POOL& pool, D3D12_RESOURCE_STATES resource_state, FUNCTION&& view_create)
 	{
 		//Allocs first resource from the pool
 		auto resource_handle = pool.Alloc();
@@ -83,7 +111,7 @@ namespace
 		while (count)
 		{
 			//Create a dynamic resource
-			CreateResource(device, data, size, false, resource_desc, resource->resource);
+			CreateResource(device, source_data, false, resource_desc, resource->resource, resource_state);
 
 			//Create views for it
 			view_create(device, *resource_handle_ptr, *resource);
@@ -207,7 +235,9 @@ namespace display
 
 		auto& vertex_buffer = device->Get(handle);
 		
-		CreateResource(device, vertex_buffer_desc.init_data, vertex_buffer_desc.size, true, CD3DX12_RESOURCE_DESC::Buffer(vertex_buffer_desc.size), vertex_buffer.resource);
+		SourceResourceData data(vertex_buffer_desc.init_data, vertex_buffer_desc.size);
+
+		CreateResource(device, data, true, CD3DX12_RESOURCE_DESC::Buffer(vertex_buffer_desc.size), vertex_buffer.resource, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
 
 		// Initialize the vertex buffer view.
 		vertex_buffer.view.BufferLocation = vertex_buffer.resource->GetGPUVirtualAddress();
@@ -229,7 +259,9 @@ namespace display
 
 		auto& index_buffer = device->Get(handle);
 
-		CreateResource(device, index_buffer_desc.init_data, index_buffer_desc.size, true, CD3DX12_RESOURCE_DESC::Buffer(index_buffer_desc.size), index_buffer.resource);
+		SourceResourceData data(index_buffer_desc.init_data, index_buffer_desc.size);
+
+		CreateResource(device, data, true, CD3DX12_RESOURCE_DESC::Buffer(index_buffer_desc.size), index_buffer.resource, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
 
 		// Initialize the vertex buffer view.
 		index_buffer.view.BufferLocation = index_buffer.resource->GetGPUVirtualAddress();
@@ -248,13 +280,14 @@ namespace display
 	ConstantBufferHandle CreateConstantBuffer(Device * device, const ConstantBufferDesc& constant_buffer_desc)
 	{
 		size_t size = (constant_buffer_desc.size + 255) & ~255;	// CB size is required to be 256-byte aligned.
+		SourceResourceData data(constant_buffer_desc.init_data, size);
 
 		if (constant_buffer_desc.access == Access::Static)
 		{
 			ConstantBufferHandle handle = device->m_constant_buffer_pool.Alloc();
 			auto& constant_buffer = device->Get(handle);
 
-			CreateResource(device, constant_buffer_desc.init_data, size, true, CD3DX12_RESOURCE_DESC::Buffer(size), constant_buffer.resource);
+			CreateResource(device, data, true, CD3DX12_RESOURCE_DESC::Buffer(size), constant_buffer.resource, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
 
 			//Size needs to be 256byte aligned
 			D3D12_CONSTANT_BUFFER_VIEW_DESC dx12_constant_buffer_desc = {};
@@ -266,7 +299,7 @@ namespace display
 		}
 		else if (constant_buffer_desc.access == Access::Dynamic)
 		{
-			ConstantBufferHandle handle = CreateRingResources(device, constant_buffer_desc.init_data, size, CD3DX12_RESOURCE_DESC::Buffer(size), device->m_constant_buffer_pool,
+			ConstantBufferHandle handle = CreateRingResources(device, data, CD3DX12_RESOURCE_DESC::Buffer(size), device->m_constant_buffer_pool, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER,
 				[&](display::Device* device, const ConstantBufferHandle& handle, display::Device::ConstantBuffer& constant_buffer)
 			{
 				//Size needs to be 256byte aligned
@@ -279,6 +312,7 @@ namespace display
 		}	
 		else
 		{
+			std::runtime_error("Discard constant buffers are not supported");
 			return ConstantBufferHandle();
 		}
 	}
@@ -340,7 +374,9 @@ namespace display
 			ShaderResourceHandle handle = device->m_shader_resource_pool.Alloc();
 			auto& shader_resource = device->Get(handle);
 
-			CreateResource(device, shader_resource_desc.init_data, shader_resource_desc.size, true, d12_resource_desc, shader_resource.resource);
+			SourceResourceData data(shader_resource_desc.init_data, shader_resource_desc.size, shader_resource_desc.pitch, shader_resource_desc.slice_pitch);
+
+			CreateResource(device, data, true, d12_resource_desc, shader_resource.resource, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 
 			//Create view
 			D3D12_SHADER_RESOURCE_VIEW_DESC dx12_shader_resource_desc = {};
@@ -354,7 +390,7 @@ namespace display
 		}
 		else
 		{
-
+			std::runtime_error("Only static shader resources are supported");
 		}
 		return ShaderResourceHandle();
 	}

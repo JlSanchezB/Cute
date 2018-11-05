@@ -72,9 +72,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="tools\compile_root_signature.bat">
-      <Filter>tools</Filter>
-    </None>
     <None Include="tools\compile_shader.bat">
       <Filter>tools</Filter>
     </None>

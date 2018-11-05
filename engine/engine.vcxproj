@@ -144,7 +144,6 @@
     <ClCompile Include="display\pc_dx12\display_resource.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="tools\compile_root_signature.bat" />
     <None Include="tools\compile_shader.bat" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
