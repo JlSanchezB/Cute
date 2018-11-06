@@ -9,6 +9,9 @@
 
 namespace display
 {
+	template<typename TARGET_TYPE, typename SOURCE_TYPE>
+	TARGET_TYPE Convert(SOURCE_TYPE type);
+
 	inline DXGI_FORMAT Convert(Format format)
 	{
 		switch (format)
@@ -195,7 +198,8 @@ namespace display
 		return ret;
 	}
 
-	inline D3D12_RESOURCE_DIMENSION ConvertResource(ShaderResourceType shader_resource_type)
+	template<>
+	inline D3D12_RESOURCE_DIMENSION Convert<D3D12_RESOURCE_DIMENSION, ShaderResourceType>(ShaderResourceType shader_resource_type)
 	{
 		switch (shader_resource_type)
 		{
@@ -205,7 +209,8 @@ namespace display
 		}
 	}
 
-	inline D3D12_SRV_DIMENSION ConvertView(ShaderResourceType shader_resource_type)
+	template<>
+	inline D3D12_SRV_DIMENSION Convert<D3D12_SRV_DIMENSION, ShaderResourceType>(ShaderResourceType shader_resource_type)
 	{
 		switch (shader_resource_type)
 		{

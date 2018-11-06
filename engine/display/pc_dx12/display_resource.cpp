@@ -367,7 +367,7 @@ namespace display
 		d12_resource_desc.DepthOrArraySize = 1;
 		d12_resource_desc.SampleDesc.Count = 1;
 		d12_resource_desc.SampleDesc.Quality = 0;
-		d12_resource_desc.Dimension = ConvertResource(shader_resource_desc.type);
+		d12_resource_desc.Dimension = Convert<D3D12_RESOURCE_DIMENSION>(shader_resource_desc.type);
 
 		if (shader_resource_desc.access == Access::Static)
 		{
@@ -382,7 +382,7 @@ namespace display
 			D3D12_SHADER_RESOURCE_VIEW_DESC dx12_shader_resource_desc = {};
 			dx12_shader_resource_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 			dx12_shader_resource_desc.Format = d12_resource_desc.Format;
-			dx12_shader_resource_desc.ViewDimension = ConvertView(shader_resource_desc.type);
+			dx12_shader_resource_desc.ViewDimension = Convert<D3D12_SRV_DIMENSION>(shader_resource_desc.type);
 			dx12_shader_resource_desc.Texture2D.MipLevels = d12_resource_desc.MipLevels;
 			device->m_native_device->CreateShaderResourceView(shader_resource.resource.Get(), &dx12_shader_resource_desc, device->m_shader_resource_pool.GetDescriptor(handle));
 
