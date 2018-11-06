@@ -132,6 +132,7 @@
     <ClInclude Include="display\display_enum.h" />
     <ClInclude Include="display\display_handle.h" />
     <ClInclude Include="display\pc_dx12\d3dx12.h" />
+    <ClInclude Include="display\pc_dx12\dds_loader.h" />
     <ClInclude Include="display\pc_dx12\descriptor_heap.h" />
     <ClInclude Include="display\pc_dx12\display_common.h" />
     <ClInclude Include="display\pc_dx12\display_convert.h" />
@@ -139,6 +140,7 @@
   <ItemGroup>
     <ClCompile Include="core\pc\log.cpp" />
     <ClCompile Include="core\pc\platform.cpp" />
+    <ClCompile Include="display\pc_dx12\dds_loader.cpp" />
     <ClCompile Include="display\pc_dx12\descriptor_heap.cpp" />
     <ClCompile Include="display\pc_dx12\display.cpp" />
     <ClCompile Include="display\pc_dx12\display_resource.cpp" />

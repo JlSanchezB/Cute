@@ -81,8 +81,10 @@ namespace display
 	//Destroy unordered access buffer
 	void DestroyUnorderedAccessBuffer(Device* device, UnorderedAccessBufferHandle& handle);
 
-	//Create shader resource
+	//Create a generic shader resource
 	ShaderResourceHandle CreateShaderResource(Device* device, const ShaderResourceDesc& shader_resource_desc);
+	//Create a texture from platform dependent buffer
+	ShaderResourceHandle CreateTextureResource(Device* device, const void* data, size_t size);
 	//Destroy shader resource
 	void DestroyShaderResource(Device * device, ShaderResourceHandle& handle);
 

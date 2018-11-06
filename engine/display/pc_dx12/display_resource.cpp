@@ -1,4 +1,5 @@
 #include "display_common.h"
+#include "dds_loader.h"
 
 namespace
 {
@@ -394,6 +395,65 @@ namespace display
 		}
 		return ShaderResourceHandle();
 	}
+
+	ShaderResourceHandle CreateTextureResource(Device* device, const void* data, size_t size)
+	{
+		ShaderResourceHandle handle = device->m_shader_resource_pool.Alloc();
+		auto& shader_resource = device->Get(handle);
+
+		D3D12_RESOURCE_DESC d12_resource_desc = {};
+		std::vector<D3D12_SUBRESOURCE_DATA> sub_resources;
+
+		ThrowIfFailed(dds_loader::CalculateD12Loader(device->m_native_device.Get(), reinterpret_cast<const uint8_t*>(data), size,
+			dds_loader::DDS_LOADER_DEFAULT, d12_resource_desc, sub_resources));
+
+		//Create resources
+		ThrowIfFailed(device->m_native_device->CreateCommittedResource(
+			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+			D3D12_HEAP_FLAG_NONE,
+			&d12_resource_desc,
+			D3D12_RESOURCE_STATE_COPY_DEST,
+			nullptr,
+			IID_PPV_ARGS(&shader_resource.resource)));
+
+		//Calculate required size
+		UINT64 RequiredSize = 0;
+		device->m_native_device->GetCopyableFootprints(&d12_resource_desc, 0, static_cast<UINT>(sub_resources.size()), 0, nullptr, nullptr, nullptr, &RequiredSize);
+	
+		//Upload resource
+		ComPtr<ID3D12Resource> upload_resource;
+
+		//Create upload buffer
+		ThrowIfFailed(device->m_native_device->CreateCommittedResource(
+			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
+			D3D12_HEAP_FLAG_NONE,
+			&CD3DX12_RESOURCE_DESC::Buffer(RequiredSize),
+			D3D12_RESOURCE_STATE_GENERIC_READ,
+			nullptr,
+			IID_PPV_ARGS(&upload_resource)));
+
+		//Upload resource
+		//Command list
+		auto& command_list = device->Get(device->m_resource_command_list).resource;
+
+		//Open command list
+		OpenCommandList(device, device->m_resource_command_list);
+
+		UpdateSubresources<128>(command_list.Get(), shader_resource.resource.Get(), upload_resource.Get(), 0, 0, static_cast<UINT>(sub_resources.size()), &sub_resources[0]);
+		command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(shader_resource.resource.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE));
+
+		//Close command list
+		CloseCommandList(device, device->m_resource_command_list);
+
+		//Execute the command list
+		ExecuteCommandList(device, device->m_resource_command_list);
+
+		//The upload resource is not needed, add to the deferred resource buffer
+		AddDeferredDeleteResource(device, upload_resource);
+
+		return handle;
+	}
+
 	void DestroyShaderResource(Device * device, ShaderResourceHandle & handle)
 	{
 		//Delete handle and linked ones

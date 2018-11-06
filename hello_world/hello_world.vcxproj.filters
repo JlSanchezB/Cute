@@ -26,20 +26,9 @@
     <CustomBuild Include="colour_shader.hlsl">
       <Filter>Assets</Filter>
     </CustomBuild>
+    <CustomBuild Include="texture_shader.hlsl" />
   </ItemGroup>
   <ItemGroup>
-    <Image Include="texture.dds">
-      <Filter>Assets</Filter>
-    </Image>
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="dds.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <FxCompile Include="texture_shader.hlsl">
-      <Filter>Assets</Filter>
-    </FxCompile>
+    <CopyFileToFolders Include="texture.dds" />
   </ItemGroup>
 </Project>

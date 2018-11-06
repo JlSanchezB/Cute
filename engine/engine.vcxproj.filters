@@ -53,6 +53,9 @@
     <ClInclude Include="display\pc_dx12\descriptor_heap.h">
       <Filter>display</Filter>
     </ClInclude>
+    <ClInclude Include="display\pc_dx12\dds_loader.h">
+      <Filter>display</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="display\pc_dx12\display.cpp">
@@ -68,6 +71,9 @@
       <Filter>display</Filter>
     </ClCompile>
     <ClCompile Include="display\pc_dx12\descriptor_heap.cpp">
+      <Filter>display</Filter>
+    </ClCompile>
+    <ClCompile Include="display\pc_dx12\dds_loader.cpp">
       <Filter>display</Filter>
     </ClCompile>
   </ItemGroup>
