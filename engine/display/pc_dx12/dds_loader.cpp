@@ -1052,7 +1052,7 @@ namespace dds_loader
 	}
 
 	HRESULT CalculateD12Loader(ID3D12Device* device, const uint8_t* dds_file, size_t size, DDS_LOADER_FLAGS flags, D3D12_RESOURCE_DESC& d12_resource_desc,
-		std::vector<D3D12_SUBRESOURCE_DATA>& sub_resources)
+		std::vector<D3D12_SUBRESOURCE_DATA>& sub_resources, D3D12_SHADER_RESOURCE_VIEW_DESC& dx12_shader_resource_view_desc)
 	{
 		// Validate DDS file in memory
 		if (size < (sizeof(uint32_t) + sizeof(DDS_HEADER)))
@@ -1284,6 +1284,64 @@ namespace dds_loader
 
 		if (numberOfResources > D3D12_REQ_SUBRESOURCES)
 			return E_INVALIDARG;
+
+		//Calculate view descriptor
+		
+		dx12_shader_resource_view_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+		dx12_shader_resource_view_desc.Format = d12_resource_desc.Format;
+
+		if (isCubeMap)
+		{
+			if (arraySize > 1)
+			{
+				//Array of cubemaps
+				dx12_shader_resource_view_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBEARRAY;
+				dx12_shader_resource_view_desc.TextureCubeArray.MipLevels = static_cast<UINT>(mipCount);
+				dx12_shader_resource_view_desc.TextureCubeArray.NumCubes = static_cast<UINT>(arraySize);
+			}
+			else
+			{
+				//Cubemap
+				dx12_shader_resource_view_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBE;
+				dx12_shader_resource_view_desc.TextureCube.MipLevels = static_cast<UINT>(mipCount);
+			}
+		}
+		else
+		{
+			switch (resDim)
+			{
+			case D3D12_RESOURCE_DIMENSION_TEXTURE1D:
+				if (arraySize > 1)
+				{
+					dx12_shader_resource_view_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE1DARRAY;
+					dx12_shader_resource_view_desc.Texture1DArray.MipLevels = static_cast<UINT>(mipCount);
+					dx12_shader_resource_view_desc.Texture1DArray.ArraySize = static_cast<UINT>(arraySize);
+				}
+				else
+				{
+					dx12_shader_resource_view_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE1D;
+					dx12_shader_resource_view_desc.Texture1D.MipLevels = static_cast<UINT>(mipCount);
+				}
+				break;
+			case D3D12_RESOURCE_DIMENSION_TEXTURE2D:
+				if (arraySize > 1)
+				{
+					dx12_shader_resource_view_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2DARRAY;
+					dx12_shader_resource_view_desc.Texture2DArray.MipLevels = static_cast<UINT>(mipCount);
+					dx12_shader_resource_view_desc.Texture2DArray.ArraySize = static_cast<UINT>(arraySize);
+				}
+				else
+				{
+					dx12_shader_resource_view_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+					dx12_shader_resource_view_desc.Texture2D.MipLevels = static_cast<UINT>(mipCount);
+				}
+				break;
+			case D3D12_RESOURCE_DIMENSION_TEXTURE3D:		
+					dx12_shader_resource_view_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE3D;
+					dx12_shader_resource_view_desc.Texture3D.MipLevels = static_cast<UINT>(mipCount);
+				break;
+			}
+		}
 
 		sub_resources.reserve(numberOfResources);
 

@@ -403,9 +403,10 @@ namespace display
 
 		D3D12_RESOURCE_DESC d12_resource_desc = {};
 		std::vector<D3D12_SUBRESOURCE_DATA> sub_resources;
+		D3D12_SHADER_RESOURCE_VIEW_DESC dx12_shader_resource_desc = {};
 
 		ThrowIfFailed(dds_loader::CalculateD12Loader(device->m_native_device.Get(), reinterpret_cast<const uint8_t*>(data), size,
-			dds_loader::DDS_LOADER_DEFAULT, d12_resource_desc, sub_resources));
+			dds_loader::DDS_LOADER_DEFAULT, d12_resource_desc, sub_resources, dx12_shader_resource_desc));
 
 		//Create resources
 		ThrowIfFailed(device->m_native_device->CreateCommittedResource(
@@ -450,6 +451,10 @@ namespace display
 
 		//The upload resource is not needed, add to the deferred resource buffer
 		AddDeferredDeleteResource(device, upload_resource);
+
+		//Create view
+
+		device->m_native_device->CreateShaderResourceView(shader_resource.resource.Get(), &dx12_shader_resource_desc, device->m_shader_resource_pool.GetDescriptor(handle));
 
 		return handle;
 	}

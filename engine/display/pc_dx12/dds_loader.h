@@ -26,7 +26,7 @@ namespace dds_loader
 	};
 
 	HRESULT CalculateD12Loader(ID3D12Device* device, const uint8_t* dds_file, size_t size, DDS_LOADER_FLAGS flags, D3D12_RESOURCE_DESC& d12_resource_desc,
-		std::vector<D3D12_SUBRESOURCE_DATA>& sub_resources);
+		std::vector<D3D12_SUBRESOURCE_DATA>& sub_resources, D3D12_SHADER_RESOURCE_VIEW_DESC& dx12_shader_resource_view_desc);
 
 	DDS_ALPHA_MODE CalculateAlphaMode(const uint8_t* dds_file);
 }
