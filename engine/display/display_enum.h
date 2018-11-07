@@ -114,6 +114,11 @@ namespace display
 		Buffer,
 		Texture2D
 	};
+
+	enum class RenderTargetType
+	{
+		Texture2D
+	};
 }
 
 #endif

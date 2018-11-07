@@ -624,6 +624,44 @@ namespace display
 		device->m_pipeline_state_pool.Free(handle);
 	}
 
+	//Create render target
+	RenderTargetHandle CreateRenderTarget(Device* device, const RenderTargetDesc& render_target_desc, const char* name)
+	{
+		RenderTargetHandle handle = device->m_render_target_pool.Alloc();
+		auto& render_target = device->Get(handle);
+
+		auto d12_resource_desc = CD3DX12_RESOURCE_DESC::Tex2D(Convert(render_target_desc.format), static_cast<UINT>(render_target_desc.width), static_cast<UINT>(render_target_desc.heigth));
+		d12_resource_desc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
+
+		//Create commited resource
+		ThrowIfFailed(device->m_native_device->CreateCommittedResource(
+			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+			D3D12_HEAP_FLAG_NONE,
+			&d12_resource_desc,
+			D3D12_RESOURCE_STATE_RENDER_TARGET,
+			nullptr,
+			IID_PPV_ARGS(&render_target.resource)));
+
+		render_target.current_state = D3D12_RESOURCE_STATE_RENDER_TARGET;
+
+		//Create view
+		D3D12_RENDER_TARGET_VIEW_DESC dx12_render_target_view_desc = {};
+		dx12_render_target_view_desc.Format = Convert(render_target_desc.format);
+		dx12_render_target_view_desc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
+		dx12_render_target_view_desc.Texture2D.MipSlice = 0;
+		dx12_render_target_view_desc.Texture2D.PlaneSlice = 0;
+		device->m_native_device->CreateRenderTargetView(render_target.resource.Get(), &dx12_render_target_view_desc, device->m_render_target_pool.GetDescriptor(handle));
+
+		SetObjectName(render_target.resource.Get(), name);
+
+		return handle;
+	}
+	//Destroy render target
+	void DestroyRenderTarget(Device* device, RenderTargetHandle& handle)
+	{
+		device->m_render_target_pool.Free(handle);
+	}
+
 	//Context commands
 	void SetRenderTargets(Device* device, const WeakCommandListHandle& command_list_handle, size_t num_targets, WeakRenderTargetHandle* render_target_array, WeakRenderTargetHandle * depth_stencil)
 	{

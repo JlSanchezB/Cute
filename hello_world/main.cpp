@@ -51,6 +51,7 @@ public:
 	display::UnorderedAccessBufferHandle m_unordered_access_buffer;
 
 	display::ShaderResourceHandle m_texture;
+	display::RenderTargetHandle m_render_target;
 
 
 	void OnInit() override
@@ -168,6 +169,15 @@ public:
 			m_texture = display::CreateTextureResource(m_device, reinterpret_cast<void*>(&texture_buffer[0]), texture_buffer.size(), "texture.dds");
 		}
 		
+		//RenderTarget
+		{
+			display::RenderTargetDesc render_target_desc;
+			render_target_desc.format = display::Format::R8G8B8A8_UNORM;
+			render_target_desc.width = 500;
+			render_target_desc.heigth = 500;
+			
+			m_render_target = display::CreateRenderTarget(m_device, render_target_desc);
+		}
 	}
 	void OnDestroy() override
 	{
@@ -179,6 +189,7 @@ public:
 		display::DestroyConstantBuffer(m_device, m_constant_buffer);
 		display::DestroyUnorderedAccessBuffer(m_device, m_unordered_access_buffer);
 		display::DestroyShaderResource(m_device, m_texture);
+		display::DestroyRenderTarget(m_device, m_render_target);
 
 		display::DestroyDevice(m_device);
 	}

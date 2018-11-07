@@ -71,6 +71,11 @@ namespace display
 	//Destroy vertex buffer
 	void DestroyIndexBuffer(Device* device, IndexBufferHandle& handle);
 
+	//Create render target
+	RenderTargetHandle CreateRenderTarget(Device* device, const RenderTargetDesc& render_target_desc, const char* name = nullptr);
+	//Destroy render target
+	void DestroyRenderTarget(Device* device, RenderTargetHandle& handle);
+
 	//Create constant buffer
 	ConstantBufferHandle CreateConstantBuffer(Device* device, const ConstantBufferDesc& constant_buffer_desc, const char* name = nullptr);
 	//Destroy constant buffer

@@ -207,6 +207,14 @@ namespace display
 		const void* init_data = nullptr;
 	};
 
+	struct RenderTargetDesc
+	{
+		Format format;
+		RenderTargetType render_target_type = RenderTargetType::Texture2D;
+		size_t width = 0;
+		size_t heigth = 0;
+	};
+
 }
 #endif
 
