@@ -230,7 +230,7 @@ namespace display
 		device->m_resource_deferred_delete_index++;
 	}
 
-	VertexBufferHandle CreateVertexBuffer(Device * device, const VertexBufferDesc& vertex_buffer_desc)
+	VertexBufferHandle CreateVertexBuffer(Device * device, const VertexBufferDesc& vertex_buffer_desc, const char* name)
 	{
 		VertexBufferHandle handle = device->m_vertex_buffer_pool.Alloc();
 
@@ -245,6 +245,8 @@ namespace display
 		vertex_buffer.view.StrideInBytes = static_cast<UINT>(vertex_buffer_desc.stride);
 		vertex_buffer.view.SizeInBytes = static_cast<UINT>(vertex_buffer_desc.size);
 
+		SetObjectName(vertex_buffer.resource.Get(), name);
+
 		return handle;
 	}
 
@@ -254,7 +256,7 @@ namespace display
 		device->m_vertex_buffer_pool.Free(handle);
 	}
 
-	IndexBufferHandle CreateIndexBuffer(Device * device, const IndexBufferDesc& index_buffer_desc)
+	IndexBufferHandle CreateIndexBuffer(Device * device, const IndexBufferDesc& index_buffer_desc, const char* name)
 	{
 		IndexBufferHandle handle = device->m_index_buffer_pool.Alloc();
 
@@ -269,6 +271,7 @@ namespace display
 		index_buffer.view.Format = Convert(index_buffer_desc.format);
 		index_buffer.view.SizeInBytes = static_cast<UINT>(index_buffer_desc.size);
 
+		SetObjectName(index_buffer.resource.Get(), name);
 
 		return handle;
 	}
@@ -278,7 +281,7 @@ namespace display
 		//Delete handle
 		device->m_index_buffer_pool.Free(handle);
 	}
-	ConstantBufferHandle CreateConstantBuffer(Device * device, const ConstantBufferDesc& constant_buffer_desc)
+	ConstantBufferHandle CreateConstantBuffer(Device * device, const ConstantBufferDesc& constant_buffer_desc, const char* name)
 	{
 		size_t size = (constant_buffer_desc.size + 255) & ~255;	// CB size is required to be 256-byte aligned.
 		SourceResourceData data(constant_buffer_desc.init_data, size);
@@ -296,6 +299,8 @@ namespace display
 			dx12_constant_buffer_desc.SizeInBytes = static_cast<UINT>(size);
 			device->m_native_device->CreateConstantBufferView(&dx12_constant_buffer_desc, device->m_constant_buffer_pool.GetDescriptor(handle));
 
+			SetObjectName(constant_buffer.resource.Get(), name);
+
 			return handle;
 		}
 		else if (constant_buffer_desc.access == Access::Dynamic)
@@ -308,7 +313,11 @@ namespace display
 				dx12_constant_buffer_desc.BufferLocation = constant_buffer.resource->GetGPUVirtualAddress();
 				dx12_constant_buffer_desc.SizeInBytes = static_cast<UINT>(size);
 				device->m_native_device->CreateConstantBufferView(&dx12_constant_buffer_desc, device->m_constant_buffer_pool.GetDescriptor(handle));
+
+				SetObjectName(constant_buffer.resource.Get(), name);
 			});
+
+
 			return handle;
 		}	
 		else
@@ -323,7 +332,7 @@ namespace display
 		DeleteRingResource(device, handle, device->m_constant_buffer_pool);
 	}
 
-	UnorderedAccessBufferHandle CreateUnorderedAccessBuffer(Device * device, const UnorderedAccessBufferDesc& unordered_access_buffer_desc)
+	UnorderedAccessBufferHandle CreateUnorderedAccessBuffer(Device * device, const UnorderedAccessBufferDesc& unordered_access_buffer_desc, const char* name)
 	{
 		size_t size = unordered_access_buffer_desc.element_size * unordered_access_buffer_desc.element_count;
 
@@ -350,6 +359,8 @@ namespace display
 
 		device->m_native_device->CreateUnorderedAccessView(unordered_access_buffer.resource.Get(), nullptr, &dx12_unordered_access_buffer_desc_desc, device->m_unordered_access_buffer_pool.GetDescriptor(handle));
 
+		SetObjectName(unordered_access_buffer.resource.Get(), name);
+
 		return handle;
 	}
 	void DestroyUnorderedAccessBuffer(Device * device, UnorderedAccessBufferHandle & handle)
@@ -357,7 +368,7 @@ namespace display
 		device->m_unordered_access_buffer_pool.Free(handle);
 	}
 
-	ShaderResourceHandle CreateShaderResource(Device * device, const ShaderResourceDesc & shader_resource_desc)
+	ShaderResourceHandle CreateShaderResource(Device * device, const ShaderResourceDesc & shader_resource_desc, const char* name)
 	{
 		D3D12_RESOURCE_DESC d12_resource_desc = {};
 		d12_resource_desc.MipLevels = static_cast<UINT>(shader_resource_desc.mips);
@@ -387,6 +398,8 @@ namespace display
 			dx12_shader_resource_desc.Texture2D.MipLevels = d12_resource_desc.MipLevels;
 			device->m_native_device->CreateShaderResourceView(shader_resource.resource.Get(), &dx12_shader_resource_desc, device->m_shader_resource_pool.GetDescriptor(handle));
 
+			SetObjectName(shader_resource.resource.Get(), name);
+
 			return handle;
 		}
 		else
@@ -396,7 +409,7 @@ namespace display
 		return ShaderResourceHandle();
 	}
 
-	ShaderResourceHandle CreateTextureResource(Device* device, const void* data, size_t size)
+	ShaderResourceHandle CreateTextureResource(Device* device, const void* data, size_t size, const char* name)
 	{
 		ShaderResourceHandle handle = device->m_shader_resource_pool.Alloc();
 		auto& shader_resource = device->Get(handle);
@@ -453,8 +466,9 @@ namespace display
 		AddDeferredDeleteResource(device, upload_resource);
 
 		//Create view
-
 		device->m_native_device->CreateShaderResourceView(shader_resource.resource.Get(), &dx12_shader_resource_desc, device->m_shader_resource_pool.GetDescriptor(handle));
+
+		SetObjectName(shader_resource.resource.Get(), name);
 
 		return handle;
 	}

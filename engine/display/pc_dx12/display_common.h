@@ -403,6 +403,17 @@ namespace
 	{
 		return device->m_frame_resources[device->m_frame_index].command_allocator;
 	}
+
+	inline void SetObjectName(ID3D12Object* object, const char* name)
+	{
+		if (name)
+		{
+			wchar_t wstr[4096];
+			size_t out_size;
+			mbstowcs_s(&out_size, wstr, 4096, name, strlen(name));
+			object->SetName(wstr);
+		}
+	}
 }
 
 #define SAFE_RELEASE(p) if (p) (p)->Release()

@@ -227,8 +227,8 @@ namespace display
 
 		//Create command lists
 		{
-			device->m_present_command_list = CreateCommandList(device);
-			device->m_resource_command_list = CreateCommandList(device);
+			device->m_present_command_list = CreateCommandList(device, "Present");
+			device->m_resource_command_list = CreateCommandList(device, "ResourceUploading");
 		}
 
 		// Create synchronization objects and wait until assets have been uploaded to the GPU.
@@ -433,7 +433,7 @@ namespace display
 	}
 
 	//Context
-	CommandListHandle CreateCommandList(Device* device)
+	CommandListHandle CreateCommandList(Device* device, const char* name)
 	{
 		CommandListHandle handle = device->m_command_list_pool.Alloc();
 		ThrowIfFailed(device->m_native_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, GetCommandAllocator(device).Get(), nullptr, IID_PPV_ARGS(&device->Get(handle).resource)));
@@ -441,6 +441,8 @@ namespace display
 		// Command lists are created in the recording state, but there is nothing
 		// to record yet. The main loop expects it to be closed, so close it now.
 		ThrowIfFailed(device->Get(handle).resource->Close());
+
+		SetObjectName(device->Get(handle).resource.Get(),name);
 
 		return handle;
 	}
@@ -480,7 +482,7 @@ namespace display
 		return device->m_frame_resources[device->m_frame_index].render_target;
 	}
 
-	RootSignatureHandle CreateRootSignature(Device * device, const RootSignatureDesc& root_signature_desc)
+	RootSignatureHandle CreateRootSignature(Device * device, const RootSignatureDesc& root_signature_desc, const char* name)
 	{
 		RootSignatureHandle handle = device->m_root_signature_pool.Alloc();
 
@@ -512,6 +514,8 @@ namespace display
 		
 		device->Get(handle).desc = root_signature_desc;
 
+		SetObjectName(device->Get(handle).resource.Get(), name);
+
 		return handle;
 	}
 
@@ -520,7 +524,7 @@ namespace display
 		device->m_root_signature_pool.Free(root_signature_handle);
 	}
 
-	PipelineStateHandle CreatePipelineState(Device * device, const PipelineStateDesc & pipeline_state_desc)
+	PipelineStateHandle CreatePipelineState(Device * device, const PipelineStateDesc & pipeline_state_desc, const char* name)
 	{
 		PipelineStateHandle handle = device->m_pipeline_state_pool.Alloc();
 
@@ -609,6 +613,8 @@ namespace display
 
 		//Create pipeline state
 		ThrowIfFailed(device->m_native_device->CreateGraphicsPipelineState(&DX12_pipeline_state_desc, IID_PPV_ARGS(&device->Get(handle))));
+
+		SetObjectName(device->Get(handle).Get(), name);
 
 		return handle;
 	}

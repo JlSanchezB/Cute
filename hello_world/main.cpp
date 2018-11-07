@@ -128,7 +128,7 @@ public:
 			vertex_buffer_desc.size = sizeof(vertex_data);
 			vertex_buffer_desc.stride = sizeof(VertexData);
 
-			m_vertex_buffer = display::CreateVertexBuffer(m_device, vertex_buffer_desc);
+			m_vertex_buffer = display::CreateVertexBuffer(m_device, vertex_buffer_desc, "fullscreen_quad");
 		}
 
 		//Constant buffer
@@ -165,7 +165,7 @@ public:
 		{
 			std::vector<char> texture_buffer = ReadFileToBuffer("texture.dds");
 
-			m_texture = display::CreateTextureResource(m_device, reinterpret_cast<void*>(&texture_buffer[0]), texture_buffer.size());
+			m_texture = display::CreateTextureResource(m_device, reinterpret_cast<void*>(&texture_buffer[0]), texture_buffer.size(), "texture.dds");
 		}
 		
 	}

@@ -37,7 +37,7 @@ namespace display
 	void EndFrame(Device* device);
 
 	//Command List
-	CommandListHandle CreateCommandList(Device* device);
+	CommandListHandle CreateCommandList(Device* device, const char* name = nullptr);
 	void DestroyCommandList(Device* device, CommandListHandle& handle);
 
 	//Open command list, begin recording
@@ -52,39 +52,39 @@ namespace display
 	WeakRenderTargetHandle GetBackBuffer(Device* device);
 
 	//Create root signature
-	RootSignatureHandle CreateRootSignature(Device* device, const RootSignatureDesc& root_signature_desc);
+	RootSignatureHandle CreateRootSignature(Device* device, const RootSignatureDesc& root_signature_desc, const char* name = nullptr);
 	//Destroy root signature
 	void DestroyRootSignature(Device * device, RootSignatureHandle& root_signature_handle);
 
 	//Create pipeline state
-	PipelineStateHandle CreatePipelineState(Device* device, const PipelineStateDesc& pipeline_state_desc);
+	PipelineStateHandle CreatePipelineState(Device* device, const PipelineStateDesc& pipeline_state_desc, const char* name = nullptr);
 	//Destroy pipeline state
 	void DestroyPipelineState(Device* device, PipelineStateHandle& handle);
 
 	//Create vertex buffer
-	VertexBufferHandle CreateVertexBuffer(Device* device, const VertexBufferDesc& vertex_buffer_desc);
+	VertexBufferHandle CreateVertexBuffer(Device* device, const VertexBufferDesc& vertex_buffer_desc, const char* name = nullptr);
 	//Destroy vertex buffer
 	void DestroyVertexBuffer(Device* device, VertexBufferHandle& handle);
 
 	//Create vertex buffer
-	IndexBufferHandle CreateIndexBuffer(Device* device, const IndexBufferDesc& index_buffer_desc);
+	IndexBufferHandle CreateIndexBuffer(Device* device, const IndexBufferDesc& index_buffer_desc, const char* name = nullptr);
 	//Destroy vertex buffer
 	void DestroyIndexBuffer(Device* device, IndexBufferHandle& handle);
 
 	//Create constant buffer
-	ConstantBufferHandle CreateConstantBuffer(Device* device, const ConstantBufferDesc& constant_buffer_desc);
+	ConstantBufferHandle CreateConstantBuffer(Device* device, const ConstantBufferDesc& constant_buffer_desc, const char* name = nullptr);
 	//Destroy constant buffer
 	void DestroyConstantBuffer(Device* device, ConstantBufferHandle& handle);
 
 	//Create unordered access buffer
-	UnorderedAccessBufferHandle CreateUnorderedAccessBuffer(Device* device, const UnorderedAccessBufferDesc& unordered_access_buffer_desc);
+	UnorderedAccessBufferHandle CreateUnorderedAccessBuffer(Device* device, const UnorderedAccessBufferDesc& unordered_access_buffer_desc, const char* name = nullptr);
 	//Destroy unordered access buffer
 	void DestroyUnorderedAccessBuffer(Device* device, UnorderedAccessBufferHandle& handle);
 
 	//Create a generic shader resource
-	ShaderResourceHandle CreateShaderResource(Device* device, const ShaderResourceDesc& shader_resource_desc);
+	ShaderResourceHandle CreateShaderResource(Device* device, const ShaderResourceDesc& shader_resource_desc, const char* name = nullptr);
 	//Create a texture from platform dependent buffer
-	ShaderResourceHandle CreateTextureResource(Device* device, const void* data, size_t size);
+	ShaderResourceHandle CreateTextureResource(Device* device, const void* data, size_t size, const char* name = nullptr);
 	//Destroy shader resource
 	void DestroyShaderResource(Device * device, ShaderResourceHandle& handle);
 
