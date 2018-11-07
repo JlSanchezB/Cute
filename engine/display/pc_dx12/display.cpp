@@ -342,17 +342,6 @@ namespace display
 		return device->m_tearing;
 	}
 
-	//Used from framework to set the correct size
-	bool IsWindowed(Device* device)
-	{
-		return device->m_windowed;
-	}
-
-	void SetWindowed(Device* device, bool windowed)
-	{
-		device->m_windowed = windowed;
-	}
-
 	//Used for the fullscreen tearing implementation
 	bool GetCurrentDisplayRect(Device* device, Rect& rect)
 	{

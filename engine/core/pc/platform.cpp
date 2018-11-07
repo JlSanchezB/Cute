@@ -16,9 +16,6 @@ namespace display
 	//Only need to control the resolution from the platform layer if tearing is enabled
 	bool IsTearingEnabled(Device* device);
 
-	bool IsWindowed(Device* device);
-	void SetWindowed(Device* device, bool windowed);
-
 	bool GetCurrentDisplayRect(Device* device, Rect& rect);
 }
 
@@ -27,6 +24,7 @@ namespace
 	//Fullscreen
 	RECT g_window_rect;
 	UINT g_window_style = WS_OVERLAPPEDWINDOW;
+	bool g_windowed = true;
 
 	//Windows message handle
 	LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
@@ -71,7 +69,7 @@ namespace
 			{
 				if (game && game->GetDevice() && display::IsTearingEnabled(game->GetDevice()))
 				{
-					if (display::IsWindowed(game->GetDevice()))
+					if (g_windowed)
 					{
 						//Change to full screen
 
@@ -118,7 +116,7 @@ namespace
 
 						ShowWindow(hWnd, SW_MAXIMIZE);
 
-						display::SetWindowed(game->GetDevice(), false);
+						g_windowed = false;
 					}
 					else
 					{
@@ -136,7 +134,7 @@ namespace
 
 						ShowWindow(hWnd, SW_NORMAL);
 
-						display::SetWindowed(game->GetDevice(), true);
+						g_windowed = true;
 					}
 					return 0;
 				}
