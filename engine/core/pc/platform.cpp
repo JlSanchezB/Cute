@@ -21,6 +21,9 @@ namespace display
 
 namespace
 {
+	//Device
+	display::Device* g_device = nullptr;
+
 	//Fullscreen
 	RECT g_window_rect;
 	UINT g_window_style = WS_OVERLAPPEDWINDOW;
@@ -54,9 +57,9 @@ namespace
 				GetClientRect(hWnd, &clientRect);
 
 				//Call the device
-				if (game->GetDevice())
+				if (g_device)
 				{
-					display::ChangeWindowSize(game->GetDevice(), clientRect.right - clientRect.left, clientRect.bottom - clientRect.top, wParam == SIZE_MINIMIZED);
+					display::ChangeWindowSize(g_device, clientRect.right - clientRect.left, clientRect.bottom - clientRect.top, wParam == SIZE_MINIMIZED);
 				}
 				//Call the game
 				game->OnSizeChange(clientRect.right - clientRect.left, clientRect.bottom - clientRect.top, wParam == SIZE_MINIMIZED);
@@ -67,7 +70,7 @@ namespace
 			// Handle ALT+ENTER:
 			if ((wParam == VK_RETURN) && (lParam & (1 << 29)))
 			{
-				if (game && game->GetDevice() && display::IsTearingEnabled(game->GetDevice()))
+				if (game && g_device && display::IsTearingEnabled(g_device))
 				{
 					if (g_windowed)
 					{
@@ -82,7 +85,7 @@ namespace
 						//Get current display size
 						RECT fullscreenWindowRect;
 						display::Rect rect;
-						if (display::GetCurrentDisplayRect(game->GetDevice(), rect))
+						if (display::GetCurrentDisplayRect(g_device, rect))
 						{
 							fullscreenWindowRect.bottom = static_cast<LONG>(rect.bottom);
 							fullscreenWindowRect.top = static_cast<LONG>(rect.top);
@@ -159,6 +162,11 @@ namespace platform
 	HWND GetHwnd()
 	{
 		return g_current_hwnd;
+	}
+
+	void Game::SetDevice(display::Device * device)
+	{
+		g_device = device;
 	}
 
 	char Run(const char* name, void* param, size_t width, size_t height, Game* game)
