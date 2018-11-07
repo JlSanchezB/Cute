@@ -99,7 +99,7 @@ namespace display
 	void DestroyShaderResource(Device * device, ShaderResourceHandle& handle);
 
 	//Set render target
-	void SetRenderTargets(Device* device, const WeakCommandListHandle& command_list, size_t num_targets, WeakRenderTargetHandle* render_target_array, WeakRenderTargetHandle* depth_stencil);
+	void SetRenderTargets(Device* device, const WeakCommandListHandle& command_list, size_t num_targets, WeakRenderTargetHandle* render_target_array, WeakDepthBufferHandle depth_stencil);
 
 	//Clear
 	void ClearRenderTargetColour(Device* device, const WeakCommandListHandle& command_list, const WeakRenderTargetHandle& render_target, const float colour[4]);

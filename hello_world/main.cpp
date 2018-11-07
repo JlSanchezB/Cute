@@ -211,7 +211,7 @@ public:
 
 		//Set BackBuffer
 		display::WeakRenderTargetHandle back_buffer = display::GetBackBuffer(m_device);
-		display::SetRenderTargets(m_device, m_command_list, 1, &back_buffer, nullptr);
+		display::SetRenderTargets(m_device, m_command_list, 1, &back_buffer, display::WeakDepthBufferHandle());
 
 		//Clear
 		const float clear_colour[] = { rand() / (RAND_MAX + 1.f) , 0.2f, 0.4f, 1.0f };

@@ -697,7 +697,7 @@ namespace display
 	}
 
 	//Context commands
-	void SetRenderTargets(Device* device, const WeakCommandListHandle& command_list_handle, size_t num_targets, WeakRenderTargetHandle* render_target_array, WeakRenderTargetHandle * depth_stencil)
+	void SetRenderTargets(Device* device, const WeakCommandListHandle& command_list_handle, size_t num_targets, WeakRenderTargetHandle* render_target_array, WeakDepthBufferHandle depth_stencil)
 	{
 		const auto& command_list = device->Get(command_list_handle).resource;
 
@@ -716,7 +716,14 @@ namespace display
 			render_target_handles[i] = device->m_render_target_pool.GetDescriptor(render_target_array[i]);
 		}
 
-		command_list->OMSetRenderTargets(static_cast<UINT>(num_targets), render_target_handles, FALSE, nullptr);
+		if (depth_stencil.IsValid())
+		{
+			auto& depth_buffer = device->Get(depth_stencil);
+			command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(depth_buffer.resource.Get(), depth_buffer.current_state, D3D12_RESOURCE_STATE_DEPTH_WRITE));
+			depth_buffer.current_state = D3D12_RESOURCE_STATE_DEPTH_WRITE;
+		}
+
+		command_list->OMSetRenderTargets(static_cast<UINT>(num_targets), render_target_handles, FALSE, depth_stencil.IsValid() ? &device->m_depth_buffer_pool.GetDescriptor(depth_stencil) : nullptr);
 	}
 
 	void ClearRenderTargetColour(Device* device, const WeakCommandListHandle& command_list_handle, const WeakRenderTargetHandle& render_target_handle, const float colour[4])
