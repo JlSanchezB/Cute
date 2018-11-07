@@ -52,6 +52,7 @@ public:
 
 	display::ShaderResourceHandle m_texture;
 	display::RenderTargetHandle m_render_target;
+	display::DepthBufferHandle m_depth_buffer;
 
 
 	void OnInit() override
@@ -177,6 +178,12 @@ public:
 			render_target_desc.heigth = 500;
 			
 			m_render_target = display::CreateRenderTarget(m_device, render_target_desc);
+
+			display::DepthBufferDesc depth_buffer_desc;
+			depth_buffer_desc.width = 500;
+			depth_buffer_desc.heigth = 500;
+
+			m_depth_buffer = display::CreateDepthBuffer(m_device, depth_buffer_desc);
 		}
 	}
 	void OnDestroy() override
@@ -190,6 +197,7 @@ public:
 		display::DestroyUnorderedAccessBuffer(m_device, m_unordered_access_buffer);
 		display::DestroyShaderResource(m_device, m_texture);
 		display::DestroyRenderTarget(m_device, m_render_target);
+		display::DestroyDepthBuffer(m_device, m_depth_buffer);
 
 		display::DestroyDevice(m_device);
 	}

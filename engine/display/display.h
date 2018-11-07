@@ -76,6 +76,11 @@ namespace display
 	//Destroy render target
 	void DestroyRenderTarget(Device* device, RenderTargetHandle& handle);
 
+	//Create depth buffer
+	DepthBufferHandle CreateDepthBuffer(Device* device, const DepthBufferDesc& depth_buffer_desc, const char* name = nullptr);
+	//Destroy depth buffer
+	void DestroyDepthBuffer(Device* device, DepthBufferHandle& handle);
+
 	//Create constant buffer
 	ConstantBufferHandle CreateConstantBuffer(Device* device, const ConstantBufferDesc& constant_buffer_desc, const char* name = nullptr);
 	//Destroy constant buffer

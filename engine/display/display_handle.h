@@ -15,6 +15,9 @@ namespace display
 	using RenderTargetHandle = core::Handle<struct RenderTarget, uint16_t>;
 	using WeakRenderTargetHandle = core::WeakHandle<struct RenderTarget, uint16_t>;
 
+	using DepthBufferHandle = core::Handle<struct DepthBuffer, uint16_t>;
+	using WeakDepthBufferHandle = core::WeakHandle<struct DepthBuffer, uint16_t>;
+
 	using RootSignatureHandle = core::Handle<struct RootSignature, uint16_t>;
 	using WeakRootSignatureHandle = core::WeakHandle<struct RootSignature, uint16_t>;
 

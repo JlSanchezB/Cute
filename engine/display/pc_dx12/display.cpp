@@ -183,6 +183,7 @@ namespace display
 
 		//Alloc pools
 		device->m_render_target_pool.Init(100, 10, params.num_frames, device, D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+		device->m_depth_buffer_pool.Init(100, 10, params.num_frames, device, D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
 		device->m_command_list_pool.Init(500, 10, params.num_frames);
 		device->m_root_signature_pool.Init(10, 10, params.num_frames);
 		device->m_pipeline_state_pool.Init(2000, 100, params.num_frames);
@@ -278,6 +279,7 @@ namespace display
 
 		//Destroy pools
 		device->m_render_target_pool.Destroy();
+		device->m_depth_buffer_pool.Destroy();
 		device->m_command_list_pool.Destroy();
 		device->m_root_signature_pool.Destroy();
 		device->m_pipeline_state_pool.Destroy();
@@ -414,6 +416,7 @@ namespace display
 
 		//Delete deferred handles
 		device->m_render_target_pool.NextFrame();
+		device->m_depth_buffer_pool.NextFrame();
 		device->m_command_list_pool.NextFrame();
 		device->m_root_signature_pool.NextFrame();
 		device->m_pipeline_state_pool.NextFrame();
@@ -630,14 +633,11 @@ namespace display
 		RenderTargetHandle handle = device->m_render_target_pool.Alloc();
 		auto& render_target = device->Get(handle);
 
-		auto d12_resource_desc = CD3DX12_RESOURCE_DESC::Tex2D(Convert(render_target_desc.format), static_cast<UINT>(render_target_desc.width), static_cast<UINT>(render_target_desc.heigth));
-		d12_resource_desc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
-
 		//Create commited resource
 		ThrowIfFailed(device->m_native_device->CreateCommittedResource(
 			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
 			D3D12_HEAP_FLAG_NONE,
-			&d12_resource_desc,
+			&CD3DX12_RESOURCE_DESC::Tex2D(Convert(render_target_desc.format), static_cast<UINT>(render_target_desc.width), static_cast<UINT>(render_target_desc.heigth), 1, 0, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET),
 			D3D12_RESOURCE_STATE_RENDER_TARGET,
 			nullptr,
 			IID_PPV_ARGS(&render_target.resource)));
@@ -660,6 +660,40 @@ namespace display
 	void DestroyRenderTarget(Device* device, RenderTargetHandle& handle)
 	{
 		device->m_render_target_pool.Free(handle);
+	}
+
+	//Create depth buffer
+	DepthBufferHandle CreateDepthBuffer(Device* device, const DepthBufferDesc& depth_buffer_desc, const char* name)
+	{
+		DepthBufferHandle handle = device->m_depth_buffer_pool.Alloc();
+		auto& depth_buffer = device->Get(handle);
+
+		//Create commited resource
+		ThrowIfFailed(device->m_native_device->CreateCommittedResource(
+			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+			D3D12_HEAP_FLAG_NONE,
+			&CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_D32_FLOAT, static_cast<UINT>(depth_buffer_desc.width), static_cast<UINT>(depth_buffer_desc.heigth), 1, 0, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL),
+			D3D12_RESOURCE_STATE_DEPTH_WRITE,
+			nullptr,
+			IID_PPV_ARGS(&depth_buffer.resource)));
+
+		depth_buffer.current_state = D3D12_RESOURCE_STATE_DEPTH_WRITE;
+
+		D3D12_DEPTH_STENCIL_VIEW_DESC dx12_depth_stencil_desc = {};
+		dx12_depth_stencil_desc.Format = DXGI_FORMAT_D32_FLOAT;
+		dx12_depth_stencil_desc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
+		dx12_depth_stencil_desc.Flags = D3D12_DSV_FLAG_NONE;
+
+		device->m_native_device->CreateDepthStencilView(depth_buffer.resource.Get(), &dx12_depth_stencil_desc, device->m_depth_buffer_pool.GetDescriptor(handle));
+
+		SetObjectName(depth_buffer.resource.Get(), name);
+
+		return handle;
+	}
+	//Destroy depth buffer
+	void DestroyDepthBuffer(Device* device, DepthBufferHandle& handle)
+	{
+		device->m_depth_buffer_pool.Free(handle);
 	}
 
 	//Context commands

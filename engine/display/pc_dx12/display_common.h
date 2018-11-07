@@ -181,6 +181,11 @@ namespace display
 			ComPtr<ID3D12Resource> resource;
 			D3D12_RESOURCE_STATES current_state;
 		};
+		struct DepthBuffer
+		{
+			ComPtr<ID3D12Resource> resource;
+			D3D12_RESOURCE_STATES current_state;
+		};
 		struct VertexBuffer
 		{
 			ComPtr<ID3D12Resource> resource;
@@ -207,6 +212,7 @@ namespace display
 
 		GraphicHandlePool<CommandListHandle, CommandList> m_command_list_pool;
 		GraphicDescriptorHandlePool<RenderTargetHandle, RenderTarget> m_render_target_pool;
+		GraphicDescriptorHandlePool<DepthBufferHandle, DepthBuffer> m_depth_buffer_pool;
 		GraphicHandlePool<RootSignatureHandle, RootSignature> m_root_signature_pool;
 		GraphicHandlePool<PipelineStateHandle, PipelineState> m_pipeline_state_pool;
 		GraphicHandlePool<VertexBufferHandle, VertexBuffer> m_vertex_buffer_pool;
@@ -271,6 +277,18 @@ namespace display
 	inline auto& Device::Get<WeakRenderTargetHandle>(const WeakRenderTargetHandle& handle)
 	{
 		return this->m_render_target_pool[handle];
+	}
+
+	template<>
+	inline auto& Device::Get<DepthBufferHandle>(const DepthBufferHandle& handle)
+	{
+		return this->m_depth_buffer_pool[handle];
+	}
+
+	template<>
+	inline auto& Device::Get<WeakDepthBufferHandle>(const WeakDepthBufferHandle& handle)
+	{
+		return this->m_depth_buffer_pool[handle];
 	}
 
 	template<>

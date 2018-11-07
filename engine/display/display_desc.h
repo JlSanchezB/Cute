@@ -215,6 +215,11 @@ namespace display
 		size_t heigth = 0;
 	};
 
+	struct DepthBufferDesc
+	{
+		size_t width = 0;
+		size_t heigth = 0;
+	};
 }
 #endif
 
