@@ -8,14 +8,14 @@ namespace
 		size_t size = 0;
 		size_t row_pitch = 0; //Needed for textures
 		size_t slice_pitch = 0;
-		void* data;
+		const void* data;
 
 		//It is a simple buffer
-		SourceResourceData(void* _data, size_t _size) : data(_data), size(_size), row_pitch(_size), slice_pitch(_size)
+		SourceResourceData(const void* _data, size_t _size) : data(_data), size(_size), row_pitch(_size), slice_pitch(_size)
 		{
 		}
 		//Texture buffer
-		SourceResourceData(void* _data, size_t _size, size_t _row_pitch, size_t _slice_pitch) : data(_data), size(_size), row_pitch(_row_pitch), slice_pitch(_slice_pitch)
+		SourceResourceData(const void* _data, size_t _size, size_t _row_pitch, size_t _slice_pitch) : data(_data), size(_size), row_pitch(_row_pitch), slice_pitch(_slice_pitch)
 		{
 		}
 	};

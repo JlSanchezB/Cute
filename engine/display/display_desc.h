@@ -109,7 +109,7 @@ namespace display
 
 	struct ShaderDesc
 	{
-		void* data = nullptr;
+		const void* data = nullptr;
 		size_t size = 0;
 	};
 
@@ -169,14 +169,14 @@ namespace display
 	struct VertexBufferDesc
 	{
 		size_t size = 0;
-		void* init_data = nullptr;
+		const void* init_data = nullptr;
 		size_t stride = 0;
 	};
 
 	struct IndexBufferDesc
 	{
 		size_t size = 0;
-		void* init_data = nullptr;
+		const void* init_data = nullptr;
 		Format format = Format::R16_UINT;
 	};
 
@@ -184,7 +184,7 @@ namespace display
 	{
 		Access access = Access::Static;
 		size_t size = 0;
-		void* init_data = nullptr;
+		const void* init_data = nullptr;
 	};
 
 	struct UnorderedAccessBufferDesc
@@ -204,7 +204,7 @@ namespace display
 		size_t slice_pitch = 0;
 		size_t mips = 0;
 		size_t size = 0;
-		void* init_data = nullptr;
+		const void* init_data = nullptr;
 	};
 
 }
