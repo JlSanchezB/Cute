@@ -242,6 +242,9 @@ public:
 		display::WeakVertexBufferHandle weak_vertex_buffer = m_vertex_buffer;
 		display::SetVertexBuffers(m_device, m_command_list, 0, 1, &weak_vertex_buffer);
 
+		//Resource binding
+		//display::SetShaderResource(m_device, m_command_list, 0, m_texture);
+
 		//Draw
 		display::Draw(m_device, m_command_list, 0, 3, display::PrimitiveTopology::TriangleList);
 

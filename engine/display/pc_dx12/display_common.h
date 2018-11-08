@@ -135,6 +135,11 @@ namespace display
 		{
 			return DescriptorHeapPool::GetDescriptor(GraphicHandlePool<HANDLE, DATA>::GetInternalIndex(handle));
 		}
+
+		CD3DX12_GPU_DESCRIPTOR_HANDLE GetGPUDescriptor(const Accessor& handle)
+		{
+			return DescriptorHeapPool::GetGPUDescriptor(GraphicHandlePool<HANDLE, DATA>::GetInternalIndex(handle));
+		}
 	};
 
 	//Ring resource support, used for dynamic type of resources

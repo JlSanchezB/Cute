@@ -67,6 +67,44 @@ namespace display
 		// Set the fence value for the next frame.
 		device->m_frame_resources[device->m_frame_index].fence_value = currentFenceValue + 1;
 	}
+
+	void PreDraw(display::Device* device, display::Device::CommandList& command_list)
+	{
+		auto& root_signature_desc = device->Get(command_list.current_root_signature);
+		//Bind resources that are dirty
+		for (size_t i = 0; i < root_signature_desc.desc.num_root_parameters; ++i)
+		{
+			if (command_list.graphics_state.dirty[i])
+			{
+				auto& root_parameter = root_signature_desc.desc.root_parameters[i];
+				size_t slot = root_parameter.shader_register;
+
+				//We need to set this root signature
+				switch (root_parameter.type)
+				{
+				case display::RootSignatureParameterType::ConstantBuffer:
+					{
+						auto& constant_buffer_handle = command_list.graphics_state.constant_buffers[i];
+						command_list.resource->SetGraphicsRootConstantBufferView(static_cast<UINT>(i), device->Get(constant_buffer_handle).resource->GetGPUVirtualAddress());
+					}
+					break;
+				case display::RootSignatureParameterType::UnorderAccessBuffer:
+					{
+						auto& unordered_access_buffer_handle = command_list.graphics_state.unordered_access_buffers[i];
+						command_list.resource->SetGraphicsRootUnorderedAccessView(static_cast<UINT>(i), device->Get(unordered_access_buffer_handle).resource->GetGPUVirtualAddress());
+					}
+				break;
+				case display::RootSignatureParameterType::ShaderResource:
+					{
+						auto& shader_resource_handle = command_list.graphics_state.shader_resources[i];
+						command_list.resource->SetGraphicsRootShaderResourceView(static_cast<UINT>(i), device->Get(shader_resource_handle).resource->GetGPUVirtualAddress());
+					}
+				break;
+				}
+			}
+		}
+		command_list.graphics_state.dirty.reset();
+	}
 }
 
 //Access to platform::GetHwnd()
@@ -851,9 +889,13 @@ namespace display
 	}
 	void Draw(Device * device, const WeakCommandListHandle & command_list_handle, size_t start_vertex, size_t vertex_count, PrimitiveTopology primitive_topology)
 	{
-		auto& command_list = device->Get(command_list_handle).resource;
-		command_list->IASetPrimitiveTopology(Convert(primitive_topology));
+		auto& command_list = device->Get(command_list_handle);
 
-		command_list->DrawInstanced(static_cast<UINT>(vertex_count), 1, static_cast<UINT>(start_vertex), 0);
+		//PreDraw, clean all dirty states
+		PreDraw(device, command_list);
+
+		command_list.resource->IASetPrimitiveTopology(Convert(primitive_topology));
+
+		command_list.resource->DrawInstanced(static_cast<UINT>(vertex_count), 1, static_cast<UINT>(start_vertex), 0);
 	}
 }
