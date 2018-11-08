@@ -15,6 +15,7 @@
 #include <string>
 #include <wrl.h>
 #include <shellapi.h>
+#include <bitset>
 
 using namespace DirectX;
 
@@ -29,7 +30,7 @@ using Microsoft::WRL::ComPtr;
 
 namespace display
 {
-	static const size_t kNumMaxProperties = 16;
+	static const size_t kNumMaxResourceBindSlots = 16;
 
 	//Maps all the slots to the correct root signature property
 	struct RootSignatureMap
@@ -38,25 +39,27 @@ namespace display
 		{
 			static const size_t kInvalid = static_cast<size_t>(-1);
 			size_t property = kInvalid;
-			size_t subp_roperty = kInvalid; //-1 if it is a root one
+			size_t sub_property = kInvalid; //-1 if it is a root one
 		};
 
-		std::array<PropertyMap, kNumMaxProperties> constant_buffers = {};
-		std::array<PropertyMap, kNumMaxProperties> unordered_access_buffers = {};
-		std::array<PropertyMap, kNumMaxProperties> shader_resources = {};
+		std::array<PropertyMap, kNumMaxResourceBindSlots> constant_buffers = {};
+		std::array<PropertyMap, kNumMaxResourceBindSlots> unordered_access_buffers = {};
+		std::array<PropertyMap, kNumMaxResourceBindSlots> shader_resources = {};
 	};
 	//State of the properties to be send to the GPU
 	struct GraphicsState
 	{
-		std::array<WeakConstantBufferHandle, kNumMaxProperties> constant_buffers;
-		std::array<WeakUnorderedAccessBufferHandle, kNumMaxProperties> unordered_access_buffers;
-		std::array<WeakShaderResourceHandle, kNumMaxProperties> shader_resources;
+		std::bitset<kMaxNumRootParameters> dirty; //Dirty each root property
+		std::array<WeakConstantBufferHandle, kNumMaxResourceBindSlots> constant_buffers;
+		std::array<WeakUnorderedAccessBufferHandle, kNumMaxResourceBindSlots> unordered_access_buffers;
+		std::array<WeakShaderResourceHandle, kNumMaxResourceBindSlots> shader_resources;
 
 		void Reset()
 		{
 			for (auto& it : constant_buffers) it = WeakConstantBufferHandle();
 			for (auto& it : unordered_access_buffers) it = WeakUnorderedAccessBufferHandle();
 			for (auto& it : shader_resources) it = WeakShaderResourceHandle();
+			dirty.reset();
 		}
 	};
 

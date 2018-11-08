@@ -41,6 +41,16 @@ namespace core
 		{
 			return m_index != kInvalid;
 		}
+
+		bool operator==(const HandleAccessor& b)
+		{
+			return m_index == b.m_index;
+		}
+
+		bool operator!=(const HandleAccessor& b)
+		{
+			return m_index != b.m_index;
+		}
 	};
 
 	//Handles can only be created from a pool and they can not be copied, only moved

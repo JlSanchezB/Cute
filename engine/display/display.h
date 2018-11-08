@@ -98,11 +98,19 @@ namespace display
 	//Destroy shader resource
 	void DestroyShaderResource(Device * device, ShaderResourceHandle& handle);
 
+	//Context
+
 	//Set render target
 	void SetRenderTargets(Device* device, const WeakCommandListHandle& command_list, size_t num_targets, WeakRenderTargetHandle* render_target_array, WeakDepthBufferHandle depth_stencil);
 
 	//Clear
 	void ClearRenderTargetColour(Device* device, const WeakCommandListHandle& command_list, const WeakRenderTargetHandle& render_target, const float colour[4]);
+
+	//Set Viewport
+	void SetViewport(Device* device, const WeakCommandListHandle& command_list, const Viewport& viewport);
+
+	//Set Scissor
+	void SetScissorRect(Device* device, const WeakCommandListHandle& command_list, const Rect scissor_rect);
 
 	//Set root signature
 	void SetRootSignature(Device* device, const WeakCommandListHandle& command_list, const WeakRootSignatureHandle& root_signature);
@@ -116,11 +124,18 @@ namespace display
 	//Set Index Buffer
 	void SetIndexBuffer(Device* device, const WeakCommandListHandle& command_list, const WeakIndexBufferHandle& index_buffer);
 
-	//Set Viewport
-	void SetViewport(Device* device, const WeakCommandListHandle& command_list, const Viewport& viewport);
 
-	//Set Scissor
-	void SetScissorRect(Device* device, const WeakCommandListHandle& command_list, const Rect scissor_rect);
+	//Resource Binding
+
+	//Set constant buffer
+	void SetConstantBuffer(Device* device, const WeakCommandListHandle& command_list, size_t slot, const WeakConstantBufferHandle& constant_buffer);
+
+	//Set unordered access buffer
+	void SetUnorderedAccessBuffer(Device* device, const WeakCommandListHandle& command_list, size_t slot, const WeakUnorderedAccessBufferHandle& unordered_access_buffer);
+
+	//Set shader resource
+	void SetShaderResource(Device* device, const WeakCommandListHandle& command_list, size_t slot, const WeakShaderResourceHandle& shader_resource);
+
 
 	//Draw
 	void Draw(Device* device, const WeakCommandListHandle& command_list, size_t start_vertex, size_t vertex_count, PrimitiveTopology primitive_topology);

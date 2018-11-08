@@ -472,7 +472,6 @@ namespace display
 			featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_0;
 		}
 
-		CD3DX12_ROOT_PARAMETER1 root_parameters[1];
 
 		D3D12_STATIC_SAMPLER_DESC static_samplers[kMaxNumStaticSamplers] = {};
 		for (size_t i = 0; i < root_signature_desc.num_static_samplers; ++i)
@@ -480,8 +479,26 @@ namespace display
 			static_samplers[i] = Convert(root_signature_desc.static_samplers[i]);
 		}
 
+		CD3DX12_ROOT_PARAMETER1 root_parameters[kMaxNumRootParameters];
+		for (size_t i = 0; i < root_signature_desc.num_root_parameters; ++i)
+		{
+			auto& source_property = root_signature_desc.root_parameters[i];
+			switch (source_property.type)
+			{
+			case RootSignatureParameterType::ConstantBuffer:
+				root_parameters[i].InitAsConstantBufferView(static_cast<UINT>(source_property.shader_register), 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, Convert(source_property.visibility));
+				break;
+			case RootSignatureParameterType::UnorderAccessBuffer:
+				root_parameters[i].InitAsUnorderedAccessView(static_cast<UINT>(source_property.shader_register), 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, Convert(source_property.visibility));
+				break;
+			case RootSignatureParameterType::ShaderResource:
+				root_parameters[i].InitAsShaderResourceView(static_cast<UINT>(source_property.shader_register), 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, Convert(source_property.visibility));
+				break;
+			}	
+		}
+
 		CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDesc;
-		rootSignatureDesc.Init_1_1(0, root_parameters, static_cast<UINT>(root_signature_desc.num_static_samplers), static_samplers, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+		rootSignatureDesc.Init_1_1(static_cast<UINT>(root_signature_desc.num_root_parameters), root_parameters, static_cast<UINT>(root_signature_desc.num_static_samplers), static_samplers, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
 		ComPtr<ID3DBlob> signature;
 		ComPtr<ID3DBlob> error;
@@ -763,6 +780,49 @@ namespace display
 
 		command_list->IASetIndexBuffer(&index_buffer.view);
 	}
+	void SetConstantBuffer(Device * device, const WeakCommandListHandle & command_list_handle, size_t slot, const WeakConstantBufferHandle & constant_buffer)
+	{
+		auto& command_list = device->Get(command_list_handle);
+		
+		//Update graphics state
+		if (command_list.graphics_state.constant_buffers[slot] != constant_buffer)
+		{
+			//Get root signature property index and dirty it
+			size_t root_signature_property = device->Get(command_list.current_root_signature).mapping.constant_buffers[slot].property;
+			command_list.graphics_state.dirty.set(root_signature_property, true);
+
+			command_list.graphics_state.constant_buffers[slot] = constant_buffer;
+		}
+	}
+	void SetUnorderedAccessBuffer(Device * device, const WeakCommandListHandle & command_list_handle, size_t slot, const WeakUnorderedAccessBufferHandle & unordered_access_buffer)
+	{
+		auto& command_list = device->Get(command_list_handle);
+
+		//Update graphics state
+		if (command_list.graphics_state.unordered_access_buffers[slot] != unordered_access_buffer)
+		{
+			//Get root signature property index and dirty it
+			size_t root_signature_property = device->Get(command_list.current_root_signature).mapping.unordered_access_buffers[slot].property;
+			command_list.graphics_state.dirty.set(root_signature_property, true);
+
+			command_list.graphics_state.unordered_access_buffers[slot] = unordered_access_buffer;
+		}
+	}
+	void SetShaderResource(Device * device, const WeakCommandListHandle & command_list_handle, size_t slot, const WeakShaderResourceHandle & shader_resource)
+	{
+		auto& command_list = device->Get(command_list_handle);
+
+		//Update graphics state
+		if (command_list.graphics_state.shader_resources[slot] != shader_resource)
+		{
+			//Get root signature property index and dirty it
+			size_t root_signature_property = device->Get(command_list.current_root_signature).mapping.shader_resources[slot].property;
+			command_list.graphics_state.dirty.set(root_signature_property, true);
+
+			command_list.graphics_state.shader_resources[slot] = shader_resource;
+		}
+	}
+
 	void SetViewport(Device * device, const WeakCommandListHandle & command_list_handle, const Viewport & viewport)
 	{
 		auto& command_list = device->Get(command_list_handle).resource;
