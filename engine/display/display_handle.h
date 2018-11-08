@@ -9,9 +9,6 @@ namespace display
 	using CommandListHandle = core::Handle<struct CommandList, uint16_t>;
 	using WeakCommandListHandle = core::WeakHandle<struct CommandList, uint16_t>;
 
-	using TextureHandle = core::Handle<struct Texture, uint16_t>;
-	using weakTextureHandle = core::WeakHandle<struct Texture, uint16_t>;
-
 	using RenderTargetHandle = core::Handle<struct RenderTarget, uint16_t>;
 	using WeakRenderTargetHandle = core::WeakHandle<struct RenderTarget, uint16_t>;
 

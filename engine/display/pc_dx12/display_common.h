@@ -29,24 +29,35 @@ using Microsoft::WRL::ComPtr;
 
 namespace display
 {
+	static const size_t kNumMaxProperties = 16;
+
+	//Maps all the slots to the correct root signature property
+	struct RootSignatureMap
+	{
+		struct PropertyMap
+		{
+			static const size_t kInvalid = static_cast<size_t>(-1);
+			size_t property = kInvalid;
+			size_t subp_roperty = kInvalid; //-1 if it is a root one
+		};
+
+		std::array<PropertyMap, kNumMaxProperties> constant_buffers = {};
+		std::array<PropertyMap, kNumMaxProperties> unordered_access_buffers = {};
+		std::array<PropertyMap, kNumMaxProperties> shader_resources = {};
+	};
 	//State of the properties to be send to the GPU
 	struct GraphicsState
 	{
-		static const size_t kNumMaxProperties = 32;
+		std::array<WeakConstantBufferHandle, kNumMaxProperties> constant_buffers;
+		std::array<WeakUnorderedAccessBufferHandle, kNumMaxProperties> unordered_access_buffers;
+		std::array<WeakShaderResourceHandle, kNumMaxProperties> shader_resources;
 
-		std::array<WeakConstantBufferHandle, kNumMaxProperties> constant_buffers = {};
-		std::array<WeakUnorderedAccessBufferHandle, kNumMaxProperties> unordered_access_buffers = {};
-		std::array<WeakShaderResourceHandle, kNumMaxProperties> textures = {};
-	};
-
-	//State of the properties that has been set in the root signature
-	struct RootSignatureState
-	{
-		struct Property
+		void Reset()
 		{
-			D3D12_GPU_VIRTUAL_ADDRESS address = 0;
-		};
-		std::vector<Property> properties;
+			for (auto& it : constant_buffers) it = WeakConstantBufferHandle();
+			for (auto& it : unordered_access_buffers) it = WeakUnorderedAccessBufferHandle();
+			for (auto& it : shader_resources) it = WeakShaderResourceHandle();
+		}
 	};
 
 	//Graphics handle pool, it is a handle pool with deferred deallocation
@@ -166,13 +177,13 @@ namespace display
 		struct CommandList
 		{
 			ComPtr<ID3D12GraphicsCommandList> resource;
-			RootSignatureState root_signature_state;
 			GraphicsState graphics_state;
-			RootSignatureDesc root_signature_desc;
+			WeakRootSignatureHandle current_root_signature;
 		};
 		struct RootSignature
 		{
 			ComPtr<ID3D12RootSignature> resource;
+			RootSignatureMap mapping;
 			RootSignatureDesc desc;
 		};
 		using PipelineState = ComPtr<ID3D12PipelineState>;

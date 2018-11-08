@@ -67,33 +67,6 @@ namespace display
 		// Set the fence value for the next frame.
 		device->m_frame_resources[device->m_frame_index].fence_value = currentFenceValue + 1;
 	}
-
-
-	void CreateRootSignatureGraphicsState(display::RootSignatureState& root_signature_state, display::GraphicsState& graphics_state, const display::RootSignatureDesc& root_signature)
-	{
-		//Set all null in the graphics state
-		for (auto& constant_buffer : graphics_state.constant_buffers)
-		{
-			constant_buffer = display::WeakConstantBufferHandle();
-		}
-
-		for (auto& unordered_access_buffer : graphics_state.unordered_access_buffers)
-		{
-			unordered_access_buffer = display::WeakUnorderedAccessBufferHandle();
-		}
-
-		for (auto& texture : graphics_state.textures)
-		{
-			texture = display::WeakShaderResourceHandle();
-		}
-
-		//Create root signature state
-		root_signature_state.properties.resize(root_signature.num_root_parameters);
-		for (auto& property : root_signature_state.properties)
-		{
-			property.address = 0;
-		}
-	}
 }
 
 //Access to platform::GetHwnd()
@@ -519,6 +492,25 @@ namespace display
 
 		SetObjectName(device->Get(handle).resource.Get(), name);
 
+		//Create the mapping from slots to root signature
+		auto& root_signature_mapping = device->Get(handle).mapping;
+		for (size_t i = 0; i < root_signature_desc.num_root_parameters; ++i)
+		{
+			auto& root_parameter = root_signature_desc.root_parameters[i];
+			switch (root_parameter.type)
+			{
+			case RootSignatureParameterType::ConstantBuffer:
+				root_signature_mapping.constant_buffers[root_parameter.shader_register].property = i;
+				break;
+			case RootSignatureParameterType::UnorderAccessBuffer:
+				root_signature_mapping.unordered_access_buffers[root_parameter.shader_register].property = i;
+				break;
+			case RootSignatureParameterType::ShaderResource:
+				root_signature_mapping.shader_resources[root_parameter.shader_register].property = i;
+				break;
+			}
+		}
+
 		return handle;
 	}
 
@@ -739,13 +731,11 @@ namespace display
 		auto& root_signature = device->Get(root_signature_handle);
 
 		command_list.resource->SetGraphicsRootSignature(root_signature.resource.Get());
-
-		//Root signature desc
-		command_list.root_signature_desc = root_signature.desc;
 		
-		//Create states
-		CreateRootSignatureGraphicsState(command_list.root_signature_state, command_list.graphics_state, command_list.root_signature_desc);
+		command_list.current_root_signature = root_signature_handle;
 
+		//Clean the state
+		command_list.graphics_state.Reset();
 	}
 	void SetPipelineState(Device * device, const WeakCommandListHandle & command_list_handle, const WeakPipelineStateHandle & pipeline_state_handle)
 	{

@@ -119,7 +119,7 @@ namespace display
 		{
 		default:
 		case RootSignatureParameterType::ConstantBuffer: return D3D12_ROOT_PARAMETER_TYPE_CBV;
-		case RootSignatureParameterType::Texture: return D3D12_ROOT_PARAMETER_TYPE_SRV;
+		case RootSignatureParameterType::ShaderResource: return D3D12_ROOT_PARAMETER_TYPE_SRV;
 		case RootSignatureParameterType::UnorderAccessBuffer: return D3D12_ROOT_PARAMETER_TYPE_UAV;
 		}
 	}

@@ -10,7 +10,7 @@ namespace display
 	{
 		ConstantBuffer,
 		UnorderAccessBuffer,
-		Texture
+		ShaderResource
 	};
 
 	enum class ShaderVisibility
