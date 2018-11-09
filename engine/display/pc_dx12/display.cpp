@@ -67,44 +67,6 @@ namespace display
 		// Set the fence value for the next frame.
 		device->m_frame_resources[device->m_frame_index].fence_value = currentFenceValue + 1;
 	}
-
-	void PreDraw(display::Device* device, display::Device::CommandList& command_list)
-	{
-		auto& root_signature_desc = device->Get(command_list.current_root_signature);
-		//Bind resources that are dirty
-		for (size_t i = 0; i < root_signature_desc.desc.num_root_parameters; ++i)
-		{
-			if (command_list.graphics_state.dirty[i])
-			{
-				auto& root_parameter = root_signature_desc.desc.root_parameters[i];
-				size_t slot = root_parameter.shader_register;
-
-				//We need to set this root signature
-				switch (root_parameter.type)
-				{
-				case display::RootSignatureParameterType::ConstantBuffer:
-					{
-						auto& constant_buffer_handle = command_list.graphics_state.constant_buffers[i];
-						command_list.resource->SetGraphicsRootConstantBufferView(static_cast<UINT>(i), device->Get(constant_buffer_handle).resource->GetGPUVirtualAddress());
-					}
-					break;
-				case display::RootSignatureParameterType::UnorderAccessBuffer:
-					{
-						auto& unordered_access_buffer_handle = command_list.graphics_state.unordered_access_buffers[i];
-						command_list.resource->SetGraphicsRootUnorderedAccessView(static_cast<UINT>(i), device->Get(unordered_access_buffer_handle).resource->GetGPUVirtualAddress());
-					}
-				break;
-				case display::RootSignatureParameterType::ShaderResource:
-					{
-						auto& shader_resource_handle = command_list.graphics_state.shader_resources[i];
-						command_list.resource->SetGraphicsRootShaderResourceView(static_cast<UINT>(i), device->Get(shader_resource_handle).resource->GetGPUVirtualAddress());
-					}
-				break;
-				}
-			}
-		}
-		command_list.graphics_state.dirty.reset();
-	}
 }
 
 //Access to platform::GetHwnd()
@@ -547,25 +509,6 @@ namespace display
 
 		SetObjectName(device->Get(handle).resource.Get(), name);
 
-		//Create the mapping from slots to root signature
-		auto& root_signature_mapping = device->Get(handle).mapping;
-		for (size_t i = 0; i < root_signature_desc.num_root_parameters; ++i)
-		{
-			auto& root_parameter = root_signature_desc.root_parameters[i];
-			switch (root_parameter.type)
-			{
-			case RootSignatureParameterType::ConstantBuffer:
-				root_signature_mapping.constant_buffers[root_parameter.shader_register].property = i;
-				break;
-			case RootSignatureParameterType::UnorderAccessBuffer:
-				root_signature_mapping.unordered_access_buffers[root_parameter.shader_register].property = i;
-				break;
-			case RootSignatureParameterType::ShaderResource:
-				root_signature_mapping.shader_resources[root_parameter.shader_register].property = i;
-				break;
-			}
-		}
-
 		return handle;
 	}
 
@@ -788,9 +731,6 @@ namespace display
 		command_list.resource->SetGraphicsRootSignature(root_signature.resource.Get());
 		
 		command_list.current_root_signature = root_signature_handle;
-
-		//Clean the state
-		command_list.graphics_state.Reset();
 	}
 	void SetPipelineState(Device * device, const WeakCommandListHandle & command_list_handle, const WeakPipelineStateHandle & pipeline_state_handle)
 	{
@@ -818,47 +758,36 @@ namespace display
 
 		command_list->IASetIndexBuffer(&index_buffer.view);
 	}
-	void SetConstantBuffer(Device * device, const WeakCommandListHandle & command_list_handle, size_t slot, const WeakConstantBufferHandle & constant_buffer)
+	void SetConstantBuffer(Device * device, const WeakCommandListHandle & command_list_handle, size_t root_parameter, const WeakConstantBufferHandle & constant_buffer_handle)
 	{
 		auto& command_list = device->Get(command_list_handle);
+		auto& root_signature = device->Get(command_list.current_root_signature);
+		auto& constant_buffer = device->Get(constant_buffer_handle);
+
+		assert(root_parameter < root_signature.desc.num_root_parameters);
+
+		command_list.resource->SetGraphicsRootConstantBufferView(static_cast<UINT>(root_parameter), constant_buffer.resource->GetGPUVirtualAddress());
 		
-		//Update graphics state
-		if (command_list.graphics_state.constant_buffers[slot] != constant_buffer)
-		{
-			//Get root signature property index and dirty it
-			size_t root_signature_property = device->Get(command_list.current_root_signature).mapping.constant_buffers[slot].property;
-			command_list.graphics_state.dirty.set(root_signature_property, true);
-
-			command_list.graphics_state.constant_buffers[slot] = constant_buffer;
-		}
 	}
-	void SetUnorderedAccessBuffer(Device * device, const WeakCommandListHandle & command_list_handle, size_t slot, const WeakUnorderedAccessBufferHandle & unordered_access_buffer)
+	void SetUnorderedAccessBuffer(Device * device, const WeakCommandListHandle & command_list_handle, size_t root_parameter, const WeakUnorderedAccessBufferHandle & unordered_access_buffer_handle)
 	{
 		auto& command_list = device->Get(command_list_handle);
+		auto& root_signature = device->Get(command_list.current_root_signature);
+		auto& unordered_access_buffer = device->Get(unordered_access_buffer_handle);
 
-		//Update graphics state
-		if (command_list.graphics_state.unordered_access_buffers[slot] != unordered_access_buffer)
-		{
-			//Get root signature property index and dirty it
-			size_t root_signature_property = device->Get(command_list.current_root_signature).mapping.unordered_access_buffers[slot].property;
-			command_list.graphics_state.dirty.set(root_signature_property, true);
+		assert(root_parameter < root_signature.desc.num_root_parameters);
 
-			command_list.graphics_state.unordered_access_buffers[slot] = unordered_access_buffer;
-		}
+		command_list.resource->SetGraphicsRootUnorderedAccessView(static_cast<UINT>(root_parameter), unordered_access_buffer.resource->GetGPUVirtualAddress());
 	}
-	void SetShaderResource(Device * device, const WeakCommandListHandle & command_list_handle, size_t slot, const WeakShaderResourceHandle & shader_resource)
+	void SetShaderResource(Device * device, const WeakCommandListHandle & command_list_handle, size_t root_parameter, const WeakShaderResourceHandle & shader_resource_handle)
 	{
 		auto& command_list = device->Get(command_list_handle);
+		auto& root_signature = device->Get(command_list.current_root_signature);
+		auto& shader_resource = device->Get(shader_resource_handle);
 
-		//Update graphics state
-		if (command_list.graphics_state.shader_resources[slot] != shader_resource)
-		{
-			//Get root signature property index and dirty it
-			size_t root_signature_property = device->Get(command_list.current_root_signature).mapping.shader_resources[slot].property;
-			command_list.graphics_state.dirty.set(root_signature_property, true);
+		assert(root_parameter < root_signature.desc.num_root_parameters);
 
-			command_list.graphics_state.shader_resources[slot] = shader_resource;
-		}
+		command_list.resource->SetGraphicsRootShaderResourceView(static_cast<UINT>(root_parameter), shader_resource.resource->GetGPUVirtualAddress());
 	}
 
 	void SetViewport(Device * device, const WeakCommandListHandle & command_list_handle, const Viewport & viewport)
@@ -890,9 +819,6 @@ namespace display
 	void Draw(Device * device, const WeakCommandListHandle & command_list_handle, size_t start_vertex, size_t vertex_count, PrimitiveTopology primitive_topology)
 	{
 		auto& command_list = device->Get(command_list_handle);
-
-		//PreDraw, clean all dirty states
-		PreDraw(device, command_list);
 
 		command_list.resource->IASetPrimitiveTopology(Convert(primitive_topology));
 

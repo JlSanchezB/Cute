@@ -128,13 +128,13 @@ namespace display
 	//Resource Binding
 
 	//Set constant buffer
-	void SetConstantBuffer(Device* device, const WeakCommandListHandle& command_list, size_t slot, const WeakConstantBufferHandle& constant_buffer);
+	void SetConstantBuffer(Device* device, const WeakCommandListHandle& command_list, size_t root_parameter, const WeakConstantBufferHandle& constant_buffer);
 
 	//Set unordered access buffer
-	void SetUnorderedAccessBuffer(Device* device, const WeakCommandListHandle& command_list, size_t slot, const WeakUnorderedAccessBufferHandle& unordered_access_buffer);
+	void SetUnorderedAccessBuffer(Device* device, const WeakCommandListHandle& command_list, size_t root_parameter, const WeakUnorderedAccessBufferHandle& unordered_access_buffer);
 
 	//Set shader resource
-	void SetShaderResource(Device* device, const WeakCommandListHandle& command_list, size_t slot, const WeakShaderResourceHandle& shader_resource);
+	void SetShaderResource(Device* device, const WeakCommandListHandle& command_list, size_t root_parameter, const WeakShaderResourceHandle& shader_resource);
 
 
 	//Draw

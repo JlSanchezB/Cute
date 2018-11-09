@@ -33,39 +33,6 @@ using Microsoft::WRL::ComPtr;
 
 namespace display
 {
-	static const size_t kNumMaxResourceBindSlots = 16;
-
-	//Maps all the slots to the correct root signature property
-	struct RootSignatureMap
-	{
-		struct PropertyMap
-		{
-			static const size_t kInvalid = static_cast<size_t>(-1);
-			size_t property = kInvalid;
-			size_t sub_property = kInvalid; //-1 if it is a root one
-		};
-
-		std::array<PropertyMap, kNumMaxResourceBindSlots> constant_buffers = {};
-		std::array<PropertyMap, kNumMaxResourceBindSlots> unordered_access_buffers = {};
-		std::array<PropertyMap, kNumMaxResourceBindSlots> shader_resources = {};
-	};
-	//State of the properties to be send to the GPU
-	struct GraphicsState
-	{
-		std::bitset<kMaxNumRootParameters> dirty; //Dirty each root property
-		std::array<WeakConstantBufferHandle, kNumMaxResourceBindSlots> constant_buffers;
-		std::array<WeakUnorderedAccessBufferHandle, kNumMaxResourceBindSlots> unordered_access_buffers;
-		std::array<WeakShaderResourceHandle, kNumMaxResourceBindSlots> shader_resources;
-
-		void Reset()
-		{
-			for (auto& it : constant_buffers) it = WeakConstantBufferHandle();
-			for (auto& it : unordered_access_buffers) it = WeakUnorderedAccessBufferHandle();
-			for (auto& it : shader_resources) it = WeakShaderResourceHandle();
-			dirty.reset();
-		}
-	};
-
 	//Graphics handle pool, it is a handle pool with deferred deallocation
 	template<typename HANDLE, typename DATA>
 	class GraphicHandlePool : public core::HandlePool<HANDLE, DATA>
@@ -245,13 +212,11 @@ namespace display
 		struct CommandList
 		{
 			ComPtr<ID3D12GraphicsCommandList> resource;
-			GraphicsState graphics_state;
 			WeakRootSignatureHandle current_root_signature;
 		};
 		struct RootSignature
 		{
 			ComPtr<ID3D12RootSignature> resource;
-			RootSignatureMap mapping;
 			RootSignatureDesc desc;
 		};
 		using PipelineState = ComPtr<ID3D12PipelineState>;
