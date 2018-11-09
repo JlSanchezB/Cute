@@ -98,6 +98,11 @@ namespace display
 	//Destroy shader resource
 	void DestroyShaderResource(Device * device, ShaderResourceHandle& handle);
 
+	//Create descriptor table
+	DescriptorTableHandle CreateDescriptorTable(Device* device, const DescriptorTableDesc& descriptor_table_desc);
+	//Destroy descriptor table
+	void DestroyDescriptorTable(Device * device, DescriptorTableHandle& handle);
+
 	//Context
 
 	//Set render target

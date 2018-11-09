@@ -478,4 +478,11 @@ namespace display
 		//Delete handle and linked ones
 		DeleteRingResource(device, handle, device->m_shader_resource_pool);
 	}
+	DescriptorTableHandle CreateDescriptorTable(Device * device, const DescriptorTableDesc & descriptor_table_desc)
+	{
+		return DescriptorTableHandle();
+	}
+	void DestroyDescriptorTable(Device * device, DescriptorTableHandle & handle)
+	{
+	}
 }

@@ -35,17 +35,32 @@ namespace display
 		ShaderVisibility visibility;
 	};
 
-	struct RootSignatureParamater
+	struct RootSignatureBaseParameter
+	{
+		size_t shader_register;
+	};
+
+	struct RootSignatureTable
+	{
+		size_t base_shader_register;
+		size_t range;
+	};
+
+	struct RootSignatureParameter
 	{
 		RootSignatureParameterType type;
-		size_t shader_register;
 		ShaderVisibility visibility;
+		union
+		{
+			RootSignatureBaseParameter root_param;
+			RootSignatureTable table;
+		};
 	};
 
 	struct RootSignatureDesc
 	{
 		size_t num_root_parameters = 0;
-		std::array<RootSignatureParamater, kMaxNumRootParameters> root_parameters;
+		std::array<RootSignatureParameter, kMaxNumRootParameters> root_parameters;
 		size_t num_static_samplers = 0;
 		std::array< StaticSamplerDesc, kMaxNumStaticSamplers> static_samplers;
 	};
@@ -219,6 +234,18 @@ namespace display
 	{
 		size_t width = 0;
 		size_t heigth = 0;
+	};
+
+	struct DescriptorTableDesc
+	{
+		static const size_t kNumMaxDescriptors = 32;
+		RootSignatureParameterType type; //Can not be a descriptor table
+		union
+		{
+			std::array<WeakConstantBufferHandle, kNumMaxDescriptors> constant_buffer_table;
+			std::array<WeakUnorderedAccessBufferHandle, kNumMaxDescriptors> unordered_access_buffer_table;
+			std::array<WeakShaderResourceHandle, kNumMaxDescriptors> shader_resource_table;
+		};
 	};
 }
 #endif

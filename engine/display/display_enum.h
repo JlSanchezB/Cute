@@ -10,7 +10,8 @@ namespace display
 	{
 		ConstantBuffer,
 		UnorderAccessBuffer,
-		ShaderResource
+		ShaderResource,
+		DescriptorTable
 	};
 
 	enum class ShaderVisibility

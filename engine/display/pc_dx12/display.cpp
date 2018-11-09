@@ -489,13 +489,13 @@ namespace display
 			switch (source_property.type)
 			{
 			case RootSignatureParameterType::ConstantBuffer:
-				root_parameters[i].InitAsConstantBufferView(static_cast<UINT>(source_property.shader_register), 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, Convert(source_property.visibility));
+				root_parameters[i].InitAsConstantBufferView(static_cast<UINT>(source_property.root_param.shader_register), 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, Convert(source_property.visibility));
 				break;
 			case RootSignatureParameterType::UnorderAccessBuffer:
-				root_parameters[i].InitAsUnorderedAccessView(static_cast<UINT>(source_property.shader_register), 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, Convert(source_property.visibility));
+				root_parameters[i].InitAsUnorderedAccessView(static_cast<UINT>(source_property.root_param.shader_register), 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, Convert(source_property.visibility));
 				break;
 			case RootSignatureParameterType::ShaderResource:
-				root_parameters[i].InitAsShaderResourceView(static_cast<UINT>(source_property.shader_register), 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, Convert(source_property.visibility));
+				root_parameters[i].InitAsShaderResourceView(static_cast<UINT>(source_property.root_param.shader_register), 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, Convert(source_property.visibility));
 				break;
 			}	
 		}

@@ -76,7 +76,7 @@ public:
 			display::RootSignatureDesc root_signature_desc;
 			root_signature_desc.num_root_parameters = 1;
 			root_signature_desc.root_parameters[0].type = display::RootSignatureParameterType::ShaderResource;
-			root_signature_desc.root_parameters[0].shader_register = 0;
+			root_signature_desc.root_parameters[0].root_param.shader_register = 0;
 			root_signature_desc.root_parameters[0].visibility = display::ShaderVisibility::Pixel;
 
 			root_signature_desc.num_static_samplers = 1;
