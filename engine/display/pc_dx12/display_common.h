@@ -1,11 +1,14 @@
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN             // Exclude rarely-used stuff from Windows headers.
+#endif
+#if !defined(NOMINMAX)
+#define NOMINMAX 1
+#endif
+
 #include <display\display.h>
 #include "d3dx12.h"
 #include "display_convert.h"
 #include <core/ring_buffer.h>
-
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN             // Exclude rarely-used stuff from Windows headers.
-#endif
 
 #include <windows.h>
 #include <d3d12.h>
@@ -93,6 +96,7 @@ namespace display
 			//Destroy all handles
 			for (auto& handle : m_defered_delete_handles[last_frame])
 			{
+				DeferredFree(handle);
 				core::HandlePool<HANDLE, DATA>::Free(handle);
 			}
 			m_defered_delete_handles[last_frame].clear();
@@ -109,13 +113,17 @@ namespace display
 				NextFrame();
 			}
 		}
+	protected:
+		virtual void DeferredFree(HANDLE& handle)
+		{
+		};
 	private:
 
 		size_t m_current_frame = 0;
 		std::vector<std::vector<HANDLE>> m_defered_delete_handles;
 	};
 
-	//GraphicsHandlePool with descriptor heap support
+	//GraphicsHandlePool with descriptor heap pool support
 	template<typename HANDLE, typename DATA>
 	class GraphicDescriptorHandlePool : public GraphicHandlePool<HANDLE, DATA>, public DescriptorHeapPool
 	{
@@ -139,6 +147,58 @@ namespace display
 		CD3DX12_GPU_DESCRIPTOR_HANDLE GetGPUDescriptor(const Accessor& handle)
 		{
 			return DescriptorHeapPool::GetGPUDescriptor(GraphicHandlePool<HANDLE, DATA>::GetInternalIndex(handle));
+		}
+	};
+
+	template<typename HANDLE>
+	struct GraphicHandlePoolEmptyFreeFunction
+	{
+		void Free(HANDLE& handle)
+		{
+
+		}
+	};
+
+	//GraphicsHandlePool with descriptor heap free list support
+	template<typename HANDLE, typename DATA>
+	class GraphicDescriptorHandleFreeList : public GraphicHandlePool<HANDLE, DescriptorHeapFreeListItem<DATA>>, public DescriptorHeapFreeList
+	{
+		//Needs a special accessor class
+		using Accessor = core::HandleAccessor<HANDLE, DATA>;
+	public:
+		void Init(size_t max_size, size_t init_size, size_t num_frames, size_t average_descriptors_per_handle, Device* device, D3D12_DESCRIPTOR_HEAP_TYPE heap_type)
+		{
+			GraphicHandlePool<HANDLE, DATA>::Init(max_size, init_size, num_frames);
+			CreateHeap(device, heap_type, max_size * average_descriptors_per_handle);
+		}
+
+		~GraphicDescriptorHandleFreeList()
+		{
+			DestroyHeap();
+		}
+
+		//Allocate a handle with the descriptors associated to it
+		template<typename ...Args>
+		HANDLE Alloc(uint16_t num_descriptors, Args&&... args)
+		{
+			DescriptorHeapFreeList::AllocDescriptors(operator[](handle), num_descriptors);
+			GraphicHandlePool<HANDLE, DescriptorHeapFreeListItem<DATA>>::Alloc(std::foward(args));
+		}
+
+		//Free unused handle
+		void DeferredFree(HANDLE& handle) override
+		{
+			DescriptorHeapFreeList::DeallocDescriptors(operator[](handle));
+		};
+
+		CD3DX12_CPU_DESCRIPTOR_HANDLE GetDescriptor(const Accessor& handle)
+		{
+			return DescriptorHeapFreeList::GetDescriptor(operator[](handle));
+		}
+
+		CD3DX12_GPU_DESCRIPTOR_HANDLE GetGPUDescriptor(const Accessor& handle)
+		{
+			return DescriptorHeapFreeList::GetGPUDescriptor(operator[](handle));
 		}
 	};
 
