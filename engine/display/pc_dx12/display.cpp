@@ -439,6 +439,11 @@ namespace display
 		// re-recording.
 		ThrowIfFailed(command_list->Reset(GetCommandAllocator(device).Get(), nullptr));
 
+		//Set descriptor table heaps
+		ID3D12DescriptorHeap* descriptor_table[1];
+		descriptor_table[0] = device->m_descriptor_table_pool.GetHeap();
+		command_list->SetDescriptorHeaps(1, descriptor_table);
+
 	}
 	//Close context, stop recording
 	void CloseCommandList(Device* device, const WeakCommandListHandle& handle)
@@ -803,6 +808,16 @@ namespace display
 		assert(root_parameter < root_signature.desc.num_root_parameters);
 
 		command_list.resource->SetGraphicsRootShaderResourceView(static_cast<UINT>(root_parameter), shader_resource.resource->GetGPUVirtualAddress());
+	}
+
+	void SetDescriptorTable(Device * device, const WeakCommandListHandle & command_list_handle, size_t root_parameter, const WeakDescriptorTableHandle & descriptor_table_handle)
+	{
+		auto& command_list = device->Get(command_list_handle);
+		auto& root_signature = device->Get(command_list.current_root_signature);
+		auto& descriptor_table = device->Get(descriptor_table_handle);
+
+		assert(root_parameter < root_signature.desc.num_root_parameters);
+		command_list.resource->SetGraphicsRootDescriptorTable(static_cast<UINT>(root_parameter), device->m_descriptor_table_pool.GetGPUDescriptor(descriptor_table_handle));
 	}
 
 	void SetViewport(Device * device, const WeakCommandListHandle & command_list_handle, const Viewport & viewport)

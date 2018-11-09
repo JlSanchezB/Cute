@@ -480,9 +480,34 @@ namespace display
 	}
 	DescriptorTableHandle CreateDescriptorTable(Device * device, const DescriptorTableDesc & descriptor_table_desc)
 	{
-		return DescriptorTableHandle();
+		DescriptorTableHandle handle = device->m_descriptor_table_pool.Alloc(static_cast<uint16_t>(descriptor_table_desc.num_descriptors));
+		auto& descriptor_table = device->Get(handle);
+
+		//Copy descriptors
+		for (size_t i = 0; i < descriptor_table_desc.num_descriptors; ++i)
+		{
+			auto& descriptor_table_item = descriptor_table_desc.descriptors[i];
+			switch (descriptor_table_item.type)
+			{
+			case DescriptorTableParameterType::ConstantBuffer:
+				device->m_native_device->CopyDescriptorsSimple(1, device->m_descriptor_table_pool.GetDescriptor(handle, i),
+					device->m_constant_buffer_pool.GetDescriptor(descriptor_table_item.constant_buffer), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+				break;
+			case DescriptorTableParameterType::UnorderAccessBuffer:
+				device->m_native_device->CopyDescriptorsSimple(1, device->m_descriptor_table_pool.GetDescriptor(handle, i),
+					device->m_unordered_access_buffer_pool.GetDescriptor(descriptor_table_item.unordered_access_buffer), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+				break;
+			case DescriptorTableParameterType::ShaderResource:
+				device->m_native_device->CopyDescriptorsSimple(1, device->m_descriptor_table_pool.GetDescriptor(handle, i),
+					device->m_shader_resource_pool.GetDescriptor(descriptor_table_item.shader_resource), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+				break;
+			}
+		}
+
+		return handle;
 	}
 	void DestroyDescriptorTable(Device * device, DescriptorTableHandle & handle)
 	{
+		device->m_descriptor_table_pool.Free(handle);
 	}
 }

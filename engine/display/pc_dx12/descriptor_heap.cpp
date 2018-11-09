@@ -26,7 +26,7 @@ namespace display
 		D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = {};
 		rtvHeapDesc.NumDescriptors = static_cast<UINT>(size);
 		rtvHeapDesc.Type = heap_type;
-		rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+		rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 		ThrowIfFailed(device->m_native_device->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&m_descriptor_heap)));
 
 		m_descriptor_size = device->m_native_device->GetDescriptorHandleIncrementSize(heap_type);

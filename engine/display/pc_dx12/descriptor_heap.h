@@ -26,26 +26,26 @@ namespace display
 	class DescriptorHeapFreeList
 	{
 	public:
-		template<typename BASE>
-		struct Item : public BASE, public DescriptorHeapFreeList::Block
-		{
-		};
-
-	protected:
-		void CreateHeap(Device* device, D3D12_DESCRIPTOR_HEAP_TYPE heap_type, size_t size);
-		void DestroyHeap();
-
 		struct Block
 		{
 			uint16_t index;
 			uint16_t size;
 		};
 
+		ID3D12DescriptorHeap* GetHeap() const
+		{
+			return m_descriptor_heap.Get();
+		}
+
+	protected:
+		void CreateHeap(Device* device, D3D12_DESCRIPTOR_HEAP_TYPE heap_type, size_t size);
+		void DestroyHeap();
+
 		void AllocDescriptors(Block& block, uint16_t num_descriptors);
 		void DeallocDescriptors(Block& block);
 
-		inline CD3DX12_CPU_DESCRIPTOR_HANDLE GetDescriptor(const Block& item) const;
-		inline CD3DX12_GPU_DESCRIPTOR_HANDLE GetGPUDescriptor(const Block& item) const;
+		inline CD3DX12_CPU_DESCRIPTOR_HANDLE GetDescriptor(const Block& item, size_t offset = 0) const;
+		inline CD3DX12_GPU_DESCRIPTOR_HANDLE GetGPUDescriptor(const Block& item, size_t offset = 0) const;
 
 	private:
 
@@ -65,13 +65,13 @@ namespace display
 		return CD3DX12_GPU_DESCRIPTOR_HANDLE(m_descriptor_heap->GetGPUDescriptorHandleForHeapStart(), static_cast<INT>(index), m_descriptor_size);
 	}
 
-	inline CD3DX12_CPU_DESCRIPTOR_HANDLE DescriptorHeapFreeList::GetDescriptor(const Block& item) const
+	inline CD3DX12_CPU_DESCRIPTOR_HANDLE DescriptorHeapFreeList::GetDescriptor(const Block& item, size_t offset) const
 	{
-		return CD3DX12_CPU_DESCRIPTOR_HANDLE(m_descriptor_heap->GetCPUDescriptorHandleForHeapStart(), static_cast<INT>(item.index), m_descriptor_size);
+		return CD3DX12_CPU_DESCRIPTOR_HANDLE(m_descriptor_heap->GetCPUDescriptorHandleForHeapStart(), static_cast<INT>(item.index + offset), m_descriptor_size);
 	}
-	inline CD3DX12_GPU_DESCRIPTOR_HANDLE DescriptorHeapFreeList::GetGPUDescriptor(const Block& item) const
+	inline CD3DX12_GPU_DESCRIPTOR_HANDLE DescriptorHeapFreeList::GetGPUDescriptor(const Block& item, size_t offset) const
 	{
-		return CD3DX12_GPU_DESCRIPTOR_HANDLE(m_descriptor_heap->GetGPUDescriptorHandleForHeapStart(), static_cast<INT>(item.index), m_descriptor_size);
+		return CD3DX12_GPU_DESCRIPTOR_HANDLE(m_descriptor_heap->GetGPUDescriptorHandleForHeapStart(), static_cast<INT>(item.index + offset), m_descriptor_size);
 	}
 }
 #endif

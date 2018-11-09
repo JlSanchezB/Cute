@@ -128,14 +128,12 @@ namespace display
 
 	//GraphicsHandlePool with descriptor heap free list support
 	template<typename HANDLE, typename DATA>
-	class GraphicDescriptorHandleFreeList : public GraphicHandlePool<HANDLE, DescriptorHeapFreeList::Item<DATA>>, public DescriptorHeapFreeList
+	class GraphicDescriptorHandleFreeList : public GraphicHandlePool<HANDLE, DATA>, public DescriptorHeapFreeList
 	{
-		//Needs a special accessor class
-		using Accessor = core::HandleAccessor<HANDLE, DATA>;
 	public:
 		void Init(size_t max_size, size_t init_size, size_t num_frames, size_t average_descriptors_per_handle, Device* device, D3D12_DESCRIPTOR_HEAP_TYPE heap_type)
 		{
-			GraphicHandlePool<HANDLE, DescriptorHeapFreeList::Item<DATA>>::Init(max_size, init_size, num_frames);
+			GraphicHandlePool<HANDLE, DATA>::Init(max_size, init_size, num_frames);
 			CreateHeap(device, heap_type, max_size * average_descriptors_per_handle);
 		}
 
@@ -148,8 +146,9 @@ namespace display
 		template<typename ...Args>
 		HANDLE Alloc(uint16_t num_descriptors, Args&&... args)
 		{
+			HANDLE handle = GraphicHandlePool<HANDLE, DATA>::Alloc(args...);
 			DescriptorHeapFreeList::AllocDescriptors(operator[](handle), num_descriptors);
-			GraphicHandlePool<HANDLE, DescriptorHeapFreeListItem<DATA>>::Alloc(std::foward(args));
+			return handle;
 		}
 
 		//Free unused handle
@@ -158,14 +157,14 @@ namespace display
 			DescriptorHeapFreeList::DeallocDescriptors(operator[](handle));
 		};
 
-		CD3DX12_CPU_DESCRIPTOR_HANDLE GetDescriptor(const Accessor& handle)
+		CD3DX12_CPU_DESCRIPTOR_HANDLE GetDescriptor(const Accessor& handle, size_t offset = 0)
 		{
-			return DescriptorHeapFreeList::GetDescriptor(operator[](handle));
+			return DescriptorHeapFreeList::GetDescriptor(operator[](handle), offset);
 		}
 
-		CD3DX12_GPU_DESCRIPTOR_HANDLE GetGPUDescriptor(const Accessor& handle)
+		CD3DX12_GPU_DESCRIPTOR_HANDLE GetGPUDescriptor(const Accessor& handle, size_t offset = 0)
 		{
-			return DescriptorHeapFreeList::GetGPUDescriptor(operator[](handle));
+			return DescriptorHeapFreeList::GetGPUDescriptor(operator[](handle), offset);
 		}
 	};
 
@@ -252,7 +251,7 @@ namespace display
 		{
 			ComPtr<ID3D12Resource> resource;
 		};
-		struct DescriptorTable
+		struct DescriptorTable : DescriptorHeapFreeList::Block
 		{
 		};
 		

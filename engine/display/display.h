@@ -141,6 +141,8 @@ namespace display
 	//Set shader resource
 	void SetShaderResource(Device* device, const WeakCommandListHandle& command_list, size_t root_parameter, const WeakShaderResourceHandle& shader_resource);
 
+	//Set descriptor table
+	void SetDescriptorTable(Device* device, const WeakCommandListHandle& command_list, size_t root_parameter, const WeakDescriptorTableHandle& descriptor_table);
 
 	//Draw
 	void Draw(Device* device, const WeakCommandListHandle& command_list, size_t start_vertex, size_t vertex_count, PrimitiveTopology primitive_topology);

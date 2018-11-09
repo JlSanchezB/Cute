@@ -187,9 +187,8 @@ public:
 		//Descriptor tables
 		{
 			display::DescriptorTableDesc descriptor_table_desc;
-			descriptor_table_desc.type = display::RootSignatureParameterType::DescriptorTable;
-			descriptor_table_desc.num_descriptors = 1;
-			descriptor_table_desc.shader_resource_table[0] = m_texture;
+			descriptor_table_desc.AddDescriptor(m_texture);
+
 			m_shader_resources_descriptor_table = display::CreateDescriptorTable(m_device, descriptor_table_desc);
 		}
 		
@@ -258,7 +257,7 @@ public:
 		display::SetVertexBuffers(m_device, m_command_list, 0, 1, &weak_vertex_buffer);
 
 		//Resource binding
-		//display::SetShaderResource(m_device, m_command_list, 0, m_texture);
+		display::SetDescriptorTable(m_device, m_command_list, 0, m_shader_resources_descriptor_table);
 
 		//Draw
 		display::Draw(m_device, m_command_list, 0, 3, display::PrimitiveTopology::TriangleList);
