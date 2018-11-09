@@ -40,10 +40,18 @@ namespace display
 		size_t shader_register;
 	};
 
+	struct RootSignatureTableRange
+	{
+		DescriptorTableParameterType type;
+		size_t base_shader_register;
+		size_t size;
+	};
+
 	struct RootSignatureTable
 	{
-		size_t base_shader_register;
-		size_t range;
+		static const size_t kNumMaxRanges = 8;
+		size_t num_ranges;
+		std::array<RootSignatureTableRange, kNumMaxRanges> range;
 	};
 
 	struct RootSignatureParameter
@@ -238,14 +246,15 @@ namespace display
 
 	struct DescriptorTableDesc
 	{
+		Access access = Access::Static;
 		static const size_t kNumMaxDescriptors = 32;
 		RootSignatureParameterType type; //Can not be a descriptor table
-		union
-		{
-			std::array<WeakConstantBufferHandle, kNumMaxDescriptors> constant_buffer_table;
-			std::array<WeakUnorderedAccessBufferHandle, kNumMaxDescriptors> unordered_access_buffer_table;
-			std::array<WeakShaderResourceHandle, kNumMaxDescriptors> shader_resource_table;
-		};
+
+		std::array<WeakConstantBufferHandle, kNumMaxDescriptors> constant_buffer_table;
+		std::array<WeakUnorderedAccessBufferHandle, kNumMaxDescriptors> unordered_access_buffer_table;
+		std::array<WeakShaderResourceHandle, kNumMaxDescriptors> shader_resource_table;
+
+		size_t num_descriptors = 0;
 	};
 }
 #endif

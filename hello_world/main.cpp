@@ -54,6 +54,8 @@ public:
 	display::RenderTargetHandle m_render_target;
 	display::DepthBufferHandle m_depth_buffer;
 
+	display::DescriptorTableHandle m_shader_resources_descriptor_table;
+
 
 	void OnInit() override
 	{
@@ -75,8 +77,11 @@ public:
 		{
 			display::RootSignatureDesc root_signature_desc;
 			root_signature_desc.num_root_parameters = 1;
-			root_signature_desc.root_parameters[0].type = display::RootSignatureParameterType::ShaderResource;
-			root_signature_desc.root_parameters[0].root_param.shader_register = 0;
+			root_signature_desc.root_parameters[0].type = display::RootSignatureParameterType::DescriptorTable;
+			root_signature_desc.root_parameters[0].table.num_ranges = 1;
+			root_signature_desc.root_parameters[0].table.range[0].base_shader_register = 0;
+			root_signature_desc.root_parameters[0].table.range[0].size = 1;
+			root_signature_desc.root_parameters[0].table.range[0].type = display::DescriptorTableParameterType::ShaderResource;
 			root_signature_desc.root_parameters[0].visibility = display::ShaderVisibility::Pixel;
 
 			root_signature_desc.num_static_samplers = 1;
@@ -178,6 +183,15 @@ public:
 
 			m_texture = display::CreateTextureResource(m_device, reinterpret_cast<void*>(&texture_buffer[0]), texture_buffer.size(), "texture.dds");
 		}
+
+		//Descriptor tables
+		{
+			display::DescriptorTableDesc descriptor_table_desc;
+			descriptor_table_desc.type = display::RootSignatureParameterType::DescriptorTable;
+			descriptor_table_desc.num_descriptors = 1;
+			descriptor_table_desc.shader_resource_table[0] = m_texture;
+			m_shader_resources_descriptor_table = display::CreateDescriptorTable(m_device, descriptor_table_desc);
+		}
 		
 		//RenderTarget
 		{
@@ -207,6 +221,7 @@ public:
 		display::DestroyShaderResource(m_device, m_texture);
 		display::DestroyRenderTarget(m_device, m_render_target);
 		display::DestroyDepthBuffer(m_device, m_depth_buffer);
+		display::DestroyDescriptorTable(m_device, m_shader_resources_descriptor_table);
 
 		display::DestroyDevice(m_device);
 	}

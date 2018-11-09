@@ -14,6 +14,13 @@ namespace display
 		DescriptorTable
 	};
 
+	enum class DescriptorTableParameterType
+	{
+		ConstantBuffer,
+		UnorderAccessBuffer,
+		ShaderResource,
+	};
+
 	enum class ShaderVisibility
 	{
 		All,

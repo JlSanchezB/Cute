@@ -497,6 +497,18 @@ namespace display
 			case RootSignatureParameterType::ShaderResource:
 				root_parameters[i].InitAsShaderResourceView(static_cast<UINT>(source_property.root_param.shader_register), 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, Convert(source_property.visibility));
 				break;
+			case RootSignatureParameterType::DescriptorTable:
+				{
+					CD3DX12_DESCRIPTOR_RANGE1 range[RootSignatureTable::kNumMaxRanges];
+					for (size_t range_index = 0; range_index < source_property.table.num_ranges; ++range_index)
+					{
+						auto& range_desc = source_property.table.range[range_index];
+						range[range_index].Init(Convert(range_desc.type), static_cast<UINT>(range_desc.size), static_cast<UINT>(range_desc.base_shader_register), 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
+					}
+				
+					root_parameters[i].InitAsDescriptorTable(static_cast<UINT>(source_property.table.num_ranges), &range[0], Convert(source_property.visibility));
+				}
+				break;
 			}	
 		}
 
