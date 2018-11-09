@@ -128,14 +128,14 @@ namespace display
 
 	//GraphicsHandlePool with descriptor heap free list support
 	template<typename HANDLE, typename DATA>
-	class GraphicDescriptorHandleFreeList : public GraphicHandlePool<HANDLE, DescriptorHeapFreeListItem<DATA>>, public DescriptorHeapFreeList
+	class GraphicDescriptorHandleFreeList : public GraphicHandlePool<HANDLE, DescriptorHeapFreeList::Item<DATA>>, public DescriptorHeapFreeList
 	{
 		//Needs a special accessor class
 		using Accessor = core::HandleAccessor<HANDLE, DATA>;
 	public:
 		void Init(size_t max_size, size_t init_size, size_t num_frames, size_t average_descriptors_per_handle, Device* device, D3D12_DESCRIPTOR_HEAP_TYPE heap_type)
 		{
-			GraphicHandlePool<HANDLE, DATA>::Init(max_size, init_size, num_frames);
+			GraphicHandlePool<HANDLE, DescriptorHeapFreeList::Item<DATA>>::Init(max_size, init_size, num_frames);
 			CreateHeap(device, heap_type, max_size * average_descriptors_per_handle);
 		}
 
@@ -252,6 +252,9 @@ namespace display
 		{
 			ComPtr<ID3D12Resource> resource;
 		};
+		struct DescriptorTable
+		{
+		};
 		
 
 		GraphicHandlePool<CommandListHandle, CommandList> m_command_list_pool;
@@ -264,6 +267,7 @@ namespace display
 		GraphicDescriptorHandlePool<ConstantBufferHandle, ConstantBuffer> m_constant_buffer_pool;
 		GraphicDescriptorHandlePool<UnorderedAccessBufferHandle, UnorderedAccessBuffer> m_unordered_access_buffer_pool;
 		GraphicDescriptorHandlePool<ShaderResourceHandle, ShaderResource> m_shader_resource_pool;
+		GraphicDescriptorHandleFreeList<DescriptorTableHandle, DescriptorTable> m_descriptor_table_pool;
 
 		//Accesor to the resources (we need a specialitation for each type)
 		template<typename HANDLE>
@@ -417,6 +421,18 @@ namespace display
 	inline auto& Device::Get<WeakShaderResourceHandle>(const WeakShaderResourceHandle& handle)
 	{
 		return this->m_shader_resource_pool[handle];
+	}
+
+	template<>
+	inline auto& Device::Get<DescriptorTableHandle>(const DescriptorTableHandle& handle)
+	{
+		return this->m_descriptor_table_pool[handle];
+	}
+
+	template<>
+	inline auto& Device::Get<WeakDescriptorTableHandle>(const WeakDescriptorTableHandle& handle)
+	{
+		return this->m_descriptor_table_pool[handle];
 	}
 
 	//Delete resources that are not needed by the GPU

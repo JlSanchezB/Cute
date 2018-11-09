@@ -20,7 +20,7 @@ namespace display
 		SAFE_RELEASE(m_descriptor_heap);
 	}
 
-	inline void DescriptorHeapFreeList::CreateHeap(Device * device, D3D12_DESCRIPTOR_HEAP_TYPE heap_type, size_t size)
+	void DescriptorHeapFreeList::CreateHeap(Device * device, D3D12_DESCRIPTOR_HEAP_TYPE heap_type, size_t size)
 	{
 		//Create heap
 		D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = {};
@@ -39,7 +39,7 @@ namespace display
 		all_free.size = static_cast<uint16_t>(size);
 
 	}
-	inline void DescriptorHeapFreeList::DestroyHeap()
+	void DescriptorHeapFreeList::DestroyHeap()
 	{
 		SAFE_RELEASE(m_descriptor_heap);
 	}

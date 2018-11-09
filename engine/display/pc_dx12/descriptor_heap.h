@@ -26,6 +26,10 @@ namespace display
 	class DescriptorHeapFreeList
 	{
 	public:
+		template<typename BASE>
+		struct Item : public BASE, public DescriptorHeapFreeList::Block
+		{
+		};
 
 	protected:
 		void CreateHeap(Device* device, D3D12_DESCRIPTOR_HEAP_TYPE heap_type, size_t size);
@@ -42,6 +46,7 @@ namespace display
 
 		inline CD3DX12_CPU_DESCRIPTOR_HANDLE GetDescriptor(const Block& item) const;
 		inline CD3DX12_GPU_DESCRIPTOR_HANDLE GetGPUDescriptor(const Block& item) const;
+
 	private:
 
 		ComPtr<ID3D12DescriptorHeap> m_descriptor_heap;
@@ -49,11 +54,6 @@ namespace display
 
 		//Pool of free blocks
 		std::vector<Block> m_free_blocks_pool;
-	};
-
-	template<typename BASE>
-	struct DescriptorHeapFreeListItem : public BASE, public DescriptorHeapFreeList::Block
-	{
 	};
 
 	inline CD3DX12_CPU_DESCRIPTOR_HANDLE DescriptorHeapPool::GetDescriptor(size_t index) const

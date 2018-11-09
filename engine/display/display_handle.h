@@ -36,6 +36,9 @@ namespace display
 	using ShaderResourceHandle = core::Handle<struct ShaderResource, uint16_t>;
 	using WeakShaderResourceHandle = core::WeakHandle<struct ShaderResource, uint16_t>;
 
+	using DescriptorTableHandle = core::Handle<struct DescriptorTable, uint16_t>;
+	using WeakDescriptorTableHandle = core::WeakHandle<struct DescriptorTable, uint16_t>;
+
 }
 
 #endif //DISPLAY_HANDLE_H_
