@@ -550,4 +550,18 @@ namespace display
 		//Delete handle and linked ones
 		DeleteRingResource(device, handle, device->m_descriptor_table_pool);
 	}
+	SamplerHandle CreateSampler(Device * device, const SamplerDesc & sampler_desc)
+	{
+		SamplerHandle handle = device->m_sampler_pool.Alloc();
+
+		D3D12_SAMPLER_DESC dx12_sampler_desc = Convert(sampler_desc);
+
+		device->m_native_device->CreateSampler(&dx12_sampler_desc, device->m_sampler_pool.GetDescriptor(handle));
+
+		return handle;
+	}
+	void DestroySampler(Device * device, SamplerHandle & handle)
+	{
+		device->m_sampler_pool.Free(handle);
+	}
 }

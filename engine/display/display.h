@@ -103,6 +103,11 @@ namespace display
 	//Destroy descriptor table
 	void DestroyDescriptorTable(Device * device, DescriptorTableHandle& handle);
 
+	//Create sampler
+	SamplerHandle CreateSampler(Device* device, const SamplerDesc& sampler_desc);
+	//Destroy sampler
+	void DestroySampler(Device * device, SamplerHandle& handle);
+
 	//Context
 
 	//Set render target

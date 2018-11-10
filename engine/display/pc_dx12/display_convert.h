@@ -134,6 +134,7 @@ namespace display
 		case DescriptorTableParameterType::ConstantBuffer: return D3D12_DESCRIPTOR_RANGE_TYPE_CBV;
 		case DescriptorTableParameterType::ShaderResource: return D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
 		case DescriptorTableParameterType::UnorderAccessBuffer: return D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
+		case DescriptorTableParameterType::Sampler: return D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER;
 		}
 	}
 

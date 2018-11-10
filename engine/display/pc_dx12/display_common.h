@@ -254,6 +254,9 @@ namespace display
 		struct DescriptorTable : DescriptorHeapFreeList::Block, RingResourceSupport<DescriptorTableHandle>
 		{
 		};
+		struct Sampler
+		{
+		};
 		
 
 		GraphicHandlePool<CommandListHandle, CommandList> m_command_list_pool;
@@ -267,6 +270,7 @@ namespace display
 		GraphicDescriptorHandlePool<UnorderedAccessBufferHandle, UnorderedAccessBuffer> m_unordered_access_buffer_pool;
 		GraphicDescriptorHandlePool<ShaderResourceHandle, ShaderResource> m_shader_resource_pool;
 		GraphicDescriptorHandleFreeList<DescriptorTableHandle, DescriptorTable> m_descriptor_table_pool;
+		GraphicDescriptorHandlePool<SamplerHandle, Sampler> m_sampler_pool;
 
 		//Accesor to the resources (we need a specialitation for each type)
 		template<typename HANDLE>
@@ -432,6 +436,18 @@ namespace display
 	inline auto& Device::Get<WeakDescriptorTableHandle>(const WeakDescriptorTableHandle& handle)
 	{
 		return this->m_descriptor_table_pool[handle];
+	}
+
+	template<>
+	inline auto& Device::Get<SamplerHandle>(const SamplerHandle& handle)
+	{
+		return this->m_sampler_pool[handle];
+	}
+
+	template<>
+	inline auto& Device::Get<WeakSamplerHandle>(const WeakSamplerHandle& handle)
+	{
+		return this->m_sampler_pool[handle];
 	}
 
 	//Delete resources that are not needed by the GPU

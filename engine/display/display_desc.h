@@ -250,6 +250,7 @@ namespace display
 		WeakConstantBufferHandle constant_buffer;
 		WeakUnorderedAccessBufferHandle unordered_access_buffer;
 		WeakShaderResourceHandle shader_resource;
+		WeakSamplerHandle sampler;
 	};
 
 	struct DescriptorTableDesc
@@ -278,6 +279,13 @@ namespace display
 		{
 			descriptors[num_descriptors].type = DescriptorTableParameterType::ShaderResource;
 			descriptors[num_descriptors].shader_resource = shader_resource;
+			num_descriptors++;
+		}
+
+		void AddDescriptor(const WeakSamplerHandle& sampler)
+		{
+			descriptors[num_descriptors].type = DescriptorTableParameterType::Sampler;
+			descriptors[num_descriptors].sampler = sampler;
 			num_descriptors++;
 		}
 	};
