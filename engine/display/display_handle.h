@@ -39,8 +39,8 @@ namespace display
 	using DescriptorTableHandle = core::Handle<struct DescriptorTable, uint16_t>;
 	using WeakDescriptorTableHandle = core::WeakHandle<struct DescriptorTable, uint16_t>;
 
-	using SamplerHandle = core::Handle<struct Sampler, uint16_t>;
-	using WeakSamplerHandle = core::WeakHandle<struct Sampler, uint16_t>;
+	using SamplerDescriptorTableHandle = core::Handle<struct SamplerDescriptorTable, uint16_t>;
+	using WeakSamplerDescriptorTableHandle = core::WeakHandle<struct SamplerDescriptorTable, uint16_t>;
 }
 
 #endif //DISPLAY_HANDLE_H_

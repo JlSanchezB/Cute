@@ -492,6 +492,9 @@ namespace display
 					device->m_native_device->CopyDescriptorsSimple(1, device->m_descriptor_table_pool.GetDescriptor(handle, i),
 						device->m_shader_resource_pool.GetDescriptor(descriptor_table_item.shader_resource), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 					break;
+				case DescriptorTableParameterType::Sampler:
+					assert(false); //Not supported
+					break;
 				}
 			}
 			return handle;
@@ -524,6 +527,9 @@ namespace display
 						device->m_native_device->CopyDescriptorsSimple(1, device->m_descriptor_table_pool.GetDescriptor(handle_it, i),
 							device->m_shader_resource_pool.GetDescriptor(GetRingResource(device, descriptor_table_item.shader_resource, frame_index)), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 						break;
+					case DescriptorTableParameterType::Sampler:
+						assert(false); //Not supported
+						break;
 					}
 				}
 
@@ -550,18 +556,23 @@ namespace display
 		//Delete handle and linked ones
 		DeleteRingResource(device, handle, device->m_descriptor_table_pool);
 	}
-	SamplerHandle CreateSampler(Device * device, const SamplerDesc & sampler_desc)
+
+	SamplerDescriptorTableHandle CreateSamplerDescriptorTable(Device* device, const SamplerDescriptorTableDesc& sampler_descriptor_table)
 	{
-		SamplerHandle handle = device->m_sampler_pool.Alloc();
+		//Create a descritpro table with the list of samplers
+		SamplerDescriptorTableHandle handle = device->m_sampler_descriptor_table_pool.Alloc(static_cast<uint16_t>(sampler_descriptor_table.num_descriptors));
 
-		D3D12_SAMPLER_DESC dx12_sampler_desc = Convert(sampler_desc);
+		for (size_t i = 0; i < sampler_descriptor_table.num_descriptors; ++i)
+		{
+			D3D12_SAMPLER_DESC dx12_sampler_desc = Convert(sampler_descriptor_table.descriptors[i]);
 
-		device->m_native_device->CreateSampler(&dx12_sampler_desc, device->m_sampler_pool.GetDescriptor(handle));
-
+			device->m_native_device->CreateSampler(&dx12_sampler_desc, device->m_sampler_descriptor_table_pool.GetDescriptor(handle, i));
+		}
 		return handle;
 	}
-	void DestroySampler(Device * device, SamplerHandle & handle)
+
+	void DestroySamplerDescriptorTable(Device * device, SamplerDescriptorTableHandle& handle)
 	{
-		device->m_sampler_pool.Free(handle);
+		device->m_sampler_descriptor_table_pool.Free(handle);
 	}
 }
