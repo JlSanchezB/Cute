@@ -96,8 +96,8 @@ public:
 		//Pipeline state
 		{
 			//Read pixel and vertex shader
-			std::vector<char> pixel_shader_buffer = ReadFileToBuffer("colour_shader_ps.fxo");
-			std::vector<char> vertex_shader_buffer = ReadFileToBuffer("colour_shader_vs.fxo");
+			std::vector<char> pixel_shader_buffer = ReadFileToBuffer("texture_shader_ps.fxo");
+			std::vector<char> vertex_shader_buffer = ReadFileToBuffer("texture_shader_vs.fxo");
 
 			//Create pipeline state
 			display::PipelineStateDesc pipeline_state_desc;
@@ -105,7 +105,7 @@ public:
 
 			//Add input layouts
 			pipeline_state_desc.input_layout.elements[0] = display::InputElementDesc("POSITION", 0, display::Format::R32G32B32A32_FLOAT, 0, 0);
-			pipeline_state_desc.input_layout.elements[1] = display::InputElementDesc("COLOR", 0, display::Format::R32G32B32A32_FLOAT, 0, 16);
+			pipeline_state_desc.input_layout.elements[1] = display::InputElementDesc("TEXCOORD", 0, display::Format::R32G32_FLOAT, 0, 16);
 			pipeline_state_desc.input_layout.num_elements = 2;
 
 
@@ -129,14 +129,14 @@ public:
 			struct VertexData
 			{
 				float position[4];
-				float colour[4];
+				float tex[2];
 			};
 
 			VertexData vertex_data[3] =
 			{
-				{{-1.f, 1.f, 1.f, 1.f},{1.f, 0.f, 0.f, 0.f}},
-				{{3.f, 1.f, 1.f, 1.f},{0.f, 1.f, 0.f, 0.f}},
-				{{-1.f, -3.f, 1.f, 1.f},{0.f, 0.f, 1.f, 0.f}}
+				{{-1.f, 1.f, 1.f, 1.f},{0.f, 0.f}},
+				{{3.f, 1.f, 1.f, 1.f},{2.f, 0.f}},
+				{{-1.f, -3.f, 1.f, 1.f},{0.f, 2.f}}
 			};
 
 			display::VertexBufferDesc vertex_buffer_desc;

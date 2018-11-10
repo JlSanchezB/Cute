@@ -26,9 +26,13 @@
     <CustomBuild Include="colour_shader.hlsl">
       <Filter>Assets</Filter>
     </CustomBuild>
-    <CustomBuild Include="texture_shader.hlsl" />
+    <CustomBuild Include="texture_shader.hlsl">
+      <Filter>Assets</Filter>
+    </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <CopyFileToFolders Include="texture.dds" />
+    <CopyFileToFolders Include="texture.dds">
+      <Filter>Assets</Filter>
+    </CopyFileToFolders>
   </ItemGroup>
 </Project>
