@@ -782,7 +782,7 @@ namespace display
 	{
 		auto& command_list = device->Get(command_list_handle);
 		auto& root_signature = device->Get(command_list.current_root_signature);
-		auto& constant_buffer = device->Get(constant_buffer_handle);
+		auto& constant_buffer = device->Get(GetRingResource(device, constant_buffer_handle, device->m_frame_index));
 
 		assert(root_parameter < root_signature.desc.num_root_parameters);
 
@@ -803,7 +803,7 @@ namespace display
 	{
 		auto& command_list = device->Get(command_list_handle);
 		auto& root_signature = device->Get(command_list.current_root_signature);
-		auto& shader_resource = device->Get(shader_resource_handle);
+		auto& shader_resource = device->Get(GetRingResource(device, shader_resource_handle, device->m_frame_index));
 
 		assert(root_parameter < root_signature.desc.num_root_parameters);
 
@@ -814,10 +814,11 @@ namespace display
 	{
 		auto& command_list = device->Get(command_list_handle);
 		auto& root_signature = device->Get(command_list.current_root_signature);
-		auto& descriptor_table = device->Get(descriptor_table_handle);
+		WeakDescriptorTableHandle  current_descriptor_table_handle = GetRingResource(device, descriptor_table_handle, device->m_frame_index);
+		auto& descriptor_table = device->Get(current_descriptor_table_handle);
 
 		assert(root_parameter < root_signature.desc.num_root_parameters);
-		command_list.resource->SetGraphicsRootDescriptorTable(static_cast<UINT>(root_parameter), device->m_descriptor_table_pool.GetGPUDescriptor(descriptor_table_handle));
+		command_list.resource->SetGraphicsRootDescriptorTable(static_cast<UINT>(root_parameter), device->m_descriptor_table_pool.GetGPUDescriptor(current_descriptor_table_handle));
 	}
 
 	void SetViewport(Device * device, const WeakCommandListHandle & command_list_handle, const Viewport & viewport)
