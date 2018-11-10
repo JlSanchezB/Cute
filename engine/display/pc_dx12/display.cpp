@@ -824,6 +824,15 @@ namespace display
 		command_list.resource->SetGraphicsRootDescriptorTable(static_cast<UINT>(root_parameter), device->m_descriptor_table_pool.GetGPUDescriptor(current_descriptor_table_handle));
 	}
 
+	void SetDescriptorTable(Device* device, const WeakCommandListHandle& command_list_handle, size_t root_parameter, const WeakSamplerDescriptorTableHandle& sampler_descriptor_table_handle)
+	{
+		auto& command_list = device->Get(command_list_handle);
+		auto& root_signature = device->Get(command_list.current_root_signature);
+
+		assert(root_parameter < root_signature.desc.num_root_parameters);
+		command_list.resource->SetGraphicsRootDescriptorTable(static_cast<UINT>(root_parameter), device->m_sampler_descriptor_table_pool.GetGPUDescriptor(sampler_descriptor_table_handle));
+	}
+
 	void SetViewport(Device * device, const WeakCommandListHandle & command_list_handle, const Viewport & viewport)
 	{
 		auto& command_list = device->Get(command_list_handle).resource;
