@@ -84,9 +84,23 @@ public:
 			root_signature_desc.root_parameters[0].table.range[0].type = display::DescriptorTableParameterType::ShaderResource;
 			root_signature_desc.root_parameters[0].visibility = display::ShaderVisibility::Pixel;
 
-			root_signature_desc.num_static_samplers = 1;
+			root_signature_desc.num_static_samplers = 4;
+			//Point Clamp
 			root_signature_desc.static_samplers[0].shader_register = 0;
 			root_signature_desc.static_samplers[0].visibility = display::ShaderVisibility::Pixel;
+			//Linear Clamp
+			root_signature_desc.static_samplers[1].shader_register = 1;
+			root_signature_desc.static_samplers[1].visibility = display::ShaderVisibility::Pixel;
+			root_signature_desc.static_samplers[1].filter = display::Filter::Linear;
+			//Point Wrap
+			root_signature_desc.static_samplers[2].shader_register = 2;
+			root_signature_desc.static_samplers[2].visibility = display::ShaderVisibility::Pixel;
+			root_signature_desc.static_samplers[2].address_u = root_signature_desc.static_samplers[2].address_v = display::TextureAddressMode::Wrap;
+			//Linear Wrap
+			root_signature_desc.static_samplers[3].shader_register = 3;
+			root_signature_desc.static_samplers[3].visibility = display::ShaderVisibility::Pixel;
+			root_signature_desc.static_samplers[3].address_u = root_signature_desc.static_samplers[3].address_v = display::TextureAddressMode::Wrap;
+			root_signature_desc.static_samplers[3].filter = display::Filter::Linear;
 
 			//Create the root signature
 			m_root_signature = display::CreateRootSignature(m_device, root_signature_desc);
@@ -237,17 +251,17 @@ public:
 		display::SetRenderTargets(m_device, m_command_list, 1, &back_buffer, display::WeakDepthBufferHandle());
 
 		//Clear
-		const float clear_colour[] = { rand() / (RAND_MAX + 1.f) , 0.2f, 0.4f, 1.0f };
+		const float clear_colour[] = { 0.f, 0.f, 0.f, 1.0f };
 		display::ClearRenderTargetColour(m_device, m_command_list, back_buffer, clear_colour);
 
 		//Set root signature
 		display::SetRootSignature(m_device, m_command_list, m_root_signature);
 
 		//Set viewport
-		display::SetViewport(m_device, m_command_list, display::Viewport(static_cast<float>(m_width), static_cast<float>(m_height)));
+		display::SetViewport(m_device, m_command_list, display::Viewport(static_cast<float>(m_width/2), static_cast<float>(m_height/2)));
 
 		//Set Scissor Rect
-		display::SetScissorRect(m_device, m_command_list, display::Rect(0, 0, m_width, m_height));
+		display::SetScissorRect(m_device, m_command_list, display::Rect(0, 0, m_width/2, m_height/2));
 
 		//Set pipeline state
 		display::SetPipelineState(m_device, m_command_list, m_pipeline_state);

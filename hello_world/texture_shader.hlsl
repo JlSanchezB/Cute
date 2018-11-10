@@ -1,5 +1,5 @@
 Texture2D texture_test : t0;
-SamplerState static_sampler : s0;
+SamplerState static_sampler : s2;
 
 struct PSInput
 {
