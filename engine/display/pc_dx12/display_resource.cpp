@@ -148,14 +148,18 @@ namespace
 
 	//Return the handle used in the current frame of a ring resource
 	template<typename WEAKHANDLE>
-	WEAKHANDLE GetCurrentRingResource(display::Device * device, WEAKHANDLE handle)
+	WEAKHANDLE GetRingResource(display::Device * device, WEAKHANDLE handle, size_t frame_index)
 	{
-		//The frame index indicate how many jumps are needed
-		size_t count = static_cast<size_t>(device->m_frame_index);
-
-		while (count)
+		//Only if it is a ring resource
+		if (device->Get(handle).next_handle.IsValid())
 		{
-			handle = device->Get(handle).next_handle;
+			//The frame index indicate how many jumps are needed
+			size_t count = frame_index;
+
+			while (count)
+			{
+				handle = device->Get(handle).next_handle;
+			}
 		}
 
 		return handle;
@@ -483,31 +487,86 @@ namespace display
 		DescriptorTableHandle handle = device->m_descriptor_table_pool.Alloc(static_cast<uint16_t>(descriptor_table_desc.num_descriptors));
 		auto& descriptor_table = device->Get(handle);
 
-		//Copy descriptors
-		for (size_t i = 0; i < descriptor_table_desc.num_descriptors; ++i)
+		if (descriptor_table_desc.access == Access::Static)
 		{
-			auto& descriptor_table_item = descriptor_table_desc.descriptors[i];
-			switch (descriptor_table_item.type)
+			//Copy descriptors
+			for (size_t i = 0; i < descriptor_table_desc.num_descriptors; ++i)
 			{
-			case DescriptorTableParameterType::ConstantBuffer:
-				device->m_native_device->CopyDescriptorsSimple(1, device->m_descriptor_table_pool.GetDescriptor(handle, i),
-					device->m_constant_buffer_pool.GetDescriptor(descriptor_table_item.constant_buffer), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-				break;
-			case DescriptorTableParameterType::UnorderAccessBuffer:
-				device->m_native_device->CopyDescriptorsSimple(1, device->m_descriptor_table_pool.GetDescriptor(handle, i),
-					device->m_unordered_access_buffer_pool.GetDescriptor(descriptor_table_item.unordered_access_buffer), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-				break;
-			case DescriptorTableParameterType::ShaderResource:
-				device->m_native_device->CopyDescriptorsSimple(1, device->m_descriptor_table_pool.GetDescriptor(handle, i),
-					device->m_shader_resource_pool.GetDescriptor(descriptor_table_item.shader_resource), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-				break;
+				auto& descriptor_table_item = descriptor_table_desc.descriptors[i];
+				switch (descriptor_table_item.type)
+				{
+				case DescriptorTableParameterType::ConstantBuffer:
+					//We only support static resources, no ring ones
+					assert(!device->Get(descriptor_table_item.constant_buffer).next_handle.IsValid());
+					device->m_native_device->CopyDescriptorsSimple(1, device->m_descriptor_table_pool.GetDescriptor(handle, i),
+						device->m_constant_buffer_pool.GetDescriptor(descriptor_table_item.constant_buffer), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+					break;
+				case DescriptorTableParameterType::UnorderAccessBuffer:
+					device->m_native_device->CopyDescriptorsSimple(1, device->m_descriptor_table_pool.GetDescriptor(handle, i),
+						device->m_unordered_access_buffer_pool.GetDescriptor(descriptor_table_item.unordered_access_buffer), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+					break;
+				case DescriptorTableParameterType::ShaderResource:
+					//We only support static resources, no ring ones
+					assert(!device->Get(descriptor_table_item.shader_resource).next_handle.IsValid());
+					device->m_native_device->CopyDescriptorsSimple(1, device->m_descriptor_table_pool.GetDescriptor(handle, i),
+						device->m_shader_resource_pool.GetDescriptor(descriptor_table_item.shader_resource), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+					break;
+				}
+			}
+			return handle;
+		}
+		else if (descriptor_table_desc.access == Access::Dynamic)
+		{
+			//Will create a ring descriptor table, and each descriptor will have the correct frame resource
+			size_t count = device->m_frame_resources.size();
+			size_t frame_index = 0;
+			DescriptorTableHandle* handle_ptr = &handle;
+			while (count)
+			{
+				DescriptorTableHandle& handle_it = *handle_ptr;
+
+				//Copy descriptors
+				for (size_t i = 0; i < descriptor_table_desc.num_descriptors; ++i)
+				{
+					auto& descriptor_table_item = descriptor_table_desc.descriptors[i];
+					switch (descriptor_table_item.type)
+					{
+					case DescriptorTableParameterType::ConstantBuffer:
+						device->m_native_device->CopyDescriptorsSimple(1, device->m_descriptor_table_pool.GetDescriptor(handle_it, i),
+							device->m_constant_buffer_pool.GetDescriptor(GetRingResource(device, descriptor_table_item.constant_buffer, frame_index)), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+						break;
+					case DescriptorTableParameterType::UnorderAccessBuffer:
+						device->m_native_device->CopyDescriptorsSimple(1, device->m_descriptor_table_pool.GetDescriptor(handle_it, i),
+							device->m_unordered_access_buffer_pool.GetDescriptor(descriptor_table_item.unordered_access_buffer), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+						break;
+					case DescriptorTableParameterType::ShaderResource:
+						device->m_native_device->CopyDescriptorsSimple(1, device->m_descriptor_table_pool.GetDescriptor(handle_it, i),
+							device->m_shader_resource_pool.GetDescriptor(GetRingResource(device, descriptor_table_item.shader_resource, frame_index)), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+						break;
+					}
+				}
+
+				if (count > 0)
+				{
+					//Create next one
+					device->Get(handle_it).next_handle = device->m_descriptor_table_pool.Alloc(static_cast<uint16_t>(descriptor_table_desc.num_descriptors));
+					handle_ptr = &device->Get(handle_it).next_handle;
+				}
+				count--;
+				frame_index++;
 			}
 		}
+		else
+		{
+			std::runtime_error("Only static and dynamic descriptor tables are supported");
+		}
+		
 
 		return handle;
 	}
 	void DestroyDescriptorTable(Device * device, DescriptorTableHandle & handle)
 	{
-		device->m_descriptor_table_pool.Free(handle);
+		//Delete handle and linked ones
+		DeleteRingResource(device, handle, device->m_descriptor_table_pool);
 	}
 }

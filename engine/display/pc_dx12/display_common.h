@@ -251,7 +251,7 @@ namespace display
 		{
 			ComPtr<ID3D12Resource> resource;
 		};
-		struct DescriptorTable : DescriptorHeapFreeList::Block
+		struct DescriptorTable : DescriptorHeapFreeList::Block, RingResourceSupport<DescriptorTableHandle>
 		{
 		};
 		

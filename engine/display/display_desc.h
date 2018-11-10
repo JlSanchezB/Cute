@@ -254,7 +254,7 @@ namespace display
 
 	struct DescriptorTableDesc
 	{
-		Access access = Access::Static;
+		Access access = Access::Static; //With static, only static handles are supported
 		static const size_t kNumMaxDescriptors = 32;
 
 		std::array<DescriptorTableIndexDesc, kNumMaxDescriptors> descriptors;
