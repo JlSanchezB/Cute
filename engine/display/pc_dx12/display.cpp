@@ -166,7 +166,7 @@ namespace display
 		device->m_unordered_access_buffer_pool.Init(1000, 10, params.num_frames, device, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 		device->m_shader_resource_pool.Init(2000, 100, params.num_frames, device, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 		device->m_descriptor_table_pool.Init(2000, 100, params.num_frames, 8, device, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-		device->m_sampler_descriptor_table_pool.Init(200, 10, params.num_frames, 8, device, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		device->m_sampler_descriptor_table_pool.Init(200, 10, params.num_frames, 8, device, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
 
 		//Create frame resources
 		device->m_frame_resources.resize(params.num_frames);

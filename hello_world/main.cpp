@@ -55,6 +55,7 @@ public:
 	display::DepthBufferHandle m_depth_buffer;
 
 	display::DescriptorTableHandle m_shader_resources_descriptor_table;
+	display::SamplerDescriptorTableHandle m_sampler_descriptor_table;
 
 
 	void OnInit() override
@@ -204,6 +205,20 @@ public:
 			descriptor_table_desc.AddDescriptor(m_texture);
 
 			m_shader_resources_descriptor_table = display::CreateDescriptorTable(m_device, descriptor_table_desc);
+
+			display::SamplerDescriptorTableDesc sampler_descriptor_table_desc;
+			sampler_descriptor_table_desc.num_descriptors = 4;
+			//Point Clamp
+			
+			//Linear Clamp
+			sampler_descriptor_table_desc.descriptors[1].filter = display::Filter::Linear;
+			//Point Wrap
+			sampler_descriptor_table_desc.descriptors[2].address_u = sampler_descriptor_table_desc.descriptors[2].address_v = display::TextureAddressMode::Wrap;
+			//Linear Wrap
+			sampler_descriptor_table_desc.descriptors[3].address_u = sampler_descriptor_table_desc.descriptors[3].address_v = display::TextureAddressMode::Wrap;
+			sampler_descriptor_table_desc.descriptors[3].filter = display::Filter::Linear;
+
+			m_sampler_descriptor_table = display::CreateSamplerDescriptorTable(m_device, sampler_descriptor_table_desc);
 		}
 		
 		//RenderTarget
@@ -235,6 +250,7 @@ public:
 		display::DestroyRenderTarget(m_device, m_render_target);
 		display::DestroyDepthBuffer(m_device, m_depth_buffer);
 		display::DestroyDescriptorTable(m_device, m_shader_resources_descriptor_table);
+		display::DestroySamplerDescriptorTable(m_device, m_sampler_descriptor_table);
 
 		display::DestroyDevice(m_device);
 	}
