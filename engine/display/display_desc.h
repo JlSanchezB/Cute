@@ -250,6 +250,7 @@ namespace display
 		WeakConstantBufferHandle constant_buffer;
 		WeakUnorderedAccessBufferHandle unordered_access_buffer;
 		WeakShaderResourceHandle shader_resource;
+		WeakRenderTargetHandle render_target;
 	};
 
 	struct DescriptorTableDesc

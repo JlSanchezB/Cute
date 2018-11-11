@@ -495,6 +495,10 @@ namespace display
 				case DescriptorTableParameterType::Sampler:
 					assert(false); //Not supported
 					break;
+				case DescriptorTableParameterType::RenderTarget:
+					device->m_native_device->CopyDescriptorsSimple(1, device->m_descriptor_table_pool.GetDescriptor(handle, i),
+						device->m_render_target_pool.GetDescriptor(descriptor_table_item.render_target, 1), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+					break;
 				}
 			}
 			return handle;
@@ -529,6 +533,10 @@ namespace display
 						break;
 					case DescriptorTableParameterType::Sampler:
 						assert(false); //Not supported
+						break;
+					case DescriptorTableParameterType::RenderTarget:
+						device->m_native_device->CopyDescriptorsSimple(1, device->m_descriptor_table_pool.GetDescriptor(handle, i),
+							device->m_render_target_pool.GetDescriptor(descriptor_table_item.render_target, 1), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 						break;
 					}
 				}

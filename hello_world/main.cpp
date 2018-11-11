@@ -54,7 +54,8 @@ public:
 	display::RenderTargetHandle m_render_target;
 	display::DepthBufferHandle m_depth_buffer;
 
-	display::DescriptorTableHandle m_shader_resources_descriptor_table;
+	display::DescriptorTableHandle m_texture_descriptor_table;
+	display::DescriptorTableHandle m_render_target_descriptor_table;
 	display::SamplerDescriptorTableHandle m_sampler_descriptor_table;
 
 
@@ -204,7 +205,7 @@ public:
 			display::DescriptorTableDesc descriptor_table_desc;
 			descriptor_table_desc.AddDescriptor(m_texture);
 
-			m_shader_resources_descriptor_table = display::CreateDescriptorTable(m_device, descriptor_table_desc);
+			m_texture_descriptor_table = display::CreateDescriptorTable(m_device, descriptor_table_desc);
 
 			display::SamplerDescriptorTableDesc sampler_descriptor_table_desc;
 			sampler_descriptor_table_desc.num_descriptors = 4;
@@ -225,14 +226,14 @@ public:
 		{
 			display::RenderTargetDesc render_target_desc;
 			render_target_desc.format = display::Format::R8G8B8A8_UNORM;
-			render_target_desc.width = 500;
-			render_target_desc.heigth = 500;
+			render_target_desc.width = 512;
+			render_target_desc.heigth = 512;
 			
 			m_render_target = display::CreateRenderTarget(m_device, render_target_desc);
 
 			display::DepthBufferDesc depth_buffer_desc;
-			depth_buffer_desc.width = 500;
-			depth_buffer_desc.heigth = 500;
+			depth_buffer_desc.width = 512;
+			depth_buffer_desc.heigth = 512;
 
 			m_depth_buffer = display::CreateDepthBuffer(m_device, depth_buffer_desc);
 		}
@@ -249,7 +250,7 @@ public:
 		display::DestroyShaderResource(m_device, m_texture);
 		display::DestroyRenderTarget(m_device, m_render_target);
 		display::DestroyDepthBuffer(m_device, m_depth_buffer);
-		display::DestroyDescriptorTable(m_device, m_shader_resources_descriptor_table);
+		display::DestroyDescriptorTable(m_device, m_texture_descriptor_table);
 		display::DestroySamplerDescriptorTable(m_device, m_sampler_descriptor_table);
 
 		display::DestroyDevice(m_device);
@@ -287,7 +288,7 @@ public:
 		display::SetVertexBuffers(m_device, m_command_list, 0, 1, &weak_vertex_buffer);
 
 		//Resource binding
-		display::SetDescriptorTable(m_device, m_command_list, 0, m_shader_resources_descriptor_table);
+		display::SetDescriptorTable(m_device, m_command_list, 0, m_texture_descriptor_table);
 
 		//Draw
 		display::Draw(m_device, m_command_list, 0, 3, display::PrimitiveTopology::TriangleList);
