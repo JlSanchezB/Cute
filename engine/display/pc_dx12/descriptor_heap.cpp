@@ -4,20 +4,26 @@
 
 namespace display
 {
-	void DescriptorHeapPool::CreateHeap(Device * device, D3D12_DESCRIPTOR_HEAP_TYPE heap_type, size_t size)
+	void DescriptorHeapPool::AddHeap(Device * device, D3D12_DESCRIPTOR_HEAP_TYPE heap_type, size_t size)
 	{
+		DescriptorHeap descriptor_heap;
 		D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = {};
 		rtvHeapDesc.NumDescriptors = static_cast<UINT>(size);
 		rtvHeapDesc.Type = heap_type;
 		rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-		ThrowIfFailed(device->m_native_device->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&m_descriptor_heap)));
+		ThrowIfFailed(device->m_native_device->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&descriptor_heap.heap)));
 
-		m_descriptor_size = device->m_native_device->GetDescriptorHandleIncrementSize(heap_type);
+		descriptor_heap.descriptor_size = device->m_native_device->GetDescriptorHandleIncrementSize(heap_type);
+
+		m_descriptor_heap.push_back(descriptor_heap);
 	}
 
-	void DescriptorHeapPool::DestroyHeap()
+	void DescriptorHeapPool::DestroyHeaps()
 	{
-		SAFE_RELEASE(m_descriptor_heap);
+		for (auto& it : m_descriptor_heap)
+		{
+			SAFE_RELEASE(it.heap);
+		}
 	}
 
 	void DescriptorHeapFreeList::CreateHeap(Device * device, D3D12_DESCRIPTOR_HEAP_TYPE heap_type, size_t size)

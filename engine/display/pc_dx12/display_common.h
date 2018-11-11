@@ -98,22 +98,31 @@ namespace display
 		void Init(size_t max_size, size_t init_size, size_t num_frames, Device* device, D3D12_DESCRIPTOR_HEAP_TYPE heap_type)
 		{
 			GraphicHandlePool<HANDLE, DATA>::Init(max_size, init_size, num_frames);
-			CreateHeap(device, heap_type, max_size);
+			AddHeap(device, heap_type, max_size);
+		}
+
+		void InitMultipleHeaps(size_t max_size, size_t init_size, size_t num_frames, Device* device, size_t num_heaps, D3D12_DESCRIPTOR_HEAP_TYPE* heap_type)
+		{
+			GraphicHandlePool<HANDLE, DATA>::Init(max_size, init_size, num_frames);
+			for (size_t i = 0; i < num_heaps; ++i)
+			{
+				AddHeap(device, heap_type[i], max_size);
+			}
 		}
 
 		~GraphicDescriptorHandlePool()
 		{
-			DestroyHeap();
+			DestroyHeaps();
 		}
 
-		CD3DX12_CPU_DESCRIPTOR_HANDLE GetDescriptor(const Accessor& handle)
+		CD3DX12_CPU_DESCRIPTOR_HANDLE GetDescriptor(const Accessor& handle, size_t heap_index = 0)
 		{
-			return DescriptorHeapPool::GetDescriptor(GraphicHandlePool<HANDLE, DATA>::GetInternalIndex(handle));
+			return DescriptorHeapPool::GetDescriptor(GraphicHandlePool<HANDLE, DATA>::GetInternalIndex(handle), heap_index);
 		}
 
-		CD3DX12_GPU_DESCRIPTOR_HANDLE GetGPUDescriptor(const Accessor& handle)
+		CD3DX12_GPU_DESCRIPTOR_HANDLE GetGPUDescriptor(const Accessor& handle, size_t heap_index = 0)
 		{
-			return DescriptorHeapPool::GetGPUDescriptor(GraphicHandlePool<HANDLE, DATA>::GetInternalIndex(handle));
+			return DescriptorHeapPool::GetGPUDescriptor(GraphicHandlePool<HANDLE, DATA>::GetInternalIndex(handle), heap_index);
 		}
 	};
 

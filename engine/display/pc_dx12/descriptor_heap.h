@@ -12,14 +12,18 @@ namespace display
 	class DescriptorHeapPool
 	{
 	public:
-		inline CD3DX12_CPU_DESCRIPTOR_HANDLE GetDescriptor(size_t index) const;
-		inline CD3DX12_GPU_DESCRIPTOR_HANDLE GetGPUDescriptor(size_t index) const;
+		inline CD3DX12_CPU_DESCRIPTOR_HANDLE GetDescriptor(size_t index, size_t heap = 0) const;
+		inline CD3DX12_GPU_DESCRIPTOR_HANDLE GetGPUDescriptor(size_t index, size_t heap = 0) const;
 	protected:
-		void CreateHeap(Device* device, D3D12_DESCRIPTOR_HEAP_TYPE heap_type, size_t size);
-		void DestroyHeap();
+		void AddHeap(Device* device, D3D12_DESCRIPTOR_HEAP_TYPE heap_type, size_t size);
+		void DestroyHeaps();
 	private:
-		ComPtr<ID3D12DescriptorHeap> m_descriptor_heap;
-		UINT m_descriptor_size;
+		struct DescriptorHeap
+		{
+			ComPtr<ID3D12DescriptorHeap> heap;
+			UINT descriptor_size;
+		};
+		std::vector<DescriptorHeap> m_descriptor_heap;
 	};
 
 	//A heap free list helper, one index, several descriptors
@@ -56,13 +60,13 @@ namespace display
 		std::vector<Block> m_free_blocks_pool;
 	};
 
-	inline CD3DX12_CPU_DESCRIPTOR_HANDLE DescriptorHeapPool::GetDescriptor(size_t index) const
+	inline CD3DX12_CPU_DESCRIPTOR_HANDLE DescriptorHeapPool::GetDescriptor(size_t index, size_t heap) const
 	{
-		return CD3DX12_CPU_DESCRIPTOR_HANDLE(m_descriptor_heap->GetCPUDescriptorHandleForHeapStart(), static_cast<INT>(index), m_descriptor_size);
+		return CD3DX12_CPU_DESCRIPTOR_HANDLE(m_descriptor_heap[heap].heap->GetCPUDescriptorHandleForHeapStart(), static_cast<INT>(index), m_descriptor_heap[heap].descriptor_size);
 	}
-	inline CD3DX12_GPU_DESCRIPTOR_HANDLE DescriptorHeapPool::GetGPUDescriptor(size_t index) const
+	inline CD3DX12_GPU_DESCRIPTOR_HANDLE DescriptorHeapPool::GetGPUDescriptor(size_t index, size_t heap) const
 	{
-		return CD3DX12_GPU_DESCRIPTOR_HANDLE(m_descriptor_heap->GetGPUDescriptorHandleForHeapStart(), static_cast<INT>(index), m_descriptor_size);
+		return CD3DX12_GPU_DESCRIPTOR_HANDLE(m_descriptor_heap[heap].heap->GetGPUDescriptorHandleForHeapStart(), static_cast<INT>(index), m_descriptor_heap[heap].descriptor_size);
 	}
 
 	inline CD3DX12_CPU_DESCRIPTOR_HANDLE DescriptorHeapFreeList::GetDescriptor(const Block& item, size_t offset) const

@@ -155,7 +155,8 @@ namespace display
 		device->m_frame_index = device->m_swap_chain->GetCurrentBackBufferIndex();
 
 		//Alloc pools
-		device->m_render_target_pool.Init(100, 10, params.num_frames, device, D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+		D3D12_DESCRIPTOR_HEAP_TYPE render_target_heap_types[2] = { D3D12_DESCRIPTOR_HEAP_TYPE_RTV , D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV };
+		device->m_render_target_pool.InitMultipleHeaps(100, 10, params.num_frames, device, 2, render_target_heap_types);
 		device->m_depth_buffer_pool.Init(100, 10, params.num_frames, device, D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
 		device->m_command_list_pool.Init(500, 10, params.num_frames);
 		device->m_root_signature_pool.Init(10, 10, params.num_frames);
@@ -657,13 +658,21 @@ namespace display
 
 		render_target.current_state = D3D12_RESOURCE_STATE_RENDER_TARGET;
 
-		//Create view
+		//Create render target view
 		D3D12_RENDER_TARGET_VIEW_DESC dx12_render_target_view_desc = {};
 		dx12_render_target_view_desc.Format = Convert(render_target_desc.format);
 		dx12_render_target_view_desc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
 		dx12_render_target_view_desc.Texture2D.MipSlice = 0;
 		dx12_render_target_view_desc.Texture2D.PlaneSlice = 0;
-		device->m_native_device->CreateRenderTargetView(render_target.resource.Get(), &dx12_render_target_view_desc, device->m_render_target_pool.GetDescriptor(handle));
+		device->m_native_device->CreateRenderTargetView(render_target.resource.Get(), &dx12_render_target_view_desc, device->m_render_target_pool.GetDescriptor(handle, 0));
+
+		//Create shader resource view
+		D3D12_SHADER_RESOURCE_VIEW_DESC dx12_shader_resource_view_desc = {};
+		dx12_shader_resource_view_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+		dx12_shader_resource_view_desc.Format = Convert(render_target_desc.format);
+		dx12_shader_resource_view_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+		dx12_shader_resource_view_desc.Texture2D.MipLevels = 1;
+		device->m_native_device->CreateShaderResourceView(render_target.resource.Get(), &dx12_shader_resource_view_desc, device->m_render_target_pool.GetDescriptor(handle, 1));
 
 		SetObjectName(render_target.resource.Get(), name);
 
