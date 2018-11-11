@@ -233,5 +233,16 @@ namespace display
 		case ShaderResourceType::Texture2D: return D3D12_SRV_DIMENSION_TEXTURE2D;
 		}
 	}
+
+	inline D3D12_RESOURCE_STATES Convert(ResourceState resource_state)
+	{
+		switch (resource_state)
+		{
+		default:
+		case ResourceState::RenderTarget: return D3D12_RESOURCE_STATE_RENDER_TARGET;
+		case ResourceState::PixelShaderResource: return D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+		case ResourceState::NonPixelShaderResource: return D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+		}
+	}
 }
 #endif //DISPLAY_CONVERT_H_

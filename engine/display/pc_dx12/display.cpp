@@ -790,6 +790,20 @@ namespace display
 
 		command_list->IASetIndexBuffer(&index_buffer.view);
 	}
+	void RenderTargetTransition(Device * device, const WeakCommandListHandle & command_list_handle, size_t num_targets, WeakRenderTargetHandle * render_target_array, const ResourceState& dest_state)
+	{
+		auto& command_list = device->Get(command_list_handle).resource;
+		std::array< CD3DX12_RESOURCE_BARRIER, kMaxNumRenderTargets> dx12_render_target_transtitions;
+
+		for (size_t i = 0; i < num_targets; ++i)
+		{
+			auto& render_target = device->Get(render_target_array[i]);
+			dx12_render_target_transtitions[i] = CD3DX12_RESOURCE_BARRIER::Transition(render_target.resource.Get(), render_target.current_state, Convert(dest_state));
+		}
+
+		command_list->ResourceBarrier(static_cast<UINT>(num_targets), &dx12_render_target_transtitions[0]);
+
+	}
 	void SetConstantBuffer(Device * device, const WeakCommandListHandle & command_list_handle, size_t root_parameter, const WeakConstantBufferHandle & constant_buffer_handle)
 	{
 		auto& command_list = device->Get(command_list_handle);

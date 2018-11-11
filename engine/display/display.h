@@ -134,6 +134,8 @@ namespace display
 	//Set Index Buffer
 	void SetIndexBuffer(Device* device, const WeakCommandListHandle& command_list, const WeakIndexBufferHandle& index_buffer);
 
+	//Render target transition
+	void RenderTargetTransition(Device* device, const WeakCommandListHandle& command_list, size_t num_targets, WeakRenderTargetHandle* render_target_array, const ResourceState& dest_state);
 
 	//Resource Binding
 

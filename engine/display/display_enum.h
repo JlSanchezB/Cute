@@ -130,6 +130,13 @@ namespace display
 	{
 		Texture2D
 	};
+
+	enum class ResourceState
+	{
+		RenderTarget,
+		PixelShaderResource,
+		NonPixelShaderResource
+	};
 }
 
 #endif
