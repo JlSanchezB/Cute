@@ -247,10 +247,18 @@ namespace display
 	struct DescriptorTableIndexDesc
 	{
 		DescriptorTableParameterType type;
-		WeakConstantBufferHandle constant_buffer;
-		WeakUnorderedAccessBufferHandle unordered_access_buffer;
-		WeakShaderResourceHandle shader_resource;
-		WeakRenderTargetHandle render_target;
+		union
+		{
+			WeakConstantBufferHandle constant_buffer;
+			WeakUnorderedAccessBufferHandle unordered_access_buffer;
+			WeakShaderResourceHandle shader_resource;
+			WeakRenderTargetHandle render_target;
+		};
+
+		DescriptorTableIndexDesc() : constant_buffer()
+		{
+			type = DescriptorTableParameterType::ConstantBuffer;
+		}
 	};
 
 	struct DescriptorTableDesc
