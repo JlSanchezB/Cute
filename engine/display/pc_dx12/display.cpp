@@ -646,14 +646,18 @@ namespace display
 	{
 		RenderTargetHandle handle = device->m_render_target_pool.Alloc();
 		auto& render_target = device->Get(handle);
-
+		
+		D3D12_CLEAR_VALUE clear_value;
+		clear_value.Color[0] = clear_value.Color[1] = clear_value.Color[2] = clear_value.Color[3] = 0.f;
+		clear_value.Format = Convert(render_target_desc.format);
+		
 		//Create commited resource
 		ThrowIfFailed(device->m_native_device->CreateCommittedResource(
 			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
 			D3D12_HEAP_FLAG_NONE,
 			&CD3DX12_RESOURCE_DESC::Tex2D(Convert(render_target_desc.format), static_cast<UINT>(render_target_desc.width), static_cast<UINT>(render_target_desc.heigth), 1, 0, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET),
 			D3D12_RESOURCE_STATE_RENDER_TARGET,
-			nullptr,
+			&clear_value,
 			IID_PPV_ARGS(&render_target.resource)));
 
 		render_target.current_state = D3D12_RESOURCE_STATE_RENDER_TARGET;
@@ -690,13 +694,17 @@ namespace display
 		DepthBufferHandle handle = device->m_depth_buffer_pool.Alloc();
 		auto& depth_buffer = device->Get(handle);
 
+		D3D12_CLEAR_VALUE clear_value;
+		clear_value.DepthStencil = { 0.f, 0 };
+		clear_value.Format = DXGI_FORMAT_D32_FLOAT;
+
 		//Create commited resource
 		ThrowIfFailed(device->m_native_device->CreateCommittedResource(
 			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
 			D3D12_HEAP_FLAG_NONE,
 			&CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_D32_FLOAT, static_cast<UINT>(depth_buffer_desc.width), static_cast<UINT>(depth_buffer_desc.heigth), 1, 0, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL),
 			D3D12_RESOURCE_STATE_DEPTH_WRITE,
-			nullptr,
+			&clear_value,
 			IID_PPV_ARGS(&depth_buffer.resource)));
 
 		depth_buffer.current_state = D3D12_RESOURCE_STATE_DEPTH_WRITE;
@@ -795,13 +803,21 @@ namespace display
 		auto& command_list = device->Get(command_list_handle).resource;
 		std::array< CD3DX12_RESOURCE_BARRIER, kMaxNumRenderTargets> dx12_render_target_transtitions;
 
+		size_t num_transitions = 0;
 		for (size_t i = 0; i < num_targets; ++i)
 		{
 			auto& render_target = device->Get(render_target_array[i]);
-			dx12_render_target_transtitions[i] = CD3DX12_RESOURCE_BARRIER::Transition(render_target.resource.Get(), render_target.current_state, Convert(dest_state));
+			if (render_target.current_state != Convert(dest_state))
+			{
+				dx12_render_target_transtitions[num_transitions] = CD3DX12_RESOURCE_BARRIER::Transition(render_target.resource.Get(), render_target.current_state, Convert(dest_state));
+				render_target.current_state = Convert(dest_state);
+				num_transitions++;
+			}
 		}
-
-		command_list->ResourceBarrier(static_cast<UINT>(num_targets), &dx12_render_target_transtitions[0]);
+		if (num_transitions > 0)
+		{
+			command_list->ResourceBarrier(static_cast<UINT>(num_transitions), &dx12_render_target_transtitions[0]);
+		}
 
 	}
 	void SetConstantBuffer(Device * device, const WeakCommandListHandle & command_list_handle, size_t root_parameter, const WeakConstantBufferHandle & constant_buffer_handle)

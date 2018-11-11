@@ -281,6 +281,13 @@ namespace display
 			descriptors[num_descriptors].shader_resource = shader_resource;
 			num_descriptors++;
 		}
+
+		void AddDescriptor(const WeakRenderTargetHandle& render_target)
+		{
+			descriptors[num_descriptors].type = DescriptorTableParameterType::RenderTarget;
+			descriptors[num_descriptors].render_target = render_target;
+			num_descriptors++;
+		}
 	};
 
 	struct SamplerDescriptorTableDesc

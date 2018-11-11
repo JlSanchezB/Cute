@@ -207,6 +207,11 @@ public:
 
 			m_texture_descriptor_table = display::CreateDescriptorTable(m_device, descriptor_table_desc);
 
+			display::DescriptorTableDesc descriptor_table_render_target_desc;
+			descriptor_table_render_target_desc.AddDescriptor(m_render_target);
+
+			m_render_target_descriptor_table = display::CreateDescriptorTable(m_device, descriptor_table_desc);
+
 			display::SamplerDescriptorTableDesc sampler_descriptor_table_desc;
 			sampler_descriptor_table_desc.num_descriptors = 4;
 			//Point Clamp
@@ -229,7 +234,7 @@ public:
 			render_target_desc.width = 512;
 			render_target_desc.heigth = 512;
 			
-			m_render_target = display::CreateRenderTarget(m_device, render_target_desc);
+			m_render_target = display::CreateRenderTarget(m_device, render_target_desc, "render target test");
 
 			display::DepthBufferDesc depth_buffer_desc;
 			depth_buffer_desc.width = 512;
@@ -251,6 +256,7 @@ public:
 		display::DestroyRenderTarget(m_device, m_render_target);
 		display::DestroyDepthBuffer(m_device, m_depth_buffer);
 		display::DestroyDescriptorTable(m_device, m_texture_descriptor_table);
+		display::DestroyDescriptorTable(m_device, m_render_target_descriptor_table);
 		display::DestroySamplerDescriptorTable(m_device, m_sampler_descriptor_table);
 
 		display::DestroyDevice(m_device);
@@ -263,25 +269,25 @@ public:
 		//Open command list
 		display::OpenCommandList(m_device, m_command_list);
 
-		//Set BackBuffer
-		display::WeakRenderTargetHandle back_buffer = display::GetBackBuffer(m_device);
-		display::SetRenderTargets(m_device, m_command_list, 1, &back_buffer, display::WeakDepthBufferHandle());
+		//Set Render Target
+		display::WeakRenderTargetHandle render_target = m_render_target;
+		display::SetRenderTargets(m_device, m_command_list, 1, &render_target, display::WeakDepthBufferHandle());
 
 		//Clear
-		const float clear_colour[] = { 0.f, 0.f, 0.f, 1.0f };
-		display::ClearRenderTargetColour(m_device, m_command_list, back_buffer, clear_colour);
+		const float clear_colour[] = { 0.f, 0.f, 0.f, 0.f };
+		display::ClearRenderTargetColour(m_device, m_command_list, m_render_target, clear_colour);
 
 		//Set root signature
 		display::SetRootSignature(m_device, m_command_list, m_root_signature);
 
-		//Set viewport
-		display::SetViewport(m_device, m_command_list, display::Viewport(static_cast<float>(m_width/2), static_cast<float>(m_height/2)));
-
-		//Set Scissor Rect
-		display::SetScissorRect(m_device, m_command_list, display::Rect(0, 0, m_width/2, m_height/2));
-
 		//Set pipeline state
 		display::SetPipelineState(m_device, m_command_list, m_pipeline_state);
+
+		//Set viewport
+		display::SetViewport(m_device, m_command_list, display::Viewport(static_cast<float>(512 / 2), static_cast<float>(512 / 2)));
+
+		//Set Scissor Rect
+		display::SetScissorRect(m_device, m_command_list, display::Rect(0, 0, 512 / 2, 512 / 2));
 
 		//Set vertex buffer
 		display::WeakVertexBufferHandle weak_vertex_buffer = m_vertex_buffer;
@@ -292,6 +298,25 @@ public:
 
 		//Draw
 		display::Draw(m_device, m_command_list, 0, 3, display::PrimitiveTopology::TriangleList);
+
+		//Use render target as texture
+		display::RenderTargetTransition(m_device, m_command_list, 1, &render_target, display::ResourceState::PixelShaderResource);
+		//Set BackBuffer
+		display::WeakRenderTargetHandle back_buffer = display::GetBackBuffer(m_device);
+		display::SetRenderTargets(m_device, m_command_list, 1, &back_buffer, display::WeakDepthBufferHandle());
+
+		//Resource binding
+		display::SetDescriptorTable(m_device, m_command_list, 0, m_render_target_descriptor_table);
+
+		//Set viewport
+		display::SetViewport(m_device, m_command_list, display::Viewport(static_cast<float>(m_width / 2), static_cast<float>(m_height / 2)));
+
+		//Set Scissor Rect
+		display::SetScissorRect(m_device, m_command_list, display::Rect(0, 0, m_width / 2, m_height / 2));
+
+		//Draw
+		display::Draw(m_device, m_command_list, 0, 3, display::PrimitiveTopology::TriangleList);
+
 
 		//Close command list
 		display::CloseCommandList(m_device, m_command_list);
