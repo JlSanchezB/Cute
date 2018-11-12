@@ -40,23 +40,31 @@ public:
 
 	display::Device* m_device;
 
-	display::CommandListHandle m_command_list;
+	//Test 1 (Render a texture to a render target and render to back buffer)
+	struct Test1
+	{
+		display::CommandListHandle m_command_list;
 
-	display::RootSignatureHandle m_root_signature;
-	display::PipelineStateHandle m_pipeline_state;
-	display::VertexBufferHandle m_vertex_buffer;
+		display::RootSignatureHandle m_root_signature;
+		display::PipelineStateHandle m_pipeline_state;
+		display::VertexBufferHandle m_vertex_buffer;
 
-	display::ConstantBufferHandle m_constant_buffer;
+		display::ConstantBufferHandle m_constant_buffer;
 
-	display::UnorderedAccessBufferHandle m_unordered_access_buffer;
+		display::UnorderedAccessBufferHandle m_unordered_access_buffer;
 
-	display::ShaderResourceHandle m_texture;
-	display::RenderTargetHandle m_render_target;
-	display::DepthBufferHandle m_depth_buffer;
+		display::ShaderResourceHandle m_texture;
+		display::RenderTargetHandle m_render_target;
+		display::DepthBufferHandle m_depth_buffer;
 
-	display::DescriptorTableHandle m_texture_descriptor_table;
-	display::DescriptorTableHandle m_render_target_descriptor_table;
-	display::SamplerDescriptorTableHandle m_sampler_descriptor_table;
+		display::DescriptorTableHandle m_texture_descriptor_table;
+		display::DescriptorTableHandle m_render_target_descriptor_table;
+		display::SamplerDescriptorTableHandle m_sampler_descriptor_table;
+	};
+
+
+	//Tests
+	Test1 m_test_1;
 
 
 	void OnInit() override
@@ -73,7 +81,7 @@ public:
 
 		SetDevice(m_device);
 
-		m_command_list = display::CreateCommandList(m_device);
+		m_test_1.m_command_list = display::CreateCommandList(m_device);
 
 		//Root signature
 		{
@@ -105,7 +113,7 @@ public:
 			root_signature_desc.static_samplers[3].filter = display::Filter::Linear;
 
 			//Create the root signature
-			m_root_signature = display::CreateRootSignature(m_device, root_signature_desc);
+			m_test_1.m_root_signature = display::CreateRootSignature(m_device, root_signature_desc);
 			
 		}
 
@@ -117,7 +125,7 @@ public:
 
 			//Create pipeline state
 			display::PipelineStateDesc pipeline_state_desc;
-			pipeline_state_desc.root_signature = m_root_signature;
+			pipeline_state_desc.root_signature = m_test_1.m_root_signature;
 
 			//Add input layouts
 			pipeline_state_desc.input_layout.elements[0] = display::InputElementDesc("POSITION", 0, display::Format::R32G32B32A32_FLOAT, 0, 0);
@@ -137,7 +145,7 @@ public:
 			pipeline_state_desc.render_target_format[0] = display::Format::R8G8B8A8_UNORM;
 
 			//Create
-			m_pipeline_state = display::CreatePipelineState(m_device, pipeline_state_desc);
+			m_test_1.m_pipeline_state = display::CreatePipelineState(m_device, pipeline_state_desc);
 		}
 
 		//Vertex buffer
@@ -160,7 +168,7 @@ public:
 			vertex_buffer_desc.size = sizeof(vertex_data);
 			vertex_buffer_desc.stride = sizeof(VertexData);
 
-			m_vertex_buffer = display::CreateVertexBuffer(m_device, vertex_buffer_desc, "fullscreen_quad");
+			m_test_1.m_vertex_buffer = display::CreateVertexBuffer(m_device, vertex_buffer_desc, "fullscreen_quad");
 		}
 
 		//Constant buffer
@@ -176,7 +184,7 @@ public:
 			constant_buffer_desc.access = display::Access::Dynamic;
 			constant_buffer_desc.init_data = &data;
 			constant_buffer_desc.size = sizeof(data);
-			m_constant_buffer = display::CreateConstantBuffer(m_device, constant_buffer_desc);
+			m_test_1.m_constant_buffer = display::CreateConstantBuffer(m_device, constant_buffer_desc);
 		}
 
 		//Unordered access buffer
@@ -190,27 +198,27 @@ public:
 			unordered_access_buffer_desc.element_size = sizeof(SomeElement);
 			unordered_access_buffer_desc.element_count = 32;
 
-			m_unordered_access_buffer = display::CreateUnorderedAccessBuffer(m_device, unordered_access_buffer_desc);
+			m_test_1.m_unordered_access_buffer = display::CreateUnorderedAccessBuffer(m_device, unordered_access_buffer_desc);
 		}
 
 		//Texture
 		{
 			std::vector<char> texture_buffer = ReadFileToBuffer("texture.dds");
 
-			m_texture = display::CreateTextureResource(m_device, reinterpret_cast<void*>(&texture_buffer[0]), texture_buffer.size(), "texture.dds");
+			m_test_1.m_texture = display::CreateTextureResource(m_device, reinterpret_cast<void*>(&texture_buffer[0]), texture_buffer.size(), "texture.dds");
 		}
 
 		//Descriptor tables
 		{
 			display::DescriptorTableDesc descriptor_table_desc;
-			descriptor_table_desc.AddDescriptor(m_texture);
+			descriptor_table_desc.AddDescriptor(m_test_1.m_texture);
 
-			m_texture_descriptor_table = display::CreateDescriptorTable(m_device, descriptor_table_desc);
+			m_test_1.m_texture_descriptor_table = display::CreateDescriptorTable(m_device, descriptor_table_desc);
 
 			display::DescriptorTableDesc descriptor_table_render_target_desc;
-			descriptor_table_render_target_desc.AddDescriptor(m_render_target);
+			descriptor_table_render_target_desc.AddDescriptor(m_test_1.m_render_target);
 
-			m_render_target_descriptor_table = display::CreateDescriptorTable(m_device, descriptor_table_desc);
+			m_test_1.m_render_target_descriptor_table = display::CreateDescriptorTable(m_device, descriptor_table_desc);
 
 			display::SamplerDescriptorTableDesc sampler_descriptor_table_desc;
 			sampler_descriptor_table_desc.num_descriptors = 4;
@@ -224,7 +232,7 @@ public:
 			sampler_descriptor_table_desc.descriptors[3].address_u = sampler_descriptor_table_desc.descriptors[3].address_v = display::TextureAddressMode::Wrap;
 			sampler_descriptor_table_desc.descriptors[3].filter = display::Filter::Linear;
 
-			m_sampler_descriptor_table = display::CreateSamplerDescriptorTable(m_device, sampler_descriptor_table_desc);
+			m_test_1.m_sampler_descriptor_table = display::CreateSamplerDescriptorTable(m_device, sampler_descriptor_table_desc);
 		}
 		
 		//RenderTarget
@@ -234,30 +242,30 @@ public:
 			render_target_desc.width = 512;
 			render_target_desc.heigth = 512;
 			
-			m_render_target = display::CreateRenderTarget(m_device, render_target_desc, "render target test");
+			m_test_1.m_render_target = display::CreateRenderTarget(m_device, render_target_desc, "render target test");
 
 			display::DepthBufferDesc depth_buffer_desc;
 			depth_buffer_desc.width = 512;
 			depth_buffer_desc.heigth = 512;
 
-			m_depth_buffer = display::CreateDepthBuffer(m_device, depth_buffer_desc);
+			m_test_1.m_depth_buffer = display::CreateDepthBuffer(m_device, depth_buffer_desc);
 		}
 	}
 	void OnDestroy() override
 	{
 		//Free handles
-		display::DestroyCommandList(m_device, m_command_list);
-		display::DestroyRootSignature(m_device, m_root_signature);
-		display::DestroyPipelineState(m_device, m_pipeline_state);
-		display::DestroyVertexBuffer(m_device, m_vertex_buffer);
-		display::DestroyConstantBuffer(m_device, m_constant_buffer);
-		display::DestroyUnorderedAccessBuffer(m_device, m_unordered_access_buffer);
-		display::DestroyShaderResource(m_device, m_texture);
-		display::DestroyRenderTarget(m_device, m_render_target);
-		display::DestroyDepthBuffer(m_device, m_depth_buffer);
-		display::DestroyDescriptorTable(m_device, m_texture_descriptor_table);
-		display::DestroyDescriptorTable(m_device, m_render_target_descriptor_table);
-		display::DestroySamplerDescriptorTable(m_device, m_sampler_descriptor_table);
+		display::DestroyCommandList(m_device, m_test_1.m_command_list);
+		display::DestroyRootSignature(m_device, m_test_1.m_root_signature);
+		display::DestroyPipelineState(m_device, m_test_1.m_pipeline_state);
+		display::DestroyVertexBuffer(m_device, m_test_1.m_vertex_buffer);
+		display::DestroyConstantBuffer(m_device, m_test_1.m_constant_buffer);
+		display::DestroyUnorderedAccessBuffer(m_device, m_test_1.m_unordered_access_buffer);
+		display::DestroyShaderResource(m_device, m_test_1.m_texture);
+		display::DestroyRenderTarget(m_device, m_test_1.m_render_target);
+		display::DestroyDepthBuffer(m_device, m_test_1.m_depth_buffer);
+		display::DestroyDescriptorTable(m_device, m_test_1.m_texture_descriptor_table);
+		display::DestroyDescriptorTable(m_device, m_test_1.m_render_target_descriptor_table);
+		display::DestroySamplerDescriptorTable(m_device, m_test_1.m_sampler_descriptor_table);
 
 		display::DestroyDevice(m_device);
 	}
@@ -266,63 +274,66 @@ public:
 
 		display::BeginFrame(m_device);
 
-		//Open command list
-		display::OpenCommandList(m_device, m_command_list);
+		//Test 1
+		{
+			//Open command list
+			display::OpenCommandList(m_device, m_test_1.m_command_list);
 
-		//Set Render Target
-		display::WeakRenderTargetHandle render_target = m_render_target;
-		display::SetRenderTargets(m_device, m_command_list, 1, &render_target, display::WeakDepthBufferHandle());
+			//Set Render Target
+			display::WeakRenderTargetHandle render_target = m_test_1.m_render_target;
+			display::SetRenderTargets(m_device, m_test_1.m_command_list, 1, &render_target, display::WeakDepthBufferHandle());
 
-		//Clear
-		const float clear_colour[] = { 0.f, 0.f, 0.f, 0.f };
-		display::ClearRenderTargetColour(m_device, m_command_list, m_render_target, clear_colour);
+			//Clear
+			const float clear_colour[] = { 0.f, 0.f, 0.f, 0.f };
+			display::ClearRenderTargetColour(m_device, m_test_1.m_command_list, m_test_1.m_render_target, clear_colour);
 
-		//Set root signature
-		display::SetRootSignature(m_device, m_command_list, m_root_signature);
+			//Set root signature
+			display::SetRootSignature(m_device, m_test_1.m_command_list, m_test_1.m_root_signature);
 
-		//Set pipeline state
-		display::SetPipelineState(m_device, m_command_list, m_pipeline_state);
+			//Set pipeline state
+			display::SetPipelineState(m_device, m_test_1.m_command_list, m_test_1.m_pipeline_state);
 
-		//Set viewport
-		display::SetViewport(m_device, m_command_list, display::Viewport(static_cast<float>(512 / 2), static_cast<float>(512 / 2)));
+			//Set viewport
+			display::SetViewport(m_device, m_test_1.m_command_list, display::Viewport(static_cast<float>(512 / 2), static_cast<float>(512 / 2)));
 
-		//Set Scissor Rect
-		display::SetScissorRect(m_device, m_command_list, display::Rect(0, 0, 512 / 2, 512 / 2));
+			//Set Scissor Rect
+			display::SetScissorRect(m_device, m_test_1.m_command_list, display::Rect(0, 0, 512 / 2, 512 / 2));
 
-		//Set vertex buffer
-		display::WeakVertexBufferHandle weak_vertex_buffer = m_vertex_buffer;
-		display::SetVertexBuffers(m_device, m_command_list, 0, 1, &weak_vertex_buffer);
+			//Set vertex buffer
+			display::WeakVertexBufferHandle weak_vertex_buffer = m_test_1.m_vertex_buffer;
+			display::SetVertexBuffers(m_device, m_test_1.m_command_list, 0, 1, &weak_vertex_buffer);
 
-		//Resource binding
-		display::SetDescriptorTable(m_device, m_command_list, 0, m_texture_descriptor_table);
+			//Resource binding
+			display::SetDescriptorTable(m_device, m_test_1.m_command_list, 0, m_test_1.m_texture_descriptor_table);
 
-		//Draw
-		display::Draw(m_device, m_command_list, 0, 3, display::PrimitiveTopology::TriangleList);
+			//Draw
+			display::Draw(m_device, m_test_1.m_command_list, 0, 3, display::PrimitiveTopology::TriangleList);
 
-		//Use render target as texture
-		display::RenderTargetTransition(m_device, m_command_list, 1, &render_target, display::ResourceState::PixelShaderResource);
-		//Set BackBuffer
-		display::WeakRenderTargetHandle back_buffer = display::GetBackBuffer(m_device);
-		display::SetRenderTargets(m_device, m_command_list, 1, &back_buffer, display::WeakDepthBufferHandle());
+			//Use render target as texture
+			display::RenderTargetTransition(m_device, m_test_1.m_command_list, 1, &render_target, display::ResourceState::PixelShaderResource);
+			//Set BackBuffer
+			display::WeakRenderTargetHandle back_buffer = display::GetBackBuffer(m_device);
+			display::SetRenderTargets(m_device, m_test_1.m_command_list, 1, &back_buffer, display::WeakDepthBufferHandle());
 
-		//Resource binding
-		display::SetDescriptorTable(m_device, m_command_list, 0, m_render_target_descriptor_table);
+			//Resource binding
+			display::SetDescriptorTable(m_device, m_test_1.m_command_list, 0, m_test_1.m_render_target_descriptor_table);
 
-		//Set viewport
-		display::SetViewport(m_device, m_command_list, display::Viewport(static_cast<float>(m_width / 2), static_cast<float>(m_height / 2)));
+			//Set viewport
+			display::SetViewport(m_device, m_test_1.m_command_list, display::Viewport(static_cast<float>(m_width / 2), static_cast<float>(m_height / 2)));
 
-		//Set Scissor Rect
-		display::SetScissorRect(m_device, m_command_list, display::Rect(0, 0, m_width / 2, m_height / 2));
+			//Set Scissor Rect
+			display::SetScissorRect(m_device, m_test_1.m_command_list, display::Rect(0, 0, m_width / 2, m_height / 2));
 
-		//Draw
-		display::Draw(m_device, m_command_list, 0, 3, display::PrimitiveTopology::TriangleList);
+			//Draw
+			display::Draw(m_device, m_test_1.m_command_list, 0, 3, display::PrimitiveTopology::TriangleList);
 
 
-		//Close command list
-		display::CloseCommandList(m_device, m_command_list);
+			//Close command list
+			display::CloseCommandList(m_device, m_test_1.m_command_list);
+		}
 
 		//Execute command list
-		display::ExecuteCommandList(m_device, m_command_list);
+		display::ExecuteCommandList(m_device, m_test_1.m_command_list);
 
 		//Present
 		display::Present(m_device);
