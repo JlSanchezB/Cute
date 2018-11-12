@@ -2,7 +2,7 @@ struct ConstantBufferTest
 {
 	float4 position;
 	float4 color;
-	float size;
+	float4 size;
 };
 
 struct PSInput
