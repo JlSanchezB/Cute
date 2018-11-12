@@ -67,6 +67,7 @@ public:
 		display::RootSignatureHandle m_root_signature;
 		display::PipelineStateHandle m_pipeline_state;
 		display::VertexBufferHandle m_vertex_buffer;
+		display::IndexBufferHandle m_index_buffer;
 
 		display::ConstantBufferHandle m_constant_buffer[kNumQuads];
 
@@ -76,6 +77,7 @@ public:
 
 	//Tests
 	Test1 m_test_1;
+	Test2 m_test_2;
 
 
 	void OnInit() override
@@ -231,6 +233,91 @@ public:
 
 			m_test_1.m_depth_buffer = display::CreateDepthBuffer(m_device, depth_buffer_desc);
 		}
+
+		//Test 2
+
+		m_test_2.m_command_list = display::CreateCommandList(m_device, "Test1");
+
+		//Root signature
+		{
+			display::RootSignatureDesc root_signature_desc;
+			root_signature_desc.num_root_parameters = 1;
+			root_signature_desc.root_parameters[0].type = display::RootSignatureParameterType::DescriptorTable;
+			root_signature_desc.root_parameters[0].table.num_ranges = 1;
+			root_signature_desc.root_parameters[0].table.range[0].base_shader_register = 0;
+			root_signature_desc.root_parameters[0].table.range[0].size = 1;
+			root_signature_desc.root_parameters[0].table.range[0].type = display::DescriptorTableParameterType::ConstantBuffer;
+			root_signature_desc.root_parameters[0].visibility = display::ShaderVisibility::All;
+
+			root_signature_desc.num_static_samplers = 0;
+			
+			//Create the root signature
+			m_test_2.m_root_signature = display::CreateRootSignature(m_device, root_signature_desc, "Test 2");
+
+		}
+
+		//Pipeline state
+		{
+			//Read pixel and vertex shader
+			std::vector<char> pixel_shader_buffer = ReadFileToBuffer("constant_buffer_shader_ps.fxo");
+			std::vector<char> vertex_shader_buffer = ReadFileToBuffer("constant_buffer_shader_vs.fxo");
+
+			//Create pipeline state
+			display::PipelineStateDesc pipeline_state_desc;
+			pipeline_state_desc.root_signature = m_test_2.m_root_signature;
+
+			//Add input layouts
+			pipeline_state_desc.input_layout.elements[0] = display::InputElementDesc("POSITION", 0, display::Format::R32G32B32A32_FLOAT, 0, 0);
+			pipeline_state_desc.input_layout.num_elements = 1;
+
+
+			//Add shaders
+			pipeline_state_desc.pixel_shader.data = reinterpret_cast<void*>(pixel_shader_buffer.data());
+			pipeline_state_desc.pixel_shader.size = pixel_shader_buffer.size();
+
+			pipeline_state_desc.vertex_shader.data = reinterpret_cast<void*>(vertex_shader_buffer.data());
+			pipeline_state_desc.vertex_shader.size = vertex_shader_buffer.size();
+
+			//Add render targets
+			pipeline_state_desc.num_render_targets = 1;
+			pipeline_state_desc.render_target_format[0] = display::Format::R8G8B8A8_UNORM;
+
+			//Create
+			m_test_2.m_pipeline_state = display::CreatePipelineState(m_device, pipeline_state_desc, "constant buffer driven quad");
+		}
+		//Vertex buffer
+		{
+			struct VertexData
+			{
+				float position[4];
+			};
+
+			VertexData vertex_data[4] =
+			{
+				{1.f, 1.f, 1.f, 1.f},
+				{-1.f, 1.f, 1.f, 1.f},
+				{1.f, -1.f, 1.f, 1.f},
+				{-1.f, -1.f, 1.f, 1.f}
+			};
+
+			display::VertexBufferDesc vertex_buffer_desc;
+			vertex_buffer_desc.init_data = vertex_data;
+			vertex_buffer_desc.size = sizeof(vertex_data);
+			vertex_buffer_desc.stride = sizeof(VertexData);
+
+			m_test_2.m_vertex_buffer = display::CreateVertexBuffer(m_device, vertex_buffer_desc, "quad");
+		}
+
+		//Index buffer
+		{
+			uint16_t index_buffer_data[6] = { 0, 1, 2, 1, 2, 3 };
+			display::IndexBufferDesc index_buffer_desc;
+			index_buffer_desc.init_data = index_buffer_data;
+			index_buffer_desc.size = sizeof(index_buffer_data);
+
+			m_test_2.m_index_buffer = display::CreateIndexBuffer(m_device, index_buffer_desc, "quad_index_buffer");
+		}
+
 	}
 	void OnDestroy() override
 	{
@@ -245,6 +332,13 @@ public:
 		display::DestroyDescriptorTable(m_device, m_test_1.m_texture_descriptor_table);
 		display::DestroyDescriptorTable(m_device, m_test_1.m_render_target_descriptor_table);
 		display::DestroySamplerDescriptorTable(m_device, m_test_1.m_sampler_descriptor_table);
+
+		display::DestroyCommandList(m_device, m_test_2.m_command_list);
+		display::DestroyRootSignature(m_device, m_test_2.m_root_signature);
+		display::DestroyPipelineState(m_device, m_test_2.m_pipeline_state);
+		display::DestroyVertexBuffer(m_device, m_test_2.m_vertex_buffer);
+		display::DestroyIndexBuffer(m_device, m_test_2.m_index_buffer);
+		
 
 		display::DestroyDevice(m_device);
 	}

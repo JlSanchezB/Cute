@@ -2,6 +2,7 @@ struct ConstantBufferTest
 {
 	float4 position;
 	float4 color;
+	float size;
 };
 
 struct PSInput
@@ -16,7 +17,7 @@ PSInput vs_main(float4 position : POSITION)
 {
 	PSInput result;
 
-	result.position = position + constant_buffer_test.position;
+	result.position = position * constant_buffer_test.size + constant_buffer_test.position;
 	result.color = constant_buffer_test.color;
 
 	return result;
