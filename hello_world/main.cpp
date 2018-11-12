@@ -32,8 +32,8 @@ namespace
 class HelloWorldGame : public platform::Game
 {
 public:
-	const static size_t kInitWidth = 500;
-	const static size_t kInitHeight = 500;
+	constexpr static size_t kInitWidth = 500;
+	constexpr static size_t kInitHeight = 500;
 
 	size_t m_width;
 	size_t m_height;
@@ -56,6 +56,21 @@ public:
 		display::DescriptorTableHandle m_texture_descriptor_table;
 		display::DescriptorTableHandle m_render_target_descriptor_table;
 		display::SamplerDescriptorTableHandle m_sampler_descriptor_table;
+	};
+
+	//Test 2 (Render 10 quads using constant buffers)
+	struct Test2
+	{
+		static constexpr size_t kNumQuads = 10;
+		display::CommandListHandle m_command_list;
+
+		display::RootSignatureHandle m_root_signature;
+		display::PipelineStateHandle m_pipeline_state;
+		display::VertexBufferHandle m_vertex_buffer;
+
+		display::ConstantBufferHandle m_constant_buffer[kNumQuads];
+
+		display::DescriptorTableHandle m_constant_descriptor_table;
 	};
 
 

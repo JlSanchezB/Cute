@@ -13,10 +13,10 @@
 
 namespace display
 {
-	static const size_t kMaxNumRenderTargets = 8;
-	static const size_t kMaxNumInputLayoutElements = 32;
-	static const size_t kMaxNumRootParameters = 32;
-	static const size_t kMaxNumStaticSamplers = 32;
+	constexpr size_t kMaxNumRenderTargets = 8;
+	constexpr size_t kMaxNumInputLayoutElements = 32;
+	constexpr size_t kMaxNumRootParameters = 32;
+	constexpr size_t kMaxNumStaticSamplers = 32;
 
 	struct SamplerDesc
 	{
@@ -50,7 +50,7 @@ namespace display
 
 	struct RootSignatureTable
 	{
-		static const size_t kNumMaxRanges = 8;
+		static constexpr size_t kNumMaxRanges = 8;
 		size_t num_ranges;
 		std::array<RootSignatureTableRange, kNumMaxRanges> range;
 	};
@@ -249,7 +249,7 @@ namespace display
 	{
 		using Descritor = std::variant<WeakConstantBufferHandle, WeakUnorderedAccessBufferHandle, WeakShaderResourceHandle, WeakRenderTargetHandle>;
 		Access access = Access::Static; //With static, only static handles are supported
-		static const size_t kNumMaxDescriptors = 32;
+		static constexpr size_t kNumMaxDescriptors = 32;
 
 		std::array<Descritor, kNumMaxDescriptors> descriptors;
 		size_t num_descriptors = 0;
@@ -281,7 +281,7 @@ namespace display
 
 	struct SamplerDescriptorTableDesc
 	{
-		static const size_t kNumMaxDescriptors = 32;
+		static constexpr size_t kNumMaxDescriptors = 32;
 		std::array<SamplerDesc, kNumMaxDescriptors> descriptors;
 		size_t num_descriptors = 0;
 
