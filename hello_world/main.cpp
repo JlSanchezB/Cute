@@ -49,10 +49,6 @@ public:
 		display::PipelineStateHandle m_pipeline_state;
 		display::VertexBufferHandle m_vertex_buffer;
 
-		display::ConstantBufferHandle m_constant_buffer;
-
-		display::UnorderedAccessBufferHandle m_unordered_access_buffer;
-
 		display::ShaderResourceHandle m_texture;
 		display::RenderTargetHandle m_render_target;
 		display::DepthBufferHandle m_depth_buffer;
@@ -81,7 +77,7 @@ public:
 
 		SetDevice(m_device);
 
-		m_test_1.m_command_list = display::CreateCommandList(m_device);
+		m_test_1.m_command_list = display::CreateCommandList(m_device, "Test1");
 
 		//Root signature
 		{
@@ -113,7 +109,7 @@ public:
 			root_signature_desc.static_samplers[3].filter = display::Filter::Linear;
 
 			//Create the root signature
-			m_test_1.m_root_signature = display::CreateRootSignature(m_device, root_signature_desc);
+			m_test_1.m_root_signature = display::CreateRootSignature(m_device, root_signature_desc, "Test 1");
 			
 		}
 
@@ -145,7 +141,7 @@ public:
 			pipeline_state_desc.render_target_format[0] = display::Format::R8G8B8A8_UNORM;
 
 			//Create
-			m_test_1.m_pipeline_state = display::CreatePipelineState(m_device, pipeline_state_desc);
+			m_test_1.m_pipeline_state = display::CreatePipelineState(m_device, pipeline_state_desc, "simple texture");
 		}
 
 		//Vertex buffer
@@ -169,36 +165,6 @@ public:
 			vertex_buffer_desc.stride = sizeof(VertexData);
 
 			m_test_1.m_vertex_buffer = display::CreateVertexBuffer(m_device, vertex_buffer_desc, "fullscreen_quad");
-		}
-
-		//Constant buffer
-		{
-			struct SomeData
-			{
-				std::array<float, 32> data;
-			};
-
-			SomeData data;
-
-			display::ConstantBufferDesc constant_buffer_desc;
-			constant_buffer_desc.access = display::Access::Dynamic;
-			constant_buffer_desc.init_data = &data;
-			constant_buffer_desc.size = sizeof(data);
-			m_test_1.m_constant_buffer = display::CreateConstantBuffer(m_device, constant_buffer_desc);
-		}
-
-		//Unordered access buffer
-		{
-			struct SomeElement
-			{
-				std::array<float, 16> data;
-			};
-
-			display::UnorderedAccessBufferDesc unordered_access_buffer_desc;
-			unordered_access_buffer_desc.element_size = sizeof(SomeElement);
-			unordered_access_buffer_desc.element_count = 32;
-
-			m_test_1.m_unordered_access_buffer = display::CreateUnorderedAccessBuffer(m_device, unordered_access_buffer_desc);
 		}
 
 		//Texture
@@ -258,8 +224,6 @@ public:
 		display::DestroyRootSignature(m_device, m_test_1.m_root_signature);
 		display::DestroyPipelineState(m_device, m_test_1.m_pipeline_state);
 		display::DestroyVertexBuffer(m_device, m_test_1.m_vertex_buffer);
-		display::DestroyConstantBuffer(m_device, m_test_1.m_constant_buffer);
-		display::DestroyUnorderedAccessBuffer(m_device, m_test_1.m_unordered_access_buffer);
 		display::DestroyShaderResource(m_device, m_test_1.m_texture);
 		display::DestroyRenderTarget(m_device, m_test_1.m_render_target);
 		display::DestroyDepthBuffer(m_device, m_test_1.m_depth_buffer);
