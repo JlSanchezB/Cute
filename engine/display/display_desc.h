@@ -9,6 +9,7 @@
 #include <cstdint>
 #include <array>
 #include <limits>
+#include <variant>
 
 namespace display
 {
@@ -244,56 +245,36 @@ namespace display
 		size_t heigth = 0;
 	};
 
-	struct DescriptorTableIndexDesc
-	{
-		DescriptorTableParameterType type;
-		union
-		{
-			WeakConstantBufferHandle constant_buffer;
-			WeakUnorderedAccessBufferHandle unordered_access_buffer;
-			WeakShaderResourceHandle shader_resource;
-			WeakRenderTargetHandle render_target;
-		};
-
-		DescriptorTableIndexDesc() : constant_buffer()
-		{
-			type = DescriptorTableParameterType::ConstantBuffer;
-		}
-	};
-
 	struct DescriptorTableDesc
 	{
+		using Descritor = std::variant<WeakConstantBufferHandle, WeakUnorderedAccessBufferHandle, WeakShaderResourceHandle, WeakRenderTargetHandle>;
 		Access access = Access::Static; //With static, only static handles are supported
 		static const size_t kNumMaxDescriptors = 32;
 
-		std::array<DescriptorTableIndexDesc, kNumMaxDescriptors> descriptors;
+		std::array<Descritor, kNumMaxDescriptors> descriptors;
 		size_t num_descriptors = 0;
 
 		void AddDescriptor(const WeakConstantBufferHandle& constant_buffer)
 		{
-			descriptors[num_descriptors].type = DescriptorTableParameterType::ConstantBuffer;
-			descriptors[num_descriptors].constant_buffer = constant_buffer;
+			descriptors[num_descriptors] = constant_buffer;
 			num_descriptors++;
 		}
 
 		void AddDescriptor(const WeakUnorderedAccessBufferHandle& unordered_access_buffer)
 		{
-			descriptors[num_descriptors].type = DescriptorTableParameterType::UnorderAccessBuffer;
-			descriptors[num_descriptors].unordered_access_buffer = unordered_access_buffer;
+			descriptors[num_descriptors] = unordered_access_buffer;
 			num_descriptors++;
 		}
 
 		void AddDescriptor(const WeakShaderResourceHandle& shader_resource)
 		{
-			descriptors[num_descriptors].type = DescriptorTableParameterType::ShaderResource;
-			descriptors[num_descriptors].shader_resource = shader_resource;
+			descriptors[num_descriptors] = shader_resource;
 			num_descriptors++;
 		}
 
 		void AddDescriptor(const WeakRenderTargetHandle& render_target)
 		{
-			descriptors[num_descriptors].type = DescriptorTableParameterType::RenderTarget;
-			descriptors[num_descriptors].render_target = render_target;
+			descriptors[num_descriptors] = render_target;
 			num_descriptors++;
 		}
 	};

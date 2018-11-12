@@ -463,6 +463,10 @@ namespace display
 		//Delete handle and linked ones
 		DeleteRingResource(device, handle, device->m_shader_resource_pool);
 	}
+
+	template<class... Ts> struct overloaded : Ts... { using Ts::operator()...; };
+	template<class... Ts> overloaded(Ts...)->overloaded<Ts...>;
+
 	DescriptorTableHandle CreateDescriptorTable(Device * device, const DescriptorTableDesc & descriptor_table_desc)
 	{
 		DescriptorTableHandle handle = device->m_descriptor_table_pool.Alloc(static_cast<uint16_t>(descriptor_table_desc.num_descriptors));
@@ -474,32 +478,39 @@ namespace display
 			for (size_t i = 0; i < descriptor_table_desc.num_descriptors; ++i)
 			{
 				auto& descriptor_table_item = descriptor_table_desc.descriptors[i];
-				switch (descriptor_table_item.type)
-				{
-				case DescriptorTableParameterType::ConstantBuffer:
-					//We only support static resources, no ring ones
-					assert(!device->Get(descriptor_table_item.constant_buffer).next_handle.IsValid());
-					device->m_native_device->CopyDescriptorsSimple(1, device->m_descriptor_table_pool.GetDescriptor(handle, i),
-						device->m_constant_buffer_pool.GetDescriptor(descriptor_table_item.constant_buffer), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-					break;
-				case DescriptorTableParameterType::UnorderAccessBuffer:
-					device->m_native_device->CopyDescriptorsSimple(1, device->m_descriptor_table_pool.GetDescriptor(handle, i),
-						device->m_unordered_access_buffer_pool.GetDescriptor(descriptor_table_item.unordered_access_buffer), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-					break;
-				case DescriptorTableParameterType::ShaderResource:
-					//We only support static resources, no ring ones
-					assert(!device->Get(descriptor_table_item.shader_resource).next_handle.IsValid());
-					device->m_native_device->CopyDescriptorsSimple(1, device->m_descriptor_table_pool.GetDescriptor(handle, i),
-						device->m_shader_resource_pool.GetDescriptor(descriptor_table_item.shader_resource), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-					break;
-				case DescriptorTableParameterType::Sampler:
-					assert(false); //Not supported
-					break;
-				case DescriptorTableParameterType::RenderTarget:
-					device->m_native_device->CopyDescriptorsSimple(1, device->m_descriptor_table_pool.GetDescriptor(handle, i),
-						device->m_render_target_pool.GetDescriptor(descriptor_table_item.render_target, 1), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-					break;
-				}
+				std::visit(
+					overloaded
+					{
+						[&](WeakConstantBufferHandle constant_buffer)
+						{
+							//We only support static resources, no ring ones
+							assert(!device->Get(constant_buffer).next_handle.IsValid());
+							device->m_native_device->CopyDescriptorsSimple(1, device->m_descriptor_table_pool.GetDescriptor(handle, i),
+								device->m_constant_buffer_pool.GetDescriptor(constant_buffer), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+						},
+						[&](WeakUnorderedAccessBufferHandle unordered_access_buffer)
+						{
+							device->m_native_device->CopyDescriptorsSimple(1, device->m_descriptor_table_pool.GetDescriptor(handle, i),
+								device->m_unordered_access_buffer_pool.GetDescriptor(unordered_access_buffer), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+						},
+						[&](WeakShaderResourceHandle shader_resource)
+						{
+							//We only support static resources, no ring ones
+							assert(!device->Get(shader_resource).next_handle.IsValid());
+							device->m_native_device->CopyDescriptorsSimple(1, device->m_descriptor_table_pool.GetDescriptor(handle, i),
+								device->m_shader_resource_pool.GetDescriptor(shader_resource), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+						},
+						[&](WeakSamplerDescriptorTableHandle sampler)
+						{
+							assert(false); //Not supported
+						},
+						[&](WeakRenderTargetHandle render_target)
+						{
+							device->m_native_device->CopyDescriptorsSimple(1, device->m_descriptor_table_pool.GetDescriptor(handle, i),
+							device->m_render_target_pool.GetDescriptor(render_target, 1), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+						}
+					},
+					descriptor_table_item);
 			}
 			return handle;
 		}
@@ -517,28 +528,39 @@ namespace display
 				for (size_t i = 0; i < descriptor_table_desc.num_descriptors; ++i)
 				{
 					auto& descriptor_table_item = descriptor_table_desc.descriptors[i];
-					switch (descriptor_table_item.type)
-					{
-					case DescriptorTableParameterType::ConstantBuffer:
-						device->m_native_device->CopyDescriptorsSimple(1, device->m_descriptor_table_pool.GetDescriptor(handle_it, i),
-							device->m_constant_buffer_pool.GetDescriptor(GetRingResource(device, descriptor_table_item.constant_buffer, frame_index)), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-						break;
-					case DescriptorTableParameterType::UnorderAccessBuffer:
-						device->m_native_device->CopyDescriptorsSimple(1, device->m_descriptor_table_pool.GetDescriptor(handle_it, i),
-							device->m_unordered_access_buffer_pool.GetDescriptor(descriptor_table_item.unordered_access_buffer), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-						break;
-					case DescriptorTableParameterType::ShaderResource:
-						device->m_native_device->CopyDescriptorsSimple(1, device->m_descriptor_table_pool.GetDescriptor(handle_it, i),
-							device->m_shader_resource_pool.GetDescriptor(GetRingResource(device, descriptor_table_item.shader_resource, frame_index)), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-						break;
-					case DescriptorTableParameterType::Sampler:
-						assert(false); //Not supported
-						break;
-					case DescriptorTableParameterType::RenderTarget:
-						device->m_native_device->CopyDescriptorsSimple(1, device->m_descriptor_table_pool.GetDescriptor(handle, i),
-							device->m_render_target_pool.GetDescriptor(descriptor_table_item.render_target, 1), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-						break;
-					}
+					std::visit(
+						overloaded
+						{
+							[&](WeakConstantBufferHandle constant_buffer)
+							{
+								//We only support static resources, no ring ones
+								assert(!device->Get(constant_buffer).next_handle.IsValid());
+								device->m_native_device->CopyDescriptorsSimple(1, device->m_descriptor_table_pool.GetDescriptor(handle_it, i),
+									device->m_constant_buffer_pool.GetDescriptor(constant_buffer), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+							},
+							[&](WeakUnorderedAccessBufferHandle unordered_access_buffer)
+							{
+								device->m_native_device->CopyDescriptorsSimple(1, device->m_descriptor_table_pool.GetDescriptor(handle_it, i),
+									device->m_unordered_access_buffer_pool.GetDescriptor(unordered_access_buffer), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+							},
+							[&](WeakShaderResourceHandle shader_resource)
+							{
+								//We only support static resources, no ring ones
+								assert(!device->Get(shader_resource).next_handle.IsValid());
+								device->m_native_device->CopyDescriptorsSimple(1, device->m_descriptor_table_pool.GetDescriptor(handle_it, i),
+									device->m_shader_resource_pool.GetDescriptor(shader_resource), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+							},
+							[&](WeakSamplerDescriptorTableHandle sampler)
+							{
+								assert(false); //Not supported
+							},
+							[&](WeakRenderTargetHandle render_target)
+							{
+								device->m_native_device->CopyDescriptorsSimple(1, device->m_descriptor_table_pool.GetDescriptor(handle_it, i),
+								device->m_render_target_pool.GetDescriptor(render_target, 1), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+							}
+						},
+					descriptor_table_item);
 				}
 
 				if (count > 0)

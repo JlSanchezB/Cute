@@ -19,8 +19,7 @@ namespace display
 		ConstantBuffer,
 		UnorderAccessBuffer,
 		ShaderResource,
-		Sampler,
-		RenderTarget
+		Sampler
 	};
 
 	enum class ShaderVisibility
