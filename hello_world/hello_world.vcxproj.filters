@@ -35,4 +35,9 @@
       <Filter>Assets</Filter>
     </CopyFileToFolders>
   </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="constant_buffer_shader.hlsl">
+      <Filter>Assets</Filter>
+    </FxCompile>
+  </ItemGroup>
 </Project>
