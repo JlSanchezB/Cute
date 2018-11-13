@@ -155,6 +155,12 @@ namespace
 
 	//Frecuency for the perfomance timer
 	LARGE_INTEGER g_frequency;
+
+	//Frecuency for the perfomance timer
+	LARGE_INTEGER g_current_time;
+
+	//Begin time
+	LARGE_INTEGER g_begin_time;
 }
 
 namespace platform
@@ -205,6 +211,8 @@ namespace platform
 
 		//Calculate frecuency for timer
 		QueryPerformanceFrequency(&g_frequency);
+		QueryPerformanceCounter(&g_current_time);
+		QueryPerformanceCounter(&g_begin_time);
 
 		//Init callback
 		game->OnInit();
@@ -227,8 +235,14 @@ namespace platform
 				}
 			}
 
+			//Calculate time
+			LARGE_INTEGER last_time = g_current_time;
+			QueryPerformanceCounter(&g_current_time);
+			float elapsed_time = static_cast<float>(g_current_time.QuadPart - last_time.QuadPart) / g_frequency.QuadPart;
+			double total_time = static_cast<double>(g_current_time.QuadPart - g_begin_time.QuadPart) / g_frequency.QuadPart;
+			
 			//Render
-			game->OnTick();
+			game->OnTick(total_time, elapsed_time);
 
 		} while (true);
 

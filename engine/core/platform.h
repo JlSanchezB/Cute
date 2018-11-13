@@ -21,7 +21,7 @@ namespace platform
 		//Interface
 		virtual void OnInit() = 0;
 		virtual void OnDestroy() = 0;
-		virtual void OnTick() = 0;
+		virtual void OnTick(double total_time, float elapsed_time) = 0;
 		virtual void OnSizeChange(size_t width, size_t height, bool minimized) = 0;
 	};
 

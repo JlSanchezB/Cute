@@ -378,7 +378,7 @@ public:
 
 		display::DestroyDevice(m_device);
 	}
-	void OnTick() override
+	void OnTick(double total_time, float elapsed_time) override
 	{
 
 		display::BeginFrame(m_device);
@@ -424,6 +424,8 @@ public:
 			display::WeakRenderTargetHandle back_buffer = display::GetBackBuffer(m_device);
 			display::SetRenderTargets(m_device, m_test_1.m_command_list, 1, &back_buffer, display::WeakDepthBufferHandle());
 
+			display::ClearRenderTargetColour(m_device, m_test_1.m_command_list, back_buffer, clear_colour);
+
 			//Set viewport
 			display::SetViewport(m_device, m_test_1.m_command_list, display::Viewport(static_cast<float>(m_width / 2), static_cast<float>(m_height / 2)));
 
@@ -459,7 +461,6 @@ public:
 			//Set Scissor Rect
 			display::SetScissorRect(m_device, m_test_2.m_command_list, display::Rect(0, 0, m_width, m_height));
 
-
 			//Set root signature
 			display::SetRootSignature(m_device, m_test_2.m_command_list, m_test_2.m_root_signature);
 
@@ -476,9 +477,12 @@ public:
 			for (size_t i = 0; i < Test2::kNumQuads; ++i)
 			{
 				Test2ConstantBuffer constant_buffer = {};
-				constant_buffer.position[0] = -1.f + 0.2f * i;
-				constant_buffer.color[0] = constant_buffer.color[1] = constant_buffer.color[2] = constant_buffer.color[3] = 1.f;
-				constant_buffer.size[0] = 0.1f;
+				float quad = static_cast<float>(i) / Test2::kNumQuads;
+				float angle = static_cast<float>(total_time + 3.f * quad);
+				constant_buffer.position[0] = 0.5f * cosf(angle);
+				constant_buffer.position[1] = 0.5f * sinf(angle);
+				constant_buffer.color[0] = constant_buffer.color[1] = constant_buffer.color[2] = constant_buffer.color[3] = 0.5f + 0.5f * quad;
+				constant_buffer.size[0] = 0.01f + 0.02f * quad;
 
 				//Update constant buffer
 				display::UpdateConstantBuffer(m_device, m_test_2.m_constant_buffer[i], &constant_buffer, sizeof(constant_buffer));
