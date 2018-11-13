@@ -154,6 +154,9 @@ namespace display
 	//Set descriptor table
 	void SetDescriptorTable(Device* device, const WeakCommandListHandle& command_list, size_t root_parameter, const WeakSamplerDescriptorTableHandle& sampler_descriptor_table);
 
+	//Update constant buffer
+	void UpdateConstantBuffer(Device* device, const WeakConstantBufferHandle& constant_buffer_handle, const void* data, size_t size);
+
 	//Draw
 	void Draw(Device* device, const WeakCommandListHandle& command_list, size_t start_vertex, size_t vertex_count, PrimitiveTopology primitive_topology);
 

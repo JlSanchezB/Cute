@@ -475,6 +475,13 @@ public:
 
 			for (size_t i = 0; i < Test2::kNumQuads; ++i)
 			{
+				Test2ConstantBuffer constant_buffer = {};
+				constant_buffer.position[0] = -1.f + 0.2f * i;
+				constant_buffer.color[0] = constant_buffer.color[1] = constant_buffer.color[2] = constant_buffer.color[3] = 1.f;
+				constant_buffer.size[0] = 0.1f;
+
+				//Update constant buffer
+				display::UpdateConstantBuffer(m_device, m_test_2.m_constant_buffer[i], &constant_buffer, sizeof(constant_buffer));
 				//Resource binding
 				display::SetDescriptorTable(m_device, m_test_2.m_command_list, 0, m_test_2.m_constant_descriptor_table[i]);
 

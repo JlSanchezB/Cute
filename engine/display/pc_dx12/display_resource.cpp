@@ -299,6 +299,11 @@ namespace display
 				dx12_constant_buffer_desc.SizeInBytes = static_cast<UINT>(size);
 				device->m_native_device->CreateConstantBufferView(&dx12_constant_buffer_desc, device->m_constant_buffer_pool.GetDescriptor(handle));
 
+				//Get the pointer to the memory
+				CD3DX12_RANGE readRange(0, 0);		// We do not intend to read from this resource on the CPU.
+				ThrowIfFailed(constant_buffer.resource->Map(0, &readRange, reinterpret_cast<void**>(&constant_buffer.memory_data)));
+				constant_buffer.memory_size = size;
+
 				SetObjectName(constant_buffer.resource.Get(), name);
 			});
 
@@ -601,5 +606,14 @@ namespace display
 	void DestroySamplerDescriptorTable(Device * device, SamplerDescriptorTableHandle& handle)
 	{
 		device->m_sampler_descriptor_table_pool.Free(handle);
+	}
+
+	void UpdateConstantBuffer(Device * device, const WeakConstantBufferHandle & constant_buffer_handle, const void * data, size_t size)
+	{
+		auto& constant_buffer = device->Get(GetRingResource(device, constant_buffer_handle, device->m_frame_index));
+		assert(size <= constant_buffer.memory_size);
+
+		//Copy
+		memcpy(constant_buffer.memory_data, data, size);
 	}
 }
