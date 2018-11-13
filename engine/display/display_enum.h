@@ -116,7 +116,6 @@ namespace display
 	{
 		Static, //Only change in the initialization, never touch again
 		Dynamic, //Upload from the CPU to the GPU one per frame
-		Discard, //Old map discard, upload from the CPU to the GPU a lot of times per frame
 	};
 
 	enum class ShaderResourceType

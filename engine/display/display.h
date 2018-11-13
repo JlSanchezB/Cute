@@ -157,5 +157,7 @@ namespace display
 	//Draw
 	void Draw(Device* device, const WeakCommandListHandle& command_list, size_t start_vertex, size_t vertex_count, PrimitiveTopology primitive_topology);
 
+	//Draw Indexed
+	void DrawIndexed(Device* device, const WeakCommandListHandle& command_list, size_t start_index, size_t index_count, size_t base_vertex, PrimitiveTopology primitive_topology);
 }
 #endif DISPLAY_H_

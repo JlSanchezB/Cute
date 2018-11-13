@@ -43,7 +43,7 @@ namespace display
 		Block all_free;
 		all_free.index = 0;
 		all_free.size = static_cast<uint16_t>(size);
-
+		m_free_blocks_pool.push_back(all_free);
 	}
 	void DescriptorHeapFreeList::DestroyHeap()
 	{
@@ -78,7 +78,7 @@ namespace display
 			}
 		}
 		//It doesn't fit in the list
-		std::exception("No more free descriptors");
+		std::runtime_error("No more free descriptors");
 	}
 	void DescriptorHeapFreeList::DeallocDescriptors(Block & block)
 	{

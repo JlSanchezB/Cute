@@ -17,7 +17,8 @@ PSInput vs_main(float4 position : POSITION)
 {
 	PSInput result;
 
-	result.position = position * constant_buffer_test.size + constant_buffer_test.position;
+	result.position.xy = position.xy * constant_buffer_test.size.xx + constant_buffer_test.position.xy;
+	result.position.zw = position.zw;
 	result.color = constant_buffer_test.color;
 
 	return result;

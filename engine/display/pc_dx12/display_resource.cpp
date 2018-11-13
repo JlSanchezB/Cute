@@ -533,10 +533,8 @@ namespace display
 						{
 							[&](WeakConstantBufferHandle constant_buffer)
 							{
-								//We only support static resources, no ring ones
-								assert(!device->Get(constant_buffer).next_handle.IsValid());
 								device->m_native_device->CopyDescriptorsSimple(1, device->m_descriptor_table_pool.GetDescriptor(handle_it, i),
-									device->m_constant_buffer_pool.GetDescriptor(constant_buffer), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+									device->m_constant_buffer_pool.GetDescriptor(GetRingResource(device, constant_buffer, frame_index)), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 							},
 							[&](WeakUnorderedAccessBufferHandle unordered_access_buffer)
 							{
@@ -545,10 +543,9 @@ namespace display
 							},
 							[&](WeakShaderResourceHandle shader_resource)
 							{
-								//We only support static resources, no ring ones
-								assert(!device->Get(shader_resource).next_handle.IsValid());
+								//We only support static resources
 								device->m_native_device->CopyDescriptorsSimple(1, device->m_descriptor_table_pool.GetDescriptor(handle_it, i),
-									device->m_shader_resource_pool.GetDescriptor(shader_resource), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+									device->m_shader_resource_pool.GetDescriptor(GetRingResource(device, shader_resource, frame_index)), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 							},
 							[&](WeakSamplerDescriptorTableHandle sampler)
 							{
@@ -557,7 +554,7 @@ namespace display
 							[&](WeakRenderTargetHandle render_target)
 							{
 								device->m_native_device->CopyDescriptorsSimple(1, device->m_descriptor_table_pool.GetDescriptor(handle_it, i),
-								device->m_render_target_pool.GetDescriptor(render_target, 1), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+								device->m_render_target_pool.GetDescriptor(render_target), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 							}
 						},
 					descriptor_table_item);

@@ -490,6 +490,7 @@ namespace display
 			while (count)
 			{
 				handle = device->Get(handle).next_handle;
+				count--;
 			}
 		}
 

@@ -59,6 +59,12 @@ public:
 	};
 
 	//Test 2 (Render 10 quads using constant buffers)
+	struct alignas(16) Test2ConstantBuffer
+	{
+		float position[4];
+		float color[4];
+		float size[4];
+	};
 	struct Test2
 	{
 		static constexpr size_t kNumQuads = 10;
@@ -71,7 +77,7 @@ public:
 
 		display::ConstantBufferHandle m_constant_buffer[kNumQuads];
 
-		display::DescriptorTableHandle m_constant_descriptor_table;
+		display::DescriptorTableHandle m_constant_descriptor_table[kNumQuads];
 	};
 
 
@@ -310,12 +316,39 @@ public:
 
 		//Index buffer
 		{
-			uint16_t index_buffer_data[6] = { 0, 1, 2, 1, 2, 3 };
+			uint16_t index_buffer_data[6] = { 0, 2, 1, 1, 2, 3 };
 			display::IndexBufferDesc index_buffer_desc;
 			index_buffer_desc.init_data = index_buffer_data;
 			index_buffer_desc.size = sizeof(index_buffer_data);
 
 			m_test_2.m_index_buffer = display::CreateIndexBuffer(m_device, index_buffer_desc, "quad_index_buffer");
+		}
+
+		//Constant buffer
+		{
+			Test2ConstantBuffer constant_buffer = {};
+			constant_buffer.color[0] = constant_buffer.color[1] = constant_buffer.color[2] = constant_buffer.color[3] = 1.f;
+			constant_buffer.size[0] = 0.1f;
+			display::ConstantBufferDesc constant_buffer_desc;
+			constant_buffer_desc.access = display::Access::Dynamic;
+			constant_buffer_desc.init_data = &constant_buffer;
+			constant_buffer_desc.size = sizeof(Test2ConstantBuffer);
+			for (size_t i = 0; i < Test2::kNumQuads; ++i)
+			{
+				m_test_2.m_constant_buffer[i] = display::CreateConstantBuffer(m_device, constant_buffer_desc);
+			}
+		}
+
+		//Descriptor tables
+		{
+			for (size_t i = 0; i < Test2::kNumQuads; ++i)
+			{
+				display::DescriptorTableDesc descriptor_table_desc;
+				descriptor_table_desc.access = display::Access::Dynamic;
+				descriptor_table_desc.AddDescriptor(m_test_2.m_constant_buffer[i]);
+
+				m_test_2.m_constant_descriptor_table[i] = display::CreateDescriptorTable(m_device, descriptor_table_desc);
+			}
 		}
 
 	}
@@ -338,7 +371,10 @@ public:
 		display::DestroyPipelineState(m_device, m_test_2.m_pipeline_state);
 		display::DestroyVertexBuffer(m_device, m_test_2.m_vertex_buffer);
 		display::DestroyIndexBuffer(m_device, m_test_2.m_index_buffer);
-		
+		for (size_t i = 0; i < Test2::kNumQuads; ++i)
+		{
+			display::DestroyConstantBuffer(m_device, m_test_2.m_constant_buffer[i]);
+		}
 
 		display::DestroyDevice(m_device);
 	}
@@ -388,14 +424,14 @@ public:
 			display::WeakRenderTargetHandle back_buffer = display::GetBackBuffer(m_device);
 			display::SetRenderTargets(m_device, m_test_1.m_command_list, 1, &back_buffer, display::WeakDepthBufferHandle());
 
-			//Resource binding
-			display::SetDescriptorTable(m_device, m_test_1.m_command_list, 0, m_test_1.m_render_target_descriptor_table);
-
 			//Set viewport
 			display::SetViewport(m_device, m_test_1.m_command_list, display::Viewport(static_cast<float>(m_width / 2), static_cast<float>(m_height / 2)));
 
 			//Set Scissor Rect
-			display::SetScissorRect(m_device, m_test_1.m_command_list, display::Rect(0, 0, m_width / 2, m_height / 2));
+			display::SetScissorRect(m_device, m_test_1.m_command_list, display::Rect(0, 0, m_width, m_height));
+
+			//Resource binding
+			display::SetDescriptorTable(m_device, m_test_1.m_command_list, 0, m_test_1.m_render_target_descriptor_table);
 
 			//Draw
 			display::Draw(m_device, m_test_1.m_command_list, 0, 3, display::PrimitiveTopology::TriangleList);
@@ -405,8 +441,54 @@ public:
 			display::CloseCommandList(m_device, m_test_1.m_command_list);
 		}
 
+		//Test 2
+		{
+			//Open command list
+			display::OpenCommandList(m_device, m_test_2.m_command_list);
+
+			//Set Render Target
+			display::WeakRenderTargetHandle render_target = display::GetBackBuffer(m_device);
+			display::SetRenderTargets(m_device, m_test_2.m_command_list, 1, &render_target, display::WeakDepthBufferHandle());
+
+			//Set viewport
+			display::Viewport viewport(static_cast<float>(m_width / 2), static_cast<float>(m_height / 2));
+			viewport.top_left_x = 0;
+			viewport.top_left_y = static_cast<float>(m_height / 2);
+			display::SetViewport(m_device, m_test_2.m_command_list, viewport);
+
+			//Set Scissor Rect
+			display::SetScissorRect(m_device, m_test_2.m_command_list, display::Rect(0, 0, m_width, m_height));
+
+
+			//Set root signature
+			display::SetRootSignature(m_device, m_test_2.m_command_list, m_test_2.m_root_signature);
+
+			//Set pipeline state
+			display::SetPipelineState(m_device, m_test_2.m_command_list, m_test_2.m_pipeline_state);
+
+			//Set vertex buffer
+			display::WeakVertexBufferHandle weak_vertex_buffer = m_test_2.m_vertex_buffer;
+			display::SetVertexBuffers(m_device, m_test_2.m_command_list, 0, 1, &weak_vertex_buffer);
+
+			//Set index buffer
+			display::SetIndexBuffer(m_device, m_test_2.m_command_list, m_test_2.m_index_buffer);
+
+			for (size_t i = 0; i < Test2::kNumQuads; ++i)
+			{
+				//Resource binding
+				display::SetDescriptorTable(m_device, m_test_2.m_command_list, 0, m_test_2.m_constant_descriptor_table[i]);
+
+				//Draw
+				display::DrawIndexed(m_device, m_test_2.m_command_list, 0, 6, 0, display::PrimitiveTopology::TriangleList);
+			}
+
+			//Close command list
+			display::CloseCommandList(m_device, m_test_2.m_command_list);
+		}
+
 		//Execute command list
 		display::ExecuteCommandList(m_device, m_test_1.m_command_list);
+		display::ExecuteCommandList(m_device, m_test_2.m_command_list);
 
 		//Present
 		display::Present(m_device);
