@@ -87,9 +87,10 @@ namespace display
 		InputElementDesc()
 		{
 		}
-		InputElementDesc(const char* _semantic_name, uint32_t _semantic_index, Format _format, uint32_t _input_slot, size_t _aligned_offset) :
-			semantic_name(_semantic_name), semantic_index(_semantic_index), format(_format), input_slot(_input_slot), aligned_offset(_aligned_offset)
+		InputElementDesc(const char* _semantic_name, uint32_t _semantic_index, Format _format, uint32_t _input_slot, size_t _aligned_offset, InputType _input_type = InputType::Vertex) :
+			semantic_name(_semantic_name), semantic_index(_semantic_index), format(_format), input_slot(_input_slot), aligned_offset(_aligned_offset), input_type(_input_type)
 		{
+			instance_step_rate = (input_type == InputType::Vertex) ? 0 : 1;
 		}
 	};
 

@@ -79,11 +79,20 @@ public:
 
 		display::DescriptorTableHandle m_constant_descriptor_table[kNumQuads];
 	};
+	struct Test3
+	{
+		static constexpr size_t kNumQuads = 10;
+		display::CommandListHandle m_command_list;
 
+		display::RootSignatureHandle m_root_signature;
+		display::PipelineStateHandle m_pipeline_state;
+		display::VertexBufferHandle m_vertex_buffer_instance;
+	};
 
 	//Tests
 	Test1 m_test_1;
 	Test2 m_test_2;
+	Test3 m_test_3;
 
 
 	void OnInit() override
@@ -242,7 +251,7 @@ public:
 
 		//Test 2
 
-		m_test_2.m_command_list = display::CreateCommandList(m_device, "Test1");
+		m_test_2.m_command_list = display::CreateCommandList(m_device, "Test2");
 
 		//Root signature
 		{
@@ -349,6 +358,69 @@ public:
 
 				m_test_2.m_constant_descriptor_table[i] = display::CreateDescriptorTable(m_device, descriptor_table_desc);
 			}
+		}
+
+		//Test 3
+
+		m_test_3.m_command_list = display::CreateCommandList(m_device, "Test3");
+
+		//Root signature
+		{
+			display::RootSignatureDesc root_signature_desc;
+			root_signature_desc.num_root_parameters = 0;
+			root_signature_desc.num_static_samplers = 0;
+
+			//Create the root signature
+			m_test_3.m_root_signature = display::CreateRootSignature(m_device, root_signature_desc, "Test 3");
+
+		}
+
+		//Pipeline state
+		{
+			//Read pixel and vertex shader
+			std::vector<char> pixel_shader_buffer = ReadFileToBuffer("instance_shader_ps.fxo");
+			std::vector<char> vertex_shader_buffer = ReadFileToBuffer("instance_shader_vs.fxo");
+
+			//Create pipeline state
+			display::PipelineStateDesc pipeline_state_desc;
+			pipeline_state_desc.root_signature = m_test_3.m_root_signature;
+
+			//Add input layouts
+			pipeline_state_desc.input_layout.elements[0] = display::InputElementDesc("POSITION", 0, display::Format::R32G32B32A32_FLOAT, 0, 0);
+			pipeline_state_desc.input_layout.elements[1] = display::InputElementDesc("TEXCOORD", 0, display::Format::R32G32B32A32_FLOAT, 1, 0, display::InputType::Instance);
+			pipeline_state_desc.input_layout.num_elements = 2;
+
+
+			//Add shaders
+			pipeline_state_desc.pixel_shader.data = reinterpret_cast<void*>(pixel_shader_buffer.data());
+			pipeline_state_desc.pixel_shader.size = pixel_shader_buffer.size();
+
+			pipeline_state_desc.vertex_shader.data = reinterpret_cast<void*>(vertex_shader_buffer.data());
+			pipeline_state_desc.vertex_shader.size = vertex_shader_buffer.size();
+
+			//Add render targets
+			pipeline_state_desc.num_render_targets = 1;
+			pipeline_state_desc.render_target_format[0] = display::Format::R8G8B8A8_UNORM;
+
+			//Create
+			m_test_3.m_pipeline_state = display::CreatePipelineState(m_device, pipeline_state_desc, "instance driven quad");
+		}
+		//Vertex buffer
+		{
+			struct VertexData
+			{
+				float position[4];
+			};
+
+			VertexData vertex_data[Test3::kNumQuads] = {};
+	
+			display::VertexBufferDesc vertex_buffer_desc;
+			vertex_buffer_desc.access = display::Access::Dynamic;
+			vertex_buffer_desc.init_data = vertex_data;
+			vertex_buffer_desc.size = sizeof(vertex_data);
+			vertex_buffer_desc.stride = sizeof(VertexData);
+
+			m_test_3.m_vertex_buffer_instance = display::CreateVertexBuffer(m_device, vertex_buffer_desc, "instance");
 		}
 
 	}
@@ -495,6 +567,65 @@ public:
 
 			//Close command list
 			display::CloseCommandList(m_device, m_test_2.m_command_list);
+		}
+
+		{
+			//Open command list
+			display::OpenCommandList(m_device, m_test_3.m_command_list);
+
+			//Set Render Target
+			display::WeakRenderTargetHandle render_target = display::GetBackBuffer(m_device);
+			display::SetRenderTargets(m_device, m_test_3.m_command_list, 1, &render_target, display::WeakDepthBufferHandle());
+
+			//Set viewport
+			display::Viewport viewport(static_cast<float>(m_width / 2), static_cast<float>(m_height / 2));
+			viewport.top_left_x = static_cast<float>(m_width / 2);
+			viewport.top_left_y = 0;
+			display::SetViewport(m_device, m_test_3.m_command_list, viewport);
+
+			//Set Scissor Rect
+			display::SetScissorRect(m_device, m_test_3.m_command_list, display::Rect(0, 0, m_width, m_height));
+
+			//Set root signature
+			display::SetRootSignature(m_device, m_test_3.m_command_list, m_test_3.m_root_signature);
+
+			//Set pipeline state
+			display::SetPipelineState(m_device, m_test_3.m_command_list, m_test_3.m_pipeline_state);
+
+			//Set vertex buffer
+			display::WeakVertexBufferHandle weak_vertex_buffer = m_test_2.m_vertex_buffer;
+			display::SetVertexBuffers(m_device, m_test_3.m_command_list, 0, 1, &weak_vertex_buffer);
+
+			//Set instance buffer
+			display::WeakVertexBufferHandle weak_instance_buffer = m_test_3.m_vertex_buffer_instance;
+			display::SetVertexBuffers(m_device, m_test_3.m_command_list, 1, 1, &weak_instance_buffer);
+
+			//Set index buffer
+			display::SetIndexBuffer(m_device, m_test_3.m_command_list, m_test_2.m_index_buffer);
+
+			struct InstanceBuffer
+			{
+				float data[4];
+			};
+
+			std::array<InstanceBuffer, Test3::kNumQuads> instance_buffer;
+
+			for (size_t i = 0; i < Test3::kNumQuads; ++i)
+			{
+				auto& instance = instance_buffer[i];
+				float quad = static_cast<float>(i) / Test3::kNumQuads;
+				float angle = static_cast<float>(total_time + 3.f * quad);
+				instance.data[0] = 0.5f * cosf(angle);
+				instance.data[1] = 0.5f * sinf(angle);
+				instance.data[2] = 0.01f + 0.02f * quad;
+				instance.data[3] = 0.5f + 0.5f * quad;
+			}
+
+			//Draw
+			display::DrawIndexed(m_device, m_test_3.m_command_list, 0, 6, 0, display::PrimitiveTopology::TriangleList);
+
+			//Close command list
+			display::CloseCommandList(m_device, m_test_3.m_command_list);
 		}
 
 		//Execute command list

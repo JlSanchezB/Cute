@@ -181,6 +181,19 @@
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)%(Filename)_ps.fxo;$(OutDir)%(Filename)_vs.fxo;%(Outputs)</Outputs>
     </CustomBuild>
   </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="instance_shader.hlsl">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../engine/tools/compile_shader.bat %(Identity) "$(OutDir)%(Filename)"</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../engine/tools/compile_shader.bat %(Identity) "$(OutDir)%(Filename)"</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../engine/tools/compile_shader.bat %(Identity) "$(OutDir)%(Filename)"</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../engine/tools/compile_shader.bat %(Identity) "$(OutDir)%(Filename)"</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(OutDir)%(Filename)_ps.fxo;$(OutDir)%(Filename)_vs.fxo;%(Outputs)</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename)_ps.fxo;$(OutDir)%(Filename)_vs.fxo;%(Outputs)</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OutDir)%(Filename)_ps.fxo;$(OutDir)%(Filename)_vs.fxo;%(Outputs)</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)%(Filename)_ps.fxo;$(OutDir)%(Filename)_vs.fxo;%(Outputs)</Outputs>
+    </CustomBuild>
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
