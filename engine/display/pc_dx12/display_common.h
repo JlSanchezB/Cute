@@ -238,7 +238,7 @@ namespace display
 			ComPtr<ID3D12Resource> resource;
 			D3D12_RESOURCE_STATES current_state;
 		};
-		struct VertexBuffer
+		struct VertexBuffer : RingResourceSupport<VertexBufferHandle>
 		{
 			ComPtr<ID3D12Resource> resource;
 			D3D12_VERTEX_BUFFER_VIEW view;

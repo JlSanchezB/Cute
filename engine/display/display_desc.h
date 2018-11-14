@@ -192,6 +192,7 @@ namespace display
 
 	struct VertexBufferDesc
 	{
+		Access access = Access::Static;
 		size_t size = 0;
 		const void* init_data = nullptr;
 		size_t stride = 0;

@@ -217,22 +217,40 @@ namespace display
 
 	VertexBufferHandle CreateVertexBuffer(Device * device, const VertexBufferDesc& vertex_buffer_desc, const char* name)
 	{
-		VertexBufferHandle handle = device->m_vertex_buffer_pool.Alloc();
-
-		auto& vertex_buffer = device->Get(handle);
-		
 		SourceResourceData data(vertex_buffer_desc.init_data, vertex_buffer_desc.size);
 
-		CreateResource(device, data, true, CD3DX12_RESOURCE_DESC::Buffer(vertex_buffer_desc.size), vertex_buffer.resource, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
+		if (vertex_buffer_desc.access == Access::Static)
+		{
+			VertexBufferHandle handle = device->m_vertex_buffer_pool.Alloc();
+			auto& vertex_buffer = device->Get(handle);
 
-		// Initialize the vertex buffer view.
-		vertex_buffer.view.BufferLocation = vertex_buffer.resource->GetGPUVirtualAddress();
-		vertex_buffer.view.StrideInBytes = static_cast<UINT>(vertex_buffer_desc.stride);
-		vertex_buffer.view.SizeInBytes = static_cast<UINT>(vertex_buffer_desc.size);
+			CreateResource(device, data, true, CD3DX12_RESOURCE_DESC::Buffer(vertex_buffer_desc.size), vertex_buffer.resource, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
 
-		SetObjectName(vertex_buffer.resource.Get(), name);
+			// Initialize the vertex buffer view.
+			vertex_buffer.view.BufferLocation = vertex_buffer.resource->GetGPUVirtualAddress();
+			vertex_buffer.view.StrideInBytes = static_cast<UINT>(vertex_buffer_desc.stride);
+			vertex_buffer.view.SizeInBytes = static_cast<UINT>(vertex_buffer_desc.size);
 
-		return handle;
+			SetObjectName(vertex_buffer.resource.Get(), name);
+
+			return handle;
+		}
+		else if (vertex_buffer_desc.access == Access::Dynamic)
+		{
+			VertexBufferHandle handle = CreateRingResources(device, data, CD3DX12_RESOURCE_DESC::Buffer(vertex_buffer_desc.size), device->m_vertex_buffer_pool, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER,
+			[&](display::Device* device, const VertexBufferHandle& handle, display::Device::VertexBuffer& vertex_buffer)
+			{
+				// Initialize the vertex buffer view.
+				vertex_buffer.view.BufferLocation = vertex_buffer.resource->GetGPUVirtualAddress();
+				vertex_buffer.view.StrideInBytes = static_cast<UINT>(vertex_buffer_desc.stride);
+				vertex_buffer.view.SizeInBytes = static_cast<UINT>(vertex_buffer_desc.size);
+
+				SetObjectName(vertex_buffer.resource.Get(), name);
+			});
+
+			return handle;
+		}
+		return VertexBufferHandle();
 	}
 
 	void DestroyVertexBuffer(Device * device, VertexBufferHandle & handle)
@@ -310,11 +328,8 @@ namespace display
 
 			return handle;
 		}	
-		else
-		{
-			std::runtime_error("Discard constant buffers are not supported");
-			return ConstantBufferHandle();
-		}
+
+		return ConstantBufferHandle();
 	}
 	void DestroyConstantBuffer(Device * device, ConstantBufferHandle & handle)
 	{
