@@ -785,7 +785,7 @@ namespace display
 
 		for (size_t i = 0; i < num_vertex_buffers; i++)
 		{
-			vertex_buffer_views[i] = device->Get(vertex_buffer_handles[i]).view;
+			vertex_buffer_views[i] = device->Get(GetRingResource(device, vertex_buffer_handles[i], device->m_frame_index)).view;
 		}
 
 		auto& command_list = device->Get(command_list_handle).resource;
