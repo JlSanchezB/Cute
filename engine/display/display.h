@@ -157,10 +157,16 @@ namespace display
 	//Update constant buffer
 	void UpdateConstantBuffer(Device* device, const WeakConstantBufferHandle& constant_buffer_handle, const void* data, size_t size);
 
+	//Update constant buffer
+	void UpdateVertexBuffer(Device* device, const WeakVertexBufferHandle& vertex_buffer_handle, const void* data, size_t size);
+
 	//Draw
-	void Draw(Device* device, const WeakCommandListHandle& command_list, size_t start_vertex, size_t vertex_count, PrimitiveTopology primitive_topology);
+	void Draw(Device* device, const WeakCommandListHandle& command_list, const DrawDesc& draw_desc);
 
 	//Draw Indexed
-	void DrawIndexed(Device* device, const WeakCommandListHandle& command_list, size_t start_index, size_t index_count, size_t base_vertex, PrimitiveTopology primitive_topology);
+	void DrawIndexed(Device* device, const WeakCommandListHandle& command_list, const DrawIndexedDesc& draw_desc);
+
+	//Draw Indexed Instanced
+	void DrawIndexedInstanced(Device* device, const WeakCommandListHandle& command_list, const DrawIndexedInstancedDesc& draw_desc);
 }
 #endif DISPLAY_H_

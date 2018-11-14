@@ -631,4 +631,13 @@ namespace display
 		//Copy
 		memcpy(constant_buffer.memory_data, data, size);
 	}
+
+	void UpdateVertexBuffer(Device * device, const WeakVertexBufferHandle & vertex_buffer_handle, const void * data, size_t size)
+	{
+		auto& vertex_buffer = device->Get(GetRingResource(device, vertex_buffer_handle, device->m_frame_index));
+		assert(size <= vertex_buffer.memory_size);
+
+		//Copy
+		memcpy(vertex_buffer.memory_data, data, size);
+	}
 }

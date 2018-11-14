@@ -488,7 +488,9 @@ public:
 			display::SetDescriptorTable(m_device, m_test_1.m_command_list, 0, m_test_1.m_texture_descriptor_table);
 
 			//Draw
-			display::Draw(m_device, m_test_1.m_command_list, 0, 3, display::PrimitiveTopology::TriangleList);
+			display::DrawDesc draw_desc;
+			draw_desc.vertex_count = 3;
+			display::Draw(m_device, m_test_1.m_command_list, draw_desc);
 
 			//Use render target as texture
 			display::RenderTargetTransition(m_device, m_test_1.m_command_list, 1, &render_target, display::ResourceState::PixelShaderResource);
@@ -508,7 +510,7 @@ public:
 			display::SetDescriptorTable(m_device, m_test_1.m_command_list, 0, m_test_1.m_render_target_descriptor_table);
 
 			//Draw
-			display::Draw(m_device, m_test_1.m_command_list, 0, 3, display::PrimitiveTopology::TriangleList);
+			display::Draw(m_device, m_test_1.m_command_list, draw_desc);
 
 
 			//Close command list
@@ -562,7 +564,9 @@ public:
 				display::SetDescriptorTable(m_device, m_test_2.m_command_list, 0, m_test_2.m_constant_descriptor_table[i]);
 
 				//Draw
-				display::DrawIndexed(m_device, m_test_2.m_command_list, 0, 6, 0, display::PrimitiveTopology::TriangleList);
+				display::DrawIndexedDesc draw_desc;
+				draw_desc.index_count = 6;
+				display::DrawIndexed(m_device, m_test_2.m_command_list, draw_desc);
 			}
 
 			//Close command list
@@ -621,8 +625,14 @@ public:
 				instance.data[3] = 0.5f + 0.5f * quad;
 			}
 
+			//Update vertex buffer
+			display::UpdateVertexBuffer(m_device, m_test_3.m_vertex_buffer_instance, &instance_buffer[0], sizeof(instance_buffer));
+
 			//Draw
-			display::DrawIndexed(m_device, m_test_3.m_command_list, 0, 6, 0, display::PrimitiveTopology::TriangleList);
+			display::DrawIndexedInstancedDesc draw_desc;
+			draw_desc.index_count = 6;
+			draw_desc.instance_count = Test3::kNumQuads;
+			display::DrawIndexedInstanced(m_device, m_test_3.m_command_list, draw_desc);
 
 			//Close command list
 			display::CloseCommandList(m_device, m_test_3.m_command_list);
@@ -631,6 +641,7 @@ public:
 		//Execute command list
 		display::ExecuteCommandList(m_device, m_test_1.m_command_list);
 		display::ExecuteCommandList(m_device, m_test_2.m_command_list);
+		display::ExecuteCommandList(m_device, m_test_3.m_command_list);
 
 		//Present
 		display::Present(m_device);

@@ -293,6 +293,31 @@ namespace display
 			num_descriptors++;
 		}
 	};
+
+	struct DrawDesc
+	{
+		size_t start_vertex = 0;
+		size_t vertex_count = 0;
+		PrimitiveTopology primitive_topology = PrimitiveTopology::TriangleList;
+	};
+
+	struct DrawIndexedDesc
+	{
+		size_t start_index = 0;
+		size_t index_count = 0;
+		size_t base_vertex = 0;
+		PrimitiveTopology primitive_topology = PrimitiveTopology::TriangleList;
+	};
+
+	struct DrawIndexedInstancedDesc
+	{
+		size_t instance_count = 0;
+		size_t start_instance = 0;
+		size_t start_index = 0;
+		size_t index_count = 0;
+		size_t base_vertex = 0;
+		PrimitiveTopology primitive_topology = PrimitiveTopology::TriangleList;
+	};
 }
 #endif
 

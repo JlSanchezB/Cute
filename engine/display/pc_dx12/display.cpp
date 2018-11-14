@@ -898,21 +898,30 @@ namespace display
 
 		command_list->RSSetScissorRects(1, &dx12_rect);
 	}
-	void Draw(Device * device, const WeakCommandListHandle & command_list_handle, size_t start_vertex, size_t vertex_count, PrimitiveTopology primitive_topology)
+	void Draw(Device * device, const WeakCommandListHandle & command_list_handle, const DrawDesc& draw_desc)
 	{
 		auto& command_list = device->Get(command_list_handle);
 
-		command_list.resource->IASetPrimitiveTopology(Convert(primitive_topology));
+		command_list.resource->IASetPrimitiveTopology(Convert(draw_desc.primitive_topology));
 
-		command_list.resource->DrawInstanced(static_cast<UINT>(vertex_count), 1, static_cast<UINT>(start_vertex), 0);
+		command_list.resource->DrawInstanced(static_cast<UINT>(draw_desc.vertex_count), 1, static_cast<UINT>(draw_desc.start_vertex), 0);
 	}
 
-	void DrawIndexed(Device * device, const WeakCommandListHandle & command_list_handle, size_t start_index, size_t index_count,size_t base_vertex, PrimitiveTopology primitive_topology)
+	void DrawIndexed(Device * device, const WeakCommandListHandle & command_list_handle, const DrawIndexedDesc& draw_desc)
 	{
 		auto& command_list = device->Get(command_list_handle);
 
-		command_list.resource->IASetPrimitiveTopology(Convert(primitive_topology));
+		command_list.resource->IASetPrimitiveTopology(Convert(draw_desc.primitive_topology));
 
-		command_list.resource->DrawIndexedInstanced(static_cast<UINT>(index_count), 1, static_cast<UINT>(start_index), static_cast<UINT>(base_vertex), 0);
+		command_list.resource->DrawIndexedInstanced(static_cast<UINT>(draw_desc.index_count), 1, static_cast<UINT>(draw_desc.start_index), static_cast<UINT>(draw_desc.base_vertex), 0);
+	}
+
+	void DrawIndexedInstanced(Device * device, const WeakCommandListHandle & command_list_handle, const DrawIndexedInstancedDesc& draw_desc)
+	{
+		auto& command_list = device->Get(command_list_handle);
+
+		command_list.resource->IASetPrimitiveTopology(Convert(draw_desc.primitive_topology));
+
+		command_list.resource->DrawIndexedInstanced(static_cast<UINT>(draw_desc.index_count), static_cast<UINT>(draw_desc.instance_count), static_cast<UINT>(draw_desc.start_index), static_cast<UINT>(draw_desc.base_vertex), static_cast<UINT>(draw_desc.start_instance));
 	}
 }
