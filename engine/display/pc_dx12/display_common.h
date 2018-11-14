@@ -182,6 +182,8 @@ namespace display
 	struct RingResourceSupport
 	{
 		HANDLE next_handle;
+		void* memory_data = nullptr;
+		size_t memory_size = 0;
 	};
 
 	//Device internal implementation
@@ -251,8 +253,6 @@ namespace display
 		struct ConstantBuffer : RingResourceSupport<ConstantBufferHandle>
 		{
 			ComPtr<ID3D12Resource> resource;
-			void* memory_data = nullptr;
-			size_t memory_size = 0;
 		};
 		struct UnorderedAccessBuffer
 		{
