@@ -90,11 +90,12 @@ namespace
 			resource = upload_resource;
 			if (source_data.data)
 			{
+				//We only support here simple buffers
 				//Copy to the upload heap
-				UINT8* pVertexDataBegin;
-				CD3DX12_RANGE readRange(0, 0);		// We do not intend to read from this resource on the CPU.
-				ThrowIfFailed(resource->Map(0, &readRange, reinterpret_cast<void**>(&pVertexDataBegin)));
-				memcpy(pVertexDataBegin, source_data.data, source_data.size);
+				UINT8* destination_buffer;
+				CD3DX12_RANGE read_range(0, 0);		// We do not intend to read from this resource on the CPU.
+				ThrowIfFailed(resource->Map(0, &read_range, reinterpret_cast<void**>(&destination_buffer)));
+				memcpy(destination_buffer, source_data.data, source_data.size);
 				resource->Unmap(0, nullptr);
 			}
 		}
