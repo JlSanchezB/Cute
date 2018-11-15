@@ -61,6 +61,8 @@ namespace display
 	//Destroy pipeline state
 	void DestroyPipelineState(Device* device, PipelineStateHandle& handle);
 
+	void CompileShader(Device* device, const CompileShaderDesc& compile_shader_desc, std::vector<char>& shader_blob);
+
 	//Create vertex buffer
 	VertexBufferHandle CreateVertexBuffer(Device* device, const VertexBufferDesc& vertex_buffer_desc, const char* name = nullptr);
 	//Destroy vertex buffer

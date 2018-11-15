@@ -646,6 +646,17 @@ namespace display
 		device->m_pipeline_state_pool.Free(handle);
 	}
 
+	void CompileShader(Device * device, const CompileShaderDesc & compile_shader_desc, std::vector<char>& shader_blob)
+	{
+		ComPtr<ID3DBlob> blob;
+		ThrowIfFailed(D3DCompile(compile_shader_desc.code, strlen(compile_shader_desc.code), NULL, NULL, NULL, compile_shader_desc.entry_point, compile_shader_desc.target, 0, 0, &blob, NULL));
+		if (blob.Get())
+		{
+			shader_blob.resize(blob->GetBufferSize());
+			memcpy(shader_blob.data(), blob->GetBufferPointer(), blob->GetBufferSize());
+		}
+	}
+
 	//Create render target
 	RenderTargetHandle CreateRenderTarget(Device* device, const RenderTargetDesc& render_target_desc, const char* name)
 	{

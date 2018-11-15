@@ -318,6 +318,13 @@ namespace display
 		size_t base_vertex = 0;
 		PrimitiveTopology primitive_topology = PrimitiveTopology::TriangleList;
 	};
+
+	struct CompileShaderDesc
+	{
+		const char* code = nullptr;
+		const char* entry_point = nullptr;
+		const char* target = nullptr;
+	};
 }
 #endif
 
