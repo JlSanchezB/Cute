@@ -15,6 +15,9 @@
     <Filter Include="tools">
       <UniqueIdentifier>{01b83e91-8355-430c-94cb-94630f5cb37c}</UniqueIdentifier>
     </Filter>
+    <Filter Include="core\imgui">
+      <UniqueIdentifier>{57ae643d-bbb8-4e59-93b5-aca22910fa6e}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="display\display.h">
@@ -56,6 +59,27 @@
     <ClInclude Include="display\pc_dx12\dds_loader.h">
       <Filter>display</Filter>
     </ClInclude>
+    <ClInclude Include="core\imgui\imconfig.h">
+      <Filter>core\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="core\imgui\imgui.h">
+      <Filter>core\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="core\imgui\imgui_internal.h">
+      <Filter>core\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="core\imgui\imstb_rectpack.h">
+      <Filter>core\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="core\imgui\imstb_textedit.h">
+      <Filter>core\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="core\imgui\imstb_truetype.h">
+      <Filter>core\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="core\imgui\imgui_render.h">
+      <Filter>core</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="display\pc_dx12\display.cpp">
@@ -75,6 +99,21 @@
     </ClCompile>
     <ClCompile Include="display\pc_dx12\dds_loader.cpp">
       <Filter>display</Filter>
+    </ClCompile>
+    <ClCompile Include="core\imgui\imgui.cpp">
+      <Filter>core\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="core\imgui\imgui_demo.cpp">
+      <Filter>core\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="core\imgui\imgui_draw.cpp">
+      <Filter>core\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="core\imgui\imgui_widgets.cpp">
+      <Filter>core\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="core\imgui_render.cpp">
+      <Filter>core</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
