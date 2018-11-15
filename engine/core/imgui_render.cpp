@@ -10,6 +10,8 @@ namespace
 	display::ShaderResourceHandle g_texture;
 	display::ConstantBufferHandle g_constant_buffer;
 	display::VertexBufferHandle g_vertex_buffer;
+	size_t current_vertex_buffer_size = 4000;
+	size_t current_index_buffer_size = 4000;
 	display::IndexBufferHandle g_index_buffer;
 	display::DescriptorTableHandle g_descriptor_table;
 
@@ -145,8 +147,17 @@ void imgui_render::CreateResources(display::Device * device)
 	g_texture = display::CreateShaderResource(device, shader_resource_desc, "imgui");
 
 	//Create Vertex buffer (inited in some size and it will grow by demand)
+	display::VertexBufferDesc vertex_buffer_desc;
+	vertex_buffer_desc.access = display::Access::Dynamic;
+	vertex_buffer_desc.size = current_vertex_buffer_size * 20;
+	vertex_buffer_desc.stride = 20;
+	g_vertex_buffer = display::CreateVertexBuffer(device, vertex_buffer_desc, "imgui");
 
 	//Create Index buffer
+	//display::IndexBufferDesc index_buffer_desc;
+	//index_buffer_desc.access = display::Access::Dynamic;
+	//index_buffer_desc.size = current_index_buffer_size * 2;
+	//g_index_buffer = display::CreateIndexBuffer(device, index_buffer_desc, "imgui");
 
 	//Descritor table
 }
