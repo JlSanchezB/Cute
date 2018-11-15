@@ -23,6 +23,9 @@ void imgui_render::CreateResources(display::Device * device)
 	rootsignature_desc.root_parameters[1].type = display::RootSignatureParameterType::DescriptorTable;
 	rootsignature_desc.root_parameters[1].visibility = display::ShaderVisibility::Pixel;
 	rootsignature_desc.root_parameters[1].root_param.shader_register = 0;
+	rootsignature_desc.num_static_samplers = 1;
+	rootsignature_desc.static_samplers[0].address_u = rootsignature_desc.static_samplers[0].address_v = rootsignature_desc.static_samplers[0].address_w = display::TextureAddressMode::Wrap;
+	rootsignature_desc.static_samplers[0].filter = display::Filter::Linear;
 	g_rootsignature = display::CreateRootSignature(device, rootsignature_desc, "imguid");
 
 	//Create pipeline state

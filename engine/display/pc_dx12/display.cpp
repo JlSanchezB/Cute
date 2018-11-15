@@ -521,8 +521,13 @@ namespace display
 			}	
 		}
 
+		D3D12_ROOT_SIGNATURE_FLAGS flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
+			D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS |
+            D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS |
+            D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS;
+
 		CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDesc;
-		rootSignatureDesc.Init_1_1(static_cast<UINT>(root_signature_desc.num_root_parameters), root_parameters, static_cast<UINT>(root_signature_desc.num_static_samplers), static_samplers, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+		rootSignatureDesc.Init_1_1(static_cast<UINT>(root_signature_desc.num_root_parameters), root_parameters, static_cast<UINT>(root_signature_desc.num_static_samplers), static_samplers, flags);
 
 		ComPtr<ID3DBlob> signature;
 		ComPtr<ID3DBlob> error;
