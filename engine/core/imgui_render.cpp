@@ -1,4 +1,6 @@
-#include "imgui\imgui_render.h"
+#include "imgui_render.h"
+#include "imgui/imgui.h"
+
 
 namespace
 {
@@ -130,6 +132,17 @@ void imgui_render::CreateResources(display::Device * device)
 	g_constant_buffer = display::CreateConstantBuffer(device, constant_buffer_desc, "imgui");
 
 	//Create texture
+	ImGuiIO& io = ImGui::GetIO();
+	unsigned char* pixels;
+	int width, height;
+	io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
+
+	display::ShaderResourceDesc shader_resource_desc;
+	shader_resource_desc.width = width;
+	shader_resource_desc.height = height;
+	shader_resource_desc.pitch = 4 * width;
+	shader_resource_desc.init_data = pixels;
+	g_texture = display::CreateShaderResource(device, shader_resource_desc, "imgui");
 
 	//Create Vertex buffer (inited in some size and it will grow by demand)
 

@@ -225,7 +225,7 @@ namespace display
 		Format format = Format::R8G8B8A8_UNORM;
 		ShaderResourceType type = ShaderResourceType::Texture2D;
 		size_t width = 0;
-		size_t heigth = 0;
+		size_t height = 0;
 		size_t pitch = 0;
 		size_t slice_pitch = 0;
 		size_t mips = 0;

@@ -379,7 +379,7 @@ namespace display
 		d12_resource_desc.MipLevels = static_cast<UINT>(shader_resource_desc.mips);
 		d12_resource_desc.Format = Convert(shader_resource_desc.format);
 		d12_resource_desc.Width = static_cast<UINT>(shader_resource_desc.width);
-		d12_resource_desc.Height = static_cast<UINT>(shader_resource_desc.heigth);
+		d12_resource_desc.Height = static_cast<UINT>(shader_resource_desc.height);
 		d12_resource_desc.Flags = D3D12_RESOURCE_FLAG_NONE;
 		d12_resource_desc.DepthOrArraySize = 1;
 		d12_resource_desc.SampleDesc.Count = 1;

@@ -127,10 +127,10 @@
     <ClInclude Include="core\imgui\imconfig.h" />
     <ClInclude Include="core\imgui\imgui.h" />
     <ClInclude Include="core\imgui\imgui_internal.h" />
-    <ClInclude Include="core\imgui\imgui_render.h" />
     <ClInclude Include="core\imgui\imstb_rectpack.h" />
     <ClInclude Include="core\imgui\imstb_textedit.h" />
     <ClInclude Include="core\imgui\imstb_truetype.h" />
+    <ClInclude Include="core\imgui_render.h" />
     <ClInclude Include="core\log.h" />
     <ClInclude Include="core\platform.h" />
     <ClInclude Include="core\ring_buffer.h" />
