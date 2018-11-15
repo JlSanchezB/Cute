@@ -201,6 +201,7 @@ namespace display
 
 	struct IndexBufferDesc
 	{
+		Access access = Access::Static;
 		size_t size = 0;
 		const void* init_data = nullptr;
 		Format format = Format::R16_UINT;

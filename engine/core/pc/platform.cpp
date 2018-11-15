@@ -1,5 +1,7 @@
 #include <core/platform.h>
 #include <display/display.h>
+#include <core/imgui_render.h>
+#include <core/imgui/imgui.h>
 
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN             // Exclude rarely-used stuff from Windows headers.
@@ -173,6 +175,13 @@ namespace platform
 	void Game::SetDevice(display::Device * device)
 	{
 		g_device = device;
+
+		//Create IMGUI
+		IMGUI_CHECKVERSION();
+		ImGui::CreateContext();
+
+		//Create all resources for imgui
+		imgui_render::CreateResources(device);
 	}
 
 	char Run(const char* name, void* param, size_t width, size_t height, Game* game)
@@ -245,6 +254,11 @@ namespace platform
 			game->OnTick(total_time, elapsed_time);
 
 		} while (true);
+
+		//Destroy all imgui resources
+		imgui_render::DestroyResources(g_device);
+		//Destroy Imgui
+		ImGui::DestroyContext();
 
 		//Destroy callback
 		game->OnDestroy();

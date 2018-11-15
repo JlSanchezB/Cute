@@ -1,5 +1,6 @@
 #include "imgui_render.h"
-#include "imgui/imgui.h"
+#include <core/imgui/imgui.h>
+#include <display/display.h>
 
 
 namespace
@@ -34,10 +35,16 @@ void imgui_render::CreateResources(display::Device * device)
 	rootsignature_desc.root_parameters[0].root_param.shader_register = 0;
 	rootsignature_desc.root_parameters[1].type = display::RootSignatureParameterType::DescriptorTable;
 	rootsignature_desc.root_parameters[1].visibility = display::ShaderVisibility::Pixel;
-	rootsignature_desc.root_parameters[1].root_param.shader_register = 0;
+	rootsignature_desc.root_parameters[1].table.num_ranges = 1;
+	rootsignature_desc.root_parameters[1].table.range[0].base_shader_register = 0;
+	rootsignature_desc.root_parameters[1].table.range[0].size = 1;
+	rootsignature_desc.root_parameters[1].table.range[0].type = display::DescriptorTableParameterType::ShaderResource;
+
 	rootsignature_desc.num_static_samplers = 1;
 	rootsignature_desc.static_samplers[0].address_u = rootsignature_desc.static_samplers[0].address_v = rootsignature_desc.static_samplers[0].address_w = display::TextureAddressMode::Wrap;
 	rootsignature_desc.static_samplers[0].filter = display::Filter::Linear;
+	rootsignature_desc.static_samplers[0].shader_register = 0;
+	rootsignature_desc.static_samplers[0].visibility = display::ShaderVisibility::Pixel;
 	g_rootsignature = display::CreateRootSignature(device, rootsignature_desc, "imguid");
 
 	//Compile shaders
@@ -144,6 +151,8 @@ void imgui_render::CreateResources(display::Device * device)
 	shader_resource_desc.height = height;
 	shader_resource_desc.pitch = 4 * width;
 	shader_resource_desc.init_data = pixels;
+	shader_resource_desc.size = width * height * 4;
+	shader_resource_desc.mips = 1;
 	g_texture = display::CreateShaderResource(device, shader_resource_desc, "imgui");
 
 	//Create Vertex buffer (inited in some size and it will grow by demand)
@@ -164,6 +173,12 @@ void imgui_render::CreateResources(display::Device * device)
 
 void imgui_render::DestroyResources(display::Device * device)
 {
+	display::DestroyRootSignature(device, g_rootsignature);
+	display::DestroyPipelineState(device, g_pipeline_state);
+	display::DestroyConstantBuffer(device, g_constant_buffer);
+	display::DestroyShaderResource(device, g_texture);
+	display::DestroyVertexBuffer(device, g_vertex_buffer);
+	//display::DestroyInde(device, g_vertex_buffer);
 }
 
 void imgui_render::Draw(display::Device * device, const display::CommandListHandle & command_list_handle)

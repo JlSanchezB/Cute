@@ -245,7 +245,7 @@ namespace display
 			ComPtr<ID3D12Resource> resource;
 			D3D12_VERTEX_BUFFER_VIEW view;
 		};
-		struct IndexBuffer
+		struct IndexBuffer : RingResourceSupport<IndexBufferHandle>
 		{
 			ComPtr<ID3D12Resource> resource;
 			D3D12_INDEX_BUFFER_VIEW view;

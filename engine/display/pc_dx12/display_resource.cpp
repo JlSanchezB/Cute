@@ -28,6 +28,8 @@ namespace
 
 		if (static_buffer)
 		{
+			assert(source_data.data); //It is a static resource and this is the only oportunity to copy data
+
 			ThrowIfFailed(device->m_native_device->CreateCommittedResource(
 				&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
 				D3D12_HEAP_FLAG_NONE,
@@ -85,15 +87,16 @@ namespace
 		}
 		else
 		{
-			//Our resource is the upload resource, we only support simple linear ones, no textures
 			resource = upload_resource;
-
-			//Copy to the upload heap
-			UINT8* pVertexDataBegin;
-			CD3DX12_RANGE readRange(0, 0);		// We do not intend to read from this resource on the CPU.
-			ThrowIfFailed(resource->Map(0, &readRange, reinterpret_cast<void**>(&pVertexDataBegin)));
-			memcpy(pVertexDataBegin, source_data.data, source_data.size);
-			resource->Unmap(0, nullptr);
+			if (source_data.data)
+			{
+				//Copy to the upload heap
+				UINT8* pVertexDataBegin;
+				CD3DX12_RANGE readRange(0, 0);		// We do not intend to read from this resource on the CPU.
+				ThrowIfFailed(resource->Map(0, &readRange, reinterpret_cast<void**>(&pVertexDataBegin)));
+				memcpy(pVertexDataBegin, source_data.data, source_data.size);
+				resource->Unmap(0, nullptr);
+			}
 		}
 	}
 
@@ -261,33 +264,53 @@ namespace display
 	void DestroyVertexBuffer(Device * device, VertexBufferHandle & handle)
 	{
 		//Delete handle
-		device->m_vertex_buffer_pool.Free(handle);
+		DeleteRingResource(device, handle, device->m_vertex_buffer_pool);
 	}
 
 	IndexBufferHandle CreateIndexBuffer(Device * device, const IndexBufferDesc& index_buffer_desc, const char* name)
 	{
-		IndexBufferHandle handle = device->m_index_buffer_pool.Alloc();
-
-		auto& index_buffer = device->Get(handle);
-
 		SourceResourceData data(index_buffer_desc.init_data, index_buffer_desc.size);
 
-		CreateResource(device, data, true, CD3DX12_RESOURCE_DESC::Buffer(index_buffer_desc.size), index_buffer.resource, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
+		if (index_buffer_desc.access == Access::Static)
+		{
+			IndexBufferHandle handle = device->m_index_buffer_pool.Alloc();
 
-		// Initialize the vertex buffer view.
-		index_buffer.view.BufferLocation = index_buffer.resource->GetGPUVirtualAddress();
-		index_buffer.view.Format = Convert(index_buffer_desc.format);
-		index_buffer.view.SizeInBytes = static_cast<UINT>(index_buffer_desc.size);
+			auto& index_buffer = device->Get(handle);
 
-		SetObjectName(index_buffer.resource.Get(), name);
+			CreateResource(device, data, true, CD3DX12_RESOURCE_DESC::Buffer(index_buffer_desc.size), index_buffer.resource, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
 
-		return handle;
+			// Initialize the vertex buffer view.
+			index_buffer.view.BufferLocation = index_buffer.resource->GetGPUVirtualAddress();
+			index_buffer.view.Format = Convert(index_buffer_desc.format);
+			index_buffer.view.SizeInBytes = static_cast<UINT>(index_buffer_desc.size);
+
+			SetObjectName(index_buffer.resource.Get(), name);
+
+			return handle;
+		}
+		else if (index_buffer_desc.access == Access::Dynamic)
+		{
+			IndexBufferHandle handle = CreateRingResources(device, data, CD3DX12_RESOURCE_DESC::Buffer(index_buffer_desc.size), device->m_index_buffer_pool, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER,
+				[&](display::Device* device, const IndexBufferHandle& handle, display::Device::IndexBuffer& index_buffer)
+			{
+				// Initialize the vertex buffer view.
+				index_buffer.view.BufferLocation = index_buffer.resource->GetGPUVirtualAddress();
+				index_buffer.view.Format = Convert(index_buffer_desc.format);
+				index_buffer.view.SizeInBytes = static_cast<UINT>(index_buffer_desc.size);
+
+				SetObjectName(index_buffer.resource.Get(), name);
+			});
+
+			return handle;
+		}
+
+		return IndexBufferHandle();
 	}
 
 	void DestroyIndexBuffer(Device * device, IndexBufferHandle & handle)
 	{
 		//Delete handle
-		device->m_index_buffer_pool.Free(handle);
+		DeleteRingResource(device, handle, device->m_index_buffer_pool);
 	}
 	ConstantBufferHandle CreateConstantBuffer(Device * device, const ConstantBufferDesc& constant_buffer_desc, const char* name)
 	{

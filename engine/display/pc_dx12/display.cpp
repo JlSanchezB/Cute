@@ -810,7 +810,7 @@ namespace display
 	void SetIndexBuffer(Device * device, const WeakCommandListHandle & command_list_handle, const WeakIndexBufferHandle & index_buffer_handle)
 	{
 		auto& command_list = device->Get(command_list_handle).resource;
-		auto& index_buffer = device->Get(index_buffer_handle);
+		auto& index_buffer = device->Get(GetRingResource(device, index_buffer_handle, device->m_frame_index));
 
 		command_list->IASetIndexBuffer(&index_buffer.view);
 	}
