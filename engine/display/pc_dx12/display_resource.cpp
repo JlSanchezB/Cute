@@ -410,32 +410,24 @@ namespace display
 		d12_resource_desc.SampleDesc.Quality = 0;
 		d12_resource_desc.Dimension = Convert<D3D12_RESOURCE_DIMENSION>(shader_resource_desc.type);
 
-		if (shader_resource_desc.access == Access::Static)
-		{
-			ShaderResourceHandle handle = device->m_shader_resource_pool.Alloc();
-			auto& shader_resource = device->Get(handle);
+		ShaderResourceHandle handle = device->m_shader_resource_pool.Alloc();
+		auto& shader_resource = device->Get(handle);
 
-			SourceResourceData data(shader_resource_desc.init_data, shader_resource_desc.size, shader_resource_desc.pitch, shader_resource_desc.slice_pitch);
+		SourceResourceData data(shader_resource_desc.init_data, shader_resource_desc.size, shader_resource_desc.pitch, shader_resource_desc.slice_pitch);
 
-			CreateResource(device, data, true, d12_resource_desc, shader_resource.resource, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		CreateResource(device, data, true, d12_resource_desc, shader_resource.resource, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 
-			//Create view
-			D3D12_SHADER_RESOURCE_VIEW_DESC dx12_shader_resource_desc = {};
-			dx12_shader_resource_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-			dx12_shader_resource_desc.Format = d12_resource_desc.Format;
-			dx12_shader_resource_desc.ViewDimension = Convert<D3D12_SRV_DIMENSION>(shader_resource_desc.type);
-			dx12_shader_resource_desc.Texture2D.MipLevels = d12_resource_desc.MipLevels;
-			device->m_native_device->CreateShaderResourceView(shader_resource.resource.Get(), &dx12_shader_resource_desc, device->m_shader_resource_pool.GetDescriptor(handle));
+		//Create view
+		D3D12_SHADER_RESOURCE_VIEW_DESC dx12_shader_resource_desc = {};
+		dx12_shader_resource_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+		dx12_shader_resource_desc.Format = d12_resource_desc.Format;
+		dx12_shader_resource_desc.ViewDimension = Convert<D3D12_SRV_DIMENSION>(shader_resource_desc.type);
+		dx12_shader_resource_desc.Texture2D.MipLevels = d12_resource_desc.MipLevels;
+		device->m_native_device->CreateShaderResourceView(shader_resource.resource.Get(), &dx12_shader_resource_desc, device->m_shader_resource_pool.GetDescriptor(handle));
 
-			SetObjectName(shader_resource.resource.Get(), name);
+		SetObjectName(shader_resource.resource.Get(), name);
 
-			return handle;
-		}
-		else
-		{
-			std::runtime_error("Only static shader resources are supported");
-		}
-		return ShaderResourceHandle();
+		return handle;
 	}
 
 	ShaderResourceHandle CreateTextureResource(Device* device, const void* data, size_t size, const char* name)

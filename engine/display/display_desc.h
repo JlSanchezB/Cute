@@ -222,7 +222,6 @@ namespace display
 
 	struct ShaderResourceDesc
 	{
-		Access access = Access::Static;
 		Format format = Format::R8G8B8A8_UNORM;
 		ShaderResourceType type = ShaderResourceType::Texture2D;
 		size_t width = 0;
