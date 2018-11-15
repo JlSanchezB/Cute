@@ -163,12 +163,17 @@ void imgui_render::CreateResources(display::Device * device)
 	g_vertex_buffer = display::CreateVertexBuffer(device, vertex_buffer_desc, "imgui");
 
 	//Create Index buffer
-	//display::IndexBufferDesc index_buffer_desc;
-	//index_buffer_desc.access = display::Access::Dynamic;
-	//index_buffer_desc.size = current_index_buffer_size * 2;
-	//g_index_buffer = display::CreateIndexBuffer(device, index_buffer_desc, "imgui");
+	display::IndexBufferDesc index_buffer_desc;
+	index_buffer_desc.access = display::Access::Dynamic;
+	index_buffer_desc.size = current_index_buffer_size * 2;
+	g_index_buffer = display::CreateIndexBuffer(device, index_buffer_desc, "imgui");
 
 	//Descritor table
+	display::DescriptorTableDesc descriptor_table_desc;
+	descriptor_table_desc.access = display::Access::Static;
+	descriptor_table_desc.AddDescriptor(g_texture);
+
+	g_descriptor_table = display::CreateDescriptorTable(device, descriptor_table_desc);
 }
 
 void imgui_render::DestroyResources(display::Device * device)
@@ -178,7 +183,8 @@ void imgui_render::DestroyResources(display::Device * device)
 	display::DestroyConstantBuffer(device, g_constant_buffer);
 	display::DestroyShaderResource(device, g_texture);
 	display::DestroyVertexBuffer(device, g_vertex_buffer);
-	//display::DestroyInde(device, g_vertex_buffer);
+	display::DestroyIndexBuffer(device, g_index_buffer);
+	display::DestroyDescriptorTable(device, g_descriptor_table);
 }
 
 void imgui_render::Draw(display::Device * device, const display::CommandListHandle & command_list_handle)
