@@ -9,6 +9,9 @@
 
 namespace imgui_render
 {
+	//Init
+	void Init(HWND hwnd);
+
 	//Create resources
 	void CreateResources(display::Device* device);
 

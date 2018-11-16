@@ -191,6 +191,9 @@ namespace platform
 		ImGui::CreateContext();
 		ImGui::StyleColorsDark();
 
+		//Init imgui
+		imgui_render::Init(g_current_hwnd);
+
 		//Create all resources for imgui
 		imgui_render::CreateResources(device);
 	}
