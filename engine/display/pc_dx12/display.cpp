@@ -73,6 +73,7 @@ namespace display
 namespace platform
 {
 	extern HWND GetHwnd();
+	extern void PresentCallback(display::Device* device, display::CommandListHandle& commandlist_handle);
 }
 
 namespace display
@@ -358,6 +359,9 @@ namespace display
 		OpenCommandList(device, device->m_present_command_list);
 
 		auto& command_list = device->Get(device->m_present_command_list).resource;
+
+		//Call framework to render UI/Debug
+		platform::PresentCallback(device, device->m_present_command_list);
 
 		// Indicate that the back buffer will now be used to present.
 		auto& back_buffer = device->Get(device->m_frame_resources[device->m_frame_index].render_target);

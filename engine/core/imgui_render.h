@@ -15,6 +15,12 @@ namespace imgui_render
 	//Destroy resources
 	void DestroyResources(display::Device* device);
 
+	//Next frame
+	void NextFrame(HWND hWnd, float elapsed_time);
+
+	//Windows message handle
+	bool WndProcHandler(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
+
 	//Draw imgui system
 	void Draw(display::Device* device, const display::CommandListHandle& command_list_handle);
 }

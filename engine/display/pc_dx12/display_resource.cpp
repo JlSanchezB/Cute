@@ -656,4 +656,13 @@ namespace display
 		//Copy
 		memcpy(vertex_buffer.memory_data, data, size);
 	}
+
+	void UpdateIndexBuffer(Device * device, const WeakIndexBufferHandle & index_buffer_handle, const void * data, size_t size)
+	{
+		auto& index_buffer = device->Get(GetRingResource(device, index_buffer_handle, device->m_frame_index));
+		assert(size <= index_buffer.memory_size);
+
+		//Copy
+		memcpy(index_buffer.memory_data, data, size);
+	}
 }

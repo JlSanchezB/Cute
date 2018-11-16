@@ -1,7 +1,14 @@
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN             // Exclude rarely-used stuff from Windows headers.
+#endif
+
+#include <windows.h>
+
+#undef max
+
 #include "imgui_render.h"
 #include <core/imgui/imgui.h>
 #include <display/display.h>
-
 
 namespace
 {
@@ -23,6 +30,60 @@ namespace
 		float projection_matrix_2[4];
 		float projection_matrix_3[4];
 	};
+
+	ImGuiMouseCursor g_LastMouseCursor = ImGuiMouseCursor_COUNT;
+
+	void UpdateMousePos(HWND hWnd)
+	{
+		ImGuiIO& io = ImGui::GetIO();
+
+		// Set OS mouse position if requested (rarely used, only when ImGuiConfigFlags_NavEnableSetMousePos is enabled by user)
+		if (io.WantSetMousePos)
+		{
+			POINT pos = { (int)io.MousePos.x, (int)io.MousePos.y };
+			::ClientToScreen(hWnd, &pos);
+			::SetCursorPos(pos.x, pos.y);
+		}
+
+		// Set mouse position
+		io.MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
+		POINT pos;
+		if (::GetActiveWindow() == hWnd && ::GetCursorPos(&pos))
+			if (::ScreenToClient(hWnd, &pos))
+				io.MousePos = ImVec2((float)pos.x, (float)pos.y);
+	}
+
+	bool UpdateMouseCursor(HWND hWnd)
+	{
+		ImGuiIO& io = ImGui::GetIO();
+		if (io.ConfigFlags & ImGuiConfigFlags_NoMouseCursorChange)
+			return false;
+
+		ImGuiMouseCursor imgui_cursor = ImGui::GetMouseCursor();
+		if (imgui_cursor == ImGuiMouseCursor_None || io.MouseDrawCursor)
+		{
+			// Hide OS mouse cursor if imgui is drawing it or if it wants no cursor
+			::SetCursor(NULL);
+		}
+		else
+		{
+			// Show OS mouse cursor
+			LPTSTR win32_cursor = IDC_ARROW;
+			switch (imgui_cursor)
+			{
+			case ImGuiMouseCursor_Arrow:        win32_cursor = IDC_ARROW; break;
+			case ImGuiMouseCursor_TextInput:    win32_cursor = IDC_IBEAM; break;
+			case ImGuiMouseCursor_ResizeAll:    win32_cursor = IDC_SIZEALL; break;
+			case ImGuiMouseCursor_ResizeEW:     win32_cursor = IDC_SIZEWE; break;
+			case ImGuiMouseCursor_ResizeNS:     win32_cursor = IDC_SIZENS; break;
+			case ImGuiMouseCursor_ResizeNESW:   win32_cursor = IDC_SIZENESW; break;
+			case ImGuiMouseCursor_ResizeNWSE:   win32_cursor = IDC_SIZENWSE; break;
+			case ImGuiMouseCursor_Hand:         win32_cursor = IDC_HAND; break;
+			}
+			::SetCursor(::LoadCursor(NULL, win32_cursor));
+		}
+		return true;
+	}
 }
 
 void imgui_render::CreateResources(display::Device * device)
@@ -121,6 +182,8 @@ void imgui_render::CreateResources(display::Device * device)
 	pipeline_state_desc.vertex_shader.data = reinterpret_cast<void*>(vertex_shader.data());
 	pipeline_state_desc.vertex_shader.size = vertex_shader.size();
 
+	pipeline_state_desc.rasteritation_state.cull_mode = display::CullMode::None;
+
 	pipeline_state_desc.blend_desc.render_target_blend[0].blend_enable = true;
 	pipeline_state_desc.blend_desc.render_target_blend[0].src_blend = display::Blend::SrcAlpha;
 	pipeline_state_desc.blend_desc.render_target_blend[0].dest_blend = display::Blend::InvSrcAlpha;
@@ -158,14 +221,14 @@ void imgui_render::CreateResources(display::Device * device)
 	//Create Vertex buffer (inited in some size and it will grow by demand)
 	display::VertexBufferDesc vertex_buffer_desc;
 	vertex_buffer_desc.access = display::Access::Dynamic;
-	vertex_buffer_desc.size = current_vertex_buffer_size * 20;
+	vertex_buffer_desc.size = current_vertex_buffer_size * sizeof(ImDrawVert);
 	vertex_buffer_desc.stride = 20;
 	g_vertex_buffer = display::CreateVertexBuffer(device, vertex_buffer_desc, "imgui");
 
 	//Create Index buffer
 	display::IndexBufferDesc index_buffer_desc;
 	index_buffer_desc.access = display::Access::Dynamic;
-	index_buffer_desc.size = current_index_buffer_size * 2;
+	index_buffer_desc.size = current_index_buffer_size * sizeof(ImDrawIdx);
 	g_index_buffer = display::CreateIndexBuffer(device, index_buffer_desc, "imgui");
 
 	//Descritor table
@@ -187,6 +250,209 @@ void imgui_render::DestroyResources(display::Device * device)
 	display::DestroyDescriptorTable(device, g_descriptor_table);
 }
 
+void imgui_render::NextFrame(HWND hWnd, float elapsed_time)
+{
+	ImGuiIO& io = ImGui::GetIO();
+
+	// Setup display size (every frame to accommodate for window resizing)
+	RECT rect;
+	::GetClientRect(hWnd, &rect);
+	io.DisplaySize = ImVec2((float)(rect.right - rect.left), (float)(rect.bottom - rect.top));
+
+	// Setup time step
+	io.DeltaTime = elapsed_time;
+
+	// Read keyboard modifiers inputs
+	io.KeyCtrl = (::GetKeyState(VK_CONTROL) & 0x8000) != 0;
+	io.KeyShift = (::GetKeyState(VK_SHIFT) & 0x8000) != 0;
+	io.KeyAlt = (::GetKeyState(VK_MENU) & 0x8000) != 0;
+	io.KeySuper = false;
+	// io.KeysDown[], io.MousePos, io.MouseDown[], io.MouseWheel: filled by the WndProc handler below.
+
+	// Update OS mouse position
+	UpdateMousePos(hWnd);
+
+	// Update OS mouse cursor with the cursor requested by imgui
+	ImGuiMouseCursor mouse_cursor = io.MouseDrawCursor ? ImGuiMouseCursor_None : ImGui::GetMouseCursor();
+	if (g_LastMouseCursor != mouse_cursor)
+	{
+		g_LastMouseCursor = mouse_cursor;
+		UpdateMouseCursor(hWnd);
+	}
+
+	//Next frame in ImGui
+	ImGui::NewFrame();
+}
+
+bool imgui_render::WndProcHandler(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+	if (ImGui::GetCurrentContext() == NULL)
+		return false;
+
+	ImGuiIO& io = ImGui::GetIO();
+	switch (msg)
+	{
+	case WM_LBUTTONDOWN: case WM_LBUTTONDBLCLK:
+	case WM_RBUTTONDOWN: case WM_RBUTTONDBLCLK:
+	case WM_MBUTTONDOWN: case WM_MBUTTONDBLCLK:
+	{
+		int button = 0;
+		if (msg == WM_LBUTTONDOWN || msg == WM_LBUTTONDBLCLK) button = 0;
+		if (msg == WM_RBUTTONDOWN || msg == WM_RBUTTONDBLCLK) button = 1;
+		if (msg == WM_MBUTTONDOWN || msg == WM_MBUTTONDBLCLK) button = 2;
+		if (!ImGui::IsAnyMouseDown() && ::GetCapture() == NULL)
+			::SetCapture(hwnd);
+		io.MouseDown[button] = true;
+		return false;
+	}
+	case WM_LBUTTONUP:
+	case WM_RBUTTONUP:
+	case WM_MBUTTONUP:
+	{
+		int button = 0;
+		if (msg == WM_LBUTTONUP) button = 0;
+		if (msg == WM_RBUTTONUP) button = 1;
+		if (msg == WM_MBUTTONUP) button = 2;
+		io.MouseDown[button] = false;
+		if (!ImGui::IsAnyMouseDown() && ::GetCapture() == hwnd)
+			::ReleaseCapture();
+		return false;
+	}
+	case WM_MOUSEWHEEL:
+		io.MouseWheel += (float)GET_WHEEL_DELTA_WPARAM(wParam) / (float)WHEEL_DELTA;
+		return false;
+	case WM_MOUSEHWHEEL:
+		io.MouseWheelH += (float)GET_WHEEL_DELTA_WPARAM(wParam) / (float)WHEEL_DELTA;
+		return false;
+	case WM_KEYDOWN:
+	case WM_SYSKEYDOWN:
+		if (wParam < 256)
+			io.KeysDown[wParam] = 1;
+		return false;
+	case WM_KEYUP:
+	case WM_SYSKEYUP:
+		if (wParam < 256)
+			io.KeysDown[wParam] = 0;
+		return false;
+	case WM_CHAR:
+		// You can also use ToAscii()+GetKeyboardState() to retrieve characters.
+		if (wParam > 0 && wParam < 0x10000)
+			io.AddInputCharacter((unsigned short)wParam);
+		return false;
+	case WM_SETCURSOR:
+		if (LOWORD(lParam) == HTCLIENT && UpdateMouseCursor(hwnd))
+			return true;
+		return false;
+	}
+	return true;
+}
+
 void imgui_render::Draw(display::Device * device, const display::CommandListHandle & command_list_handle)
 {
+	auto draw_data = ImGui::GetDrawData();
+
+	//Check if we need to create a vertex buffer
+	if (current_vertex_buffer_size < draw_data->TotalVtxCount)
+	{
+		//Grow
+		current_vertex_buffer_size = draw_data->TotalVtxCount + 5000;
+
+		display::DestroyVertexBuffer(device, g_vertex_buffer);
+
+		//Create a new one
+		display::VertexBufferDesc vertex_buffer_desc;
+		vertex_buffer_desc.access = display::Access::Dynamic;
+		vertex_buffer_desc.size = current_vertex_buffer_size * sizeof(ImDrawVert);
+		vertex_buffer_desc.stride = 20;
+		g_vertex_buffer = display::CreateVertexBuffer(device, vertex_buffer_desc, "imgui");
+	}
+
+	//Check if we need to create a index buffer
+	if (current_index_buffer_size < draw_data->TotalIdxCount)
+	{
+		//Grow
+		current_index_buffer_size = draw_data->TotalVtxCount + 10000;
+
+		//Create new one
+		display::IndexBufferDesc index_buffer_desc;
+		index_buffer_desc.access = display::Access::Dynamic;
+		index_buffer_desc.size = current_index_buffer_size * sizeof(ImDrawIdx);
+		g_index_buffer = display::CreateIndexBuffer(device, index_buffer_desc, "imgui");
+	}
+
+	//Update constant buffer
+	float L = draw_data->DisplayPos.x;
+	float R = draw_data->DisplayPos.x + draw_data->DisplaySize.x;
+	float T = draw_data->DisplayPos.y;
+	float B = draw_data->DisplayPos.y + draw_data->DisplaySize.y;
+	float mvp[4][4] =
+	{
+		{ 2.0f / (R - L),   0.0f,           0.0f,       0.0f },
+		{ 0.0f,         2.0f / (T - B),     0.0f,       0.0f },
+		{ 0.0f,         0.0f,           0.5f,       0.0f },
+		{ (R + L) / (L - R),  (T + B) / (B - T),    0.5f,       1.0f },
+	};
+
+	display::UpdateConstantBuffer(device, g_constant_buffer, mvp, sizeof(mvp));
+
+	//Update vertex buffer and index buffer
+	std::vector<ImDrawVert> vertex_buffer(draw_data->TotalVtxCount);
+	std::vector<ImDrawIdx> index_buffer(draw_data->TotalIdxCount);
+
+	ImDrawVert* vtx_dst = vertex_buffer.data();
+	ImDrawIdx* idx_dst = index_buffer.data();
+	for (int n = 0; n < draw_data->CmdListsCount; n++)
+	{
+		const ImDrawList* cmd_list = draw_data->CmdLists[n];
+		memcpy(vtx_dst, cmd_list->VtxBuffer.Data, cmd_list->VtxBuffer.Size * sizeof(ImDrawVert));
+		memcpy(idx_dst, cmd_list->IdxBuffer.Data, cmd_list->IdxBuffer.Size * sizeof(ImDrawIdx));
+		vtx_dst += cmd_list->VtxBuffer.Size;
+		idx_dst += cmd_list->IdxBuffer.Size;
+	}
+
+	display::UpdateVertexBuffer(device, g_vertex_buffer, vertex_buffer.data(), draw_data->TotalVtxCount * sizeof(ImDrawVert));
+	display::UpdateIndexBuffer(device, g_index_buffer, index_buffer.data(), draw_data->TotalIdxCount * sizeof(ImDrawIdx));
+
+
+	//Set all the resources
+	display::SetRootSignature(device, command_list_handle, g_rootsignature);
+	display::SetPipelineState(device, command_list_handle, g_pipeline_state);
+	display::WeakVertexBufferHandle vertex_buffers = g_vertex_buffer;
+	display::SetVertexBuffers(device, command_list_handle, 0, 1, &vertex_buffers);
+	display::SetIndexBuffer(device, command_list_handle, g_index_buffer);
+	display::SetConstantBuffer(device, command_list_handle, 0, g_constant_buffer);
+	display::SetDescriptorTable(device, command_list_handle, 1, g_descriptor_table);
+
+	// Render command lists
+	int vtx_offset = 0;
+	int idx_offset = 0;
+	ImVec2 pos = draw_data->DisplayPos;
+	for (int n = 0; n < draw_data->CmdListsCount; n++)
+	{
+		const ImDrawList* cmd_list = draw_data->CmdLists[n];
+		for (int cmd_i = 0; cmd_i < cmd_list->CmdBuffer.Size; cmd_i++)
+		{
+			const ImDrawCmd* pcmd = &cmd_list->CmdBuffer[cmd_i];
+			if (pcmd->UserCallback)
+			{
+				pcmd->UserCallback(cmd_list, pcmd);
+			}
+			else
+			{
+				display::Rect rect;
+				rect.left = static_cast<size_t>(pcmd->ClipRect.x - pos.x);
+				rect.top = static_cast<size_t>(pcmd->ClipRect.y - pos.y);
+				rect.right = static_cast<size_t>(pcmd->ClipRect.z - pos.x);
+				rect.bottom = static_cast<size_t>(pcmd->ClipRect.w - pos.y);
+				display::SetScissorRect(device, command_list_handle, rect);
+				display::DrawIndexedDesc draw_desc;
+				draw_desc.index_count = pcmd->ElemCount;
+				draw_desc.base_vertex = vtx_offset;
+				draw_desc.start_index = idx_offset;
+				display::DrawIndexed(device, command_list_handle, draw_desc);
+			}
+			idx_offset += pcmd->ElemCount;
+		}
+		vtx_offset += cmd_list->VtxBuffer.Size;
+	}
 }

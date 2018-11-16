@@ -5,6 +5,8 @@
 #ifndef PLATFORM_H_
 #define PLATFORM_H_
 
+#include <core/imgui/imgui.h>
+
 namespace display
 {
 	struct Device;

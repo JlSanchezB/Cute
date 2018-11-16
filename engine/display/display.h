@@ -159,8 +159,11 @@ namespace display
 	//Update constant buffer
 	void UpdateConstantBuffer(Device* device, const WeakConstantBufferHandle& constant_buffer_handle, const void* data, size_t size);
 
-	//Update constant buffer
+	//Update vertex buffer
 	void UpdateVertexBuffer(Device* device, const WeakVertexBufferHandle& vertex_buffer_handle, const void* data, size_t size);
+
+	//Update index buffer
+	void UpdateIndexBuffer(Device * device, const WeakIndexBufferHandle & index_buffer_handle, const void * data, size_t size);
 
 	//Draw
 	void Draw(Device* device, const WeakCommandListHandle& command_list, const DrawDesc& draw_desc);

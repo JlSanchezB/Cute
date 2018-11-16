@@ -1,6 +1,5 @@
 #include <core/platform.h>
 #include <display/display.h>
-#include <core/imgui_render.h>
 #include <core/imgui/imgui.h>
 
 #ifndef WIN32_LEAN_AND_MEAN
@@ -9,6 +8,7 @@
 
 #include <windows.h>
 #include <chrono>
+#include <core/imgui_render.h>
 
 namespace display
 {
@@ -172,6 +172,13 @@ namespace platform
 		return g_current_hwnd;
 	}
 
+	//Called from the device before present with the present command list
+	void PresentCallback(display::Device* device, display::CommandListHandle& commandlist_handle)
+	{
+		ImGui::Render();
+		imgui_render::Draw(device, commandlist_handle);
+	}
+
 	void Game::SetDevice(display::Device * device)
 	{
 		g_device = device;
@@ -179,6 +186,7 @@ namespace platform
 		//Create IMGUI
 		IMGUI_CHECKVERSION();
 		ImGui::CreateContext();
+		ImGui::StyleColorsDark();
 
 		//Create all resources for imgui
 		imgui_render::CreateResources(device);
@@ -250,6 +258,9 @@ namespace platform
 			float elapsed_time = static_cast<float>(g_current_time.QuadPart - last_time.QuadPart) / g_frequency.QuadPart;
 			double total_time = static_cast<double>(g_current_time.QuadPart - g_begin_time.QuadPart) / g_frequency.QuadPart;
 			
+			//New frame for imgui
+			imgui_render::NextFrame(g_current_hwnd, elapsed_time);
+
 			//Render
 			game->OnTick(total_time, elapsed_time);
 

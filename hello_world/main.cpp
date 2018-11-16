@@ -35,6 +35,7 @@ public:
 	constexpr static size_t kInitWidth = 500;
 	constexpr static size_t kInitHeight = 500;
 
+	bool m_show_imgui_demo = true;
 	size_t m_width;
 	size_t m_height;
 
@@ -637,6 +638,9 @@ public:
 			//Close command list
 			display::CloseCommandList(m_device, m_test_3.m_command_list);
 		}
+
+		//Show Imgui demo
+		ImGui::ShowDemoWindow(&m_show_imgui_demo);
 
 		//Execute command list
 		display::ExecuteCommandList(m_device, m_test_1.m_command_list);
