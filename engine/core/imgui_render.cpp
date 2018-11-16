@@ -417,8 +417,7 @@ void imgui_render::Draw(display::Device * device, const display::CommandListHand
 	//Set all the resources
 	display::SetRootSignature(device, command_list_handle, g_rootsignature);
 	display::SetPipelineState(device, command_list_handle, g_pipeline_state);
-	display::WeakVertexBufferHandle vertex_buffers = g_vertex_buffer;
-	display::SetVertexBuffers(device, command_list_handle, 0, 1, &vertex_buffers);
+	display::SetVertexBuffers(device, command_list_handle, 0, 1, &g_vertex_buffer);
 	display::SetIndexBuffer(device, command_list_handle, g_index_buffer);
 	display::SetConstantBuffer(device, command_list_handle, 0, g_constant_buffer);
 	display::SetDescriptorTable(device, command_list_handle, 1, g_descriptor_table);

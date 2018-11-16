@@ -462,8 +462,7 @@ public:
 			display::OpenCommandList(m_device, m_test_1.m_command_list);
 
 			//Set Render Target
-			display::WeakRenderTargetHandle render_target = m_test_1.m_render_target;
-			display::SetRenderTargets(m_device, m_test_1.m_command_list, 1, &render_target, display::WeakDepthBufferHandle());
+			display::SetRenderTargets(m_device, m_test_1.m_command_list, 1, &m_test_1.m_render_target, display::WeakDepthBufferHandle());
 
 			//Clear
 			const float clear_colour[] = { 0.f, 0.f, 0.f, 0.f };
@@ -482,8 +481,7 @@ public:
 			display::SetScissorRect(m_device, m_test_1.m_command_list, display::Rect(0, 0, 512 / 2, 512 / 2));
 
 			//Set vertex buffer
-			display::WeakVertexBufferHandle weak_vertex_buffer = m_test_1.m_vertex_buffer;
-			display::SetVertexBuffers(m_device, m_test_1.m_command_list, 0, 1, &weak_vertex_buffer);
+			display::SetVertexBuffers(m_device, m_test_1.m_command_list, 0, 1, &m_test_1.m_vertex_buffer);
 
 			//Resource binding
 			display::SetDescriptorTable(m_device, m_test_1.m_command_list, 0, m_test_1.m_texture_descriptor_table);
@@ -494,12 +492,11 @@ public:
 			display::Draw(m_device, m_test_1.m_command_list, draw_desc);
 
 			//Use render target as texture
-			display::RenderTargetTransition(m_device, m_test_1.m_command_list, 1, &render_target, display::ResourceState::PixelShaderResource);
+			display::RenderTargetTransition(m_device, m_test_1.m_command_list, 1, &m_test_1.m_render_target, display::ResourceState::PixelShaderResource);
 			//Set BackBuffer
-			display::WeakRenderTargetHandle back_buffer = display::GetBackBuffer(m_device);
-			display::SetRenderTargets(m_device, m_test_1.m_command_list, 1, &back_buffer, display::WeakDepthBufferHandle());
+			display::SetRenderTargets(m_device, m_test_1.m_command_list, 1, &display::GetBackBuffer(m_device), display::WeakDepthBufferHandle());
 
-			display::ClearRenderTargetColour(m_device, m_test_1.m_command_list, back_buffer, clear_colour);
+			display::ClearRenderTargetColour(m_device, m_test_1.m_command_list, display::GetBackBuffer(m_device), clear_colour);
 
 			//Set viewport
 			display::SetViewport(m_device, m_test_1.m_command_list, display::Viewport(static_cast<float>(m_width / 2), static_cast<float>(m_height / 2)));
@@ -524,8 +521,7 @@ public:
 			display::OpenCommandList(m_device, m_test_2.m_command_list);
 
 			//Set Render Target
-			display::WeakRenderTargetHandle render_target = display::GetBackBuffer(m_device);
-			display::SetRenderTargets(m_device, m_test_2.m_command_list, 1, &render_target, display::WeakDepthBufferHandle());
+			display::SetRenderTargets(m_device, m_test_2.m_command_list, 1, &display::GetBackBuffer(m_device), display::WeakDepthBufferHandle());
 
 			//Set viewport
 			display::Viewport viewport(static_cast<float>(m_width / 2), static_cast<float>(m_height / 2));
@@ -543,8 +539,7 @@ public:
 			display::SetPipelineState(m_device, m_test_2.m_command_list, m_test_2.m_pipeline_state);
 
 			//Set vertex buffer
-			display::WeakVertexBufferHandle weak_vertex_buffer = m_test_2.m_vertex_buffer;
-			display::SetVertexBuffers(m_device, m_test_2.m_command_list, 0, 1, &weak_vertex_buffer);
+			display::SetVertexBuffers(m_device, m_test_2.m_command_list, 0, 1, &m_test_2.m_vertex_buffer);
 
 			//Set index buffer
 			display::SetIndexBuffer(m_device, m_test_2.m_command_list, m_test_2.m_index_buffer);
@@ -579,8 +574,7 @@ public:
 			display::OpenCommandList(m_device, m_test_3.m_command_list);
 
 			//Set Render Target
-			display::WeakRenderTargetHandle render_target = display::GetBackBuffer(m_device);
-			display::SetRenderTargets(m_device, m_test_3.m_command_list, 1, &render_target, display::WeakDepthBufferHandle());
+			display::SetRenderTargets(m_device, m_test_3.m_command_list, 1, &display::GetBackBuffer(m_device), display::WeakDepthBufferHandle());
 
 			//Set viewport
 			display::Viewport viewport(static_cast<float>(m_width / 2), static_cast<float>(m_height / 2));
@@ -598,12 +592,10 @@ public:
 			display::SetPipelineState(m_device, m_test_3.m_command_list, m_test_3.m_pipeline_state);
 
 			//Set vertex buffer
-			display::WeakVertexBufferHandle weak_vertex_buffer = m_test_2.m_vertex_buffer;
-			display::SetVertexBuffers(m_device, m_test_3.m_command_list, 0, 1, &weak_vertex_buffer);
+			display::SetVertexBuffers(m_device, m_test_3.m_command_list, 0, 1, &m_test_2.m_vertex_buffer);
 
 			//Set instance buffer
-			display::WeakVertexBufferHandle weak_instance_buffer = m_test_3.m_vertex_buffer_instance;
-			display::SetVertexBuffers(m_device, m_test_3.m_command_list, 1, 1, &weak_instance_buffer);
+			display::SetVertexBuffers(m_device, m_test_3.m_command_list, 1, 1, &m_test_3.m_vertex_buffer_instance);
 
 			//Set index buffer
 			display::SetIndexBuffer(m_device, m_test_3.m_command_list, m_test_2.m_index_buffer);

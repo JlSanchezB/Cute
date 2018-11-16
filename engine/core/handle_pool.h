@@ -53,15 +53,31 @@ namespace core
 		}
 	};
 
+	//Weak handle only can be create from a handle
+	//They can be copied
+	template <typename ENUM, typename TYPE>
+	class WeakHandle : public HandleAccessor<ENUM, TYPE>
+	{
+		using Accessor = HandleAccessor<ENUM, TYPE>;
+
+	public:
+		//Default constructor
+		WeakHandle()
+		{
+
+		}
+	};
+
 	//Handles can only be created from a pool and they can not be copied, only moved
 	template <typename ENUM, typename TYPE>
-	class Handle : public HandleAccessor<ENUM, TYPE>
+	class Handle : public WeakHandle<ENUM, TYPE>
 	{
 		using Accessor = HandleAccessor<ENUM, TYPE>;
 
 		//Private constructor of a handle, only a pool can create valid handles
-		Handle(TYPE index) : HandleAccessor(index)
+		Handle(TYPE index)
 		{
+			HandleAccessor::m_index = index;
 		}
 
 		template<typename HANDLE, typename DATA>
@@ -100,25 +116,6 @@ namespace core
 		}
 	};
 
-	//Weak handle only can be create from a handle
-	//They can be copied
-	template <typename ENUM, typename TYPE>
-	class WeakHandle : public HandleAccessor<ENUM, TYPE>
-	{
-		using Accessor = HandleAccessor<ENUM, TYPE>;
-
-	public:
-		//Default constructor
-		WeakHandle()
-		{
-		}
-
-		//A weak handle can be created from a handle
-		WeakHandle(const Handle<ENUM, TYPE>& handle)
-		{
-			Accessor::m_index = handle.m_index;
-		}
-	};
 
 	//Pool of resources
 	template<typename HANDLE, typename DATA>
