@@ -344,7 +344,7 @@ bool imgui_render::WndProcHandler(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
 			return true;
 		return false;
 	}
-	return true;
+	return false;
 }
 
 void imgui_render::Draw(display::Device * device, const display::CommandListHandle & command_list_handle)

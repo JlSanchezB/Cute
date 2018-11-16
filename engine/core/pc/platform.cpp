@@ -34,6 +34,9 @@ namespace
 	//Windows message handle
 	LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	{
+		if (imgui_render::WndProcHandler(hWnd, message, wParam, lParam))
+			return true;
+
 		platform::Game* game = reinterpret_cast<platform::Game*>(GetWindowLongPtr(hWnd, GWLP_USERDATA));
 
 		switch (message)
