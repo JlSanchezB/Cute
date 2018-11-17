@@ -632,7 +632,8 @@ public:
 		}
 
 		//Show Imgui demo
-		ImGui::ShowDemoWindow(&m_show_imgui_demo);
+		if (m_show_imgui_demo)
+			ImGui::ShowDemoWindow(&m_show_imgui_demo);
 
 		//Execute command list
 		display::ExecuteCommandList(m_device, m_test_1.m_command_list);

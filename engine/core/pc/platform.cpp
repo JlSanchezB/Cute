@@ -155,6 +155,24 @@ namespace
 		return DefWindowProc(hWnd, message, wParam, lParam);
 	}
 
+	void RenderFPSOverlay(float elapsed_time)
+	{
+
+		const float distance = 10.0f;
+		static int corner = 3;
+		ImVec2 window_pos = ImVec2((corner & 1) ? ImGui::GetIO().DisplaySize.x - distance : distance, (corner & 2) ? ImGui::GetIO().DisplaySize.y - distance : distance);
+		ImVec2 window_pos_pivot = ImVec2((corner & 1) ? 1.0f : 0.0f, (corner & 2) ? 1.0f : 0.0f);
+		if (corner != -1)
+			ImGui::SetNextWindowPos(window_pos, ImGuiCond_Always, window_pos_pivot);
+		ImGui::SetNextWindowBgAlpha(0.3f); // Transparent background
+		bool open = true;
+		if (ImGui::Begin("Perf", &open, (corner != -1 ? ImGuiWindowFlags_NoMove : 0) | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav))
+		{
+			ImGui::Text("FPS: %2.1f", 1.f / elapsed_time);
+		}
+		ImGui::End();
+
+	}
 	//global variable with the current hwnd, needed for specicif win32 and dx12 init
 	HWND g_current_hwnd;
 
@@ -268,6 +286,9 @@ namespace platform
 
 			//Render
 			game->OnTick(total_time, elapsed_time);
+
+			//Render FPS
+			RenderFPSOverlay(elapsed_time);
 
 			//Render IMGUI
 			ImGui::Render();
