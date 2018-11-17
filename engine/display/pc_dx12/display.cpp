@@ -501,6 +501,9 @@ namespace display
 			auto& source_property = root_signature_desc.root_parameters[i];
 			switch (source_property.type)
 			{
+			case RootSignatureParameterType::Constants:
+				root_parameters[i].InitAsConstants(static_cast<UINT>(source_property.root_param.num_constants),static_cast<UINT>(source_property.root_param.shader_register), 0, Convert(source_property.visibility));
+				break;
 			case RootSignatureParameterType::ConstantBuffer:
 				root_parameters[i].InitAsConstantBufferView(static_cast<UINT>(source_property.root_param.shader_register), 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, Convert(source_property.visibility));
 				break;
@@ -840,6 +843,15 @@ namespace display
 		}
 
 	}
+	void SetConstants(Device * device, const WeakCommandListHandle & command_list_handle, size_t root_parameter, const void * data, size_t num_constants)
+	{
+		auto& command_list = device->Get(command_list_handle);
+		auto& root_signature = device->Get(command_list.current_root_signature);
+		assert(root_parameter < root_signature.desc.num_root_parameters);
+
+		command_list.resource->SetGraphicsRoot32BitConstants(0, static_cast<UINT>(num_constants), data, 0);
+	}
+
 	void SetConstantBuffer(Device * device, const WeakCommandListHandle & command_list_handle, size_t root_parameter, const WeakConstantBufferHandle & constant_buffer_handle)
 	{
 		auto& command_list = device->Get(command_list_handle);

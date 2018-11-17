@@ -178,7 +178,6 @@ namespace platform
 	//Called from the device before present with the present command list
 	void PresentCallback(display::Device* device, display::CommandListHandle& commandlist_handle)
 	{
-		ImGui::Render();
 		imgui_render::Draw(device, commandlist_handle);
 	}
 
@@ -269,6 +268,12 @@ namespace platform
 
 			//Render
 			game->OnTick(total_time, elapsed_time);
+
+			//Render IMGUI
+			ImGui::Render();
+
+			//Present
+			display::Present(g_device);
 
 		} while (true);
 

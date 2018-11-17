@@ -639,9 +639,6 @@ public:
 		display::ExecuteCommandList(m_device, m_test_2.m_command_list);
 		display::ExecuteCommandList(m_device, m_test_3.m_command_list);
 
-		//Present
-		display::Present(m_device);
-
 		display::EndFrame(m_device);
 	}
 

@@ -141,6 +141,9 @@ namespace display
 
 	//Resource Binding
 
+	//Set constants
+	void SetConstants(Device* device, const WeakCommandListHandle& command_list, size_t root_parameter, const void* data, size_t size);
+
 	//Set constant buffer
 	void SetConstantBuffer(Device* device, const WeakCommandListHandle& command_list, size_t root_parameter, const WeakConstantBufferHandle& constant_buffer);
 

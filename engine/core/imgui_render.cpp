@@ -16,20 +16,11 @@ namespace
 	display::RootSignatureHandle g_rootsignature;
 	display::PipelineStateHandle g_pipeline_state;
 	display::ShaderResourceHandle g_texture;
-	display::ConstantBufferHandle g_constant_buffer;
 	display::VertexBufferHandle g_vertex_buffer;
 	size_t current_vertex_buffer_size = 4000;
 	size_t current_index_buffer_size = 4000;
 	display::IndexBufferHandle g_index_buffer;
 	display::DescriptorTableHandle g_descriptor_table;
-
-	struct ConstantBuffer
-	{
-		float projection_matrix_0[4];
-		float projection_matrix_1[4];
-		float projection_matrix_2[4];
-		float projection_matrix_3[4];
-	};
 
 	ImGuiMouseCursor g_LastMouseCursor = ImGuiMouseCursor_COUNT;
 
@@ -123,9 +114,10 @@ void imgui_render::CreateResources(display::Device * device)
 	//Create root signature
 	display::RootSignatureDesc rootsignature_desc;
 	rootsignature_desc.num_root_parameters = 2;
-	rootsignature_desc.root_parameters[0].type = display::RootSignatureParameterType::ConstantBuffer;
+	rootsignature_desc.root_parameters[0].type = display::RootSignatureParameterType::Constants;
 	rootsignature_desc.root_parameters[0].visibility = display::ShaderVisibility::Vertex;
 	rootsignature_desc.root_parameters[0].root_param.shader_register = 0;
+	rootsignature_desc.root_parameters[0].root_param.num_constants = 16;
 	rootsignature_desc.root_parameters[1].type = display::RootSignatureParameterType::DescriptorTable;
 	rootsignature_desc.root_parameters[1].visibility = display::ShaderVisibility::Pixel;
 	rootsignature_desc.root_parameters[1].table.num_ranges = 1;
@@ -182,7 +174,7 @@ void imgui_render::CreateResources(display::Device * device)
             float4 main(PS_INPUT input) : SV_Target\
             {\
               float4 out_col = input.col * texture0.Sample(sampler0, input.uv); \
-              return out_col; \
+               return out_col; \
             }";
 
 	std::vector<char> vertex_shader;
@@ -220,20 +212,15 @@ void imgui_render::CreateResources(display::Device * device)
 	pipeline_state_desc.blend_desc.render_target_blend[0].src_blend = display::Blend::SrcAlpha;
 	pipeline_state_desc.blend_desc.render_target_blend[0].dest_blend = display::Blend::InvSrcAlpha;
 	pipeline_state_desc.blend_desc.render_target_blend[0].blend_op = display::BlendOp::Add;
+	pipeline_state_desc.blend_desc.render_target_blend[0].alpha_src_blend = display::Blend::InvSrcAlpha;
+	pipeline_state_desc.blend_desc.render_target_blend[0].alpha_dest_blend = display::Blend::Zero;
+	pipeline_state_desc.blend_desc.render_target_blend[0].alpha_blend_op = display::BlendOp::Add;
 
 	pipeline_state_desc.num_render_targets = 1;
 	pipeline_state_desc.render_target_format[0] = display::Format::R8G8B8A8_UNORM;
 
 	//Create
 	g_pipeline_state = display::CreatePipelineState(device, pipeline_state_desc, "imgui");
-
-	//Create constant buffer
-	ConstantBuffer constant_buffer;
-	display::ConstantBufferDesc constant_buffer_desc;
-	constant_buffer_desc.access = display::Access::Dynamic;
-	constant_buffer_desc.init_data = &constant_buffer;
-	constant_buffer_desc.size = sizeof(constant_buffer);
-	g_constant_buffer = display::CreateConstantBuffer(device, constant_buffer_desc, "imgui");
 
 	//Create texture
 	ImGuiIO& io = ImGui::GetIO();
@@ -269,13 +256,15 @@ void imgui_render::CreateResources(display::Device * device)
 	descriptor_table_desc.AddDescriptor(g_texture);
 
 	g_descriptor_table = display::CreateDescriptorTable(device, descriptor_table_desc);
+
+	static_assert(sizeof(ImTextureID) >= sizeof(g_descriptor_table), "Can't pack descriptor handle into TexID, 32-bit not supported yet.");
+	io.Fonts->TexID = (ImTextureID)&g_descriptor_table;
 }
 
 void imgui_render::DestroyResources(display::Device * device)
 {
 	display::DestroyRootSignature(device, g_rootsignature);
 	display::DestroyPipelineState(device, g_pipeline_state);
-	display::DestroyConstantBuffer(device, g_constant_buffer);
 	display::DestroyShaderResource(device, g_texture);
 	display::DestroyVertexBuffer(device, g_vertex_buffer);
 	display::DestroyIndexBuffer(device, g_index_buffer);
@@ -383,6 +372,9 @@ void imgui_render::Draw(display::Device * device, const display::CommandListHand
 {
 	auto draw_data = ImGui::GetDrawData();
 
+	//Set back buffer
+	display::SetRenderTargets(device, command_list_handle, 1, &display::GetBackBuffer(device), display::WeakDepthBufferHandle());
+
 	//Check if we need to create a vertex buffer
 	if (current_vertex_buffer_size < draw_data->TotalVtxCount)
 	{
@@ -403,7 +395,7 @@ void imgui_render::Draw(display::Device * device, const display::CommandListHand
 	if (current_index_buffer_size < draw_data->TotalIdxCount)
 	{
 		//Grow
-		current_index_buffer_size = draw_data->TotalVtxCount + 10000;
+		current_index_buffer_size = draw_data->TotalIdxCount + 10000;
 
 		//Create new one
 		display::IndexBufferDesc index_buffer_desc;
@@ -424,8 +416,6 @@ void imgui_render::Draw(display::Device * device, const display::CommandListHand
 		{ 0.0f,         0.0f,           0.5f,       0.0f },
 		{ (R + L) / (L - R),  (T + B) / (B - T),    0.5f,       1.0f },
 	};
-
-	display::UpdateConstantBuffer(device, g_constant_buffer, mvp, sizeof(mvp));
 
 	//Update vertex buffer and index buffer
 	std::vector<ImDrawVert> vertex_buffer(draw_data->TotalVtxCount);
@@ -451,8 +441,9 @@ void imgui_render::Draw(display::Device * device, const display::CommandListHand
 	display::SetPipelineState(device, command_list_handle, g_pipeline_state);
 	display::SetVertexBuffers(device, command_list_handle, 0, 1, &g_vertex_buffer);
 	display::SetIndexBuffer(device, command_list_handle, g_index_buffer);
-	display::SetConstantBuffer(device, command_list_handle, 0, g_constant_buffer);
-	display::SetDescriptorTable(device, command_list_handle, 1, g_descriptor_table);
+	//display::SetConstantBuffer(device, command_list_handle, 0, g_constant_buffer);
+	display::SetConstants(device, command_list_handle, 0, mvp, 16);
+	display::SetViewport(device, command_list_handle, display::Viewport(draw_data->DisplaySize.x, draw_data->DisplaySize.y));
 
 	// Render command lists
 	int vtx_offset = 0;
@@ -476,6 +467,9 @@ void imgui_render::Draw(display::Device * device, const display::CommandListHand
 				rect.right = static_cast<size_t>(pcmd->ClipRect.z - pos.x);
 				rect.bottom = static_cast<size_t>(pcmd->ClipRect.w - pos.y);
 				display::SetScissorRect(device, command_list_handle, rect);
+				
+				display::SetDescriptorTable(device, command_list_handle, 1, *reinterpret_cast<display::DescriptorTableHandle*>(pcmd->TextureId));
+
 				display::DrawIndexedDesc draw_desc;
 				draw_desc.index_count = pcmd->ElemCount;
 				draw_desc.base_vertex = vtx_offset;

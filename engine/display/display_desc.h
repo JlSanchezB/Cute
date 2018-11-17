@@ -39,6 +39,7 @@ namespace display
 	struct RootSignatureBaseParameter
 	{
 		size_t shader_register;
+		size_t num_constants; //Only used in case it is a 32bits constant
 	};
 
 	struct RootSignatureTableRange

@@ -8,6 +8,7 @@ namespace display
 {
 	enum class RootSignatureParameterType
 	{
+		Constants,
 		ConstantBuffer,
 		UnorderAccessBuffer,
 		ShaderResource,
