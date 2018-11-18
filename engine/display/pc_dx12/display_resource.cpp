@@ -641,8 +641,8 @@ namespace display
 
 	void UpdateResourceBuffer(Device * device, const UpdatableResourceHandle& handle, const void * data, size_t size)
 	{
-		void* memory_data;
-		size_t memory_size;
+		void* memory_data = nullptr;
+		size_t memory_size = 0;
 
 		std::visit(
 			overloaded
