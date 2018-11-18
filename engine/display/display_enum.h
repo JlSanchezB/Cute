@@ -35,6 +35,7 @@ namespace display
 
 	enum class Format
 	{
+		UNKNOWN, //Used for structure buffers
 		R32G32_FLOAT,
 		R32G32B32_FLOAT,
 		R32G32B32A32_FLOAT,

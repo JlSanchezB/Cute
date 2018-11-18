@@ -399,35 +399,86 @@ namespace display
 
 	ShaderResourceHandle CreateShaderResource(Device * device, const ShaderResourceDesc & shader_resource_desc, const char* name)
 	{
+		D3D12_RESOURCE_STATES init_resource_state;
 		D3D12_RESOURCE_DESC d12_resource_desc = {};
-		d12_resource_desc.MipLevels = static_cast<UINT>(shader_resource_desc.mips);
-		d12_resource_desc.Format = Convert(shader_resource_desc.format);
-		d12_resource_desc.Width = static_cast<UINT>(shader_resource_desc.width);
-		d12_resource_desc.Height = static_cast<UINT>(shader_resource_desc.height);
-		d12_resource_desc.Flags = D3D12_RESOURCE_FLAG_NONE;
-		d12_resource_desc.DepthOrArraySize = 1;
-		d12_resource_desc.SampleDesc.Count = 1;
-		d12_resource_desc.SampleDesc.Quality = 0;
-		d12_resource_desc.Dimension = Convert<D3D12_RESOURCE_DIMENSION>(shader_resource_desc.type);
+		if (shader_resource_desc.type == ShaderResourceType::Texture2D)
+		{
+			d12_resource_desc.MipLevels = static_cast<UINT>(shader_resource_desc.mips);
+			d12_resource_desc.Format = Convert(shader_resource_desc.format);
+			d12_resource_desc.Width = static_cast<UINT>(shader_resource_desc.width);
+			d12_resource_desc.Height = static_cast<UINT>(shader_resource_desc.height);
+			d12_resource_desc.Flags = D3D12_RESOURCE_FLAG_NONE;
+			d12_resource_desc.DepthOrArraySize = 1;
+			d12_resource_desc.SampleDesc.Count = 1;
+			d12_resource_desc.SampleDesc.Quality = 0;
+			d12_resource_desc.Dimension = Convert<D3D12_RESOURCE_DIMENSION>(shader_resource_desc.type);
 
-		ShaderResourceHandle handle = device->m_shader_resource_pool.Alloc();
-		auto& shader_resource = device->Get(handle);
+			init_resource_state = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE; //Mainly used for pixel shader
+		}
+		else if (shader_resource_desc.type == ShaderResourceType::Buffer)
+		{
+			d12_resource_desc = CD3DX12_RESOURCE_DESC::Buffer(shader_resource_desc.size);
+			init_resource_state = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE; //Mainly used in compute or vertex shaders
+		}
 
-		SourceResourceData data(shader_resource_desc.init_data, shader_resource_desc.size, shader_resource_desc.pitch, shader_resource_desc.slice_pitch);
+		if (shader_resource_desc.access == Access::Static)
+		{
+			ShaderResourceHandle handle = device->m_shader_resource_pool.Alloc();
+			auto& shader_resource = device->Get(handle);
 
-		CreateResource(device, data, true, d12_resource_desc, shader_resource.resource, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+			SourceResourceData data(shader_resource_desc.init_data, shader_resource_desc.size, shader_resource_desc.pitch, shader_resource_desc.slice_pitch);
 
-		//Create view
-		D3D12_SHADER_RESOURCE_VIEW_DESC dx12_shader_resource_desc = {};
-		dx12_shader_resource_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-		dx12_shader_resource_desc.Format = d12_resource_desc.Format;
-		dx12_shader_resource_desc.ViewDimension = Convert<D3D12_SRV_DIMENSION>(shader_resource_desc.type);
-		dx12_shader_resource_desc.Texture2D.MipLevels = d12_resource_desc.MipLevels;
-		device->m_native_device->CreateShaderResourceView(shader_resource.resource.Get(), &dx12_shader_resource_desc, device->m_shader_resource_pool.GetDescriptor(handle));
+			CreateResource(device, data, true, d12_resource_desc, shader_resource.resource, init_resource_state);
 
-		SetObjectName(shader_resource.resource.Get(), name);
+			//Create view
+			D3D12_SHADER_RESOURCE_VIEW_DESC dx12_shader_resource_desc = {};
+			dx12_shader_resource_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+			dx12_shader_resource_desc.Format = d12_resource_desc.Format;
+			dx12_shader_resource_desc.ViewDimension = Convert<D3D12_SRV_DIMENSION>(shader_resource_desc.type);
+			if (shader_resource_desc.type == ShaderResourceType::Buffer)
+			{
+				dx12_shader_resource_desc.Buffer.NumElements = static_cast<UINT>(shader_resource_desc.num_elements);
+				dx12_shader_resource_desc.Buffer.StructureByteStride = static_cast<UINT>(shader_resource_desc.structure_stride);
+			}
+			else if (shader_resource_desc.type == ShaderResourceType::Texture2D)
+			{
+				dx12_shader_resource_desc.Texture2D.MipLevels = d12_resource_desc.MipLevels;
+			}
+			device->m_native_device->CreateShaderResourceView(shader_resource.resource.Get(), &dx12_shader_resource_desc, device->m_shader_resource_pool.GetDescriptor(handle));
 
-		return handle;
+			SetObjectName(shader_resource.resource.Get(), name);
+
+			return handle;
+		}
+		else if (shader_resource_desc.access == Access::Dynamic)
+		{
+			SourceResourceData data(shader_resource_desc.init_data, shader_resource_desc.size);
+
+			if (shader_resource_desc.type == ShaderResourceType::Buffer)
+			{
+				ShaderResourceHandle handle = CreateRingResources(device, data, d12_resource_desc, device->m_shader_resource_pool, init_resource_state,
+					[&](display::Device* device, const ShaderResourceHandle& handle, display::Device::ShaderResource& shader_resource)
+				{
+					D3D12_SHADER_RESOURCE_VIEW_DESC dx12_shader_resource_desc = {};
+					dx12_shader_resource_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+					dx12_shader_resource_desc.Format = d12_resource_desc.Format;
+					dx12_shader_resource_desc.ViewDimension = Convert<D3D12_SRV_DIMENSION>(shader_resource_desc.type);
+					dx12_shader_resource_desc.Buffer.NumElements = static_cast<UINT>(shader_resource_desc.num_elements);
+					dx12_shader_resource_desc.Buffer.StructureByteStride = static_cast<UINT>(shader_resource_desc.structure_stride);
+			
+					device->m_native_device->CreateShaderResourceView(shader_resource.resource.Get(), &dx12_shader_resource_desc, device->m_shader_resource_pool.GetDescriptor(handle));
+
+					SetObjectName(shader_resource.resource.Get(), name);
+				});
+			}
+			else
+			{
+				std::runtime_error::exception("Dynamic Texture2D SRV are not supported");
+				return ShaderResourceHandle();
+			}
+		}
+
+		return ShaderResourceHandle();
 	}
 
 	ShaderResourceHandle CreateTextureResource(Device* device, const void* data, size_t size, const char* name)

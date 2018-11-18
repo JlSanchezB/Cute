@@ -223,6 +223,7 @@ namespace display
 
 	struct ShaderResourceDesc
 	{
+		Access access = Access::Static;
 		Format format = Format::R8G8B8A8_UNORM;
 		ShaderResourceType type = ShaderResourceType::Texture2D;
 		size_t width = 0;
@@ -231,6 +232,8 @@ namespace display
 		size_t slice_pitch = 0;
 		size_t mips = 0;
 		size_t size = 0;
+		size_t num_elements = 0; //Used for buffers
+		size_t structure_stride = 0; //Used for buffers
 		const void* init_data = nullptr;
 	};
 

@@ -17,6 +17,7 @@ namespace display
 		switch (format)
 		{
 		default:
+		case Format::UNKNOWN: return DXGI_FORMAT_UNKNOWN;
 		case Format::R32G32_FLOAT: return DXGI_FORMAT_R32G32_FLOAT;
 		case Format::R32G32B32_FLOAT: return DXGI_FORMAT_R32G32B32_FLOAT;
 		case Format::R32G32B32A32_FLOAT: return DXGI_FORMAT_R32G32B32A32_FLOAT;
