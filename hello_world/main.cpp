@@ -554,7 +554,7 @@ public:
 				constant_buffer.size[0] = 0.01f + 0.02f * quad;
 
 				//Update constant buffer
-				display::UpdateConstantBuffer(m_device, m_test_2.m_constant_buffer[i], &constant_buffer, sizeof(constant_buffer));
+				display::UpdateResourceBuffer(m_device, m_test_2.m_constant_buffer[i], &constant_buffer, sizeof(constant_buffer));
 				//Resource binding
 				display::SetDescriptorTable(m_device, m_test_2.m_command_list, 0, m_test_2.m_constant_descriptor_table[i]);
 
@@ -618,7 +618,7 @@ public:
 			}
 
 			//Update vertex buffer
-			display::UpdateVertexBuffer(m_device, m_test_3.m_vertex_buffer_instance, &instance_buffer[0], sizeof(instance_buffer));
+			display::UpdateResourceBuffer(m_device, m_test_3.m_vertex_buffer_instance, &instance_buffer[0], sizeof(instance_buffer));
 
 			//Draw
 			display::DrawIndexedInstancedDesc draw_desc;

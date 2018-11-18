@@ -432,8 +432,8 @@ void imgui_render::Draw(display::Device * device, const display::CommandListHand
 		idx_dst += cmd_list->IdxBuffer.Size;
 	}
 
-	display::UpdateVertexBuffer(device, g_vertex_buffer, vertex_buffer.data(), draw_data->TotalVtxCount * sizeof(ImDrawVert));
-	display::UpdateIndexBuffer(device, g_index_buffer, index_buffer.data(), draw_data->TotalIdxCount * sizeof(ImDrawIdx));
+	display::UpdateResourceBuffer(device, g_vertex_buffer, vertex_buffer.data(), draw_data->TotalVtxCount * sizeof(ImDrawVert));
+	display::UpdateResourceBuffer(device, g_index_buffer, index_buffer.data(), draw_data->TotalIdxCount * sizeof(ImDrawIdx));
 
 
 	//Set all the resources

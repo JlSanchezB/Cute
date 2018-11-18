@@ -32,15 +32,13 @@
     <CustomBuild Include="constant_buffer_shader.hlsl">
       <Filter>Assets</Filter>
     </CustomBuild>
+    <CustomBuild Include="instance_shader.hlsl">
+      <Filter>Assets</Filter>
+    </CustomBuild>
   </ItemGroup>
   <ItemGroup>
     <CopyFileToFolders Include="texture.dds">
       <Filter>Assets</Filter>
     </CopyFileToFolders>
-  </ItemGroup>
-  <ItemGroup>
-    <FxCompile Include="instance_shader.hlsl">
-      <Filter>Assets</Filter>
-    </FxCompile>
   </ItemGroup>
 </Project>

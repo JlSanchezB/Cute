@@ -639,30 +639,42 @@ namespace display
 		device->m_sampler_descriptor_table_pool.Free(handle);
 	}
 
-	void UpdateConstantBuffer(Device * device, const WeakConstantBufferHandle & constant_buffer_handle, const void * data, size_t size)
+	void UpdateResourceBuffer(Device * device, const UpdatableResourceHandle& handle, const void * data, size_t size)
 	{
-		auto& constant_buffer = device->Get(GetRingResource(device, constant_buffer_handle, device->m_frame_index));
-		assert(size <= constant_buffer.memory_size);
+		void* memory_data;
+		size_t memory_size;
+
+		std::visit(
+			overloaded
+			{
+				[&](WeakConstantBufferHandle constant_buffer_handle)
+				{
+					auto& constant_buffer = device->Get(GetRingResource(device, constant_buffer_handle, device->m_frame_index));
+					memory_data = constant_buffer.memory_data;
+					memory_size = constant_buffer.memory_size;
+				},
+				[&](WeakVertexBufferHandle vertex_buffer_handle)
+				{
+					auto& vertex_buffer = device->Get(GetRingResource(device, vertex_buffer_handle, device->m_frame_index));
+					memory_data = vertex_buffer.memory_data;
+					memory_size = vertex_buffer.memory_size;
+				},
+				[&](WeakIndexBufferHandle index_buffer_handle)
+				{
+					auto& index_buffer = device->Get(GetRingResource(device, index_buffer_handle, device->m_frame_index));
+					memory_data = index_buffer.memory_data;
+					memory_size = index_buffer.memory_size;
+				}
+			},
+			handle);
+
+		assert(size <= memory_size);
+		assert(memory_data);
 
 		//Copy
-		memcpy(constant_buffer.memory_data, data, size);
-	}
-
-	void UpdateVertexBuffer(Device * device, const WeakVertexBufferHandle & vertex_buffer_handle, const void * data, size_t size)
-	{
-		auto& vertex_buffer = device->Get(GetRingResource(device, vertex_buffer_handle, device->m_frame_index));
-		assert(size <= vertex_buffer.memory_size);
-
-		//Copy
-		memcpy(vertex_buffer.memory_data, data, size);
-	}
-
-	void UpdateIndexBuffer(Device * device, const WeakIndexBufferHandle & index_buffer_handle, const void * data, size_t size)
-	{
-		auto& index_buffer = device->Get(GetRingResource(device, index_buffer_handle, device->m_frame_index));
-		assert(size <= index_buffer.memory_size);
-
-		//Copy
-		memcpy(index_buffer.memory_data, data, size);
+		if (memory_data)
+		{
+			memcpy(memory_data, data, size);
+		}
 	}
 }

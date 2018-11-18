@@ -160,13 +160,8 @@ namespace display
 	void SetDescriptorTable(Device* device, const WeakCommandListHandle& command_list, size_t root_parameter, const WeakSamplerDescriptorTableHandle& sampler_descriptor_table);
 
 	//Update constant buffer
-	void UpdateConstantBuffer(Device* device, const WeakConstantBufferHandle& constant_buffer_handle, const void* data, size_t size);
-
-	//Update vertex buffer
-	void UpdateVertexBuffer(Device* device, const WeakVertexBufferHandle& vertex_buffer_handle, const void* data, size_t size);
-
-	//Update index buffer
-	void UpdateIndexBuffer(Device * device, const WeakIndexBufferHandle & index_buffer_handle, const void * data, size_t size);
+	using UpdatableResourceHandle = std::variant<WeakConstantBufferHandle, WeakVertexBufferHandle, WeakIndexBufferHandle>;
+	void UpdateResourceBuffer(Device* device, const UpdatableResourceHandle& handle, const void* data, size_t size);
 
 	//Draw
 	void Draw(Device* device, const WeakCommandListHandle& command_list, const DrawDesc& draw_desc);
