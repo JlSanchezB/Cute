@@ -31,6 +31,27 @@ namespace
 	UINT g_window_style = WS_OVERLAPPEDWINDOW;
 	bool g_windowed = true;
 
+	//global variable with the current hwnd, needed for specicif win32 and dx12 init
+	HWND g_current_hwnd;
+
+	//Frecuency for the perfomance timer
+	LARGE_INTEGER g_frequency;
+
+	//Frecuency for the perfomance timer
+	LARGE_INTEGER g_current_time;
+
+	//Begin time
+	LARGE_INTEGER g_begin_time;
+
+	//Imgui menu enabled
+	bool g_imgui_menu_enable = false;
+
+	//Imgui fps enable
+	bool g_imgui_fps_enable = true;
+
+	//Imgui demo
+	bool g_imgui_demo_enable = false;
+
 	//Windows message handle
 	LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	{
@@ -70,7 +91,14 @@ namespace
 				game->OnSizeChange(clientRect.right - clientRect.left, clientRect.bottom - clientRect.top, wParam == SIZE_MINIMIZED);
 			}
 			return 0;
-
+		case WM_KEYDOWN:
+		{
+			if (wParam == VK_OEM_8)
+			{
+				g_imgui_menu_enable = ! g_imgui_menu_enable;
+			}
+			break;
+		}
 		case WM_SYSKEYDOWN:
 			// Handle ALT+ENTER:
 			if ((wParam == VK_RETURN) && (lParam & (1 << 29)))
@@ -173,17 +201,39 @@ namespace
 		ImGui::End();
 
 	}
-	//global variable with the current hwnd, needed for specicif win32 and dx12 init
-	HWND g_current_hwnd;
 
-	//Frecuency for the perfomance timer
-	LARGE_INTEGER g_frequency;
+	void RenderImgui(platform::Game* game, float elapsed_time)
+	{
+		if (g_imgui_menu_enable)
+		{
+			//Display menu
+			if (ImGui::BeginMainMenuBar())
+			{
+				if (ImGui::BeginMenu("Cute"))
+				{
+					if (ImGui::MenuItem("Logger")) {};
+					ImGui::Checkbox("Show FPS", &g_imgui_fps_enable);
+					ImGui::Checkbox("Show Imgui Demo", &g_imgui_demo_enable);
+					ImGui::EndMenu();
+				}
+				//Call game to add it owns menus
+				game->OnAddImguiMenu();
 
-	//Frecuency for the perfomance timer
-	LARGE_INTEGER g_current_time;
+				ImGui::EndMainMenuBar();
+			}
+		}
 
-	//Begin time
-	LARGE_INTEGER g_begin_time;
+		if (g_imgui_demo_enable)
+		{
+			//Show Imgui demo
+			ImGui::ShowDemoWindow(&g_imgui_demo_enable);
+		}
+
+		if (g_imgui_fps_enable)
+		{
+			RenderFPSOverlay(elapsed_time);
+		}
+	}
 }
 
 namespace platform
@@ -287,8 +337,8 @@ namespace platform
 			//Render
 			game->OnTick(total_time, elapsed_time);
 
-			//Render FPS
-			RenderFPSOverlay(elapsed_time);
+			//Render platform imgui (menu, fps,...)
+			RenderImgui(game, elapsed_time);
 
 			//Render IMGUI
 			ImGui::Render();
