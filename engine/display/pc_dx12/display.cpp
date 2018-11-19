@@ -453,8 +453,8 @@ namespace display
 		descriptor_table[0] = device->m_descriptor_table_pool.GetHeap();
 		command_list->SetDescriptorHeaps(1, descriptor_table);
 
-		//Create a new context TODO: use a pool
-		DX12Context* context = new DX12Context();
+		//Create a new context
+		DX12Context* context = device->m_context_pool.Alloc();
 		context->device = device;
 		context->command_list = command_list;
 		context->current_root_signature = WeakRootSignatureHandle();
@@ -469,8 +469,8 @@ namespace display
 		
 		dx12_context->command_list->Close();
 
-		//Delete TODO: Use a pool
-		delete dx12_context;
+		//Delete
+		device->m_context_pool.Free(dx12_context);
 	}
 
 	void ExecuteCommandList(Device * device, const WeakCommandListHandle& handle)

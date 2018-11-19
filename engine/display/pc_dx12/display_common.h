@@ -9,6 +9,7 @@
 #include "d3dx12.h"
 #include "display_convert.h"
 #include <core/ring_buffer.h>
+#include <core/simple_pool.h>
 
 #include <windows.h>
 #include <d3d12.h>
@@ -186,6 +187,14 @@ namespace display
 		size_t memory_size = 0;
 	};
 
+	//Internal context implementation
+	struct DX12Context : Context
+	{
+		Device* device;
+		ComPtr<ID3D12GraphicsCommandList> command_list;
+		WeakRootSignatureHandle current_root_signature;
+	};
+
 	//Device internal implementation
 	struct Device
 	{
@@ -217,6 +226,9 @@ namespace display
 		bool m_windowed; //Only if tearing is not enabled
 		size_t m_width;
 		size_t m_height;
+
+		//Pool for context
+		core::SimplePool<DX12Context, 256> m_context_pool;
 
 		//Pool of resources
 		struct CommandList
@@ -497,14 +509,6 @@ namespace display
 
 		return handle;
 	}
-
-	//Internal context implementation
-	struct DX12Context : Context
-	{
-		Device* device;
-		ComPtr<ID3D12GraphicsCommandList> command_list;
-		WeakRootSignatureHandle current_root_signature;
-	};
 }
 
 namespace

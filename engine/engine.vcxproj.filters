@@ -80,6 +80,9 @@
     <ClInclude Include="core\imgui_render.h">
       <Filter>core</Filter>
     </ClInclude>
+    <ClInclude Include="core\simple_pool.h">
+      <Filter>core</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="display\pc_dx12\display.cpp">
