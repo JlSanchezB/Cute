@@ -161,6 +161,13 @@ namespace display
 		uint8_t sample_count = 1;
 	};
 
+	struct ComputePipelineStateDesc
+	{
+		WeakRootSignatureHandle root_signature;
+
+		ShaderDesc compute_shader;
+	};
+
 	struct Viewport
 	{
 		float top_left_x = 0.f;

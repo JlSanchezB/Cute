@@ -667,6 +667,30 @@ namespace display
 		device->m_pipeline_state_pool.Free(handle);
 	}
 
+	PipelineStateHandle CreateComputePipelineState(Device * device, const ComputePipelineStateDesc & compute_pipeline_state_desc, const char * name)
+	{
+		PipelineStateHandle handle = device->m_pipeline_state_pool.Alloc();
+
+		//Fill the DX12 structs using our data
+		D3D12_COMPUTE_PIPELINE_STATE_DESC DX12_pipeline_state_desc = {};
+
+		DX12_pipeline_state_desc.pRootSignature = device->Get(compute_pipeline_state_desc.root_signature).resource.Get();
+		DX12_pipeline_state_desc.CS.pShaderBytecode = compute_pipeline_state_desc.compute_shader.data;
+		DX12_pipeline_state_desc.CS.BytecodeLength = compute_pipeline_state_desc.compute_shader.size;
+
+		//Create pipeline state
+		ThrowIfFailed(device->m_native_device->CreateComputePipelineState(&DX12_pipeline_state_desc, IID_PPV_ARGS(&device->Get(handle))));
+
+		SetObjectName(device->Get(handle).Get(), name);
+
+		return handle;
+	}
+
+	void DestroyComputePipelineState(Device * device, PipelineStateHandle & handle)
+	{
+		device->m_pipeline_state_pool.Free(handle);
+	}
+
 	void CompileShader(Device * device, const CompileShaderDesc & compile_shader_desc, std::vector<char>& shader_blob)
 	{
 		ComPtr<ID3DBlob> blob;
