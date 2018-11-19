@@ -244,9 +244,9 @@ namespace platform
 	}
 
 	//Called from the device before present with the present command list
-	void PresentCallback(display::Device* device, display::CommandListHandle& commandlist_handle)
+	void PresentCallback(display::Context* context)
 	{
-		imgui_render::Draw(device, commandlist_handle);
+		imgui_render::Draw(context);
 	}
 
 	void Game::SetDevice(display::Device * device)

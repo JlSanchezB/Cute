@@ -155,6 +155,7 @@
     <ClCompile Include="display\pc_dx12\dds_loader.cpp" />
     <ClCompile Include="display\pc_dx12\descriptor_heap.cpp" />
     <ClCompile Include="display\pc_dx12\display.cpp" />
+    <ClCompile Include="display\pc_dx12\display_context.cpp" />
     <ClCompile Include="display\pc_dx12\display_resource.cpp" />
   </ItemGroup>
   <ItemGroup>

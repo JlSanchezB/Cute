@@ -368,12 +368,14 @@ bool imgui_render::WndProcHandler(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
 	return false;
 }
 
-void imgui_render::Draw(display::Device * device, const display::CommandListHandle & command_list_handle)
+void imgui_render::Draw(display::Context* context)
 {
 	auto draw_data = ImGui::GetDrawData();
 
+	display::Device* device = context->GetDevice();
+
 	//Set back buffer
-	display::SetRenderTargets(device, command_list_handle, 1, &display::GetBackBuffer(device), display::WeakDepthBufferHandle());
+	context->SetRenderTargets(1, &display::GetBackBuffer(device), display::WeakDepthBufferHandle());
 
 	//Check if we need to create a vertex buffer
 	if (current_vertex_buffer_size < draw_data->TotalVtxCount)
@@ -437,13 +439,13 @@ void imgui_render::Draw(display::Device * device, const display::CommandListHand
 
 
 	//Set all the resources
-	display::SetRootSignature(device, command_list_handle, g_rootsignature);
-	display::SetPipelineState(device, command_list_handle, g_pipeline_state);
-	display::SetVertexBuffers(device, command_list_handle, 0, 1, &g_vertex_buffer);
-	display::SetIndexBuffer(device, command_list_handle, g_index_buffer);
+	context->SetRootSignature(g_rootsignature);
+	context->SetPipelineState(g_pipeline_state);
+	context->SetVertexBuffers(0, 1, &g_vertex_buffer);
+	context->SetIndexBuffer(g_index_buffer);
 	//display::SetConstantBuffer(device, command_list_handle, 0, g_constant_buffer);
-	display::SetConstants(device, command_list_handle, 0, mvp, 16);
-	display::SetViewport(device, command_list_handle, display::Viewport(draw_data->DisplaySize.x, draw_data->DisplaySize.y));
+	context->SetConstants(0, mvp, 16);
+	context->SetViewport(display::Viewport(draw_data->DisplaySize.x, draw_data->DisplaySize.y));
 
 	// Render command lists
 	int vtx_offset = 0;
@@ -466,15 +468,15 @@ void imgui_render::Draw(display::Device * device, const display::CommandListHand
 				rect.top = static_cast<size_t>(pcmd->ClipRect.y - pos.y);
 				rect.right = static_cast<size_t>(pcmd->ClipRect.z - pos.x);
 				rect.bottom = static_cast<size_t>(pcmd->ClipRect.w - pos.y);
-				display::SetScissorRect(device, command_list_handle, rect);
+				context->SetScissorRect( rect);
 				
-				display::SetDescriptorTable(device, command_list_handle, 1, *reinterpret_cast<display::DescriptorTableHandle*>(pcmd->TextureId));
+				context->SetDescriptorTable(1, *reinterpret_cast<display::DescriptorTableHandle*>(pcmd->TextureId));
 
 				display::DrawIndexedDesc draw_desc;
 				draw_desc.index_count = pcmd->ElemCount;
 				draw_desc.base_vertex = vtx_offset;
 				draw_desc.start_index = idx_offset;
-				display::DrawIndexed(device, command_list_handle, draw_desc);
+				context->DrawIndexed(draw_desc);
 			}
 			idx_offset += pcmd->ElemCount;
 		}

@@ -11,11 +11,8 @@
 
 namespace display
 {
-	//TODO: Access to adaptors
-
 	//Device
 	struct Device;
-
 
 	struct DeviceInitParams
 	{
@@ -25,6 +22,8 @@ namespace display
 		bool debug = false;
 		bool tearing = false;
 	};
+
+	struct Context;
 
 	Device* CreateDevice(const DeviceInitParams& params);
 	void DestroyDevice(Device* device);
@@ -40,10 +39,10 @@ namespace display
 	CommandListHandle CreateCommandList(Device* device, const char* name = nullptr);
 	void DestroyCommandList(Device* device, CommandListHandle& handle);
 
-	//Open command list, begin recording
-	void OpenCommandList(Device* device, const WeakCommandListHandle& handle);
+	//Open command list, begin recording. Return the context for recording
+	Context* OpenCommandList(Device* device, const WeakCommandListHandle& handle);
 	//Close command list, stop recording
-	void CloseCommandList(Device* device, const WeakCommandListHandle& handle);
+	void CloseCommandList(Device* device, Context* context);
 
 	//Execute command list
 	void ExecuteCommandList(Device* device, const WeakCommandListHandle& handle);
@@ -110,66 +109,69 @@ namespace display
 	//Destroy sampler descriptor table
 	void DestroySamplerDescriptorTable(Device * device, SamplerDescriptorTableHandle& handle);
 
-	//Context
-
-	//Set render target
-	void SetRenderTargets(Device* device, const WeakCommandListHandle& command_list, size_t num_targets, WeakRenderTargetHandle* render_target_array, WeakDepthBufferHandle depth_stencil);
-
-	//Clear
-	void ClearRenderTargetColour(Device* device, const WeakCommandListHandle& command_list, const WeakRenderTargetHandle& render_target, const float colour[4]);
-
-	//Set Viewport
-	void SetViewport(Device* device, const WeakCommandListHandle& command_list, const Viewport& viewport);
-
-	//Set Scissor
-	void SetScissorRect(Device* device, const WeakCommandListHandle& command_list, const Rect scissor_rect);
-
-	//Set root signature
-	void SetRootSignature(Device* device, const WeakCommandListHandle& command_list, const WeakRootSignatureHandle& root_signature);
-
-	//Set pipeline state
-	void SetPipelineState(Device* device, const WeakCommandListHandle& command_list, const WeakPipelineStateHandle& pipeline_state);
-
-	//Set Vertex buffers
-	void SetVertexBuffers(Device* device, const WeakCommandListHandle& command_list, size_t start_slot_index, size_t num_vertex_buffers, WeakVertexBufferHandle* vertex_buffers);
-
-	//Set Index Buffer
-	void SetIndexBuffer(Device* device, const WeakCommandListHandle& command_list, const WeakIndexBufferHandle& index_buffer);
-
-	//Render target transition
-	void RenderTargetTransition(Device* device, const WeakCommandListHandle& command_list, size_t num_targets, WeakRenderTargetHandle* render_target_array, const ResourceState& dest_state);
-
-	//Resource Binding
-
-	//Set constants
-	void SetConstants(Device* device, const WeakCommandListHandle& command_list, size_t root_parameter, const void* data, size_t size);
-
-	//Set constant buffer
-	void SetConstantBuffer(Device* device, const WeakCommandListHandle& command_list, size_t root_parameter, const WeakConstantBufferHandle& constant_buffer);
-
-	//Set unordered access buffer
-	void SetUnorderedAccessBuffer(Device* device, const WeakCommandListHandle& command_list, size_t root_parameter, const WeakUnorderedAccessBufferHandle& unordered_access_buffer);
-
-	//Set shader resource
-	void SetShaderResource(Device* device, const WeakCommandListHandle& command_list, size_t root_parameter, const WeakShaderResourceHandle& shader_resource);
-
-	//Set descriptor table
-	void SetDescriptorTable(Device* device, const WeakCommandListHandle& command_list, size_t root_parameter, const WeakDescriptorTableHandle& descriptor_table);
-
-	//Set descriptor table
-	void SetDescriptorTable(Device* device, const WeakCommandListHandle& command_list, size_t root_parameter, const WeakSamplerDescriptorTableHandle& sampler_descriptor_table);
-
-	//Update constant buffer
+	//Update resource buffer (only Access::Dynamic)
 	using UpdatableResourceHandle = std::variant<WeakConstantBufferHandle, WeakVertexBufferHandle, WeakIndexBufferHandle>;
 	void UpdateResourceBuffer(Device* device, const UpdatableResourceHandle& handle, const void* data, size_t size);
 
-	//Draw
-	void Draw(Device* device, const WeakCommandListHandle& command_list, const DrawDesc& draw_desc);
+	//Context
+	struct Context
+	{
+		//Get device
+		Device* GetDevice();
 
-	//Draw Indexed
-	void DrawIndexed(Device* device, const WeakCommandListHandle& command_list, const DrawIndexedDesc& draw_desc);
+		//Set render target
+		void SetRenderTargets(size_t num_targets, WeakRenderTargetHandle* render_target_array, WeakDepthBufferHandle depth_stencil);
 
-	//Draw Indexed Instanced
-	void DrawIndexedInstanced(Device* device, const WeakCommandListHandle& command_list, const DrawIndexedInstancedDesc& draw_desc);
+		//Clear
+		void ClearRenderTargetColour(const WeakRenderTargetHandle& render_target, const float colour[4]);
+
+		//Set Viewport
+		void SetViewport(const Viewport& viewport);
+
+		//Set Scissor
+		void SetScissorRect(const Rect scissor_rect);
+
+		//Set root signature
+		void SetRootSignature(const WeakRootSignatureHandle& root_signature);
+
+		//Set pipeline state
+		void SetPipelineState(const WeakPipelineStateHandle& pipeline_state);
+
+		//Set Vertex buffers
+		void SetVertexBuffers(size_t start_slot_index, size_t num_vertex_buffers, WeakVertexBufferHandle* vertex_buffers);
+
+		//Set Index Buffer
+		void SetIndexBuffer(const WeakIndexBufferHandle& index_buffer);
+
+		//Render target transition
+		void RenderTargetTransition(size_t num_targets, WeakRenderTargetHandle* render_target_array, const ResourceState& dest_state);
+
+		//Set constants
+		void SetConstants(size_t root_parameter, const void* data, size_t size);
+
+		//Set constant buffer
+		void SetConstantBuffer(size_t root_parameter, const WeakConstantBufferHandle& constant_buffer);
+
+		//Set unordered access buffer
+		void SetUnorderedAccessBuffer(size_t root_parameter, const WeakUnorderedAccessBufferHandle& unordered_access_buffer);
+
+		//Set shader resource
+		void SetShaderResource(size_t root_parameter, const WeakShaderResourceHandle& shader_resource);
+
+		//Set descriptor table
+		void SetDescriptorTable(size_t root_parameter, const WeakDescriptorTableHandle& descriptor_table);
+
+		//Set descriptor table
+		void SetDescriptorTable(size_t root_parameter, const WeakSamplerDescriptorTableHandle& sampler_descriptor_table);
+
+		//Draw
+		void Draw(const DrawDesc& draw_desc);
+
+		//Draw Indexed
+		void DrawIndexed(const DrawIndexedDesc& draw_desc);
+
+		//Draw Indexed Instanced
+		void DrawIndexedInstanced(const DrawIndexedInstancedDesc& draw_desc);
+	};
 }
 #endif DISPLAY_H_

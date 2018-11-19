@@ -458,90 +458,90 @@ public:
 		//Test 1
 		{
 			//Open command list
-			display::OpenCommandList(m_device, m_test_1.m_command_list);
+			display::Context* context = display::OpenCommandList(m_device, m_test_1.m_command_list);
 
 			//Set Render Target
-			display::SetRenderTargets(m_device, m_test_1.m_command_list, 1, &m_test_1.m_render_target, display::WeakDepthBufferHandle());
+			context->SetRenderTargets(1, &m_test_1.m_render_target, display::WeakDepthBufferHandle());
 
 			//Clear
 			const float clear_colour[] = { 0.f, 0.f, 0.f, 0.f };
-			display::ClearRenderTargetColour(m_device, m_test_1.m_command_list, m_test_1.m_render_target, clear_colour);
+			context->ClearRenderTargetColour( m_test_1.m_render_target, clear_colour);
 
 			//Set root signature
-			display::SetRootSignature(m_device, m_test_1.m_command_list, m_test_1.m_root_signature);
+			context->SetRootSignature(m_test_1.m_root_signature);
 
 			//Set pipeline state
-			display::SetPipelineState(m_device, m_test_1.m_command_list, m_test_1.m_pipeline_state);
+			context->SetPipelineState(m_test_1.m_pipeline_state);
 
 			//Set viewport
-			display::SetViewport(m_device, m_test_1.m_command_list, display::Viewport(static_cast<float>(512 / 2), static_cast<float>(512 / 2)));
+			context->SetViewport(display::Viewport(static_cast<float>(512 / 2), static_cast<float>(512 / 2)));
 
 			//Set Scissor Rect
-			display::SetScissorRect(m_device, m_test_1.m_command_list, display::Rect(0, 0, 512 / 2, 512 / 2));
+			context->SetScissorRect(display::Rect(0, 0, 512 / 2, 512 / 2));
 
 			//Set vertex buffer
-			display::SetVertexBuffers(m_device, m_test_1.m_command_list, 0, 1, &m_test_1.m_vertex_buffer);
+			context->SetVertexBuffers(0, 1, &m_test_1.m_vertex_buffer);
 
 			//Resource binding
-			display::SetDescriptorTable(m_device, m_test_1.m_command_list, 0, m_test_1.m_texture_descriptor_table);
+			context->SetDescriptorTable(0, m_test_1.m_texture_descriptor_table);
 
 			//Draw
 			display::DrawDesc draw_desc;
 			draw_desc.vertex_count = 3;
-			display::Draw(m_device, m_test_1.m_command_list, draw_desc);
+			context->Draw(draw_desc);
 
 			//Use render target as texture
-			display::RenderTargetTransition(m_device, m_test_1.m_command_list, 1, &m_test_1.m_render_target, display::ResourceState::PixelShaderResource);
+			context->RenderTargetTransition(1, &m_test_1.m_render_target, display::ResourceState::PixelShaderResource);
 			//Set BackBuffer
-			display::SetRenderTargets(m_device, m_test_1.m_command_list, 1, &display::GetBackBuffer(m_device), display::WeakDepthBufferHandle());
+			context->SetRenderTargets(1, &display::GetBackBuffer(m_device), display::WeakDepthBufferHandle());
 
-			display::ClearRenderTargetColour(m_device, m_test_1.m_command_list, display::GetBackBuffer(m_device), clear_colour);
+			context->ClearRenderTargetColour(display::GetBackBuffer(m_device), clear_colour);
 
 			//Set viewport
-			display::SetViewport(m_device, m_test_1.m_command_list, display::Viewport(static_cast<float>(m_width / 2), static_cast<float>(m_height / 2)));
+			context->SetViewport(display::Viewport(static_cast<float>(m_width / 2), static_cast<float>(m_height / 2)));
 
 			//Set Scissor Rect
-			display::SetScissorRect(m_device, m_test_1.m_command_list, display::Rect(0, 0, m_width, m_height));
+			context->SetScissorRect(display::Rect(0, 0, m_width, m_height));
 
 			//Resource binding
-			display::SetDescriptorTable(m_device, m_test_1.m_command_list, 0, m_test_1.m_render_target_descriptor_table);
+			context->SetDescriptorTable(0, m_test_1.m_render_target_descriptor_table);
 
 			//Draw
-			display::Draw(m_device, m_test_1.m_command_list, draw_desc);
+			context->Draw(draw_desc);
 
 
 			//Close command list
-			display::CloseCommandList(m_device, m_test_1.m_command_list);
+			display::CloseCommandList(m_device, context);
 		}
 
 		//Test 2
 		{
 			//Open command list
-			display::OpenCommandList(m_device, m_test_2.m_command_list);
+			display::Context* context = display::OpenCommandList(m_device, m_test_2.m_command_list);
 
 			//Set Render Target
-			display::SetRenderTargets(m_device, m_test_2.m_command_list, 1, &display::GetBackBuffer(m_device), display::WeakDepthBufferHandle());
+			context->SetRenderTargets(1, &display::GetBackBuffer(m_device), display::WeakDepthBufferHandle());
 
 			//Set viewport
 			display::Viewport viewport(static_cast<float>(m_width / 2), static_cast<float>(m_height / 2));
 			viewport.top_left_x = 0;
 			viewport.top_left_y = static_cast<float>(m_height / 2);
-			display::SetViewport(m_device, m_test_2.m_command_list, viewport);
+			context->SetViewport(viewport);
 
 			//Set Scissor Rect
-			display::SetScissorRect(m_device, m_test_2.m_command_list, display::Rect(0, 0, m_width, m_height));
+			context->SetScissorRect(display::Rect(0, 0, m_width, m_height));
 
 			//Set root signature
-			display::SetRootSignature(m_device, m_test_2.m_command_list, m_test_2.m_root_signature);
+			context->SetRootSignature(m_test_2.m_root_signature);
 
 			//Set pipeline state
-			display::SetPipelineState(m_device, m_test_2.m_command_list, m_test_2.m_pipeline_state);
+			context->SetPipelineState(m_test_2.m_pipeline_state);
 
 			//Set vertex buffer
-			display::SetVertexBuffers(m_device, m_test_2.m_command_list, 0, 1, &m_test_2.m_vertex_buffer);
+			context->SetVertexBuffers(0, 1, &m_test_2.m_vertex_buffer);
 
 			//Set index buffer
-			display::SetIndexBuffer(m_device, m_test_2.m_command_list, m_test_2.m_index_buffer);
+			context->SetIndexBuffer(m_test_2.m_index_buffer);
 
 			for (size_t i = 0; i < Test2::kNumQuads; ++i)
 			{
@@ -556,48 +556,48 @@ public:
 				//Update constant buffer
 				display::UpdateResourceBuffer(m_device, m_test_2.m_constant_buffer[i], &constant_buffer, sizeof(constant_buffer));
 				//Resource binding
-				display::SetDescriptorTable(m_device, m_test_2.m_command_list, 0, m_test_2.m_constant_descriptor_table[i]);
+				context->SetDescriptorTable(0, m_test_2.m_constant_descriptor_table[i]);
 
 				//Draw
 				display::DrawIndexedDesc draw_desc;
 				draw_desc.index_count = 6;
-				display::DrawIndexed(m_device, m_test_2.m_command_list, draw_desc);
+				context->DrawIndexed( draw_desc);
 			}
 
 			//Close command list
-			display::CloseCommandList(m_device, m_test_2.m_command_list);
+			display::CloseCommandList(m_device, context);
 		}
 
 		{
 			//Open command list
-			display::OpenCommandList(m_device, m_test_3.m_command_list);
+			display::Context* context = display::OpenCommandList(m_device, m_test_3.m_command_list);
 
 			//Set Render Target
-			display::SetRenderTargets(m_device, m_test_3.m_command_list, 1, &display::GetBackBuffer(m_device), display::WeakDepthBufferHandle());
+			context->SetRenderTargets(1, &display::GetBackBuffer(m_device), display::WeakDepthBufferHandle());
 
 			//Set viewport
 			display::Viewport viewport(static_cast<float>(m_width / 2), static_cast<float>(m_height / 2));
 			viewport.top_left_x = static_cast<float>(m_width / 2);
 			viewport.top_left_y = 0;
-			display::SetViewport(m_device, m_test_3.m_command_list, viewport);
+			context->SetViewport(viewport);
 
 			//Set Scissor Rect
-			display::SetScissorRect(m_device, m_test_3.m_command_list, display::Rect(0, 0, m_width, m_height));
+			context->SetScissorRect(display::Rect(0, 0, m_width, m_height));
 
 			//Set root signature
-			display::SetRootSignature(m_device, m_test_3.m_command_list, m_test_3.m_root_signature);
+			context->SetRootSignature(m_test_3.m_root_signature);
 
 			//Set pipeline state
-			display::SetPipelineState(m_device, m_test_3.m_command_list, m_test_3.m_pipeline_state);
+			context->SetPipelineState(m_test_3.m_pipeline_state);
 
 			//Set vertex buffer
-			display::SetVertexBuffers(m_device, m_test_3.m_command_list, 0, 1, &m_test_2.m_vertex_buffer);
+			context->SetVertexBuffers(0, 1, &m_test_2.m_vertex_buffer);
 
 			//Set instance buffer
-			display::SetVertexBuffers(m_device, m_test_3.m_command_list, 1, 1, &m_test_3.m_vertex_buffer_instance);
+			context->SetVertexBuffers(1, 1, &m_test_3.m_vertex_buffer_instance);
 
 			//Set index buffer
-			display::SetIndexBuffer(m_device, m_test_3.m_command_list, m_test_2.m_index_buffer);
+			context->SetIndexBuffer(m_test_2.m_index_buffer);
 
 			struct InstanceBuffer
 			{
@@ -624,10 +624,10 @@ public:
 			display::DrawIndexedInstancedDesc draw_desc;
 			draw_desc.index_count = 6;
 			draw_desc.instance_count = Test3::kNumQuads;
-			display::DrawIndexedInstanced(m_device, m_test_3.m_command_list, draw_desc);
+			context->DrawIndexedInstanced(draw_desc);
 
 			//Close command list
-			display::CloseCommandList(m_device, m_test_3.m_command_list);
+			display::CloseCommandList(m_device, context);
 		}
 
 		//Execute command list

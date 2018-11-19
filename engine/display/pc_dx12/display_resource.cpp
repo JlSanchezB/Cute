@@ -71,13 +71,14 @@ namespace
 			auto& command_list = device->Get(device->m_resource_command_list).resource;
 
 			//Open command list
-			OpenCommandList(device, device->m_resource_command_list);
+			display::Context* context = OpenCommandList(device, device->m_resource_command_list);
+			auto dx12_context = reinterpret_cast<display::DX12Context*>(context);
 
 			UpdateSubresources<1>(command_list.Get(), resource.Get(), upload_resource.Get(), 0, 0, 1, &copy_data);
-			command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(resource.Get(), D3D12_RESOURCE_STATE_COPY_DEST, resource_state));
+			dx12_context->command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(resource.Get(), D3D12_RESOURCE_STATE_COPY_DEST, resource_state));
 
 			//Close command list
-			CloseCommandList(device, device->m_resource_command_list);
+			CloseCommandList(device, context);
 
 			//Execute the command list
 			ExecuteCommandList(device, device->m_resource_command_list);
@@ -522,14 +523,14 @@ namespace display
 		//Command list
 		auto& command_list = device->Get(device->m_resource_command_list).resource;
 
-		//Open command list
-		OpenCommandList(device, device->m_resource_command_list);
+		display::Context* context = OpenCommandList(device, device->m_resource_command_list);
+		auto dx12_context = reinterpret_cast<display::DX12Context*>(context);
 
 		UpdateSubresources<128>(command_list.Get(), shader_resource.resource.Get(), upload_resource.Get(), 0, 0, static_cast<UINT>(sub_resources.size()), &sub_resources[0]);
-		command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(shader_resource.resource.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE));
+		dx12_context->command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(shader_resource.resource.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE));
 
 		//Close command list
-		CloseCommandList(device, device->m_resource_command_list);
+		CloseCommandList(device, context);
 
 		//Execute the command list
 		ExecuteCommandList(device, device->m_resource_command_list);

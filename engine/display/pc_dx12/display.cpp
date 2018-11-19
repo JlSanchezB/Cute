@@ -73,7 +73,7 @@ namespace display
 namespace platform
 {
 	extern HWND GetHwnd();
-	extern void PresentCallback(display::Device* device, display::CommandListHandle& commandlist_handle);
+	extern void PresentCallback(display::Context* context);
 }
 
 namespace display
@@ -356,12 +356,13 @@ namespace display
 	//Present
 	void Present(Device* device)
 	{
-		OpenCommandList(device, device->m_present_command_list);
+		Context* context = OpenCommandList(device, device->m_present_command_list);
+		auto dx12_context = reinterpret_cast<DX12Context*>(context);
 
-		auto& command_list = device->Get(device->m_present_command_list).resource;
+		auto& command_list = dx12_context->command_list;
 
 		//Call framework to render UI/Debug
-		platform::PresentCallback(device, device->m_present_command_list);
+		platform::PresentCallback(context);
 
 		// Indicate that the back buffer will now be used to present.
 		auto& back_buffer = device->Get(device->m_frame_resources[device->m_frame_index].render_target);
@@ -371,7 +372,7 @@ namespace display
 			back_buffer.current_state = D3D12_RESOURCE_STATE_PRESENT;
 		}
 
-		CloseCommandList(device, device->m_present_command_list);
+		CloseCommandList(device, context);
 
 		//Execute command list
 		ExecuteCommandList(device, device->m_present_command_list);
@@ -439,7 +440,7 @@ namespace display
 	}
 
 	//Open context, begin recording
-	void OpenCommandList(Device* device, const WeakCommandListHandle& handle)
+	Context*  OpenCommandList(Device* device, const WeakCommandListHandle& handle)
 	{
 		auto& command_list = device->Get(handle).resource;
 		// However, when ExecuteCommandList() is called on a particular command 
@@ -452,11 +453,24 @@ namespace display
 		descriptor_table[0] = device->m_descriptor_table_pool.GetHeap();
 		command_list->SetDescriptorHeaps(1, descriptor_table);
 
+		//Create a new context TODO: use a pool
+		DX12Context* context = new DX12Context();
+		context->device = device;
+		context->command_list = command_list;
+		context->current_root_signature = WeakRootSignatureHandle();
+
+		return context;
 	}
 	//Close context, stop recording
-	void CloseCommandList(Device* device, const WeakCommandListHandle& handle)
+	void CloseCommandList(Device* device, Context* context)
 	{
-		device->Get(handle).resource->Close();
+		assert(context);
+		auto dx12_context = reinterpret_cast<DX12Context*>(context);
+		
+		dx12_context->command_list->Close();
+
+		//Delete TODO: Use a pool
+		delete dx12_context;
 	}
 
 	void ExecuteCommandList(Device * device, const WeakCommandListHandle& handle)
@@ -747,213 +761,5 @@ namespace display
 	void DestroyDepthBuffer(Device* device, DepthBufferHandle& handle)
 	{
 		device->m_depth_buffer_pool.Free(handle);
-	}
-
-	//Context commands
-	void SetRenderTargets(Device* device, const WeakCommandListHandle& command_list_handle, size_t num_targets, WeakRenderTargetHandle* render_target_array, WeakDepthBufferHandle depth_stencil)
-	{
-		const auto& command_list = device->Get(command_list_handle).resource;
-
-		CD3DX12_CPU_DESCRIPTOR_HANDLE render_target_handles[kMaxNumRenderTargets];
-
-		//Transfert resources to render target and calculate the handles in the render target heap
-		for (size_t i = 0; i < num_targets; ++i)
-		{
-			auto& render_target = device->Get(render_target_array[i]);
-			if (render_target.current_state != D3D12_RESOURCE_STATE_RENDER_TARGET)
-			{
-				command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(render_target.resource.Get(), render_target.current_state, D3D12_RESOURCE_STATE_RENDER_TARGET));
-				render_target.current_state = D3D12_RESOURCE_STATE_RENDER_TARGET;
-			}
-
-			render_target_handles[i] = device->m_render_target_pool.GetDescriptor(render_target_array[i]);
-		}
-
-		if (depth_stencil.IsValid())
-		{
-			auto& depth_buffer = device->Get(depth_stencil);
-			command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(depth_buffer.resource.Get(), depth_buffer.current_state, D3D12_RESOURCE_STATE_DEPTH_WRITE));
-			depth_buffer.current_state = D3D12_RESOURCE_STATE_DEPTH_WRITE;
-		}
-
-		command_list->OMSetRenderTargets(static_cast<UINT>(num_targets), render_target_handles, FALSE, depth_stencil.IsValid() ? &device->m_depth_buffer_pool.GetDescriptor(depth_stencil) : nullptr);
-	}
-
-	void ClearRenderTargetColour(Device* device, const WeakCommandListHandle& command_list_handle, const WeakRenderTargetHandle& render_target_handle, const float colour[4])
-	{
-		auto& render_target = device->Get(render_target_handle);
-		auto& command_list = device->Get(command_list_handle).resource;
-
-		command_list->ClearRenderTargetView(device->m_render_target_pool.GetDescriptor(render_target_handle), colour, 0, nullptr);
-	}
-	void SetRootSignature(Device * device, const WeakCommandListHandle & command_list_handle, const WeakRootSignatureHandle & root_signature_handle)
-	{
-		auto& command_list = device->Get(command_list_handle);
-		auto& root_signature = device->Get(root_signature_handle);
-
-		command_list.resource->SetGraphicsRootSignature(root_signature.resource.Get());
-		
-		command_list.current_root_signature = root_signature_handle;
-	}
-	void SetPipelineState(Device * device, const WeakCommandListHandle & command_list_handle, const WeakPipelineStateHandle & pipeline_state_handle)
-	{
-		auto& command_list = device->Get(command_list_handle).resource;
-		auto& pipeline_state = device->Get(pipeline_state_handle);
-
-		command_list->SetPipelineState(pipeline_state.Get());
-	}
-	void SetVertexBuffers(Device * device, const WeakCommandListHandle & command_list_handle, size_t start_slot_index, size_t num_vertex_buffers, WeakVertexBufferHandle * vertex_buffer_handles)
-	{
-		std::array<D3D12_VERTEX_BUFFER_VIEW, 32> vertex_buffer_views;
-
-		for (size_t i = 0; i < num_vertex_buffers; i++)
-		{
-			vertex_buffer_views[i] = device->Get(GetRingResource(device, vertex_buffer_handles[i], device->m_frame_index)).view;
-		}
-
-		auto& command_list = device->Get(command_list_handle).resource;
-		command_list->IASetVertexBuffers(static_cast<UINT>(start_slot_index), static_cast<UINT>(num_vertex_buffers), vertex_buffer_views.data());
-	}
-	void SetIndexBuffer(Device * device, const WeakCommandListHandle & command_list_handle, const WeakIndexBufferHandle & index_buffer_handle)
-	{
-		auto& command_list = device->Get(command_list_handle).resource;
-		auto& index_buffer = device->Get(GetRingResource(device, index_buffer_handle, device->m_frame_index));
-
-		command_list->IASetIndexBuffer(&index_buffer.view);
-	}
-	void RenderTargetTransition(Device * device, const WeakCommandListHandle & command_list_handle, size_t num_targets, WeakRenderTargetHandle * render_target_array, const ResourceState& dest_state)
-	{
-		auto& command_list = device->Get(command_list_handle).resource;
-		std::array< CD3DX12_RESOURCE_BARRIER, kMaxNumRenderTargets> dx12_render_target_transtitions;
-
-		size_t num_transitions = 0;
-		for (size_t i = 0; i < num_targets; ++i)
-		{
-			auto& render_target = device->Get(render_target_array[i]);
-			if (render_target.current_state != Convert(dest_state))
-			{
-				dx12_render_target_transtitions[num_transitions] = CD3DX12_RESOURCE_BARRIER::Transition(render_target.resource.Get(), render_target.current_state, Convert(dest_state));
-				render_target.current_state = Convert(dest_state);
-				num_transitions++;
-			}
-		}
-		if (num_transitions > 0)
-		{
-			command_list->ResourceBarrier(static_cast<UINT>(num_transitions), &dx12_render_target_transtitions[0]);
-		}
-
-	}
-	void SetConstants(Device * device, const WeakCommandListHandle & command_list_handle, size_t root_parameter, const void * data, size_t num_constants)
-	{
-		auto& command_list = device->Get(command_list_handle);
-		auto& root_signature = device->Get(command_list.current_root_signature);
-		assert(root_parameter < root_signature.desc.num_root_parameters);
-
-		command_list.resource->SetGraphicsRoot32BitConstants(0, static_cast<UINT>(num_constants), data, 0);
-	}
-
-	void SetConstantBuffer(Device * device, const WeakCommandListHandle & command_list_handle, size_t root_parameter, const WeakConstantBufferHandle & constant_buffer_handle)
-	{
-		auto& command_list = device->Get(command_list_handle);
-		auto& root_signature = device->Get(command_list.current_root_signature);
-		auto& constant_buffer = device->Get(GetRingResource(device, constant_buffer_handle, device->m_frame_index));
-
-		assert(root_parameter < root_signature.desc.num_root_parameters);
-
-		command_list.resource->SetGraphicsRootConstantBufferView(static_cast<UINT>(root_parameter), constant_buffer.resource->GetGPUVirtualAddress());
-		
-	}
-	void SetUnorderedAccessBuffer(Device * device, const WeakCommandListHandle & command_list_handle, size_t root_parameter, const WeakUnorderedAccessBufferHandle & unordered_access_buffer_handle)
-	{
-		auto& command_list = device->Get(command_list_handle);
-		auto& root_signature = device->Get(command_list.current_root_signature);
-		auto& unordered_access_buffer = device->Get(unordered_access_buffer_handle);
-
-		assert(root_parameter < root_signature.desc.num_root_parameters);
-
-		command_list.resource->SetGraphicsRootUnorderedAccessView(static_cast<UINT>(root_parameter), unordered_access_buffer.resource->GetGPUVirtualAddress());
-	}
-	void SetShaderResource(Device * device, const WeakCommandListHandle & command_list_handle, size_t root_parameter, const WeakShaderResourceHandle & shader_resource_handle)
-	{
-		auto& command_list = device->Get(command_list_handle);
-		auto& root_signature = device->Get(command_list.current_root_signature);
-		auto& shader_resource = device->Get(GetRingResource(device, shader_resource_handle, device->m_frame_index));
-
-		assert(root_parameter < root_signature.desc.num_root_parameters);
-
-		command_list.resource->SetGraphicsRootShaderResourceView(static_cast<UINT>(root_parameter), shader_resource.resource->GetGPUVirtualAddress());
-	}
-
-	void SetDescriptorTable(Device * device, const WeakCommandListHandle & command_list_handle, size_t root_parameter, const WeakDescriptorTableHandle & descriptor_table_handle)
-	{
-		auto& command_list = device->Get(command_list_handle);
-		auto& root_signature = device->Get(command_list.current_root_signature);
-		WeakDescriptorTableHandle  current_descriptor_table_handle = GetRingResource(device, descriptor_table_handle, device->m_frame_index);
-		auto& descriptor_table = device->Get(current_descriptor_table_handle);
-
-		assert(root_parameter < root_signature.desc.num_root_parameters);
-		command_list.resource->SetGraphicsRootDescriptorTable(static_cast<UINT>(root_parameter), device->m_descriptor_table_pool.GetGPUDescriptor(current_descriptor_table_handle));
-	}
-
-	void SetDescriptorTable(Device* device, const WeakCommandListHandle& command_list_handle, size_t root_parameter, const WeakSamplerDescriptorTableHandle& sampler_descriptor_table_handle)
-	{
-		auto& command_list = device->Get(command_list_handle);
-		auto& root_signature = device->Get(command_list.current_root_signature);
-
-		assert(root_parameter < root_signature.desc.num_root_parameters);
-		command_list.resource->SetGraphicsRootDescriptorTable(static_cast<UINT>(root_parameter), device->m_sampler_descriptor_table_pool.GetGPUDescriptor(sampler_descriptor_table_handle));
-	}
-
-	void SetViewport(Device * device, const WeakCommandListHandle & command_list_handle, const Viewport & viewport)
-	{
-		auto& command_list = device->Get(command_list_handle).resource;
-
-		D3D12_VIEWPORT dx12_viewport;
-		dx12_viewport.TopLeftX = viewport.top_left_x;
-		dx12_viewport.TopLeftY = viewport.top_left_y;
-		dx12_viewport.Width = viewport.width;
-		dx12_viewport.Height = viewport.height;
-		dx12_viewport.MinDepth = viewport.min_depth;
-		dx12_viewport.MaxDepth = viewport.max_depth;
-
-		command_list->RSSetViewports(1, &dx12_viewport);
-	}
-	void SetScissorRect(Device * device, const WeakCommandListHandle & command_list_handle, const Rect scissor_rect)
-	{
-		auto& command_list = device->Get(command_list_handle).resource;
-
-		D3D12_RECT dx12_rect;
-		dx12_rect.left = static_cast<LONG>(scissor_rect.left);
-		dx12_rect.top = static_cast<LONG>(scissor_rect.top);
-		dx12_rect.right = static_cast<LONG>(scissor_rect.right);
-		dx12_rect.bottom = static_cast<LONG>(scissor_rect.bottom);
-
-		command_list->RSSetScissorRects(1, &dx12_rect);
-	}
-	void Draw(Device * device, const WeakCommandListHandle & command_list_handle, const DrawDesc& draw_desc)
-	{
-		auto& command_list = device->Get(command_list_handle);
-
-		command_list.resource->IASetPrimitiveTopology(Convert(draw_desc.primitive_topology));
-
-		command_list.resource->DrawInstanced(static_cast<UINT>(draw_desc.vertex_count), 1, static_cast<UINT>(draw_desc.start_vertex), 0);
-	}
-
-	void DrawIndexed(Device * device, const WeakCommandListHandle & command_list_handle, const DrawIndexedDesc& draw_desc)
-	{
-		auto& command_list = device->Get(command_list_handle);
-
-		command_list.resource->IASetPrimitiveTopology(Convert(draw_desc.primitive_topology));
-
-		command_list.resource->DrawIndexedInstanced(static_cast<UINT>(draw_desc.index_count), 1, static_cast<UINT>(draw_desc.start_index), static_cast<UINT>(draw_desc.base_vertex), 0);
-	}
-
-	void DrawIndexedInstanced(Device * device, const WeakCommandListHandle & command_list_handle, const DrawIndexedInstancedDesc& draw_desc)
-	{
-		auto& command_list = device->Get(command_list_handle);
-
-		command_list.resource->IASetPrimitiveTopology(Convert(draw_desc.primitive_topology));
-
-		command_list.resource->DrawIndexedInstanced(static_cast<UINT>(draw_desc.index_count), static_cast<UINT>(draw_desc.instance_count), static_cast<UINT>(draw_desc.start_index), static_cast<UINT>(draw_desc.base_vertex), static_cast<UINT>(draw_desc.start_instance));
 	}
 }

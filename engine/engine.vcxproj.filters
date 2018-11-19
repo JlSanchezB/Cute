@@ -115,6 +115,9 @@
     <ClCompile Include="core\imgui_render.cpp">
       <Filter>core</Filter>
     </ClCompile>
+    <ClCompile Include="display\pc_dx12\display_context.cpp">
+      <Filter>display</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="tools\compile_shader.bat">

@@ -222,7 +222,6 @@ namespace display
 		struct CommandList
 		{
 			ComPtr<ID3D12GraphicsCommandList> resource;
-			WeakRootSignatureHandle current_root_signature;
 		};
 		struct RootSignature
 		{
@@ -498,6 +497,14 @@ namespace display
 
 		return handle;
 	}
+
+	//Internal context implementation
+	struct DX12Context : Context
+	{
+		Device* device;
+		ComPtr<ID3D12GraphicsCommandList> command_list;
+		WeakRootSignatureHandle current_root_signature;
+	};
 }
 
 namespace

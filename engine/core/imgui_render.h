@@ -25,7 +25,7 @@ namespace imgui_render
 	bool WndProcHandler(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 	//Draw imgui system
-	void Draw(display::Device* device, const display::CommandListHandle& command_list_handle);
+	void Draw(display::Context* context);
 }
 
 #endif //IMGUI_RENDER_H_
