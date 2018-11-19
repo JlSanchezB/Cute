@@ -199,7 +199,6 @@ namespace
 			ImGui::Text("FPS: %2.1f", 1.f / elapsed_time);
 		}
 		ImGui::End();
-
 	}
 
 	void RenderImgui(platform::Game* game, float elapsed_time)
