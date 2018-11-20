@@ -457,7 +457,8 @@ namespace display
 		DX12Context* context = device->m_context_pool.Alloc();
 		context->device = device;
 		context->command_list = command_list;
-		context->current_root_signature = WeakRootSignatureHandle();
+		context->current_graphics_root_signature = WeakRootSignatureHandle();
+		context->current_compute_root_signature = WeakRootSignatureHandle();
 
 		return context;
 	}

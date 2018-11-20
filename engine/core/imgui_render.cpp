@@ -439,12 +439,12 @@ void imgui_render::Draw(display::Context* context)
 
 
 	//Set all the resources
-	context->SetRootSignature(g_rootsignature);
+	context->SetRootSignature(display::Pipe::Graphics, g_rootsignature);
 	context->SetPipelineState(g_pipeline_state);
 	context->SetVertexBuffers(0, 1, &g_vertex_buffer);
 	context->SetIndexBuffer(g_index_buffer);
 	//display::SetConstantBuffer(device, command_list_handle, 0, g_constant_buffer);
-	context->SetConstants(0, mvp, 16);
+	context->SetConstants(display::Pipe::Graphics, 0, mvp, 16);
 	context->SetViewport(display::Viewport(draw_data->DisplaySize.x, draw_data->DisplaySize.y));
 
 	// Render command lists
@@ -470,7 +470,7 @@ void imgui_render::Draw(display::Context* context)
 				rect.bottom = static_cast<size_t>(pcmd->ClipRect.w - pos.y);
 				context->SetScissorRect( rect);
 				
-				context->SetDescriptorTable(1, *reinterpret_cast<display::DescriptorTableHandle*>(pcmd->TextureId));
+				context->SetDescriptorTable(display::Pipe::Graphics, 1, *reinterpret_cast<display::DescriptorTableHandle*>(pcmd->TextureId));
 
 				display::DrawIndexedDesc draw_desc;
 				draw_desc.index_count = pcmd->ElemCount;

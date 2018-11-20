@@ -119,6 +119,13 @@ namespace display
 	using UpdatableResourceHandle = std::variant<WeakConstantBufferHandle, WeakVertexBufferHandle, WeakIndexBufferHandle>;
 	void UpdateResourceBuffer(Device* device, const UpdatableResourceHandle& handle, const void* data, size_t size);
 
+	//Pipe used
+	enum class Pipe
+	{
+		Graphics,
+		Compute
+	};
+
 	//Context
 	struct Context
 	{
@@ -138,7 +145,7 @@ namespace display
 		void SetScissorRect(const Rect scissor_rect);
 
 		//Set root signature
-		void SetRootSignature(const WeakRootSignatureHandle& root_signature);
+		void SetRootSignature(const Pipe& pipe, const WeakRootSignatureHandle& root_signature);
 
 		//Set pipeline state
 		void SetPipelineState(const WeakPipelineStateHandle& pipeline_state);
@@ -153,22 +160,22 @@ namespace display
 		void RenderTargetTransition(size_t num_targets, WeakRenderTargetHandle* render_target_array, const ResourceState& dest_state);
 
 		//Set constants
-		void SetConstants(size_t root_parameter, const void* data, size_t size);
+		void SetConstants(const Pipe& pipe, size_t root_parameter, const void* data, size_t size);
 
 		//Set constant buffer
-		void SetConstantBuffer(size_t root_parameter, const WeakConstantBufferHandle& constant_buffer);
+		void SetConstantBuffer(const Pipe& pipe, size_t root_parameter, const WeakConstantBufferHandle& constant_buffer);
 
 		//Set unordered access buffer
-		void SetUnorderedAccessBuffer(size_t root_parameter, const WeakUnorderedAccessBufferHandle& unordered_access_buffer);
+		void SetUnorderedAccessBuffer(const Pipe& pipe, size_t root_parameter, const WeakUnorderedAccessBufferHandle& unordered_access_buffer);
 
 		//Set shader resource
-		void SetShaderResource(size_t root_parameter, const WeakShaderResourceHandle& shader_resource);
+		void SetShaderResource(const Pipe& pipe, size_t root_parameter, const WeakShaderResourceHandle& shader_resource);
 
 		//Set descriptor table
-		void SetDescriptorTable(size_t root_parameter, const WeakDescriptorTableHandle& descriptor_table);
+		void SetDescriptorTable(const Pipe& pipe, size_t root_parameter, const WeakDescriptorTableHandle& descriptor_table);
 
 		//Set descriptor table
-		void SetDescriptorTable(size_t root_parameter, const WeakSamplerDescriptorTableHandle& sampler_descriptor_table);
+		void SetDescriptorTable(const Pipe& pipe, size_t root_parameter, const WeakSamplerDescriptorTableHandle& sampler_descriptor_table);
 
 		//Draw
 		void Draw(const DrawDesc& draw_desc);

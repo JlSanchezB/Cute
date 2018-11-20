@@ -446,7 +446,13 @@ public:
 		for (size_t i = 0; i < Test2::kNumQuads; ++i)
 		{
 			display::DestroyConstantBuffer(m_device, m_test_2.m_constant_buffer[i]);
+			display::DestroyDescriptorTable(m_device, m_test_2.m_constant_descriptor_table[i]);
 		}
+
+		display::DestroyCommandList(m_device, m_test_3.m_command_list);
+		display::DestroyRootSignature(m_device, m_test_3.m_root_signature);
+		display::DestroyPipelineState(m_device, m_test_3.m_pipeline_state);
+		display::DestroyVertexBuffer(m_device, m_test_3.m_vertex_buffer_instance);
 
 		display::DestroyDevice(m_device);
 	}
@@ -468,7 +474,7 @@ public:
 			context->ClearRenderTargetColour( m_test_1.m_render_target, clear_colour);
 
 			//Set root signature
-			context->SetRootSignature(m_test_1.m_root_signature);
+			context->SetRootSignature(display::Pipe::Graphics, m_test_1.m_root_signature);
 
 			//Set pipeline state
 			context->SetPipelineState(m_test_1.m_pipeline_state);
@@ -483,7 +489,7 @@ public:
 			context->SetVertexBuffers(0, 1, &m_test_1.m_vertex_buffer);
 
 			//Resource binding
-			context->SetDescriptorTable(0, m_test_1.m_texture_descriptor_table);
+			context->SetDescriptorTable(display::Pipe::Graphics, 0, m_test_1.m_texture_descriptor_table);
 
 			//Draw
 			display::DrawDesc draw_desc;
@@ -504,7 +510,7 @@ public:
 			context->SetScissorRect(display::Rect(0, 0, m_width, m_height));
 
 			//Resource binding
-			context->SetDescriptorTable(0, m_test_1.m_render_target_descriptor_table);
+			context->SetDescriptorTable(display::Pipe::Graphics, 0, m_test_1.m_render_target_descriptor_table);
 
 			//Draw
 			context->Draw(draw_desc);
@@ -532,7 +538,7 @@ public:
 			context->SetScissorRect(display::Rect(0, 0, m_width, m_height));
 
 			//Set root signature
-			context->SetRootSignature(m_test_2.m_root_signature);
+			context->SetRootSignature(display::Pipe::Graphics, m_test_2.m_root_signature);
 
 			//Set pipeline state
 			context->SetPipelineState(m_test_2.m_pipeline_state);
@@ -556,7 +562,7 @@ public:
 				//Update constant buffer
 				display::UpdateResourceBuffer(m_device, m_test_2.m_constant_buffer[i], &constant_buffer, sizeof(constant_buffer));
 				//Resource binding
-				context->SetDescriptorTable(0, m_test_2.m_constant_descriptor_table[i]);
+				context->SetDescriptorTable(display::Pipe::Graphics, 0, m_test_2.m_constant_descriptor_table[i]);
 
 				//Draw
 				display::DrawIndexedDesc draw_desc;
@@ -585,7 +591,7 @@ public:
 			context->SetScissorRect(display::Rect(0, 0, m_width, m_height));
 
 			//Set root signature
-			context->SetRootSignature(m_test_3.m_root_signature);
+			context->SetRootSignature(display::Pipe::Graphics, m_test_3.m_root_signature);
 
 			//Set pipeline state
 			context->SetPipelineState(m_test_3.m_pipeline_state);

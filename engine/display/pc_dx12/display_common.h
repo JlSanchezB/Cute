@@ -192,7 +192,8 @@ namespace display
 	{
 		Device* device;
 		ComPtr<ID3D12GraphicsCommandList> command_list;
-		WeakRootSignatureHandle current_root_signature;
+		WeakRootSignatureHandle current_graphics_root_signature;
+		WeakRootSignatureHandle current_compute_root_signature;
 	};
 
 	//Device internal implementation
