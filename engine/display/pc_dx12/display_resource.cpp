@@ -699,23 +699,11 @@ namespace display
 		std::visit(
 			overloaded
 			{
-				[&](WeakConstantBufferHandle constant_buffer_handle)
+				[&](auto handle)
 				{
-					auto& constant_buffer = device->Get(GetRingResource(device, constant_buffer_handle, device->m_frame_index));
+					auto& constant_buffer = device->Get(GetRingResource(device, handle, device->m_frame_index));
 					memory_data = constant_buffer.memory_data;
 					memory_size = constant_buffer.memory_size;
-				},
-				[&](WeakVertexBufferHandle vertex_buffer_handle)
-				{
-					auto& vertex_buffer = device->Get(GetRingResource(device, vertex_buffer_handle, device->m_frame_index));
-					memory_data = vertex_buffer.memory_data;
-					memory_size = vertex_buffer.memory_size;
-				},
-				[&](WeakIndexBufferHandle index_buffer_handle)
-				{
-					auto& index_buffer = device->Get(GetRingResource(device, index_buffer_handle, device->m_frame_index));
-					memory_data = index_buffer.memory_data;
-					memory_size = index_buffer.memory_size;
 				}
 			},
 			handle);
