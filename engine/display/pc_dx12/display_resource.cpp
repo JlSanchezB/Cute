@@ -588,10 +588,6 @@ namespace display
 							device->m_native_device->CopyDescriptorsSimple(1, device->m_descriptor_table_pool.GetDescriptor(handle, i),
 								device->m_shader_resource_pool.GetDescriptor(shader_resource), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 						},
-						[&](WeakSamplerDescriptorTableHandle sampler)
-						{
-							assert(false); //Not supported
-						},
 						[&](WeakRenderTargetHandle render_target)
 						{
 							device->m_native_device->CopyDescriptorsSimple(1, device->m_descriptor_table_pool.GetDescriptor(handle, i),
@@ -634,10 +630,6 @@ namespace display
 								//We only support static resources
 								device->m_native_device->CopyDescriptorsSimple(1, device->m_descriptor_table_pool.GetDescriptor(handle_it, i),
 									device->m_shader_resource_pool.GetDescriptor(GetRingResource(device, shader_resource, frame_index)), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-							},
-							[&](WeakSamplerDescriptorTableHandle sampler)
-							{
-								assert(false); //Not supported
 							},
 							[&](WeakRenderTargetHandle render_target)
 							{
