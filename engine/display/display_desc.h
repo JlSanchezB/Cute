@@ -32,27 +32,27 @@ namespace display
 
 	struct StaticSamplerDesc : SamplerDesc
 	{
-		size_t shader_register;
+		uint16_t shader_register;
 		ShaderVisibility visibility;
 	};
 
 	struct RootSignatureBaseParameter
 	{
-		size_t shader_register;
-		size_t num_constants; //Only used in case it is a 32bits constant
+		uint16_t shader_register;
+		uint16_t num_constants; //Only used in case it is a 32bits constant
 	};
 
 	struct RootSignatureTableRange
 	{
 		DescriptorTableParameterType type;
-		size_t base_shader_register;
-		size_t size;
+		uint16_t base_shader_register;
+		uint16_t size;
 	};
 
 	struct RootSignatureTable
 	{
 		static constexpr size_t kNumMaxRanges = 8;
-		size_t num_ranges;
+		uint16_t num_ranges;
 		std::array<RootSignatureTableRange, kNumMaxRanges> range;
 	};
 
@@ -69,26 +69,26 @@ namespace display
 
 	struct RootSignatureDesc
 	{
-		size_t num_root_parameters = 0;
+		uint8_t num_root_parameters = 0;
 		std::array<RootSignatureParameter, kMaxNumRootParameters> root_parameters;
-		size_t num_static_samplers = 0;
+		uint8_t num_static_samplers = 0;
 		std::array< StaticSamplerDesc, kMaxNumStaticSamplers> static_samplers;
 	};
 
 	struct InputElementDesc
 	{
 		const char* semantic_name;
-		uint32_t semantic_index;
+		uint16_t semantic_index;
 		Format format;
-		uint32_t input_slot;
-		size_t aligned_offset;
+		uint16_t input_slot;
+		uint32_t aligned_offset;
 		InputType input_type = InputType::Vertex;
 		uint32_t instance_step_rate = 0;
 		
 		InputElementDesc()
 		{
 		}
-		InputElementDesc(const char* _semantic_name, uint32_t _semantic_index, Format _format, uint32_t _input_slot, size_t _aligned_offset, InputType _input_type = InputType::Vertex) :
+		InputElementDesc(const char* _semantic_name, uint16_t _semantic_index, Format _format, uint16_t _input_slot, uint32_t _aligned_offset, InputType _input_type = InputType::Vertex) :
 			semantic_name(_semantic_name), semantic_index(_semantic_index), format(_format), input_slot(_input_slot), aligned_offset(_aligned_offset), input_type(_input_type)
 		{
 			instance_step_rate = (input_type == InputType::Vertex) ? 0 : 1;
@@ -98,7 +98,7 @@ namespace display
 	struct InputLayoutDesc
 	{
 		std::array<InputElementDesc, kMaxNumInputLayoutElements> elements;
-		size_t num_elements = 0;
+		uint16_t num_elements = 0;
 	};
 
 	struct RasterizationDesc
@@ -184,16 +184,16 @@ namespace display
 
 	struct Rect
 	{
-		size_t left;
-		size_t top;
-		size_t right;
-		size_t bottom;
+		uint32_t left;
+		uint32_t top;
+		uint32_t right;
+		uint32_t bottom;
 		
 		Rect()
 		{
 		}
 
-		Rect(size_t _left, size_t _top, size_t _right, size_t _bottom) :
+		Rect(uint32_t _left, uint32_t _top, uint32_t _right, uint32_t _bottom) :
 			left(_left), top(_top), right(_right), bottom(_bottom)
 		{
 		}
@@ -204,7 +204,7 @@ namespace display
 		Access access = Access::Static;
 		size_t size = 0;
 		const void* init_data = nullptr;
-		size_t stride = 0;
+		uint32_t stride = 0;
 	};
 
 	struct IndexBufferDesc
@@ -224,8 +224,8 @@ namespace display
 
 	struct UnorderedAccessBufferDesc
 	{
-		size_t element_size = 0;
-		size_t element_count = 0;
+		uint32_t element_size = 0;
+		uint32_t element_count = 0;
 	};
 
 	struct ShaderResourceDesc
@@ -233,14 +233,14 @@ namespace display
 		Access access = Access::Static;
 		Format format = Format::R8G8B8A8_UNORM;
 		ShaderResourceType type = ShaderResourceType::Texture2D;
-		size_t width = 0;
-		size_t height = 0;
-		size_t pitch = 0;
-		size_t slice_pitch = 0;
-		size_t mips = 0;
+		uint32_t width = 0;
+		uint32_t height = 0;
+		uint32_t pitch = 0;
+		uint32_t slice_pitch = 0;
+		uint16_t mips = 0;
 		size_t size = 0;
-		size_t num_elements = 0; //Used for buffers
-		size_t structure_stride = 0; //Used for buffers
+		uint32_t num_elements = 0; //Used for buffers
+		uint32_t structure_stride = 0; //Used for buffers
 		const void* init_data = nullptr;
 	};
 
@@ -248,14 +248,14 @@ namespace display
 	{
 		Format format;
 		RenderTargetType render_target_type = RenderTargetType::Texture2D;
-		size_t width = 0;
-		size_t heigth = 0;
+		uint32_t width = 0;
+		uint32_t heigth = 0;
 	};
 
 	struct DepthBufferDesc
 	{
-		size_t width = 0;
-		size_t heigth = 0;
+		uint32_t width = 0;
+		uint32_t heigth = 0;
 	};
 
 	struct DescriptorTableDesc
@@ -307,26 +307,26 @@ namespace display
 
 	struct DrawDesc
 	{
-		size_t start_vertex = 0;
-		size_t vertex_count = 0;
+		uint32_t start_vertex = 0;
+		uint32_t vertex_count = 0;
 		PrimitiveTopology primitive_topology = PrimitiveTopology::TriangleList;
 	};
 
 	struct DrawIndexedDesc
 	{
-		size_t start_index = 0;
-		size_t index_count = 0;
-		size_t base_vertex = 0;
+		uint32_t start_index = 0;
+		uint32_t index_count = 0;
+		uint32_t base_vertex = 0;
 		PrimitiveTopology primitive_topology = PrimitiveTopology::TriangleList;
 	};
 
 	struct DrawIndexedInstancedDesc
 	{
-		size_t instance_count = 0;
-		size_t start_instance = 0;
-		size_t start_index = 0;
-		size_t index_count = 0;
-		size_t base_vertex = 0;
+		uint32_t instance_count = 0;
+		uint32_t start_instance = 0;
+		uint32_t start_index = 0;
+		uint32_t index_count = 0;
+		uint32_t base_vertex = 0;
 		PrimitiveTopology primitive_topology = PrimitiveTopology::TriangleList;
 	};
 
@@ -335,6 +335,13 @@ namespace display
 		const char* code = nullptr;
 		const char* entry_point = nullptr;
 		const char* target = nullptr;
+	};
+
+	struct ExecuteComputeDesc
+	{
+		uint32_t group_count_x = 1;
+		uint32_t group_count_y = 1;
+		uint32_t group_count_z = 1;
 	};
 }
 #endif

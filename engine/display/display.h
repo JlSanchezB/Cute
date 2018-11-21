@@ -16,9 +16,9 @@ namespace display
 
 	struct DeviceInitParams
 	{
-		size_t num_frames;
-		size_t width;
-		size_t height;
+		uint8_t num_frames;
+		uint32_t width;
+		uint32_t height;
 		bool debug = false;
 		bool tearing = false;
 	};
@@ -187,7 +187,7 @@ namespace display
 		void DrawIndexedInstanced(const DrawIndexedInstancedDesc& draw_desc);
 
 		//Execute compute
-		void ExecuteCompute(uint16_t group_count_x, uint16_t group_count_y, uint16_t group_count_z);
+		void ExecuteCompute(const ExecuteComputeDesc& execute_compute_desc);
 	};
 }
 #endif DISPLAY_H_

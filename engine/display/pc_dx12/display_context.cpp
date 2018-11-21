@@ -319,11 +319,11 @@ namespace display
 
 		command_list->DrawIndexedInstanced(static_cast<UINT>(draw_desc.index_count), static_cast<UINT>(draw_desc.instance_count), static_cast<UINT>(draw_desc.start_index), static_cast<UINT>(draw_desc.base_vertex), static_cast<UINT>(draw_desc.start_instance));
 	}
-	void Context::ExecuteCompute(uint16_t group_count_x, uint16_t group_count_y, uint16_t group_count_z)
+	void Context::ExecuteCompute(const ExecuteComputeDesc& execute_compute_desc)
 	{
 		auto dx12_context = reinterpret_cast<DX12Context*>(this);
 		const auto& command_list = dx12_context->command_list;
 
-		command_list->Dispatch(group_count_x, group_count_y, group_count_z);
+		command_list->Dispatch(execute_compute_desc.group_count_x, execute_compute_desc.group_count_y, execute_compute_desc.group_count_z);
 	}
 }
