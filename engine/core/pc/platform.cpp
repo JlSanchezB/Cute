@@ -264,7 +264,7 @@ namespace platform
 		imgui_render::CreateResources(device);
 	}
 
-	char Run(const char* name, void* param, size_t width, size_t height, Game* game)
+	char Run(const char* name, void* param, uint32_t width, uint32_t height, Game* game)
 	{
 		HINSTANCE hInstance = *(reinterpret_cast<HINSTANCE*>(param));
 

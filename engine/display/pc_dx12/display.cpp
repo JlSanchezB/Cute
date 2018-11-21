@@ -695,11 +695,18 @@ namespace display
 	void CompileShader(Device * device, const CompileShaderDesc & compile_shader_desc, std::vector<char>& shader_blob)
 	{
 		ComPtr<ID3DBlob> blob;
-		ThrowIfFailed(D3DCompile(compile_shader_desc.code, strlen(compile_shader_desc.code), NULL, NULL, NULL, compile_shader_desc.entry_point, compile_shader_desc.target, 0, 0, &blob, NULL));
-		if (blob.Get())
+		ComPtr<ID3DBlob> errors;
+		auto hr = D3DCompile(compile_shader_desc.code, strlen(compile_shader_desc.code), NULL, NULL, NULL, compile_shader_desc.entry_point, compile_shader_desc.target, 0, 0, &blob, &errors);
+		if (SUCCEEDED(hr))
 		{
 			shader_blob.resize(blob->GetBufferSize());
 			memcpy(shader_blob.data(), blob->GetBufferPointer(), blob->GetBufferSize());
+		}
+		else
+		{
+			//Error compiling
+			core::log(reinterpret_cast<const char*>(errors->GetBufferPointer()));
+			std::runtime_error::exception(reinterpret_cast<const char*>(errors->GetBufferPointer()));
 		}
 	}
 

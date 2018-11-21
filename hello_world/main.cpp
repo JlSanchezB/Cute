@@ -32,11 +32,11 @@ namespace
 class HelloWorldGame : public platform::Game
 {
 public:
-	constexpr static size_t kInitWidth = 500;
-	constexpr static size_t kInitHeight = 500;
+	constexpr static uint32_t kInitWidth = 500;
+	constexpr static uint32_t kInitHeight = 500;
 
-	size_t m_width;
-	size_t m_height;
+	uint32_t m_width;
+	uint32_t m_height;
 
 	display::Device* m_device;
 
@@ -88,11 +88,21 @@ public:
 		display::PipelineStateHandle m_pipeline_state;
 		display::VertexBufferHandle m_vertex_buffer_instance;
 	};
+	struct Test4
+	{
+		static constexpr size_t kNumQuads = 10;
+		display::CommandListHandle m_command_list;
+		
+		display::RootSignatureHandle m_root_signature;
+		display::PipelineStateHandle m_pipeline_state;
+		display::PipelineStateHandle m_compute_pipeline_state;
+	};
 
 	//Tests
 	Test1 m_test_1;
 	Test2 m_test_2;
 	Test3 m_test_3;
+	Test4 m_test_4;
 
 
 	void OnInit() override
@@ -423,6 +433,90 @@ public:
 			m_test_3.m_vertex_buffer_instance = display::CreateVertexBuffer(m_device, vertex_buffer_desc, "instance");
 		}
 
+		//Test4
+		m_test_4.m_command_list = display::CreateCommandList(m_device, "Test4");
+		
+		//Root signature
+		{
+			display::RootSignatureDesc root_signature_desc;
+			root_signature_desc.num_root_parameters = 1;
+			root_signature_desc.root_parameters[0].type = display::RootSignatureParameterType::DescriptorTable;
+			root_signature_desc.root_parameters[0].table.num_ranges = 1;
+			root_signature_desc.root_parameters[0].table.range[0].base_shader_register = 0;
+			root_signature_desc.root_parameters[0].table.range[0].size = 1;
+			root_signature_desc.root_parameters[0].table.range[0].type = display::DescriptorTableParameterType::ShaderResource;
+			root_signature_desc.root_parameters[0].visibility = display::ShaderVisibility::All;
+
+			root_signature_desc.num_static_samplers = 0;
+
+			//Create the root signature
+			m_test_4.m_root_signature = display::CreateRootSignature(m_device, root_signature_desc, "Test 4");
+
+		}
+
+		{
+			//Compute pipeline, compile shader for testing
+			const char* shader_code =
+				"StructuredBuffer<float4> compute_params: t0;\
+				struct PSInput\
+				{\
+					float4 position : SV_POSITION;\
+					float4 color : COLOR;\
+				};\
+				\
+				PSInput main_vs(float4 position : POSITION, uint instance_id : SV_InstanceID)\
+				{\
+					PSInput result; \
+					float4 instance_data = compute_params[instance_id];\
+					result.position.xy = position.xy * instance_data.z + instance_data.xy;\
+					result.position.zw = position.zw;\
+					result.color = instance_data.wwww;\
+					return result;\
+				}\
+				float4 main_ps(PSInput input) : SV_TARGET\
+				{\
+					return input.color;\
+				}";
+
+			std::vector<char> vertex_shader;
+			std::vector<char> pixel_shader;
+
+			display::CompileShaderDesc compile_shader_desc;
+			compile_shader_desc.code = shader_code;
+			compile_shader_desc.entry_point = "main_vs";
+			compile_shader_desc.target = "vs_5_0";
+			display::CompileShader(m_device, compile_shader_desc, vertex_shader);
+
+			compile_shader_desc.code = shader_code;
+			compile_shader_desc.entry_point = "main_ps";
+			compile_shader_desc.target = "ps_5_0";
+			display::CompileShader(m_device, compile_shader_desc, pixel_shader);
+
+
+			//Create pipeline state
+			display::PipelineStateDesc pipeline_state_desc;
+			pipeline_state_desc.root_signature = m_test_4.m_root_signature;
+
+			//Add input layouts
+			pipeline_state_desc.input_layout.elements[0] = display::InputElementDesc("POSITION", 0, display::Format::R32G32B32A32_FLOAT, 0, 0);
+			pipeline_state_desc.input_layout.num_elements = 1;
+
+
+			//Add shaders
+			pipeline_state_desc.pixel_shader.data = reinterpret_cast<void*>(pixel_shader.data());
+			pipeline_state_desc.pixel_shader.size = pixel_shader.size();
+
+			pipeline_state_desc.vertex_shader.data = reinterpret_cast<void*>(vertex_shader.data());
+			pipeline_state_desc.vertex_shader.size = vertex_shader.size();
+
+			//Add render targets
+			pipeline_state_desc.num_render_targets = 1;
+			pipeline_state_desc.render_target_format[0] = display::Format::R8G8B8A8_UNORM;
+
+			//Create
+			m_test_4.m_pipeline_state = display::CreatePipelineState(m_device, pipeline_state_desc, "compute driven quad");
+		}
+
 	}
 	void OnDestroy() override
 	{
@@ -453,6 +547,10 @@ public:
 		display::DestroyRootSignature(m_device, m_test_3.m_root_signature);
 		display::DestroyPipelineState(m_device, m_test_3.m_pipeline_state);
 		display::DestroyVertexBuffer(m_device, m_test_3.m_vertex_buffer_instance);
+
+		display::DestroyCommandList(m_device, m_test_4.m_command_list);
+		display::DestroyRootSignature(m_device, m_test_4.m_root_signature);
+		display::DestroyPipelineState(m_device, m_test_4.m_pipeline_state);
 
 		display::DestroyDevice(m_device);
 	}
@@ -644,7 +742,7 @@ public:
 		display::EndFrame(m_device);
 	}
 
-	void OnSizeChange(size_t width, size_t height, bool minimized) override
+	void OnSizeChange(uint32_t width, uint32_t height, bool minimized) override
 	{
 		m_width = width;
 		m_height = height;

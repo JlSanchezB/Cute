@@ -213,7 +213,7 @@ namespace core
 			}
 			if (num_allocated_handles > 0)
 			{
-				core::log("Pool still has some allocated handles, force deleted all handles\n");
+				core::log("Pool still has some allocated handles <%i>, force deleted all handles\n", num_allocated_handles);
 			}
 		}
 	}

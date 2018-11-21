@@ -10,6 +10,6 @@
 
 namespace core
 {
-	void log(const char* message);
+	void log(const char* message, ...);
 }
 #endif //LOG_H
