@@ -95,6 +95,9 @@ public:
 		
 		display::RootSignatureHandle m_root_signature;
 		display::PipelineStateHandle m_pipeline_state;
+		display::RootSignatureHandle m_compute_root_signature;
+		display::ConstantBufferHandle m_compute_constant_buffer;
+		display::DescriptorTableHandle m_compute_constant_descriptor_table;
 		display::PipelineStateHandle m_compute_pipeline_state;
 	};
 
@@ -517,6 +520,20 @@ public:
 			m_test_4.m_pipeline_state = display::CreatePipelineState(m_device, pipeline_state_desc, "compute driven quad");
 		}
 
+		{
+			//Create compute root signature
+			display::RootSignatureDesc root_signature_desc;
+			root_signature_desc.num_root_parameters = 1;
+			root_signature_desc.root_parameters[0].type = display::RootSignatureParameterType::ConstantBuffer;
+			root_signature_desc.root_parameters[0].root_param.shader_register = 0;
+			root_signature_desc.root_parameters[0].visibility = display::ShaderVisibility::All;
+
+			root_signature_desc.num_static_samplers = 0;
+
+			//Create the root signature
+			m_test_4.m_compute_root_signature = display::CreateRootSignature(m_device, root_signature_desc, "Test 4 Compute");
+		}
+
 	}
 	void OnDestroy() override
 	{
@@ -551,6 +568,7 @@ public:
 		display::DestroyCommandList(m_device, m_test_4.m_command_list);
 		display::DestroyRootSignature(m_device, m_test_4.m_root_signature);
 		display::DestroyPipelineState(m_device, m_test_4.m_pipeline_state);
+		display::DestroyRootSignature(m_device, m_test_4.m_compute_root_signature);
 
 		display::DestroyDevice(m_device);
 	}
