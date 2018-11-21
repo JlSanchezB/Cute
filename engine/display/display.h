@@ -120,7 +120,7 @@ namespace display
 	void UpdateResourceBuffer(Device* device, const UpdatableResourceHandle& handle, const void* data, size_t size);
 
 	//Pipe used
-	enum class Pipe
+	enum class Pipe : uint8_t
 	{
 		Graphics,
 		Compute
@@ -133,7 +133,7 @@ namespace display
 		Device* GetDevice();
 
 		//Set render target
-		void SetRenderTargets(size_t num_targets, WeakRenderTargetHandle* render_target_array, WeakDepthBufferHandle depth_stencil);
+		void SetRenderTargets(uint8_t num_targets, WeakRenderTargetHandle* render_target_array, WeakDepthBufferHandle depth_stencil);
 
 		//Clear
 		void ClearRenderTargetColour(const WeakRenderTargetHandle& render_target, const float colour[4]);
@@ -151,31 +151,31 @@ namespace display
 		void SetPipelineState(const WeakPipelineStateHandle& pipeline_state);
 
 		//Set Vertex buffers
-		void SetVertexBuffers(size_t start_slot_index, size_t num_vertex_buffers, WeakVertexBufferHandle* vertex_buffers);
+		void SetVertexBuffers(uint8_t start_slot_index, uint8_t num_vertex_buffers, WeakVertexBufferHandle* vertex_buffers);
 
 		//Set Index Buffer
 		void SetIndexBuffer(const WeakIndexBufferHandle& index_buffer);
 
 		//Render target transition
-		void RenderTargetTransition(size_t num_targets, WeakRenderTargetHandle* render_target_array, const ResourceState& dest_state);
+		void RenderTargetTransition(uint8_t num_targets, WeakRenderTargetHandle* render_target_array, const ResourceState& dest_state);
 
 		//Set constants
-		void SetConstants(const Pipe& pipe, size_t root_parameter, const void* data, size_t size);
+		void SetConstants(const Pipe& pipe, uint8_t root_parameter, const void* data, size_t size);
 
 		//Set constant buffer
-		void SetConstantBuffer(const Pipe& pipe, size_t root_parameter, const WeakConstantBufferHandle& constant_buffer);
+		void SetConstantBuffer(const Pipe& pipe, uint8_t root_parameter, const WeakConstantBufferHandle& constant_buffer);
 
 		//Set unordered access buffer
-		void SetUnorderedAccessBuffer(const Pipe& pipe, size_t root_parameter, const WeakUnorderedAccessBufferHandle& unordered_access_buffer);
+		void SetUnorderedAccessBuffer(const Pipe& pipe, uint8_t root_parameter, const WeakUnorderedAccessBufferHandle& unordered_access_buffer);
 
 		//Set shader resource
-		void SetShaderResource(const Pipe& pipe, size_t root_parameter, const WeakShaderResourceHandle& shader_resource);
+		void SetShaderResource(const Pipe& pipe, uint8_t root_parameter, const WeakShaderResourceHandle& shader_resource);
 
 		//Set descriptor table
-		void SetDescriptorTable(const Pipe& pipe, size_t root_parameter, const WeakDescriptorTableHandle& descriptor_table);
+		void SetDescriptorTable(const Pipe& pipe, uint8_t root_parameter, const WeakDescriptorTableHandle& descriptor_table);
 
 		//Set descriptor table
-		void SetDescriptorTable(const Pipe& pipe, size_t root_parameter, const WeakSamplerDescriptorTableHandle& sampler_descriptor_table);
+		void SetDescriptorTable(const Pipe& pipe, uint8_t root_parameter, const WeakSamplerDescriptorTableHandle& sampler_descriptor_table);
 
 		//Draw
 		void Draw(const DrawDesc& draw_desc);

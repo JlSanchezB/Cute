@@ -8,7 +8,7 @@ namespace display
 		auto dx12_context = reinterpret_cast<DX12Context*>(this);
 		return dx12_context->device;
 	}
-	void Context::SetRenderTargets(size_t num_targets, WeakRenderTargetHandle* render_target_array, WeakDepthBufferHandle depth_stencil)
+	void Context::SetRenderTargets(uint8_t num_targets, WeakRenderTargetHandle* render_target_array, WeakDepthBufferHandle depth_stencil)
 	{
 		auto dx12_context = reinterpret_cast<DX12Context*>(this);
 		Device* device = dx12_context->device;
@@ -80,7 +80,7 @@ namespace display
 
 		command_list->SetPipelineState(pipeline_state.Get());
 	}
-	void Context::SetVertexBuffers(size_t start_slot_index, size_t num_vertex_buffers, WeakVertexBufferHandle * vertex_buffer_handles)
+	void Context::SetVertexBuffers(uint8_t start_slot_index, uint8_t num_vertex_buffers, WeakVertexBufferHandle * vertex_buffer_handles)
 	{
 		auto dx12_context = reinterpret_cast<DX12Context*>(this);
 		Device* device = dx12_context->device;
@@ -105,7 +105,7 @@ namespace display
 
 		command_list->IASetIndexBuffer(&index_buffer.view);
 	}
-	void Context::RenderTargetTransition(size_t num_targets, WeakRenderTargetHandle * render_target_array, const ResourceState& dest_state)
+	void Context::RenderTargetTransition(uint8_t num_targets, WeakRenderTargetHandle * render_target_array, const ResourceState& dest_state)
 	{
 		auto dx12_context = reinterpret_cast<DX12Context*>(this);
 		Device* device = dx12_context->device;
@@ -130,7 +130,7 @@ namespace display
 		}
 
 	}
-	void Context::SetConstants(const Pipe& pipe, size_t root_parameter, const void * data, size_t num_constants)
+	void Context::SetConstants(const Pipe& pipe, uint8_t root_parameter, const void * data, size_t num_constants)
 	{
 		auto dx12_context = reinterpret_cast<DX12Context*>(this);
 		Device* device = dx12_context->device;
@@ -152,7 +152,7 @@ namespace display
 		}
 	}
 
-	void Context::SetConstantBuffer(const Pipe& pipe, size_t root_parameter, const WeakConstantBufferHandle & constant_buffer_handle)
+	void Context::SetConstantBuffer(const Pipe& pipe, uint8_t root_parameter, const WeakConstantBufferHandle & constant_buffer_handle)
 	{
 		auto dx12_context = reinterpret_cast<DX12Context*>(this);
 		Device* device = dx12_context->device;
@@ -174,7 +174,7 @@ namespace display
 			command_list->SetComputeRootConstantBufferView(static_cast<UINT>(root_parameter), constant_buffer.resource->GetGPUVirtualAddress());
 		}
 	}
-	void Context::SetUnorderedAccessBuffer(const Pipe& pipe, size_t root_parameter, const WeakUnorderedAccessBufferHandle & unordered_access_buffer_handle)
+	void Context::SetUnorderedAccessBuffer(const Pipe& pipe, uint8_t root_parameter, const WeakUnorderedAccessBufferHandle & unordered_access_buffer_handle)
 	{
 		auto dx12_context = reinterpret_cast<DX12Context*>(this);
 		Device* device = dx12_context->device;
@@ -194,7 +194,7 @@ namespace display
 			command_list->SetComputeRootUnorderedAccessView(static_cast<UINT>(root_parameter), unordered_access_buffer.resource->GetGPUVirtualAddress());
 		}
 	}
-	void Context::SetShaderResource(const Pipe& pipe, size_t root_parameter, const WeakShaderResourceHandle & shader_resource_handle)
+	void Context::SetShaderResource(const Pipe& pipe, uint8_t root_parameter, const WeakShaderResourceHandle & shader_resource_handle)
 	{
 		auto dx12_context = reinterpret_cast<DX12Context*>(this);
 		Device* device = dx12_context->device;
@@ -215,7 +215,7 @@ namespace display
 		}
 	}
 
-	void Context::SetDescriptorTable(const Pipe& pipe, size_t root_parameter, const WeakDescriptorTableHandle & descriptor_table_handle)
+	void Context::SetDescriptorTable(const Pipe& pipe, uint8_t root_parameter, const WeakDescriptorTableHandle & descriptor_table_handle)
 	{
 		auto dx12_context = reinterpret_cast<DX12Context*>(this);
 		Device* device = dx12_context->device;
@@ -237,7 +237,7 @@ namespace display
 		}
 	}
 
-	void Context::SetDescriptorTable(const Pipe& pipe, size_t root_parameter, const WeakSamplerDescriptorTableHandle& sampler_descriptor_table_handle)
+	void Context::SetDescriptorTable(const Pipe& pipe, uint8_t root_parameter, const WeakSamplerDescriptorTableHandle& sampler_descriptor_table_handle)
 	{
 		auto dx12_context = reinterpret_cast<DX12Context*>(this);
 		Device* device = dx12_context->device;
