@@ -185,6 +185,9 @@ namespace display
 
 		//Draw Indexed Instanced
 		void DrawIndexedInstanced(const DrawIndexedInstancedDesc& draw_desc);
+
+		//Execute compute
+		void ExecuteCompute(uint16_t group_count_x, uint16_t group_count_y, uint16_t group_count_z);
 	};
 }
 #endif DISPLAY_H_
