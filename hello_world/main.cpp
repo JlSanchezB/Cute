@@ -96,9 +96,9 @@ public:
 		display::RootSignatureHandle m_root_signature;
 		display::PipelineStateHandle m_pipeline_state;
 		display::RootSignatureHandle m_compute_root_signature;
-		display::ConstantBufferHandle m_compute_constant_buffer;
-		display::DescriptorTableHandle m_compute_constant_descriptor_table;
 		display::PipelineStateHandle m_compute_pipeline_state;
+		display::ConstantBufferHandle m_compute_time_constant_buffer;
+		display::UnorderedAccessBufferHandle m_compute_unordered_access_buffer;
 	};
 
 	//Tests
@@ -458,7 +458,7 @@ public:
 		}
 
 		{
-			//Compute pipeline, compile shader for testing
+			//Graphics pipeline, compile shader for testing
 			const char* shader_code =
 				"StructuredBuffer<float4> compute_params: t0;\
 				struct PSInput\
@@ -523,15 +523,72 @@ public:
 		{
 			//Create compute root signature
 			display::RootSignatureDesc root_signature_desc;
-			root_signature_desc.num_root_parameters = 1;
+			root_signature_desc.num_root_parameters = 2;
 			root_signature_desc.root_parameters[0].type = display::RootSignatureParameterType::ConstantBuffer;
 			root_signature_desc.root_parameters[0].root_param.shader_register = 0;
 			root_signature_desc.root_parameters[0].visibility = display::ShaderVisibility::All;
+			root_signature_desc.root_parameters[1].type = display::RootSignatureParameterType::UnorderAccessBuffer;
+			root_signature_desc.root_parameters[1].root_param.shader_register = 0;
+			root_signature_desc.root_parameters[1].visibility = display::ShaderVisibility::All;
 
 			root_signature_desc.num_static_samplers = 0;
 
 			//Create the root signature
 			m_test_4.m_compute_root_signature = display::CreateRootSignature(m_device, root_signature_desc, "Test 4 Compute");
+		}
+
+		{
+			//Compute pipeline, compile shader for testing
+			const char* shader_code =
+				"RWStructuredBuffer<float4> compute_params: u0;\
+				float4 time : c0; \
+				\
+				[numthreads(NUM_QUADS, 1, 1)]\
+				void fill_positions(uint3 thread : SV_DispatchThreadID)\
+				{\
+					float quad = float(thread.x) / float(NUM_QUADS); \
+					float angle = float(time.x + 3.f * quad);\
+					compute_params[thread.x].x = 0.5f * cos(angle);\
+					compute_params[thread.x].y = 0.5f * sin(angle);\
+					compute_params[thread.x].z = 0.01f + 0.02f * quad;\
+					compute_params[thread.x].w = 0.5f + 0.5f * quad;\
+				}";
+
+			std::vector<char> compute_shader;
+
+			display::CompileShaderDesc compile_shader_desc;
+			compile_shader_desc.code = shader_code;
+			compile_shader_desc.entry_point = "fill_positions";
+			compile_shader_desc.target = "cs_5_0";
+
+			compile_shader_desc.defines.emplace_back("NUM_QUADS", "10");
+
+			display::CompileShader(m_device, compile_shader_desc, compute_shader);
+
+			//Create pipeline state
+			display::ComputePipelineStateDesc pipeline_state_desc;
+			pipeline_state_desc.root_signature = m_test_4.m_compute_root_signature;
+
+			//Add shaders
+			pipeline_state_desc.compute_shader.data = reinterpret_cast<void*>(compute_shader.data());
+			pipeline_state_desc.compute_shader.size = compute_shader.size();
+
+			//Create
+			m_test_4.m_compute_pipeline_state = display::CreateComputePipelineState(m_device, pipeline_state_desc, "compute driven update");
+		}
+		{
+			display::ConstantBufferDesc constant_buffer_desc;
+			constant_buffer_desc.access = display::Access::Dynamic;
+			constant_buffer_desc.size = 4 * sizeof(float);
+
+			m_test_4.m_compute_time_constant_buffer = display::CreateConstantBuffer(m_device, constant_buffer_desc, "Time compute");
+		}
+		{
+			display::UnorderedAccessBufferDesc unodered_access_buffer_desc;
+			unodered_access_buffer_desc.element_count = 10;
+			unodered_access_buffer_desc.element_size = 4 * sizeof(float);
+
+			m_test_4.m_compute_unordered_access_buffer = display::CreateUnorderedAccessBuffer(m_device, unodered_access_buffer_desc, "Unordered access buffer por positions");
 		}
 
 	}
@@ -569,6 +626,9 @@ public:
 		display::DestroyRootSignature(m_device, m_test_4.m_root_signature);
 		display::DestroyPipelineState(m_device, m_test_4.m_pipeline_state);
 		display::DestroyRootSignature(m_device, m_test_4.m_compute_root_signature);
+		display::DestroyPipelineState(m_device, m_test_4.m_compute_pipeline_state);
+		display::DestroyConstantBuffer(m_device, m_test_4.m_compute_time_constant_buffer);
+		display::DestroyUnorderedAccessBuffer(m_device, m_test_4.m_compute_unordered_access_buffer);
 
 		display::DestroyDevice(m_device);
 	}

@@ -335,6 +335,8 @@ namespace display
 		const char* code = nullptr;
 		const char* entry_point = nullptr;
 		const char* target = nullptr;
+		const char* name = nullptr;
+		std::vector < std::pair<const char*, const char*>> defines;
 	};
 
 	struct ExecuteComputeDesc

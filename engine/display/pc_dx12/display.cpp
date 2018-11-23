@@ -696,7 +696,18 @@ namespace display
 	{
 		ComPtr<ID3DBlob> blob;
 		ComPtr<ID3DBlob> errors;
-		auto hr = D3DCompile(compile_shader_desc.code, strlen(compile_shader_desc.code), NULL, NULL, NULL, compile_shader_desc.entry_point, compile_shader_desc.target, 0, 0, &blob, &errors);
+
+		std::unique_ptr<D3D_SHADER_MACRO[]> defines;
+		if (compile_shader_desc.defines.size() > 0)
+		{
+			defines = std::make_unique<D3D_SHADER_MACRO[]>(compile_shader_desc.defines.size() + 1);
+			memcpy(defines.get(), compile_shader_desc.defines.data(), sizeof(D3D_SHADER_MACRO) * compile_shader_desc.defines.size());
+			//Add null terminated
+			defines.get()[compile_shader_desc.defines.size()].Name = nullptr;
+			defines.get()[compile_shader_desc.defines.size()].Definition = nullptr;
+		}
+
+		auto hr = D3DCompile(compile_shader_desc.code, strlen(compile_shader_desc.code), compile_shader_desc.name, defines.get(), NULL, compile_shader_desc.entry_point, compile_shader_desc.target, 0, 0, &blob, &errors);
 		if (SUCCEEDED(hr))
 		{
 			shader_blob.resize(blob->GetBufferSize());
