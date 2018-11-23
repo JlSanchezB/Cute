@@ -168,8 +168,9 @@ namespace display
 		//Set unordered access buffer
 		void SetUnorderedAccessBuffer(const Pipe& pipe, uint8_t root_parameter, const WeakUnorderedAccessBufferHandle& unordered_access_buffer);
 
+		using ShaderResourceSet = std::variant<WeakShaderResourceHandle, WeakUnorderedAccessBufferHandle>;
 		//Set shader resource
-		void SetShaderResource(const Pipe& pipe, uint8_t root_parameter, const WeakShaderResourceHandle& shader_resource);
+		void SetShaderResource(const Pipe& pipe, uint8_t root_parameter, const ShaderResourceSet& shader_resource);
 
 		//Set descriptor table
 		void SetDescriptorTable(const Pipe& pipe, uint8_t root_parameter, const WeakDescriptorTableHandle& descriptor_table);

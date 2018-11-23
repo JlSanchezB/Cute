@@ -556,3 +556,6 @@ namespace
 }
 
 #define SAFE_RELEASE(p) if (p) (p)->Release()
+
+template<class... Ts> struct overloaded : Ts... { using Ts::operator()...; };
+template<class... Ts> overloaded(Ts...)->overloaded<Ts...>;

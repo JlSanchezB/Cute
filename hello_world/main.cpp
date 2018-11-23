@@ -443,11 +443,8 @@ public:
 		{
 			display::RootSignatureDesc root_signature_desc;
 			root_signature_desc.num_root_parameters = 1;
-			root_signature_desc.root_parameters[0].type = display::RootSignatureParameterType::DescriptorTable;
-			root_signature_desc.root_parameters[0].table.num_ranges = 1;
-			root_signature_desc.root_parameters[0].table.range[0].base_shader_register = 0;
-			root_signature_desc.root_parameters[0].table.range[0].size = 1;
-			root_signature_desc.root_parameters[0].table.range[0].type = display::DescriptorTableParameterType::ShaderResource;
+			root_signature_desc.root_parameters[0].type = display::RootSignatureParameterType::ShaderResource;
+			root_signature_desc.root_parameters[0].root_param.shader_register = 0;
 			root_signature_desc.root_parameters[0].visibility = display::ShaderVisibility::All;
 
 			root_signature_desc.num_static_samplers = 0;
@@ -812,10 +809,80 @@ public:
 			display::CloseCommandList(m_device, context);
 		}
 
+		{
+			//Test4, execute a compute shader to fill a unordered access buffer with the instance data
+			
+			//Open command list
+			display::Context* context = display::OpenCommandList(m_device, m_test_4.m_command_list);
+
+			//Set Render Target
+			context->SetRenderTargets(1, &display::GetBackBuffer(m_device), display::WeakDepthBufferHandle());
+
+			//Set viewport
+			display::Viewport viewport(static_cast<float>(m_width / 2), static_cast<float>(m_height / 2));
+			viewport.top_left_x = static_cast<float>(m_width / 2);
+			viewport.top_left_y = static_cast<float>(m_height / 2);
+			context->SetViewport(viewport);
+
+			//Set Scissor Rect
+			context->SetScissorRect(display::Rect(0, 0, m_width, m_height));
+
+			//Execute compute
+			//Set root signature
+			context->SetRootSignature(display::Pipe::Compute, m_test_4.m_compute_root_signature);
+			
+			//Update time
+			float time_constant_buffer[4] = { static_cast<float>(total_time), 0.f, 0.f, 0.f };
+			display::UpdateResourceBuffer(m_device, m_test_4.m_compute_time_constant_buffer, time_constant_buffer, sizeof(time_constant_buffer));
+
+			//Set time constant
+			context->SetConstantBuffer(display::Pipe::Compute, 0, m_test_4.m_compute_time_constant_buffer);
+
+			//Set unordered access buffer
+			context->SetUnorderedAccessBuffer(display::Pipe::Compute, 1, m_test_4.m_compute_unordered_access_buffer);
+
+			//Set compute pipeline
+			context->SetPipelineState(m_test_4.m_compute_pipeline_state);
+
+			//Execute compute
+			display::ExecuteComputeDesc execute_compute_desc;
+			execute_compute_desc.group_count_x = 1;
+			execute_compute_desc.group_count_y = 1;
+			execute_compute_desc.group_count_z = 1;
+			context->ExecuteCompute(execute_compute_desc);
+
+		
+
+			//Set graphic root signature
+			context->SetRootSignature(display::Pipe::Graphics, m_test_4.m_root_signature);
+
+			//Set pipeline state
+			context->SetPipelineState(m_test_4.m_pipeline_state);
+
+			//Set unordered access buffer
+			context->SetShaderResource(display::Pipe::Graphics, 0, m_test_4.m_compute_unordered_access_buffer);
+
+			//Set vertex buffer
+			context->SetVertexBuffers(0, 1, &m_test_2.m_vertex_buffer);
+
+			//Set index buffer
+			context->SetIndexBuffer(m_test_2.m_index_buffer);
+
+			//Draw
+			display::DrawIndexedInstancedDesc draw_desc;
+			draw_desc.index_count = 6;
+			draw_desc.instance_count = Test3::kNumQuads;
+			context->DrawIndexedInstanced(draw_desc);
+
+			//Close command list
+			display::CloseCommandList(m_device, context);
+		}
+
 		//Execute command list
 		display::ExecuteCommandList(m_device, m_test_1.m_command_list);
 		display::ExecuteCommandList(m_device, m_test_2.m_command_list);
 		display::ExecuteCommandList(m_device, m_test_3.m_command_list);
+		display::ExecuteCommandList(m_device, m_test_4.m_command_list);
 
 		display::EndFrame(m_device);
 	}

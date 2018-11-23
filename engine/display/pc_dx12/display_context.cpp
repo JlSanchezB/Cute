@@ -194,24 +194,39 @@ namespace display
 			command_list->SetComputeRootUnorderedAccessView(static_cast<UINT>(root_parameter), unordered_access_buffer.resource->GetGPUVirtualAddress());
 		}
 	}
-	void Context::SetShaderResource(const Pipe& pipe, uint8_t root_parameter, const WeakShaderResourceHandle & shader_resource_handle)
+	void Context::SetShaderResource(const Pipe& pipe, uint8_t root_parameter, const ShaderResourceSet & shader_resource_handle)
 	{
 		auto dx12_context = reinterpret_cast<DX12Context*>(this);
 		Device* device = dx12_context->device;
 		const auto& command_list = dx12_context->command_list;
-		auto& shader_resource = device->Get(GetRingResource(device, shader_resource_handle, device->m_frame_index));
+		D3D12_GPU_VIRTUAL_ADDRESS gpu_virtual_address;
+
+		std::visit(
+			overloaded
+			{
+				[&](const WeakShaderResourceHandle& handle)
+				{
+					auto& shader_resource = device->Get(GetRingResource(device, handle, device->m_frame_index));
+					gpu_virtual_address = shader_resource.resource->GetGPUVirtualAddress();
+				},
+				[&](const WeakUnorderedAccessBufferHandle& handle)
+				{
+					auto& shader_resource = device->Get(handle);
+					gpu_virtual_address = shader_resource.resource->GetGPUVirtualAddress();
+				}
+			}, shader_resource_handle);
 
 		if (pipe == Pipe::Graphics)
 		{
 			auto& root_signature = device->Get(dx12_context->current_graphics_root_signature);
 			assert(root_parameter < root_signature.desc.num_root_parameters);
-			command_list->SetGraphicsRootShaderResourceView(static_cast<UINT>(root_parameter), shader_resource.resource->GetGPUVirtualAddress());
+			command_list->SetGraphicsRootShaderResourceView(static_cast<UINT>(root_parameter), gpu_virtual_address);
 		}
 		else if (pipe == Pipe::Compute)
 		{
 			auto& root_signature = device->Get(dx12_context->current_compute_root_signature);
 			assert(root_parameter < root_signature.desc.num_root_parameters);
-			command_list->SetComputeRootShaderResourceView(static_cast<UINT>(root_parameter), shader_resource.resource->GetGPUVirtualAddress());
+			command_list->SetComputeRootShaderResourceView(static_cast<UINT>(root_parameter), gpu_virtual_address);
 		}
 	}
 
