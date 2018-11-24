@@ -202,6 +202,10 @@ namespace display
 		//DX12 device
 		ComPtr<ID3D12Device> m_native_device;
 
+		//Adapter desc
+		DXGI_ADAPTER_DESC1 m_adapter_desc;
+		char m_adapter_description[128];
+
 		//Device resources
 
 		//Per frame system resources

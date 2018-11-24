@@ -22,6 +22,7 @@ namespace display
 		bool debug = false;
 		bool tearing = false;
 		bool vsync = false;
+		uint32_t adapter_index = -1;
 	};
 
 	struct Context;

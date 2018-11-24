@@ -5,11 +5,39 @@
 namespace display
 {
 	_Use_decl_annotations_
-		void GetHardwareAdapter(IDXGIFactory2* pFactory, IDXGIAdapter1** ppAdapter)
+	void GetHardwareAdapter(IDXGIFactory2* pFactory, IDXGIAdapter1** ppAdapter, uint32_t adapter_index)
 	{
 		ComPtr<IDXGIAdapter1> adapter;
 		*ppAdapter = nullptr;
 
+		if (adapter_index != -1)
+		{
+			//Try to use the adapter index
+			if (DXGI_ERROR_NOT_FOUND != pFactory->EnumAdapters1(adapter_index, &adapter))
+			{
+				DXGI_ADAPTER_DESC1 desc;
+				adapter->GetDesc1(&desc);
+
+				if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
+				{
+					// Don't select the Basic Render Driver adapter.
+					// If you want a software adapter, pass in "/warp" on the command line.	
+				}
+				else
+				{
+					// Check to see if the adapter supports Direct3D 12, but don't create the
+					// actual device yet.
+					if (SUCCEEDED(D3D12CreateDevice(adapter.Get(), D3D_FEATURE_LEVEL_11_0, _uuidof(ID3D12Device), nullptr)))
+					{
+						*ppAdapter = adapter.Detach();
+						return;
+					}
+				}
+			}
+
+			//If it doesn't work, just use the first valid
+			core::log("Adapter index %i can not be initied, using the first valid\n", adapter_index);
+		}
 		for (UINT adapterIndex = 0; DXGI_ERROR_NOT_FOUND != pFactory->EnumAdapters1(adapterIndex, &adapter); ++adapterIndex)
 		{
 			DXGI_ADAPTER_DESC1 desc;
@@ -26,6 +54,10 @@ namespace display
 			// actual device yet.
 			if (SUCCEEDED(D3D12CreateDevice(adapter.Get(), D3D_FEATURE_LEVEL_11_0, _uuidof(ID3D12Device), nullptr)))
 			{
+				if (adapter_index != -1)
+				{
+					core::log("Valid adapter found (%i)\n", adapterIndex);
+				}
 				break;
 			}
 		}
@@ -72,6 +104,7 @@ namespace display
 	{
 		if (ImGui::Begin("Display Stats", activated, ImGuiWindowFlags_AlwaysAutoResize))
 		{
+			ImGui::Text("Adapter (%s)", device->m_adapter_description);
 			ImGui::Text("Resolution (%i,%i), frames (%i)", device->m_width, device->m_height, device->m_frame_resources.size());
 			ImGui::Text("windowed(%s), tearing(%s), vsync(%s)", (device->m_windowed) ? "true" : "false", (device->m_tearing) ? "true" : "false", (device->m_vsync) ? "true" : "false");
 			ImGui::Separator();
@@ -127,13 +160,21 @@ namespace display
 		ThrowIfFailed(CreateDXGIFactory2(dxgiFactoryFlags, IID_PPV_ARGS(&factory)));
 
 		ComPtr<IDXGIAdapter1> hardwareAdapter;
-		GetHardwareAdapter(factory.Get(), &hardwareAdapter);
+		GetHardwareAdapter(factory.Get(), &hardwareAdapter, params.adapter_index);
+
+		//Get Adapter descriptor
+		hardwareAdapter->GetDesc1(&device->m_adapter_desc);
+		setlocale(LC_ALL, "en_US.utf8");
+		size_t num_converted_characters;
+		wcstombs_s(&num_converted_characters, device->m_adapter_description, device->m_adapter_desc.Description, 128);
 
 		ThrowIfFailed(D3D12CreateDevice(
 			hardwareAdapter.Get(),
 			D3D_FEATURE_LEVEL_11_0,
 			IID_PPV_ARGS(&device->m_native_device)
 		));
+
+		core::log("DX12 device created in adapter <%s>\n", device->m_adapter_description);
 
 		// Describe and create the command queue.
 		D3D12_COMMAND_QUEUE_DESC queueDesc = {};
