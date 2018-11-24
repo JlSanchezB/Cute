@@ -116,6 +116,7 @@ public:
 		device_init_params.width = kInitWidth;
 		device_init_params.height = kInitHeight;
 		device_init_params.tearing = true;
+		device_init_params.vsync = false;
 		device_init_params.num_frames = 3;
 
 		m_device = display::CreateDevice(device_init_params);

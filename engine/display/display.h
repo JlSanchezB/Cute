@@ -21,6 +21,7 @@ namespace display
 		uint32_t height;
 		bool debug = false;
 		bool tearing = false;
+		bool vsync = false;
 	};
 
 	struct Context;

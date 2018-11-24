@@ -225,6 +225,7 @@ namespace display
 		ComPtr<ID3D12Fence> m_fence;
 		bool m_tearing; //It changes all the fullscreen implementation
 		bool m_windowed; //Only if tearing is not enabled
+		bool m_vsync; //vsync
 		size_t m_width;
 		size_t m_height;
 

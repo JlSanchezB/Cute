@@ -72,8 +72,11 @@ namespace display
 	{
 		if (ImGui::Begin("Display Stats", activated, ImGuiWindowFlags_AlwaysAutoResize))
 		{
-			ImGui::Text("Resolution (%i,%i), windowed (%s), tearing (%s), frames (%i)", device->m_width, device->m_height, (device->m_windowed)?"true":"false", (device->m_tearing) ? "true" : "false", device->m_frame_resources.size());
+			ImGui::Text("Resolution (%i,%i), frames (%i)", device->m_width, device->m_height, device->m_frame_resources.size());
+			ImGui::Text("windowed(%s), tearing(%s), vsync(%s)", (device->m_windowed) ? "true" : "false", (device->m_tearing) ? "true" : "false", (device->m_vsync) ? "true" : "false");
+			ImGui::Separator();
 			ImGui::Text("Uploaded memory each frame (%zu)", device->uploaded_memory_frame);
+			ImGui::Separator();
 			ImGui::Text("Command list handles (%zu/%zu)", device->m_command_list_pool.size(), device->m_command_list_pool.max_size());
 			ImGui::Text("Render target handles (%zu/%zu)", device->m_render_target_pool.size(), device->m_render_target_pool.max_size());
 			ImGui::Text("Depth buffer handles (%zu/%zu)", device->m_depth_buffer_pool.size(), device->m_depth_buffer_pool.max_size());
@@ -152,6 +155,7 @@ namespace display
 		//Windows settings
 		device->m_tearing = params.tearing;
 		device->m_windowed = true;
+		device->m_vsync = params.vsync;
 		device->m_width = params.width;
 		device->m_height = params.height;
 
@@ -403,10 +407,11 @@ namespace display
 		// flag when it is supported, even when presenting in windowed mode.
 		// However, this flag cannot be used if the app is in fullscreen mode as a
 		// result of calling SetFullscreenState.
-		UINT present_flags = (device->m_tearing && device->m_windowed) ? DXGI_PRESENT_ALLOW_TEARING : 0;
+		UINT sync_interval = (device->m_vsync) ? 1: 0;
+		UINT present_flags = (device->m_tearing && device->m_windowed && !device->m_vsync) ? DXGI_PRESENT_ALLOW_TEARING : 0;
 
 		// Present the frame.
-		ThrowIfFailed(device->m_swap_chain->Present(1, 0));
+		ThrowIfFailed(device->m_swap_chain->Present(sync_interval, present_flags));
 
 		MoveToNextFrame(device);
 	}
