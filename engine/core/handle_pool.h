@@ -149,6 +149,16 @@ namespace core
 			return *reinterpret_cast<const DATA*>(&m_data[handle.m_index].data);
 		}
 
+		size_t size() const
+		{
+			return m_size;
+		}
+
+		size_t max_size() const
+		{
+			return m_max_size;
+		}
+
 	private:
 		typename HANDLE::type_param& GetNextFreeSlot(const typename HANDLE::type_param& index)
 		{
@@ -158,7 +168,10 @@ namespace core
 		void GrowDataStorage(size_t new_size);
 
 		//Max size the pool can grow
-		size_t m_max_size;
+		size_t m_max_size = 0;
+
+		//Current size
+		size_t m_size = 0;;
 
 		//Data storage of our DATA and free list
 		using DataStorage = union
@@ -183,7 +196,7 @@ namespace core
 	template<typename HANDLE, typename DATA>
 	inline HandlePool<HANDLE, DATA>::~HandlePool()
 	{
-		if (m_data.size())
+		if (m_data.size() && size() > 0)
 		{
 			//Report leaks
 			std::vector<bool> allocated;
@@ -223,8 +236,10 @@ namespace core
 	inline void HandlePool<HANDLE, DATA>::Init(size_t max_size, size_t init_size)
 	{
 		assert(max_size < std::numeric_limits<typename HANDLE::type_param>::max() - 1);
+		assert(init_size <= max_size);
 		m_max_size = max_size;
 		m_first_free_allocated = HANDLE::kInvalid;
+		m_size = 0;
 
 		GrowDataStorage(init_size);
 	}
@@ -261,6 +276,8 @@ namespace core
 		//Create DATA
 		new(&m_data[handle_slot]) DATA(std::forward<Args>(args)...);
 
+		m_size++;
+
 		return HANDLE(handle_slot);
 	}
 
@@ -281,6 +298,9 @@ namespace core
 			GetNextFreeSlot(handle.m_index) = m_first_free_allocated;
 			m_first_free_allocated = handle.m_index;
 		}
+
+		m_size--;
+
 		//Reset handle to an invalid, it will avoid it keep the index
 		handle.m_index = HANDLE::kInvalid;
 	}

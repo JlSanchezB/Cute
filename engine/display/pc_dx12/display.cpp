@@ -70,10 +70,22 @@ namespace display
 
 	void DisplayImguiStats(Device* device, bool* activated)
 	{
-		if (ImGui::Begin("Display Stats", activated))
+		if (ImGui::Begin("Display Stats", activated, ImGuiWindowFlags_AlwaysAutoResize))
 		{
-			ImGui::Text("Resolution (%i,%i), windowed %s, tearing %s", device->m_width, device->m_height, (device->m_windowed)?"true":"false", (device->m_tearing) ? "true" : "false");
-			ImGui::Text("Uploaded memory each frame <%zu>", device->uploaded_memory_frame);
+			ImGui::Text("Resolution (%i,%i), windowed (%s), tearing (%s), frames (%i)", device->m_width, device->m_height, (device->m_windowed)?"true":"false", (device->m_tearing) ? "true" : "false", device->m_frame_resources.size());
+			ImGui::Text("Uploaded memory each frame (%zu)", device->uploaded_memory_frame);
+			ImGui::Text("Command list handles (%zu/%zu)", device->m_command_list_pool.size(), device->m_command_list_pool.max_size());
+			ImGui::Text("Render target handles (%zu/%zu)", device->m_render_target_pool.size(), device->m_render_target_pool.max_size());
+			ImGui::Text("Depth buffer handles (%zu/%zu)", device->m_depth_buffer_pool.size(), device->m_depth_buffer_pool.max_size());
+			ImGui::Text("Root signature handles (%zu/%zu)", device->m_root_signature_pool.size(), device->m_root_signature_pool.max_size());
+			ImGui::Text("Pipeline state handles (%zu/%zu)", device->m_pipeline_state_pool.size(), device->m_pipeline_state_pool.max_size());
+			ImGui::Text("Vertex buffer handles (%zu/%zu)", device->m_vertex_buffer_pool.size(), device->m_vertex_buffer_pool.max_size());
+			ImGui::Text("Index buffer handles (%zu/%zu)", device->m_index_buffer_pool.size(), device->m_index_buffer_pool.max_size());
+			ImGui::Text("Constant buffer handles (%zu/%zu)", device->m_constant_buffer_pool.size(), device->m_constant_buffer_pool.max_size());
+			ImGui::Text("Unordered access buffer handles (%zu/%zu)", device->m_unordered_access_buffer_pool.size(), device->m_unordered_access_buffer_pool.max_size());
+			ImGui::Text("Shader resource handles (%zu/%zu)", device->m_shader_resource_pool.size(), device->m_shader_resource_pool.max_size());
+			ImGui::Text("Descriptor table handles (%zu/%zu)", device->m_descriptor_table_pool.size(), device->m_descriptor_table_pool.max_size());
+			ImGui::Text("Sampler descriptor table handles (%zu/%zu)", device->m_sampler_descriptor_table_pool.size(), device->m_sampler_descriptor_table_pool.max_size());
 			ImGui::End();	
 		}
 	}
@@ -170,7 +182,7 @@ namespace display
 		device->m_render_target_pool.InitMultipleHeaps(100, 10, params.num_frames, device, 2, render_target_heap_types);
 		device->m_depth_buffer_pool.Init(100, 10, params.num_frames, device, D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
 		device->m_command_list_pool.Init(500, 10, params.num_frames);
-		device->m_root_signature_pool.Init(10, 10, params.num_frames);
+		device->m_root_signature_pool.Init(100, 10, params.num_frames);
 		device->m_pipeline_state_pool.Init(2000, 100, params.num_frames);
 		device->m_vertex_buffer_pool.Init(2000, 100, params.num_frames);
 		device->m_index_buffer_pool.Init(2000, 100, params.num_frames);
