@@ -228,6 +228,10 @@ namespace display
 		size_t m_width;
 		size_t m_height;
 
+		//Statis
+		size_t uploaded_memory_frame = 0;
+
+
 		//Pool for context
 		core::SimplePool<DX12Context, 256> m_context_pool;
 

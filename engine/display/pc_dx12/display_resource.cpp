@@ -704,6 +704,7 @@ namespace display
 		if (memory_data)
 		{
 			memcpy(memory_data, data, size);
+			device->uploaded_memory_frame += size;
 		}
 	}
 }

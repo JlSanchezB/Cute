@@ -19,6 +19,8 @@ namespace display
 	bool IsTearingEnabled(Device* device);
 
 	bool GetCurrentDisplayRect(Device* device, Rect& rect);
+
+	void DisplayImguiStats(Device* device, bool* activated);
 }
 
 namespace
@@ -51,6 +53,9 @@ namespace
 
 	//Imgui demo
 	bool g_imgui_demo_enable = false;
+
+	//Imgui display stats
+	bool g_imgui_display_stats = false;
 
 	//Windows message handle
 	LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
@@ -213,6 +218,7 @@ namespace
 					if (ImGui::MenuItem("Logger")) {};
 					ImGui::Checkbox("Show FPS", &g_imgui_fps_enable);
 					ImGui::Checkbox("Show Imgui Demo", &g_imgui_demo_enable);
+					ImGui::Checkbox("Display Stats", &g_imgui_display_stats);
 					ImGui::EndMenu();
 				}
 				//Call game to add it owns menus
@@ -231,6 +237,11 @@ namespace
 		if (g_imgui_fps_enable)
 		{
 			RenderFPSOverlay(elapsed_time);
+		}
+
+		if (g_imgui_display_stats && g_device)
+		{
+			display::DisplayImguiStats(g_device, &g_imgui_display_stats);
 		}
 	}
 }

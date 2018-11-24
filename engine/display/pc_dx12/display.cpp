@@ -1,5 +1,5 @@
 #include "display_common.h"
-
+#include <core/imgui/imgui.h>
 #include <utility>
 
 namespace display
@@ -66,6 +66,16 @@ namespace display
 
 		// Set the fence value for the next frame.
 		device->m_frame_resources[device->m_frame_index].fence_value = currentFenceValue + 1;
+	}
+
+	void DisplayImguiStats(Device* device, bool* activated)
+	{
+		if (ImGui::Begin("Display Stats", activated))
+		{
+			ImGui::Text("Resolution (%i,%i), windowed %s, tearing %s", device->m_width, device->m_height, (device->m_windowed)?"true":"false", (device->m_tearing) ? "true" : "false");
+			ImGui::Text("Uploaded memory each frame <%zu>", device->uploaded_memory_frame);
+			ImGui::End();	
+		}
 	}
 }
 
@@ -413,6 +423,9 @@ namespace display
 
 		//Delete deferred resources
 		DeletePendingResources(device);
+
+		//Reset stats
+		device->uploaded_memory_frame = 0;
 	}
 
 	void EndFrame(Device* device)
