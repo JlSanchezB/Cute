@@ -18,6 +18,9 @@
     <Filter Include="core\imgui">
       <UniqueIdentifier>{57ae643d-bbb8-4e59-93b5-aca22910fa6e}</UniqueIdentifier>
     </Filter>
+    <Filter Include="render">
+      <UniqueIdentifier>{b4bb484f-39d6-4110-bedd-ce82f36196aa}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="display\display.h">
@@ -82,6 +85,9 @@
     </ClInclude>
     <ClInclude Include="core\simple_pool.h">
       <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="render\renderer.h">
+      <Filter>render</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

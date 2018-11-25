@@ -144,6 +144,7 @@
     <ClInclude Include="display\pc_dx12\descriptor_heap.h" />
     <ClInclude Include="display\pc_dx12\display_common.h" />
     <ClInclude Include="display\pc_dx12\display_convert.h" />
+    <ClInclude Include="render\renderer.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="core\imgui\imgui.cpp" />
