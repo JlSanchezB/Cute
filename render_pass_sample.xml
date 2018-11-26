@@ -1,6 +1,6 @@
 <Root>
 <Global>
-<Bool name="PostProcessActivated">true</Bool>
+<Resource type="bool" name="PostProcessActivated">true</Resource>
 <Resource type="Texture" name="SampleTexture">texture.dds</Resource>
 <Resource type="ConstantBuffer" name="GlobalConstantBuffer" size="10" access="Dynamic"/>
 <Resource type="RootSignature" name="GraphicsRootSignature">

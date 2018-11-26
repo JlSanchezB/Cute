@@ -86,7 +86,7 @@
     <ClInclude Include="core\simple_pool.h">
       <Filter>core</Filter>
     </ClInclude>
-    <ClInclude Include="render\renderer.h">
+    <ClInclude Include="render\manager.h">
       <Filter>render</Filter>
     </ClInclude>
   </ItemGroup>
