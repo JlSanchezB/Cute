@@ -27,39 +27,40 @@ namespace render
 	class Resource
 	{
 	public:
-		~Resource();
-
-		//Returns the type of resource
-		virtual const char* Type() = 0;
-	};
-
-	//Resource Type Processor
-	class ResourceFactory
-	{
-	public:
+		virtual ~Resource() {};
 		//Load from XML node and returns the Resource
 		virtual Resource* Load() = 0;
+		//Returns the type of resource
+		virtual const char* Type() = 0;
 	};
 	
 	//Base Pass class
 	class Pass
 	{
 	public:
-		~Pass();
-
+		virtual ~Pass() {};
+		//Load from XML node and returns the Resource
+		virtual Pass* Load() = 0;
 		//Render the pass
 		virtual void Render(RenderContext* render_context) = 0;
 	};
 
-	//Pass factor
-	class PassFactory
+	//Factory helper classes
+	template<class TYPE>
+	class FactoryInterface
 	{
 	public:
-		//Load from XML node and returns the Resource
-		virtual Pass* Load() = 0;
+		virtual TYPE* Create() = 0;
 	};
-
-	
+	template<class TYPE, class RESOURCE>
+	class ResourceFactory : public FactoryInterface<TYPE>
+	{
+	public:
+		TYPE* Create() override
+		{
+			return new RESOURCE();
+		}
+	};
 
 
 	//Render pass manager
@@ -67,25 +68,25 @@ namespace render
 	{
 	public:
 		//Register resource factory
-		template<typename RESOURCE_FACTORY>
+		template<typename RESOURCE>
 		void RegisterResourceFactory(const char* type)
 		{
-			m_resource_factories_map[type] = std::make_unsigned_t<RESOURCE_FACTORY>();
+			m_resource_factories_map[type] = std::make_unsigned_t<Factory<Resource, RESOURCE>>();
 		}
 		
 		//Register pass factory
-		template<typename PASS_FACTORY>
+		template<typename PASS>
 		void RegisterPassType(const char* type)
 		{
-			m_pass_factories_map[type] = std::make_unsigned_t<PASS_FACTORY>();
+			m_pass_factories_map[type] = std::make_unsigned_t<Factory<Pass, PASS>>();
 		}
 
 		//Load from passes declaration file
 		void Load();
 
 	private:
-		using ResourceFactoryMap = std::unordered_map<const char*, std::unique_ptr<ResourceFactory*>>;
-		using PassFactoryMap = std::unordered_map<const char*, std::unique_ptr<PassFactory*>>;
+		using ResourceFactoryMap = std::unordered_map<const char*, std::unique_ptr<FactoryInterface<Resource>*>>;
+		using PassFactoryMap = std::unordered_map<const char*, std::unique_ptr<FactoryInterface<Pass>*>>;
 
 		//Resource factories
 		ResourceFactoryMap m_resource_factories_map;
