@@ -7,7 +7,7 @@
 #undef max
 
 #include "imgui_render.h"
-#include <core/imgui/imgui.h>
+#include <ext/imgui/imgui.h>
 #include <display/display.h>
 
 namespace

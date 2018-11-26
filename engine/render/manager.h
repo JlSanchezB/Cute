@@ -4,15 +4,24 @@
 #ifndef RENDER_MANAGER_H_
 #define RENDER_MANAGER_H_
 
+#include <ext/tinyxml2/tinyxml2.h>
 #include <memory>
 #include <unordered_map>
+
+namespace display
+{
+	struct Device;
+	struct Context;
+}
 
 namespace render
 {
 	//Context used for loading a pass
-	class LoadContext
+	struct LoadContext
 	{
-	public:
+		display::Device* device;
+		tinyxml2::XMLDocument xml_doc;
+		tinyxml2::XMLNode* current_xml_node;
 	};
 
 	//Context used for rendering a pass
@@ -29,7 +38,7 @@ namespace render
 	public:
 		virtual ~Resource() {};
 		//Load from XML node and returns the Resource
-		virtual Resource* Load() = 0;
+		virtual Resource* Load(LoadContext* load_context) = 0;
 		//Returns the type of resource
 		virtual const char* Type() = 0;
 	};
@@ -40,7 +49,7 @@ namespace render
 	public:
 		virtual ~Pass() {};
 		//Load from XML node and returns the Resource
-		virtual Pass* Load() = 0;
+		virtual Pass* Load(LoadContext* load_context) = 0;
 		//Render the pass
 		virtual void Render(RenderContext* render_context) = 0;
 	};
@@ -82,7 +91,7 @@ namespace render
 		}
 
 		//Load from passes declaration file
-		void Load();
+		bool Load(display::Device* device, const char* render_passes_declaration);
 
 	private:
 		using ResourceFactoryMap = std::unordered_map<const char*, std::unique_ptr<FactoryInterface<Resource>*>>;

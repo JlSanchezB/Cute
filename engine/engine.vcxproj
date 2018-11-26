@@ -124,12 +124,6 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="core\handle_pool.h" />
-    <ClInclude Include="core\imgui\imconfig.h" />
-    <ClInclude Include="core\imgui\imgui.h" />
-    <ClInclude Include="core\imgui\imgui_internal.h" />
-    <ClInclude Include="core\imgui\imstb_rectpack.h" />
-    <ClInclude Include="core\imgui\imstb_textedit.h" />
-    <ClInclude Include="core\imgui\imstb_truetype.h" />
     <ClInclude Include="core\imgui_render.h" />
     <ClInclude Include="core\log.h" />
     <ClInclude Include="core\platform.h" />
@@ -144,13 +138,16 @@
     <ClInclude Include="display\pc_dx12\descriptor_heap.h" />
     <ClInclude Include="display\pc_dx12\display_common.h" />
     <ClInclude Include="display\pc_dx12\display_convert.h" />
+    <ClInclude Include="ext\imgui\imconfig.h" />
+    <ClInclude Include="ext\imgui\imgui.h" />
+    <ClInclude Include="ext\imgui\imgui_internal.h" />
+    <ClInclude Include="ext\imgui\imstb_rectpack.h" />
+    <ClInclude Include="ext\imgui\imstb_textedit.h" />
+    <ClInclude Include="ext\imgui\imstb_truetype.h" />
+    <ClInclude Include="ext\tinyxml2\tinyxml2.h" />
     <ClInclude Include="render\manager.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="core\imgui\imgui.cpp" />
-    <ClCompile Include="core\imgui\imgui_demo.cpp" />
-    <ClCompile Include="core\imgui\imgui_draw.cpp" />
-    <ClCompile Include="core\imgui\imgui_widgets.cpp" />
     <ClCompile Include="core\imgui_render.cpp" />
     <ClCompile Include="core\pc\log.cpp" />
     <ClCompile Include="core\pc\platform.cpp" />
@@ -159,9 +156,17 @@
     <ClCompile Include="display\pc_dx12\display.cpp" />
     <ClCompile Include="display\pc_dx12\display_context.cpp" />
     <ClCompile Include="display\pc_dx12\display_resource.cpp" />
+    <ClCompile Include="ext\imgui\imgui.cpp" />
+    <ClCompile Include="ext\imgui\imgui_demo.cpp" />
+    <ClCompile Include="ext\imgui\imgui_draw.cpp" />
+    <ClCompile Include="ext\imgui\imgui_widgets.cpp" />
+    <ClCompile Include="ext\tinyxml2\tinyxml2.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="tools\compile_shader.bat" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="ext\imgui\LICENSE.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

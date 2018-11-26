@@ -5,7 +5,7 @@
 #ifndef PLATFORM_H_
 #define PLATFORM_H_
 
-#include <core/imgui/imgui.h>
+#include <ext/imgui/imgui.h>
 #include <stdint.h>
 
 namespace display

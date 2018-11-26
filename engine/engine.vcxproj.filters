@@ -15,11 +15,17 @@
     <Filter Include="tools">
       <UniqueIdentifier>{01b83e91-8355-430c-94cb-94630f5cb37c}</UniqueIdentifier>
     </Filter>
-    <Filter Include="core\imgui">
-      <UniqueIdentifier>{57ae643d-bbb8-4e59-93b5-aca22910fa6e}</UniqueIdentifier>
-    </Filter>
     <Filter Include="render">
       <UniqueIdentifier>{b4bb484f-39d6-4110-bedd-ce82f36196aa}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ext">
+      <UniqueIdentifier>{f005fe6a-cb4d-46b6-86ab-2269d271a732}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ext\imgui">
+      <UniqueIdentifier>{9f103b2d-00d5-42e1-855b-0d62138c816f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ext\tinyxml2">
+      <UniqueIdentifier>{a3c8c9b3-f6cb-4403-986d-03dad38ccdb3}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -62,24 +68,6 @@
     <ClInclude Include="display\pc_dx12\dds_loader.h">
       <Filter>display</Filter>
     </ClInclude>
-    <ClInclude Include="core\imgui\imconfig.h">
-      <Filter>core\imgui</Filter>
-    </ClInclude>
-    <ClInclude Include="core\imgui\imgui.h">
-      <Filter>core\imgui</Filter>
-    </ClInclude>
-    <ClInclude Include="core\imgui\imgui_internal.h">
-      <Filter>core\imgui</Filter>
-    </ClInclude>
-    <ClInclude Include="core\imgui\imstb_rectpack.h">
-      <Filter>core\imgui</Filter>
-    </ClInclude>
-    <ClInclude Include="core\imgui\imstb_textedit.h">
-      <Filter>core\imgui</Filter>
-    </ClInclude>
-    <ClInclude Include="core\imgui\imstb_truetype.h">
-      <Filter>core\imgui</Filter>
-    </ClInclude>
     <ClInclude Include="core\imgui_render.h">
       <Filter>core</Filter>
     </ClInclude>
@@ -88,6 +76,27 @@
     </ClInclude>
     <ClInclude Include="render\manager.h">
       <Filter>render</Filter>
+    </ClInclude>
+    <ClInclude Include="ext\imgui\imconfig.h">
+      <Filter>ext\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="ext\imgui\imgui.h">
+      <Filter>ext\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="ext\imgui\imgui_internal.h">
+      <Filter>ext\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="ext\imgui\imstb_rectpack.h">
+      <Filter>ext\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="ext\imgui\imstb_textedit.h">
+      <Filter>ext\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="ext\imgui\imstb_truetype.h">
+      <Filter>ext\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="ext\tinyxml2\tinyxml2.h">
+      <Filter>ext\tinyxml2</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -109,28 +118,36 @@
     <ClCompile Include="display\pc_dx12\dds_loader.cpp">
       <Filter>display</Filter>
     </ClCompile>
-    <ClCompile Include="core\imgui\imgui.cpp">
-      <Filter>core\imgui</Filter>
-    </ClCompile>
-    <ClCompile Include="core\imgui\imgui_demo.cpp">
-      <Filter>core\imgui</Filter>
-    </ClCompile>
-    <ClCompile Include="core\imgui\imgui_draw.cpp">
-      <Filter>core\imgui</Filter>
-    </ClCompile>
-    <ClCompile Include="core\imgui\imgui_widgets.cpp">
-      <Filter>core\imgui</Filter>
-    </ClCompile>
     <ClCompile Include="core\imgui_render.cpp">
       <Filter>core</Filter>
     </ClCompile>
     <ClCompile Include="display\pc_dx12\display_context.cpp">
       <Filter>display</Filter>
     </ClCompile>
+    <ClCompile Include="ext\imgui\imgui.cpp">
+      <Filter>ext\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="ext\imgui\imgui_demo.cpp">
+      <Filter>ext\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="ext\imgui\imgui_draw.cpp">
+      <Filter>ext\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="ext\imgui\imgui_widgets.cpp">
+      <Filter>ext\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="ext\tinyxml2\tinyxml2.cpp">
+      <Filter>ext\tinyxml2</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="tools\compile_shader.bat">
       <Filter>tools</Filter>
     </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="ext\imgui\LICENSE.txt">
+      <Filter>ext\imgui</Filter>
+    </Text>
   </ItemGroup>
 </Project>
