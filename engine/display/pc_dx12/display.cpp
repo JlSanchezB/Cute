@@ -192,7 +192,7 @@ namespace display
 
 		if (FAILED(device->m_native_device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&device->m_command_queue))))
 		{
-			core::log_error("DX12 error creating command queue\n");
+			core::log_error("DX12 error creating the command queue\n");
 			delete device;
 			return nullptr;
 		}
@@ -655,13 +655,13 @@ namespace display
 		if (FAILED(D3DX12SerializeVersionedRootSignature(&rootSignatureDesc, featureData.HighestVersion, &signature, &error)))
 		{
 			device->m_root_signature_pool.Free(handle);
-			SetLastErrorMessage(device, "Error serializing the root signature <%>", reinterpret_cast<const char*>(error->GetBufferPointer()));
+			SetLastErrorMessage(device, "Error serializing root signature <%>", reinterpret_cast<const char*>(error->GetBufferPointer()));
 			return RootSignatureHandle();
 		}
 		if (FAILED(device->m_native_device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&device->Get(handle).resource))))
 		{
 			device->m_root_signature_pool.Free(handle);
-			SetLastErrorMessage(device, "Error creating the root signature <%>", name);
+			SetLastErrorMessage(device, "Error creating root signature <%>", name);
 			return RootSignatureHandle();
 		}
 		
@@ -768,7 +768,7 @@ namespace display
 		if (FAILED(device->m_native_device->CreateGraphicsPipelineState(&DX12_pipeline_state_desc, IID_PPV_ARGS(&device->Get(handle)))))
 		{
 			device->m_pipeline_state_pool.Free(handle);
-			SetLastErrorMessage(device, "Error creating the graphics pipeline state <%>", name);
+			SetLastErrorMessage(device, "Error creating graphics pipeline state <%>", name);
 			return PipelineStateHandle();
 		}
 
@@ -797,7 +797,7 @@ namespace display
 		if (FAILED(device->m_native_device->CreateComputePipelineState(&DX12_pipeline_state_desc, IID_PPV_ARGS(&device->Get(handle)))))
 		{
 			device->m_pipeline_state_pool.Free(handle);
-			SetLastErrorMessage(device, "Error creating the compute pipeline state <%>", name);
+			SetLastErrorMessage(device, "Error creating compute pipeline state <%>", name);
 			return PipelineStateHandle();
 		}
 
@@ -852,13 +852,18 @@ namespace display
 		clear_value.Format = Convert(render_target_desc.format);
 		
 		//Create commited resource
-		ThrowIfFailed(device->m_native_device->CreateCommittedResource(
+		if (FAILED(device->m_native_device->CreateCommittedResource(
 			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
 			D3D12_HEAP_FLAG_NONE,
 			&CD3DX12_RESOURCE_DESC::Tex2D(Convert(render_target_desc.format), static_cast<UINT>(render_target_desc.width), static_cast<UINT>(render_target_desc.heigth), 1, 0, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET),
 			D3D12_RESOURCE_STATE_RENDER_TARGET,
 			&clear_value,
-			IID_PPV_ARGS(&render_target.resource)));
+			IID_PPV_ARGS(&render_target.resource))))
+		{
+			device->m_render_target_pool.Free(handle);
+			SetLastErrorMessage(device, "Error creating render target <%s>", name);
+			return RenderTargetHandle();
+		}
 
 		render_target.current_state = D3D12_RESOURCE_STATE_RENDER_TARGET;
 
@@ -899,13 +904,18 @@ namespace display
 		clear_value.Format = DXGI_FORMAT_D32_FLOAT;
 
 		//Create commited resource
-		ThrowIfFailed(device->m_native_device->CreateCommittedResource(
+		if (FAILED(device->m_native_device->CreateCommittedResource(
 			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
 			D3D12_HEAP_FLAG_NONE,
 			&CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_D32_FLOAT, static_cast<UINT>(depth_buffer_desc.width), static_cast<UINT>(depth_buffer_desc.heigth), 1, 0, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL),
 			D3D12_RESOURCE_STATE_DEPTH_WRITE,
 			&clear_value,
-			IID_PPV_ARGS(&depth_buffer.resource)));
+			IID_PPV_ARGS(&depth_buffer.resource))))
+		{
+			device->m_depth_buffer_pool.Free(handle);
+			SetLastErrorMessage(device, "Error creating depth buffer <%s>", name);
+			return DepthBufferHandle();
+		}
 
 		depth_buffer.current_state = D3D12_RESOURCE_STATE_DEPTH_WRITE;
 
