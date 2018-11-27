@@ -157,7 +157,12 @@ namespace display
 		}
 
 		ComPtr<IDXGIFactory4> factory;
-		ThrowIfFailed(CreateDXGIFactory2(dxgiFactoryFlags, IID_PPV_ARGS(&factory)));
+		if (FAILED(CreateDXGIFactory2(dxgiFactoryFlags, IID_PPV_ARGS(&factory))))
+		{
+			core::log_error("DX12 error creating the DXGI Factory\n");
+			delete device;
+			return nullptr;
+		}
 
 		ComPtr<IDXGIAdapter1> hardwareAdapter;
 		GetHardwareAdapter(factory.Get(), &hardwareAdapter, params.adapter_index);
@@ -168,11 +173,15 @@ namespace display
 		size_t num_converted_characters;
 		wcstombs_s(&num_converted_characters, device->m_adapter_description, device->m_adapter_desc.Description, 128);
 
-		ThrowIfFailed(D3D12CreateDevice(
+		if (FAILED(D3D12CreateDevice(
 			hardwareAdapter.Get(),
 			D3D_FEATURE_LEVEL_11_0,
-			IID_PPV_ARGS(&device->m_native_device)
-		));
+			IID_PPV_ARGS(&device->m_native_device))))
+		{
+			core::log_error("DX12 error creating the device\n");
+			delete device;
+			return nullptr;
+		}
 
 		core::log("DX12 device created in adapter <%s>\n", device->m_adapter_description);
 
@@ -181,7 +190,12 @@ namespace display
 		queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
 		queueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
 
-		ThrowIfFailed(device->m_native_device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&device->m_command_queue)));
+		if (FAILED(device->m_native_device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&device->m_command_queue))))
+		{
+			core::log_error("DX12 error creating command queue\n");
+			delete device;
+			return nullptr;
+		}
 
 		// Describe and create the swap chain.
 		DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
@@ -203,14 +217,18 @@ namespace display
 		swapChainDesc.Flags = params.tearing ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0;
 
 		ComPtr<IDXGISwapChain1> swap_chain;
-		ThrowIfFailed(factory->CreateSwapChainForHwnd(
+		if (FAILED(factory->CreateSwapChainForHwnd(
 			device->m_command_queue.Get(),		// Swap chain needs the queue so that it can force a flush on it.
 			platform::GetHwnd(),
 			&swapChainDesc,
 			nullptr,
 			nullptr,
-			&swap_chain
-		));
+			&swap_chain)))
+		{
+			core::log_error("DX12 error creating the swap chain\n");
+			delete device;
+			return nullptr;
+		}
 
 		if (params.tearing)
 		{
@@ -219,7 +237,12 @@ namespace display
 			factory->MakeWindowAssociation(platform::GetHwnd(), DXGI_MWA_NO_ALT_ENTER);
 		}
 
-		ThrowIfFailed(swap_chain.As(&device->m_swap_chain));
+		if (FAILED(swap_chain.As(&device->m_swap_chain)))
+		{
+			core::log_error("DX12 error copying the swap chain\n");
+			delete device;
+			return nullptr;
+		}
 		device->m_frame_index = device->m_swap_chain->GetCurrentBackBufferIndex();
 
 		//Alloc pools
@@ -336,6 +359,11 @@ namespace display
 		device->m_sampler_descriptor_table_pool.Destroy();
 
 		delete device;
+	}
+
+	const char * GetLastErrorMessage(Device * device)
+	{
+		return device->m_last_error_message;
 	}
 
 	//Change size
@@ -624,8 +652,18 @@ namespace display
 
 		ComPtr<ID3DBlob> signature;
 		ComPtr<ID3DBlob> error;
-		ThrowIfFailed(D3DX12SerializeVersionedRootSignature(&rootSignatureDesc, featureData.HighestVersion, &signature, &error));
-		ThrowIfFailed(device->m_native_device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&device->Get(handle).resource)));
+		if (FAILED(D3DX12SerializeVersionedRootSignature(&rootSignatureDesc, featureData.HighestVersion, &signature, &error)))
+		{
+			device->m_root_signature_pool.Free(handle);
+			SetLastErrorMessage(device, "Error serializing the root signature <%>", reinterpret_cast<const char*>(error->GetBufferPointer()));
+			return RootSignatureHandle();
+		}
+		if (FAILED(device->m_native_device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&device->Get(handle).resource))))
+		{
+			device->m_root_signature_pool.Free(handle);
+			SetLastErrorMessage(device, "Error creating the root signature <%>", name);
+			return RootSignatureHandle();
+		}
 		
 		device->Get(handle).desc = root_signature_desc;
 
@@ -727,7 +765,12 @@ namespace display
 		DX12_pipeline_state_desc.SampleDesc.Count = static_cast<UINT>(pipeline_state_desc.sample_count);
 
 		//Create pipeline state
-		ThrowIfFailed(device->m_native_device->CreateGraphicsPipelineState(&DX12_pipeline_state_desc, IID_PPV_ARGS(&device->Get(handle))));
+		if (FAILED(device->m_native_device->CreateGraphicsPipelineState(&DX12_pipeline_state_desc, IID_PPV_ARGS(&device->Get(handle)))))
+		{
+			device->m_pipeline_state_pool.Free(handle);
+			SetLastErrorMessage(device, "Error creating the graphics pipeline state <%>", name);
+			return PipelineStateHandle();
+		}
 
 		SetObjectName(device->Get(handle).Get(), name);
 
@@ -751,7 +794,12 @@ namespace display
 		DX12_pipeline_state_desc.CS.BytecodeLength = compute_pipeline_state_desc.compute_shader.size;
 
 		//Create pipeline state
-		ThrowIfFailed(device->m_native_device->CreateComputePipelineState(&DX12_pipeline_state_desc, IID_PPV_ARGS(&device->Get(handle))));
+		if (FAILED(device->m_native_device->CreateComputePipelineState(&DX12_pipeline_state_desc, IID_PPV_ARGS(&device->Get(handle)))))
+		{
+			device->m_pipeline_state_pool.Free(handle);
+			SetLastErrorMessage(device, "Error creating the compute pipeline state <%>", name);
+			return PipelineStateHandle();
+		}
 
 		SetObjectName(device->Get(handle).Get(), name);
 
@@ -763,7 +811,7 @@ namespace display
 		device->m_pipeline_state_pool.Free(handle);
 	}
 
-	void CompileShader(Device * device, const CompileShaderDesc & compile_shader_desc, std::vector<char>& shader_blob)
+	bool CompileShader(Device * device, const CompileShaderDesc & compile_shader_desc, std::vector<char>& shader_blob)
 	{
 		ComPtr<ID3DBlob> blob;
 		ComPtr<ID3DBlob> errors;
@@ -783,12 +831,13 @@ namespace display
 		{
 			shader_blob.resize(blob->GetBufferSize());
 			memcpy(shader_blob.data(), blob->GetBufferPointer(), blob->GetBufferSize());
+			return true;
 		}
 		else
 		{
 			//Error compiling
-			core::log(reinterpret_cast<const char*>(errors->GetBufferPointer()));
-			std::runtime_error::exception(reinterpret_cast<const char*>(errors->GetBufferPointer()));
+			SetLastErrorMessage(device, "Error compiling shader <%s> errors <%s>", compile_shader_desc.name, errors->GetBufferPointer());
+			return false;
 		}
 	}
 

@@ -30,6 +30,9 @@ namespace display
 	Device* CreateDevice(const DeviceInitParams& params);
 	void DestroyDevice(Device* device);
 
+	//Get last error message
+	const char* GetLastErrorMessage(Device* device);
+
 	//Present
 	void Present(Device* device);
 
@@ -67,8 +70,8 @@ namespace display
 	//Destroy compute pipeline state
 	void DestroyComputePipelineState(Device* device, PipelineStateHandle& handle);
 
-
-	void CompileShader(Device* device, const CompileShaderDesc& compile_shader_desc, std::vector<char>& shader_blob);
+	//Compile shader
+	bool CompileShader(Device* device, const CompileShaderDesc& compile_shader_desc, std::vector<char>& shader_blob);
 
 	//Create vertex buffer
 	VertexBufferHandle CreateVertexBuffer(Device* device, const VertexBufferDesc& vertex_buffer_desc, const char* name = nullptr);

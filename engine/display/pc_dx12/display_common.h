@@ -339,6 +339,10 @@ namespace display
 
 		//Current CPU fence value
 		UINT64 m_resource_deferred_delete_index = 1;
+
+		//Last error
+		static constexpr size_t kLastErrorBufferSize = 1024;
+		char m_last_error_message[kLastErrorBufferSize] = "";
 	};
 
 	template<>
@@ -561,6 +565,20 @@ namespace
 			mbstowcs_s(&out_size, wstr, 4096, name, strlen(name));
 			object->SetName(wstr);
 		}
+	}
+
+	inline void SetLastErrorMessage(display::Device* device, const char* message, ...)
+	{
+		va_list args;
+		va_start(args, message);
+		int w = vsnprintf_s(device->m_last_error_message, display::Device::kLastErrorBufferSize, display::Device::kLastErrorBufferSize - 1, message, args);
+
+		if (w == -1 || w >= static_cast<int>(display::Device::kLastErrorBufferSize))
+			w = static_cast<int>(display::Device::kLastErrorBufferSize - 1);
+		device->m_last_error_message[w] = 0;
+		va_end(args);
+
+		core::log("Error reported from display <%s>\n", device->m_last_error_message);
 	}
 }
 

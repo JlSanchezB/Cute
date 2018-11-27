@@ -121,6 +121,11 @@ public:
 
 		m_device = display::CreateDevice(device_init_params);
 
+		if (m_device != nullptr)
+		{
+			std::runtime_error::exception("Error creating the display device");
+		}
+
 		SetDevice(m_device);
 
 		m_test_1.m_command_list = display::CreateCommandList(m_device, "Test1");

@@ -141,11 +141,13 @@ namespace core
 		//Accessors
 		DATA& operator[](const Accessor& handle)
 		{
+			assert(handle.IsValid());
 			return *reinterpret_cast<DATA*>(&m_data[handle.m_index].data);
 		}
 
 		const DATA& operator[](const Accessor& handle) const
 		{
+			assert(handle.IsValid());
 			return *reinterpret_cast<const DATA*>(&m_data[handle.m_index].data);
 		}
 
@@ -264,6 +266,7 @@ namespace core
 			else
 			{
 				//No more free handles, error
+				std::runtime_error::exception("Out of handles");
 				return HANDLE(HANDLE::kInvalid);
 			}
 		}
