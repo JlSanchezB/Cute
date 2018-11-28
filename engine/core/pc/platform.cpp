@@ -86,6 +86,8 @@ namespace
 				RECT clientRect = {};
 				GetClientRect(hWnd, &clientRect);
 
+				core::log_info("Windows is going to change size (%i,%i)", clientRect.right - clientRect.left, clientRect.bottom - clientRect.top);
+
 				//Call the device
 				if (g_device)
 				{
@@ -111,6 +113,7 @@ namespace
 				{
 					if (g_windowed)
 					{
+						core::log_info("Windows is going to full screen");
 						//Change to full screen
 
 						// Save the old window rect so we can restore it when exiting fullscreen mode.
@@ -160,6 +163,8 @@ namespace
 					}
 					else
 					{
+						core::log_info("Windows is restoring size");
+
 						// Restore the window's attributes and size.
 						SetWindowLong(hWnd, GWL_STYLE, g_window_style);
 

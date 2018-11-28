@@ -13,37 +13,42 @@ namespace
 		buf[w] = 0;
 		return w;
 	}
+
+	constexpr size_t kLogBufferSize = 1024;
 }
 
 namespace core
 {
-	void log(const char* message, ...)
+	void log_info(const char* message, ...)
 	{
-		char buffer[1024];
+		char buffer[kLogBufferSize];
 		va_list args;
 		va_start(args, message);
-		int used =  ImFormatStringV(buffer, 1024, message, args);
+		int used =  ImFormatStringV(buffer, kLogBufferSize, message, args);
 		OutputDebugString(buffer);
+		OutputDebugString("\n");
 		va_end(args);
 	}
 
 	void log_warning(const char* message, ...)
 	{
-		char buffer[1024];
+		char buffer[kLogBufferSize];
 		va_list args;
 		va_start(args, message);
-		int used = ImFormatStringV(buffer, 1024, message, args);
+		int used = ImFormatStringV(buffer, kLogBufferSize, message, args);
 		OutputDebugString(buffer);
+		OutputDebugString("\n");
 		va_end(args);
 	}
 
 	void log_error(const char* message, ...)
 	{
-		char buffer[1024];
+		char buffer[kLogBufferSize];
 		va_list args;
 		va_start(args, message);
-		int used = ImFormatStringV(buffer, 1024, message, args);
+		int used = ImFormatStringV(buffer, kLogBufferSize, message, args);
 		OutputDebugString(buffer);
+		OutputDebugString("\n");
 		va_end(args);
 	}
 }

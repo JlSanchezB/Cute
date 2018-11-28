@@ -116,6 +116,7 @@ namespace
 				resource->Unmap(0, nullptr);
 			}
 		}
+		return true;
 	}
 
 	//Helper function to create a ring resources
