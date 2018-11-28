@@ -25,6 +25,7 @@ namespace core
 		va_list args;
 		va_start(args, message);
 		int used =  ImFormatStringV(buffer, kLogBufferSize, message, args);
+		OutputDebugString("INFO: ");
 		OutputDebugString(buffer);
 		OutputDebugString("\n");
 		va_end(args);
@@ -36,6 +37,7 @@ namespace core
 		va_list args;
 		va_start(args, message);
 		int used = ImFormatStringV(buffer, kLogBufferSize, message, args);
+		OutputDebugString("WARNING: ");
 		OutputDebugString(buffer);
 		OutputDebugString("\n");
 		va_end(args);
@@ -47,6 +49,7 @@ namespace core
 		va_list args;
 		va_start(args, message);
 		int used = ImFormatStringV(buffer, kLogBufferSize, message, args);
+		OutputDebugString("ERROR: ");
 		OutputDebugString(buffer);
 		OutputDebugString("\n");
 		va_end(args);
