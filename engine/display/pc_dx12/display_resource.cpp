@@ -21,7 +21,7 @@ namespace
 	};
 
 	//Create a commited resource
-	void CreateResource(display::Device* device, const SourceResourceData& source_data, bool static_buffer, const D3D12_RESOURCE_DESC& resource_desc, ComPtr<ID3D12Resource>& resource, D3D12_RESOURCE_STATES resource_state)
+	bool CreateResource(display::Device* device, const SourceResourceData& source_data, bool static_buffer, const D3D12_RESOURCE_DESC& resource_desc, ComPtr<ID3D12Resource>& resource, D3D12_RESOURCE_STATES resource_state)
 	{
 		//Upload resource
 		ComPtr<ID3D12Resource> upload_resource;
@@ -30,32 +30,44 @@ namespace
 		{
 			assert(source_data.data); //It is a static resource and this is the only oportunity to copy data
 
-			ThrowIfFailed(device->m_native_device->CreateCommittedResource(
+			if (FAILED(device->m_native_device->CreateCommittedResource(
 				&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
 				D3D12_HEAP_FLAG_NONE,
 				&resource_desc,
 				D3D12_RESOURCE_STATE_COPY_DEST,
 				nullptr,
-				IID_PPV_ARGS(&resource)));
+				IID_PPV_ARGS(&resource))))
+			{
+				SetLastErrorMessage(device, "Error creating a resource in the default heap");
+				return false;
+			}
 
-			ThrowIfFailed(device->m_native_device->CreateCommittedResource(
+			if (FAILED(device->m_native_device->CreateCommittedResource(
 				&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
 				D3D12_HEAP_FLAG_NONE,
 				&CD3DX12_RESOURCE_DESC::Buffer(source_data.size),
 				D3D12_RESOURCE_STATE_GENERIC_READ,
 				nullptr,
-				IID_PPV_ARGS(&upload_resource)));
+				IID_PPV_ARGS(&upload_resource))))
+			{
+				SetLastErrorMessage(device, "Error creating the copy resource helper in the upload heap");
+				return false;
+			}
 
 		}
 		else
 		{
-			ThrowIfFailed(device->m_native_device->CreateCommittedResource(
+			if (FAILED(device->m_native_device->CreateCommittedResource(
 				&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
 				D3D12_HEAP_FLAG_NONE,
 				&resource_desc,
 				D3D12_RESOURCE_STATE_GENERIC_READ,
 				nullptr,
-				IID_PPV_ARGS(&upload_resource)));
+				IID_PPV_ARGS(&upload_resource))))
+			{
+				SetLastErrorMessage(device, "Error creating a resource in the upload heap");
+				return false;
+			}
 		}
 
 		if (static_buffer)
@@ -95,7 +107,11 @@ namespace
 				//Copy to the upload heap
 				UINT8* destination_buffer;
 				CD3DX12_RANGE read_range(0, 0);		// We do not intend to read from this resource on the CPU.
-				ThrowIfFailed(resource->Map(0, &read_range, reinterpret_cast<void**>(&destination_buffer)));
+				if (FAILED(resource->Map(0, &read_range, reinterpret_cast<void**>(&destination_buffer))))
+				{
+					SetLastErrorMessage(device, "Error mapping to CPU memory a resource");
+					return false;
+				}
 				memcpy(destination_buffer, source_data.data, source_data.size);
 				resource->Unmap(0, nullptr);
 			}
@@ -117,14 +133,23 @@ namespace
 		while (count)
 		{
 			//Create a dynamic resource
-			CreateResource(device, source_data, false, resource_desc, resource->resource, resource_state);
+			if (!CreateResource(device, source_data, false, resource_desc, resource->resource, resource_state))
+			{
+				DeleteRingResource(device, resource_handle, pool);
+				return resource_handle;
+			}
 
 			//Create views for it
 			view_create(device, *resource_handle_ptr, *resource);
 
 			//capture memory pointer and size
 			CD3DX12_RANGE readRange(0, 0);		// We do not intend to read from this resource on the CPU.
-			ThrowIfFailed(resource->resource->Map(0, &readRange, reinterpret_cast<void**>(&resource->memory_data)));
+			if (FAILED(resource->resource->Map(0, &readRange, reinterpret_cast<void**>(&resource->memory_data))))
+			{
+				SetLastErrorMessage(device, "Error mapping to CPU memory a ring resource");
+				DeleteRingResource(device, resource_handle, pool);
+				return resource_handle;
+			}
 			resource->memory_size = source_data.size;
 
 			if (count > 1)
@@ -234,7 +259,11 @@ namespace display
 			VertexBufferHandle handle = device->m_vertex_buffer_pool.Alloc();
 			auto& vertex_buffer = device->Get(handle);
 
-			CreateResource(device, data, true, CD3DX12_RESOURCE_DESC::Buffer(vertex_buffer_desc.size), vertex_buffer.resource, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
+			if (!CreateResource(device, data, true, CD3DX12_RESOURCE_DESC::Buffer(vertex_buffer_desc.size), vertex_buffer.resource, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER))
+			{
+				device->m_vertex_buffer_pool.Free(handle);
+				return VertexBufferHandle();
+			}		
 
 			// Initialize the vertex buffer view.
 			vertex_buffer.view.BufferLocation = vertex_buffer.resource->GetGPUVirtualAddress();
@@ -279,7 +308,12 @@ namespace display
 
 			auto& index_buffer = device->Get(handle);
 
-			CreateResource(device, data, true, CD3DX12_RESOURCE_DESC::Buffer(index_buffer_desc.size), index_buffer.resource, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
+			if (!CreateResource(device, data, true, CD3DX12_RESOURCE_DESC::Buffer(index_buffer_desc.size), index_buffer.resource, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER))
+			{
+				device->m_index_buffer_pool.Free(handle);
+				return IndexBufferHandle();
+			}
+				
 
 			// Initialize the vertex buffer view.
 			index_buffer.view.BufferLocation = index_buffer.resource->GetGPUVirtualAddress();
@@ -324,7 +358,11 @@ namespace display
 			ConstantBufferHandle handle = device->m_constant_buffer_pool.Alloc();
 			auto& constant_buffer = device->Get(handle);
 
-			CreateResource(device, data, true, CD3DX12_RESOURCE_DESC::Buffer(size), constant_buffer.resource, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
+			if (!CreateResource(device, data, true, CD3DX12_RESOURCE_DESC::Buffer(size), constant_buffer.resource, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER))
+			{
+				device->m_constant_buffer_pool.Free(handle);
+				return ConstantBufferHandle();
+			}
 
 			//Size needs to be 256byte aligned
 			D3D12_CONSTANT_BUFFER_VIEW_DESC dx12_constant_buffer_desc = {};
@@ -370,13 +408,18 @@ namespace display
 
 		auto& unordered_access_buffer = device->Get(handle);
 
-		ThrowIfFailed(device->m_native_device->CreateCommittedResource(
+		if (FAILED(device->m_native_device->CreateCommittedResource(
 			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
 			D3D12_HEAP_FLAG_NONE,
 			&CD3DX12_RESOURCE_DESC::Buffer(size, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS),
 			D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
 			nullptr,
-			IID_PPV_ARGS(&unordered_access_buffer.resource)));
+			IID_PPV_ARGS(&unordered_access_buffer.resource))))
+		{
+			SetLastErrorMessage(device, "Error creating unordered access resource <%s>", name);
+			device->m_unordered_access_buffer_pool.Free(handle);
+			return UnorderedAccessBufferHandle();
+		}
 
 		D3D12_UNORDERED_ACCESS_VIEW_DESC dx12_unordered_access_buffer_desc_desc = {};
 		dx12_unordered_access_buffer_desc_desc.Format = DXGI_FORMAT_UNKNOWN;
@@ -429,7 +472,11 @@ namespace display
 
 			SourceResourceData data(shader_resource_desc.init_data, shader_resource_desc.size, shader_resource_desc.pitch, shader_resource_desc.slice_pitch);
 
-			CreateResource(device, data, true, d12_resource_desc, shader_resource.resource, init_resource_state);
+			if (!CreateResource(device, data, true, d12_resource_desc, shader_resource.resource, init_resource_state))
+			{
+				device->m_shader_resource_pool.Free(handle);
+				return ShaderResourceHandle();
+			}
 
 			//Create view
 			D3D12_SHADER_RESOURCE_VIEW_DESC dx12_shader_resource_desc = {};
@@ -474,7 +521,7 @@ namespace display
 			}
 			else
 			{
-				std::runtime_error::exception("Dynamic Texture2D SRV are not supported");
+				SetLastErrorMessage(device, "Dynamic Texture2D SRV are not supported");
 				return ShaderResourceHandle();
 			}
 		}
@@ -491,17 +538,27 @@ namespace display
 		std::vector<D3D12_SUBRESOURCE_DATA> sub_resources;
 		D3D12_SHADER_RESOURCE_VIEW_DESC dx12_shader_resource_desc = {};
 
-		ThrowIfFailed(dds_loader::CalculateD12Loader(device->m_native_device.Get(), reinterpret_cast<const uint8_t*>(data), size,
-			dds_loader::DDS_LOADER_DEFAULT, d12_resource_desc, sub_resources, dx12_shader_resource_desc));
+		if (FAILED(dds_loader::CalculateD12Loader(device->m_native_device.Get(), reinterpret_cast<const uint8_t*>(data), size,
+			dds_loader::DDS_LOADER_DEFAULT, d12_resource_desc, sub_resources, dx12_shader_resource_desc)))
+		{
+			device->m_shader_resource_pool.Free(handle);
+			SetLastErrorMessage(device, "Error loading the DDS data <%s>", name);
+			return ShaderResourceHandle();
+		}
 
 		//Create resources
-		ThrowIfFailed(device->m_native_device->CreateCommittedResource(
+		if (FAILED(device->m_native_device->CreateCommittedResource(
 			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
 			D3D12_HEAP_FLAG_NONE,
 			&d12_resource_desc,
 			D3D12_RESOURCE_STATE_COPY_DEST,
 			nullptr,
-			IID_PPV_ARGS(&shader_resource.resource)));
+			IID_PPV_ARGS(&shader_resource.resource))))
+		{
+			device->m_shader_resource_pool.Free(handle);
+			SetLastErrorMessage(device, "Error creating resource <%s>", name);
+			return ShaderResourceHandle();
+		}
 
 		//Calculate required size
 		UINT64 RequiredSize = 0;
@@ -511,13 +568,18 @@ namespace display
 		ComPtr<ID3D12Resource> upload_resource;
 
 		//Create upload buffer
-		ThrowIfFailed(device->m_native_device->CreateCommittedResource(
+		if (FAILED(device->m_native_device->CreateCommittedResource(
 			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
 			D3D12_HEAP_FLAG_NONE,
 			&CD3DX12_RESOURCE_DESC::Buffer(RequiredSize),
 			D3D12_RESOURCE_STATE_GENERIC_READ,
 			nullptr,
-			IID_PPV_ARGS(&upload_resource)));
+			IID_PPV_ARGS(&upload_resource))))
+		{
+			device->m_shader_resource_pool.Free(handle);
+			SetLastErrorMessage(device, "Error creating upload resource <%s>", name);
+			return ShaderResourceHandle();
+		}
 
 		//Upload resource
 		//Command list
