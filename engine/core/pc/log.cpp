@@ -14,17 +14,18 @@ namespace
 		return w;
 	}
 
-	constexpr size_t kLogBufferSize = 1024;
+	//Size used for the format intermediated buffer
+	constexpr size_t kLogFormatBufferSize = 1024;
 }
 
 namespace core
 {
 	void log_info(const char* message, ...)
 	{
-		char buffer[kLogBufferSize];
+		char buffer[kLogFormatBufferSize];
 		va_list args;
 		va_start(args, message);
-		int used =  ImFormatStringV(buffer, kLogBufferSize, message, args);
+		int used =  ImFormatStringV(buffer, kLogFormatBufferSize, message, args);
 		OutputDebugString("INFO: ");
 		OutputDebugString(buffer);
 		OutputDebugString("\n");
@@ -33,10 +34,10 @@ namespace core
 
 	void log_warning(const char* message, ...)
 	{
-		char buffer[kLogBufferSize];
+		char buffer[kLogFormatBufferSize];
 		va_list args;
 		va_start(args, message);
-		int used = ImFormatStringV(buffer, kLogBufferSize, message, args);
+		int used = ImFormatStringV(buffer, kLogFormatBufferSize, message, args);
 		OutputDebugString("WARNING: ");
 		OutputDebugString(buffer);
 		OutputDebugString("\n");
@@ -45,10 +46,10 @@ namespace core
 
 	void log_error(const char* message, ...)
 	{
-		char buffer[kLogBufferSize];
+		char buffer[kLogFormatBufferSize];
 		va_list args;
 		va_start(args, message);
-		int used = ImFormatStringV(buffer, kLogBufferSize, message, args);
+		int used = ImFormatStringV(buffer, kLogFormatBufferSize, message, args);
 		OutputDebugString("ERROR: ");
 		OutputDebugString(buffer);
 		OutputDebugString("\n");
