@@ -10,8 +10,8 @@
 
 namespace core
 {
-	void log_info(const char* message, ...);
-	void log_warning(const char* message, ...);
-	void log_error(const char* message, ...);
+	void LogInfo(const char* message, ...);
+	void LogWarning(const char* message, ...);
+	void LogError(const char* message, ...);
 }
 #endif //LOG_H

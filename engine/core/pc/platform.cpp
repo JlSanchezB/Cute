@@ -22,6 +22,12 @@ namespace display
 	void DisplayImguiStats(Device* device, bool* activated);
 }
 
+namespace core
+{
+	//Render Imgui Log
+	bool LogRender();
+}
+
 namespace
 {
 	//Device
@@ -56,6 +62,9 @@ namespace
 	//Imgui display stats
 	bool g_imgui_display_stats = false;
 
+	//Imgui render log
+	bool g_imgui_log_enable = false;
+
 	//Windows message handle
 	LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	{
@@ -86,7 +95,7 @@ namespace
 				RECT clientRect = {};
 				GetClientRect(hWnd, &clientRect);
 
-				core::log_info("Windows is going to change size (%i,%i)", clientRect.right - clientRect.left, clientRect.bottom - clientRect.top);
+				core::LogInfo("Windows is going to change size (%i,%i)", clientRect.right - clientRect.left, clientRect.bottom - clientRect.top);
 
 				//Call the device
 				if (g_device)
@@ -113,7 +122,7 @@ namespace
 				{
 					if (g_windowed)
 					{
-						core::log_info("Windows is going to full screen");
+						core::LogInfo("Windows is going to full screen");
 						//Change to full screen
 
 						// Save the old window rect so we can restore it when exiting fullscreen mode.
@@ -163,7 +172,7 @@ namespace
 					}
 					else
 					{
-						core::log_info("Windows is restoring size");
+						core::LogInfo("Windows is restoring size");
 
 						// Restore the window's attributes and size.
 						SetWindowLong(hWnd, GWL_STYLE, g_window_style);
@@ -221,6 +230,7 @@ namespace
 				{
 					if (ImGui::MenuItem("Logger")) {};
 					ImGui::Checkbox("Show FPS", &g_imgui_fps_enable);
+					ImGui::Checkbox("Show Log", &g_imgui_log_enable);
 					ImGui::Checkbox("Show Imgui Demo", &g_imgui_demo_enable);
 					ImGui::Checkbox("Display Stats", &g_imgui_display_stats);
 					ImGui::EndMenu();
@@ -246,6 +256,11 @@ namespace
 		if (g_imgui_display_stats && g_device)
 		{
 			display::DisplayImguiStats(g_device, &g_imgui_display_stats);
+		}
+
+		if (g_imgui_log_enable)
+		{
+			g_imgui_log_enable = core::LogRender();
 		}
 	}
 }

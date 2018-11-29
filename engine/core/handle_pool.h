@@ -228,7 +228,7 @@ namespace core
 			}
 			if (num_allocated_handles > 0)
 			{
-				core::log_warning("Pool still has some allocated handles <%i>, force deleted all handles", num_allocated_handles);
+				core::LogWarning("Pool still has some allocated handles <%i>, force deleted all handles", num_allocated_handles);
 			}
 		}
 	}

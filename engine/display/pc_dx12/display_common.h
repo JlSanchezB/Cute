@@ -578,7 +578,7 @@ namespace
 		device->m_last_error_message[w] = 0;
 		va_end(args);
 
-		core::log_info("Error reported from display <%s>", device->m_last_error_message);
+		core::LogInfo("Error reported from display <%s>", device->m_last_error_message);
 	}
 }
 

@@ -36,7 +36,7 @@ namespace display
 			}
 
 			//If it doesn't work, just use the first valid
-			core::log_info("Adapter index %i can not be initied, using the first valid", adapter_index);
+			core::LogInfo("Adapter index %i can not be initied, using the first valid", adapter_index);
 		}
 		for (UINT adapterIndex = 0; DXGI_ERROR_NOT_FOUND != pFactory->EnumAdapters1(adapterIndex, &adapter); ++adapterIndex)
 		{
@@ -56,7 +56,7 @@ namespace display
 			{
 				if (adapter_index != -1)
 				{
-					core::log_info("Valid adapter found (%i)", adapterIndex);
+					core::LogInfo("Valid adapter found (%i)", adapterIndex);
 				}
 				break;
 			}
@@ -159,7 +159,7 @@ namespace display
 		ComPtr<IDXGIFactory4> factory;
 		if (FAILED(CreateDXGIFactory2(dxgiFactoryFlags, IID_PPV_ARGS(&factory))))
 		{
-			core::log_error("DX12 error creating the DXGI Factory");
+			core::LogError("DX12 error creating the DXGI Factory");
 			delete device;
 			return nullptr;
 		}
@@ -178,12 +178,12 @@ namespace display
 			D3D_FEATURE_LEVEL_11_0,
 			IID_PPV_ARGS(&device->m_native_device))))
 		{
-			core::log_error("DX12 error creating the device");
+			core::LogError("DX12 error creating the device");
 			delete device;
 			return nullptr;
 		}
 
-		core::log_info("DX12 device created in adapter <%s>", device->m_adapter_description);
+		core::LogInfo("DX12 device created in adapter <%s>", device->m_adapter_description);
 
 		// Describe and create the command queue.
 		D3D12_COMMAND_QUEUE_DESC queueDesc = {};
@@ -192,7 +192,7 @@ namespace display
 
 		if (FAILED(device->m_native_device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&device->m_command_queue))))
 		{
-			core::log_error("DX12 error creating the command queue");
+			core::LogError("DX12 error creating the command queue");
 			delete device;
 			return nullptr;
 		}
@@ -225,7 +225,7 @@ namespace display
 			nullptr,
 			&swap_chain)))
 		{
-			core::log_error("DX12 error creating the swap chain");
+			core::LogError("DX12 error creating the swap chain");
 			delete device;
 			return nullptr;
 		}
@@ -239,7 +239,7 @@ namespace display
 
 		if (FAILED(swap_chain.As(&device->m_swap_chain)))
 		{
-			core::log_error("DX12 error copying the swap chain");
+			core::LogError("DX12 error copying the swap chain");
 			delete device;
 			return nullptr;
 		}
@@ -768,7 +768,7 @@ namespace display
 		if (FAILED(device->m_native_device->CreateGraphicsPipelineState(&DX12_pipeline_state_desc, IID_PPV_ARGS(&device->Get(handle)))))
 		{
 			device->m_pipeline_state_pool.Free(handle);
-			SetLastErrorMessage(device, "Error creating graphics pipeline state <%>", name);
+			SetLastErrorMessage(device, "Error creating graphics pipeline state <%s>", name);
 			return PipelineStateHandle();
 		}
 
