@@ -4,14 +4,20 @@
 #ifndef RENDER_MANAGER_H_
 #define RENDER_MANAGER_H_
 
-#include <ext/tinyxml2/tinyxml2.h>
 #include <memory>
 #include <unordered_map>
+#include <core/log.h>
 
 namespace display
 {
 	struct Device;
 	struct Context;
+}
+
+namespace tinyxml2
+{
+	class XMLDocument;
+	class XMLElement;
 }
 
 namespace render
@@ -20,8 +26,9 @@ namespace render
 	struct LoadContext
 	{
 		display::Device* device;
-		tinyxml2::XMLDocument xml_doc;
-		tinyxml2::XMLNode* current_xml_node;
+		tinyxml2::XMLDocument* xml_doc;
+		tinyxml2::XMLElement* current_xml_element;
+		const char* render_passes_filename;
 	};
 
 	//Context used for rendering a pass
@@ -59,15 +66,15 @@ namespace render
 	class FactoryInterface
 	{
 	public:
-		virtual TYPE* Create() = 0;
+		virtual std::unique_ptr<TYPE> Create() = 0;
 	};
 	template<class TYPE, class RESOURCE>
 	class ResourceFactory : public FactoryInterface<TYPE>
 	{
 	public:
-		TYPE* Create() override
+		std::unique_ptr<TYPE> Create() override
 		{
-			return new RESOURCE();
+			return std::make_unique<RESOURCE>();
 		}
 	};
 
@@ -78,24 +85,18 @@ namespace render
 	public:
 		//Register resource factory
 		template<typename RESOURCE>
-		void RegisterResourceFactory(const char* type)
-		{
-			m_resource_factories_map[type] = std::make_unsigned_t<Factory<Resource, RESOURCE>>();
-		}
+		void RegisterResourceFactory(const char* type);
 		
 		//Register pass factory
 		template<typename PASS>
-		void RegisterPassType(const char* type)
-		{
-			m_pass_factories_map[type] = std::make_unsigned_t<Factory<Pass, PASS>>();
-		}
+		void RegisterPassType(const char* type);
 
 		//Load from passes declaration file
 		bool Load(display::Device* device, const char* render_passes_declaration);
 
 	private:
-		using ResourceFactoryMap = std::unordered_map<const char*, std::unique_ptr<FactoryInterface<Resource>*>>;
-		using PassFactoryMap = std::unordered_map<const char*, std::unique_ptr<FactoryInterface<Pass>*>>;
+		using ResourceFactoryMap = std::unordered_map<const char*, std::unique_ptr<FactoryInterface<Resource>>>;
+		using PassFactoryMap = std::unordered_map<const char*, std::unique_ptr<FactoryInterface<Pass>>>;
 
 		//Resource factories
 		ResourceFactoryMap m_resource_factories_map;
@@ -103,15 +104,44 @@ namespace render
 		//Pass factories
 		PassFactoryMap m_pass_factories_map;
 
-		using ResourceMap = std::unordered_map<const char*, std::unique_ptr<Resource*>>;
-		using PassMap = std::unordered_map<const char*, std::unique_ptr<Pass*>>;
+		using ResourceMap = std::unordered_map<const char*, std::unique_ptr<Resource>>;
+		using PassMap = std::unordered_map<const char*, std::unique_ptr<Pass>>;
 
 		//Gobal resources defined in the passes declaration
 		ResourceMap m_global_resources_map;
 
 		//Passes defined in the passes declaration
 		PassMap m_passes_map;
+
+		//Load resource
+		void LoadResource(render::LoadContext &load_context);
 	};
+
+	//Register resource factory
+
+	template<typename RESOURCE>
+	inline void Manager::RegisterResourceFactory(const char * type)
+	{
+		if (m_resource_factories_map.find(type) != m_resource_factories_map.end())
+		{
+			core::LogWarning("Resource <%s> has been already added, discarting new resource type", type);
+			return;
+		}
+		m_resource_factories_map[type] = std::make_unsigned_t<Factory<Resource, RESOURCE>>();
+	}
+
+	//Register pass factory
+
+	template<typename PASS>
+	inline void Manager::RegisterPassType(const char * type)
+	{
+		if (m_resource_factories_map.find(type) != m_resource_factories_map.end())
+		{
+			core::LogWarning("Pass <%s> has been already added, discarting new pass type", type);
+			return;
+		}
+		m_pass_factories_map[type] = std::make_unsigned_t<Factory<Pass, PASS>>();
+	}
 }
 
 #endif //RENDER_MANAGER_H_

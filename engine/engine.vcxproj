@@ -161,6 +161,7 @@
     <ClCompile Include="ext\imgui\imgui_draw.cpp" />
     <ClCompile Include="ext\imgui\imgui_widgets.cpp" />
     <ClCompile Include="ext\tinyxml2\tinyxml2.cpp" />
+    <ClCompile Include="render\manager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="tools\compile_shader.bat" />

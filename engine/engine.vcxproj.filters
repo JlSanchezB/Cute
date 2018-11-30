@@ -139,6 +139,9 @@
     <ClCompile Include="ext\tinyxml2\tinyxml2.cpp">
       <Filter>ext\tinyxml2</Filter>
     </ClCompile>
+    <ClCompile Include="render\manager.cpp">
+      <Filter>render</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="tools\compile_shader.bat">
