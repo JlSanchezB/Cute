@@ -74,9 +74,6 @@
     <ClInclude Include="core\simple_pool.h">
       <Filter>core</Filter>
     </ClInclude>
-    <ClInclude Include="render\manager.h">
-      <Filter>render</Filter>
-    </ClInclude>
     <ClInclude Include="ext\imgui\imconfig.h">
       <Filter>ext\imgui</Filter>
     </ClInclude>
@@ -97,6 +94,9 @@
     </ClInclude>
     <ClInclude Include="ext\tinyxml2\tinyxml2.h">
       <Filter>ext\tinyxml2</Filter>
+    </ClInclude>
+    <ClInclude Include="render\render.h">
+      <Filter>render</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -139,7 +139,7 @@
     <ClCompile Include="ext\tinyxml2\tinyxml2.cpp">
       <Filter>ext\tinyxml2</Filter>
     </ClCompile>
-    <ClCompile Include="render\manager.cpp">
+    <ClCompile Include="render\render.cpp">
       <Filter>render</Filter>
     </ClCompile>
   </ItemGroup>

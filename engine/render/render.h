@@ -29,6 +29,7 @@ namespace render
 		tinyxml2::XMLDocument* xml_doc;
 		tinyxml2::XMLElement* current_xml_element;
 		const char* render_passes_filename;
+		std::vector<std::string> errors;
 	};
 
 	//Context used for rendering a pass

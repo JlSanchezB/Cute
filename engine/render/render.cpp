@@ -1,4 +1,4 @@
-#include "manager.h"
+#include "render.h"
 #include <ext/tinyxml2/tinyxml2.h>
 
 namespace render

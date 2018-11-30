@@ -145,7 +145,7 @@
     <ClInclude Include="ext\imgui\imstb_textedit.h" />
     <ClInclude Include="ext\imgui\imstb_truetype.h" />
     <ClInclude Include="ext\tinyxml2\tinyxml2.h" />
-    <ClInclude Include="render\manager.h" />
+    <ClInclude Include="render\render.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="core\imgui_render.cpp" />
@@ -161,7 +161,7 @@
     <ClCompile Include="ext\imgui\imgui_draw.cpp" />
     <ClCompile Include="ext\imgui\imgui_widgets.cpp" />
     <ClCompile Include="ext\tinyxml2\tinyxml2.cpp" />
-    <ClCompile Include="render\manager.cpp" />
+    <ClCompile Include="render\render.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="tools\compile_shader.bat" />
