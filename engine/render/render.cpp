@@ -158,6 +158,8 @@ namespace render
 			{
 				core::LogError(error.c_str());
 			}
+
+			errors = std::move(load_context.errors);
 		}
 		return success;
 	}
