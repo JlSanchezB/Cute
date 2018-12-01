@@ -133,6 +133,9 @@ namespace render
 	System * CreateRenderPassSystem()
 	{
 		System* system = new System();
+
+		//Register all basic resources factories and passes
+
 		return system;
 	}
 
@@ -162,6 +165,20 @@ namespace render
 			errors = std::move(load_context.errors);
 		}
 		return success;
+	}
+
+	bool AddGlobalResource(System * system, const char * name, std::unique_ptr<Resource> resource)
+	{
+		if (system->m_global_resources_map.find(name) != system->m_global_resources_map.end())
+		{
+			system->m_global_resources_map[name] = std::move(resource);
+			return true;
+		}
+		else
+		{
+			core::LogWarning("Global Resource <%s> has been already added, discarting the new resource type");
+			return false;
+		}
 	}
 
 	bool RegisterResourceFactory(System * system, const char * resource_type, std::unique_ptr<FactoryInterface<Resource>> resource_factory)

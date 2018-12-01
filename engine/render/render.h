@@ -91,6 +91,9 @@ namespace render
 	//Load render pass descriptor file
 	bool LoadPassDescriptorFile(System* system, display::Device* device, const char* pass_descriptor_file, std::vector<std::string>& errors);
 
+	//Add global resource, allows the game to add global resources that the pass system can access them
+	bool AddGlobalResource(System* system, const char* name, std::unique_ptr<Resource> resource);
+
 	//Register resource factory
 	bool RegisterResourceFactory(System* system, const char * resource_type, std::unique_ptr<FactoryInterface<Resource>> resource_factory);
 
