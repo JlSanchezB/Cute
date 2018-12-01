@@ -1,5 +1,20 @@
 #include "render.h"
 #include <ext/tinyxml2/tinyxml2.h>
+#include <stdarg.h>
+
+namespace
+{
+	void AddError(render::LoadContext& load_context, const char* message, ...)
+	{
+		char buffer[1024];
+		va_list args;
+		va_start(args, message);
+		vsnprintf_s(buffer, 1024, 1024 - 1, message, args);
+		va_end(args);
+
+		load_context.errors.push_back(buffer);
+	}
+}
 
 namespace render
 {
@@ -56,17 +71,17 @@ namespace render
 				}
 				else
 				{
-					core::LogError("Error loading <%s> render passes declaration, resource name <%s> has been already added", load_context.render_passes_filename, resource_name);
+					AddError(load_context, "Resource name <%s> has been already added", resource_name);
 				}
 			}
 			else
 			{
-				core::LogError("Error loading <%s> render passes declaration, resource type <%s> is not register", load_context.render_passes_filename, resource_type);
+				AddError(load_context, "Resource type <%s> is not register", resource_type);
 			}
 		}
 		else
 		{
-			core::LogError("Error loading <%s> render passes declaration, resource has not attribute type or name");
+			AddError(load_context, "Resource has not attribute type or name");
 		}
 	}
 
@@ -77,14 +92,14 @@ namespace render
 		tinyxml2::XMLError result = xml_doc.LoadFile(load_context.render_passes_filename);
 		if (result != tinyxml2::XML_SUCCESS)
 		{
-			core::LogError("Error loading <%s> render passes declaration, file doesn't exist", load_context.render_passes_filename);
+			AddError(load_context, "File <%s> doesn't exist", load_context.render_passes_filename);
 			return false;
 		}
 
 		tinyxml2::XMLNode* root = xml_doc.FirstChildElement("Root");
 		if (root == nullptr)
 		{
-			core::LogError("Error loading <%s> render passes declaration, Root node doesn't exist", load_context.render_passes_filename);
+			AddError(load_context, "Root node doesn't exist");
 			return false;
 		}
 
@@ -104,7 +119,7 @@ namespace render
 			}
 			else
 			{
-				core::LogError("Error loading <%s> render passes declaration, global element <%s> not supported", load_context.render_passes_filename, resource->Name());
+				AddError(load_context, "Global element <%s> not supported", load_context.render_passes_filename, resource->Name());
 			}
 
 			resource = resource->NextSiblingElement();
@@ -132,7 +147,19 @@ namespace render
 		load_context.device = device;
 		load_context.render_passes_filename = pass_descriptor_file;
 
-		return system->Load(load_context);
+		bool success = system->Load(load_context);
+
+		if (!success)
+		{
+			//Log the errors
+			core::LogError("Errors loading render pass descriptor file <%s>:", pass_descriptor_file);
+
+			for (auto& error : load_context.errors)
+			{
+				core::LogError(error.c_str());
+			}
+		}
+		return success;
 	}
 
 	bool RegisterResourceFactory(System * system, const char * resource_type, std::unique_ptr<FactoryInterface<Resource>> resource_factory)
