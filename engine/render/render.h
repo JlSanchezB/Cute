@@ -20,6 +20,13 @@ namespace tinyxml2
 	class XMLElement;
 }
 
+#define DECLARE_RENDER_CLASS(name) \
+	const char* Type() const \
+	{ \
+		return name; \
+	}; \
+	inline static const char* kClassName = name;
+
 namespace render
 {
 	//System
@@ -100,18 +107,18 @@ namespace render
 
 	//Register resource factory helper
 	template<typename RESOURCE>
-	inline bool RegisterResourceFactory(System* system, const char * type)
+	inline bool RegisterResourceFactory(System* system)
 	{
 		std::unique_ptr<FactoryInterface<Resource>> factory = std::make_unique<Factory<Resource, RESOURCE>>();
-		return RegisterResourceFactory(system, type, factory);
+		return RegisterResourceFactory(system, RESOURCE::kClassName, factory);
 	}
 
 	//Register pass factory helper
 	template<typename PASS>
-	inline bool RegisterPassType(const char * type)
+	inline bool RegisterPassType(System* system)
 	{
 		std::unique_ptr<FactoryInterface<Pass>> factory = std::make_unique<Factory<Pass, PASS>>();
-		return RegisterResourceFactory(system, type, factory);
+		return RegisterResourceFactory(system, PASS::kClassName, factory);
 	}
 }
 

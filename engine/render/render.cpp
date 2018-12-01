@@ -123,7 +123,7 @@ namespace render
 			}
 			else
 			{
-				AddError(load_context, "Global element <%s> not supported", load_context.render_passes_filename, resource->Name());
+				AddError(load_context, "Global element <%s> not supported", resource->Name());
 			}
 
 			resource = resource->NextSiblingElement();
@@ -139,10 +139,10 @@ namespace render
 		System* system = new System();
 
 		//Register all basic resources factories and passes
-		RegisterResourceFactory<BoolResource>(system, "Bool");
-		RegisterResourceFactory<TextureResource>(system, "Texture");
-		RegisterResourceFactory<ConstantBufferResource>(system, "ConstantBuffer");
-		RegisterResourceFactory<RootSignatureResource>(system, "RootSignature");
+		RegisterResourceFactory<BoolResource>(system);
+		RegisterResourceFactory<TextureResource>(system);
+		RegisterResourceFactory<ConstantBufferResource>(system);
+		RegisterResourceFactory<RootSignatureResource>(system);
 
 		return system;
 	}
