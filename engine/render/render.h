@@ -22,6 +22,9 @@ namespace tinyxml2
 
 namespace render
 {
+	//System
+	struct System;
+
 	//Context used for loading a pass
 	struct LoadContext
 	{
@@ -79,69 +82,33 @@ namespace render
 		}
 	};
 
+	//Create render pass system
+	System* CreateRenderPassSystem();
 
-	//Render pass manager
-	class Manager
-	{
-	public:
-		//Register resource factory
-		template<typename RESOURCE>
-		void RegisterResourceFactory(const char* type);
-		
-		//Register pass factory
-		template<typename PASS>
-		void RegisterPassType(const char* type);
+	//Destroy render pass system
+	void DestroyRenderPassSystem(System* system);
 
-		//Load from passes declaration file
-		bool Load(display::Device* device, const char* render_passes_declaration);
-
-	private:
-		using ResourceFactoryMap = std::unordered_map<const char*, std::unique_ptr<FactoryInterface<Resource>>>;
-		using PassFactoryMap = std::unordered_map<const char*, std::unique_ptr<FactoryInterface<Pass>>>;
-
-		//Resource factories
-		ResourceFactoryMap m_resource_factories_map;
-
-		//Pass factories
-		PassFactoryMap m_pass_factories_map;
-
-		using ResourceMap = std::unordered_map<const char*, std::unique_ptr<Resource>>;
-		using PassMap = std::unordered_map<const char*, std::unique_ptr<Pass>>;
-
-		//Gobal resources defined in the passes declaration
-		ResourceMap m_global_resources_map;
-
-		//Passes defined in the passes declaration
-		PassMap m_passes_map;
-
-		//Load resource
-		void LoadResource(render::LoadContext &load_context);
-	};
+	//Load render pass descriptor file
+	bool LoadPassDescriptorFile(System* system, display::Device* device, const char* pass_descriptor_file, std::vector<std::string>& errors);
 
 	//Register resource factory
-
-	template<typename RESOURCE>
-	inline void Manager::RegisterResourceFactory(const char * type)
-	{
-		if (m_resource_factories_map.find(type) != m_resource_factories_map.end())
-		{
-			core::LogWarning("Resource <%s> has been already added, discarting new resource type", type);
-			return;
-		}
-		m_resource_factories_map[type] = std::make_unsigned_t<Factory<Resource, RESOURCE>>();
-	}
+	bool RegisterResourceFactory(System* system, const char * resource_type, std::unique_ptr<FactoryInterface<Resource>> resource_factory);
 
 	//Register pass factory
+	bool RegisterPassFactory(System* system, const char * pass_type, std::unique_ptr<FactoryInterface<Pass>> pass_factory);
 
-	template<typename PASS>
-	inline void Manager::RegisterPassType(const char * type)
+	//Register resource factory helper
+	template<typename RESOURCE>
+	inline bool RegisterResourceFactory(System* system, const char * type)
 	{
-		if (m_resource_factories_map.find(type) != m_resource_factories_map.end())
-		{
-			core::LogWarning("Pass <%s> has been already added, discarting new pass type", type);
-			return;
-		}
-		m_pass_factories_map[type] = std::make_unsigned_t<Factory<Pass, PASS>>();
+		return RegisterResourceFactory(System* system, type, std::make_unique<Factory<Resource, RESOURCE>>());
+	}
+
+	//Register pass factory helper
+	template<typename PASS>
+	inline bool RegisterPassType(const char * type)
+	{
+		return RegisterResourceFactory(System* system, type, std::make_unique<Factory<Pass, PASS>>());
 	}
 }
 

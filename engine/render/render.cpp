@@ -3,7 +3,35 @@
 
 namespace render
 {
-	void Manager::LoadResource(render::LoadContext &load_context)
+	//Internal render pass system implementation
+	struct System
+	{
+		//Load from passes declaration file
+		bool Load(LoadContext& load_context);
+
+		using ResourceFactoryMap = std::unordered_map<const char*, std::unique_ptr<FactoryInterface<Resource>>>;
+		using PassFactoryMap = std::unordered_map<const char*, std::unique_ptr<FactoryInterface<Pass>>>;
+
+		//Resource factories
+		ResourceFactoryMap m_resource_factories_map;
+
+		//Pass factories
+		PassFactoryMap m_pass_factories_map;
+
+		using ResourceMap = std::unordered_map<const char*, std::unique_ptr<Resource>>;
+		using PassMap = std::unordered_map<const char*, std::unique_ptr<Pass>>;
+
+		//Gobal resources defined in the passes declaration
+		ResourceMap m_global_resources_map;
+
+		//Passes defined in the passes declaration
+		PassMap m_passes_map;
+
+		//Load resource
+		void LoadResource(LoadContext& load_context);
+	};
+
+	void System::LoadResource(LoadContext& load_context)
 	{
 		//Get type and name
 		const char* resource_type = load_context.current_xml_element->Attribute("type");
@@ -42,28 +70,26 @@ namespace render
 		}
 	}
 
-	bool Manager::Load(display::Device * device, const char * render_passes_declaration)
+	bool System::Load(LoadContext& load_context)
 	{
 		tinyxml2::XMLDocument xml_doc;
 
-		tinyxml2::XMLError result = xml_doc.LoadFile(render_passes_declaration);
+		tinyxml2::XMLError result = xml_doc.LoadFile(load_context.render_passes_filename);
 		if (result != tinyxml2::XML_SUCCESS)
 		{
-			core::LogError("Error loading <%s> render passes declaration, file doesn't exist", render_passes_declaration);
+			core::LogError("Error loading <%s> render passes declaration, file doesn't exist", load_context.render_passes_filename);
 			return false;
 		}
 
 		tinyxml2::XMLNode* root = xml_doc.FirstChildElement("Root");
 		if (root == nullptr)
 		{
-			core::LogError("Error loading <%s> render passes declaration, Root node doesn't exist", render_passes_declaration);
+			core::LogError("Error loading <%s> render passes declaration, Root node doesn't exist", load_context.render_passes_filename);
 			return false;
 		}
 
-		LoadContext load_context;
-		load_context.device = device;
+		//Set the xml doc to the load context
 		load_context.xml_doc = &xml_doc;
-		load_context.render_passes_filename = render_passes_declaration;
 
 		//Load global resources
 		tinyxml2::XMLElement* resource = root->FirstChildElement("Global");
@@ -87,4 +113,49 @@ namespace render
 
 		return true;
 	}
+
+
+	System * CreateRenderPassSystem()
+	{
+		System* system = new System();
+		return system;
+	}
+
+	void DestroyRenderPassSystem(System * system)
+	{
+		delete system;
+	}
+
+	bool LoadPassDescriptorFile(System* system, display::Device* device, const char * pass_descriptor_file, std::vector<std::string>& errors)
+	{
+		LoadContext load_context;
+		load_context.device = device;
+		load_context.render_passes_filename = pass_descriptor_file;
+
+		return system->Load(load_context);
+	}
+
+	bool RegisterResourceFactory(System * system, const char * resource_type, std::unique_ptr<FactoryInterface<Resource>> resource_factory)
+	{
+		if (system->m_resource_factories_map.find(resource_type) != system->m_resource_factories_map.end())
+		{
+			core::LogWarning("Resource <%s> has been already added, discarting new resource type", resource_type);
+			return false;
+		}
+		system->m_resource_factories_map[resource_type] = std::move(resource_factory);
+		return true;
+	}
+
+	bool RegisterPassFactory(System * system, const char * pass_type, std::unique_ptr<FactoryInterface<Pass>> pass_factory)
+	{
+		if (system->m_resource_factories_map.find(pass_type) != system->m_resource_factories_map.end())
+		{
+			core::LogWarning("Pass <%s> has been already added, discarting new pass type", pass_type);
+			return false;
+		}
+
+		system->m_pass_factories_map[pass_type] = std::move(pass_factory);
+		return true;
+	}
+
 }
