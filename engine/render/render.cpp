@@ -1,7 +1,8 @@
 #include "render.h"
 #include <ext/tinyxml2/tinyxml2.h>
-#include <stdarg.h>
+#include "render_resource.h"
 
+#include <stdarg.h>
 namespace
 {
 	void AddError(render::LoadContext& load_context, const char* message, ...)
@@ -39,6 +40,9 @@ namespace render
 		//Gobal resources defined in the passes declaration
 		ResourceMap m_global_resources_map;
 
+		//Game resource added by the game
+		ResourceMap m_game_resources_map;
+
 		//Passes defined in the passes declaration
 		PassMap m_passes_map;
 
@@ -67,7 +71,7 @@ namespace render
 					resource_instance->Load(&load_context);
 
 					//Add to the globals
-					m_global_resources_map[resource_name] = std::move(resource_instance);
+					m_global_resources_map[resource_name].reset(resource_instance);
 				}
 				else
 				{
@@ -135,6 +139,10 @@ namespace render
 		System* system = new System();
 
 		//Register all basic resources factories and passes
+		RegisterResourceFactory<BoolResource>(system, "Bool");
+		RegisterResourceFactory<TextureResource>(system, "Texture");
+		RegisterResourceFactory<ConstantBufferResource>(system, "ConstantBuffer");
+		RegisterResourceFactory<RootSignatureResource>(system, "RootSignature");
 
 		return system;
 	}
@@ -167,21 +175,22 @@ namespace render
 		return success;
 	}
 
-	bool AddGlobalResource(System * system, const char * name, std::unique_ptr<Resource> resource)
+	bool AddGameResource(System * system, const char * name, std::unique_ptr<Resource>& resource)
 	{
-		if (system->m_global_resources_map.find(name) != system->m_global_resources_map.end())
+		if ((system->m_global_resources_map.find(name) != system->m_global_resources_map.end()) ||
+			(system->m_game_resources_map.find(name) != system->m_game_resources_map.end()))
 		{
-			system->m_global_resources_map[name] = std::move(resource);
+			system->m_game_resources_map[name] = std::move(resource);
 			return true;
 		}
 		else
 		{
-			core::LogWarning("Global Resource <%s> has been already added, discarting the new resource type");
+			core::LogWarning("Game Resource <%s> has been already added, discarting the new resource");
 			return false;
 		}
 	}
 
-	bool RegisterResourceFactory(System * system, const char * resource_type, std::unique_ptr<FactoryInterface<Resource>> resource_factory)
+	bool RegisterResourceFactory(System * system, const char * resource_type, std::unique_ptr<FactoryInterface<Resource>>& resource_factory)
 	{
 		if (system->m_resource_factories_map.find(resource_type) != system->m_resource_factories_map.end())
 		{
@@ -192,7 +201,7 @@ namespace render
 		return true;
 	}
 
-	bool RegisterPassFactory(System * system, const char * pass_type, std::unique_ptr<FactoryInterface<Pass>> pass_factory)
+	bool RegisterPassFactory(System * system, const char * pass_type, std::unique_ptr<FactoryInterface<Pass>>& pass_factory)
 	{
 		if (system->m_resource_factories_map.find(pass_type) != system->m_resource_factories_map.end())
 		{

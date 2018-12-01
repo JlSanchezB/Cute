@@ -98,6 +98,9 @@
     <ClInclude Include="render\render.h">
       <Filter>render</Filter>
     </ClInclude>
+    <ClInclude Include="render\render_resource.h">
+      <Filter>render</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="display\pc_dx12\display.cpp">

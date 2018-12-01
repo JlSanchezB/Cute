@@ -4,6 +4,8 @@
 #ifndef DISPLAY_HANDLE_H_
 #define DISPLAY_HANDLE_H_
 
+#include <core/handle_pool.h>
+
 namespace display
 {
 	using CommandListHandle = core::Handle<struct CommandList, uint16_t>;

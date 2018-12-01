@@ -1,8 +1,8 @@
 //////////////////////////////////////////////////////////////////////////
 // Cute engine - Manager of the render passes system
 //////////////////////////////////////////////////////////////////////////
-#ifndef RENDER_MANAGER_H_
-#define RENDER_MANAGER_H_
+#ifndef RENDER_H_
+#define RENDER_H_
 
 #include <memory>
 #include <unordered_map>
@@ -49,9 +49,9 @@ namespace render
 	public:
 		virtual ~Resource() {};
 		//Load from XML node and returns the Resource
-		virtual Resource* Load(LoadContext* load_context) = 0;
-		//Returns the type of resource
-		virtual const char* Type() = 0;
+		virtual void Load(LoadContext* load_context) = 0;
+		//Return type
+		virtual const char* Type() const = 0;
 	};
 	
 	//Base Pass class
@@ -60,25 +60,23 @@ namespace render
 	public:
 		virtual ~Pass() {};
 		//Load from XML node and returns the Resource
-		virtual Pass* Load(LoadContext* load_context) = 0;
+		virtual void Load(LoadContext* load_context) = 0;
 		//Render the pass
-		virtual void Render(RenderContext* render_context) = 0;
+		virtual void Render(RenderContext* render_context) const = 0;
 	};
 
 	//Factory helper classes
 	template<class TYPE>
-	class FactoryInterface
+	struct FactoryInterface
 	{
-	public:
-		virtual std::unique_ptr<TYPE> Create() = 0;
+		virtual TYPE* Create() = 0;
 	};
-	template<class TYPE, class RESOURCE>
-	class ResourceFactory : public FactoryInterface<TYPE>
+	template<class TYPE, class SPECIALISED>
+	struct Factory : FactoryInterface<TYPE>
 	{
-	public:
-		std::unique_ptr<TYPE> Create() override
+		TYPE* Create() override
 		{
-			return std::make_unique<RESOURCE>();
+			return reinterpret_cast<TYPE*> (new SPECIALISED());
 		}
 	};
 
@@ -92,27 +90,29 @@ namespace render
 	bool LoadPassDescriptorFile(System* system, display::Device* device, const char* pass_descriptor_file, std::vector<std::string>& errors);
 
 	//Add global resource, allows the game to add global resources that the pass system can access them
-	bool AddGlobalResource(System* system, const char* name, std::unique_ptr<Resource> resource);
+	bool AddGameResource(System* system, const char* name, std::unique_ptr<Resource>& resource);
 
 	//Register resource factory
-	bool RegisterResourceFactory(System* system, const char * resource_type, std::unique_ptr<FactoryInterface<Resource>> resource_factory);
+	bool RegisterResourceFactory(System* system, const char * resource_type, std::unique_ptr<FactoryInterface<Resource>>& resource_factory);
 
 	//Register pass factory
-	bool RegisterPassFactory(System* system, const char * pass_type, std::unique_ptr<FactoryInterface<Pass>> pass_factory);
+	bool RegisterPassFactory(System* system, const char * pass_type, std::unique_ptr<FactoryInterface<Pass>>& pass_factory);
 
 	//Register resource factory helper
 	template<typename RESOURCE>
 	inline bool RegisterResourceFactory(System* system, const char * type)
 	{
-		return RegisterResourceFactory(System* system, type, std::make_unique<Factory<Resource, RESOURCE>>());
+		std::unique_ptr<FactoryInterface<Resource>> factory = std::make_unique<Factory<Resource, RESOURCE>>();
+		return RegisterResourceFactory(system, type, factory);
 	}
 
 	//Register pass factory helper
 	template<typename PASS>
 	inline bool RegisterPassType(const char * type)
 	{
-		return RegisterResourceFactory(System* system, type, std::make_unique<Factory<Pass, PASS>>());
+		std::unique_ptr<FactoryInterface<Pass>> factory = std::make_unique<Factory<Pass, PASS>>();
+		return RegisterResourceFactory(system, type, factory);
 	}
 }
 
-#endif //RENDER_MANAGER_H_
+#endif //RENDER_H_
