@@ -63,6 +63,8 @@ namespace render
 					assert(resource_instance);
 					assert(strcmp(resource_instance->Type(), resource_type) == 0);
 
+					load_context.name = resource_name;
+
 					//Load resource
 					resource_instance->Load(load_context);
 

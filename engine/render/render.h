@@ -37,6 +37,7 @@ namespace render
 		display::Device* device;
 		tinyxml2::XMLDocument* xml_doc;
 		tinyxml2::XMLElement* current_xml_element;
+		const char* name;
 		const char* render_passes_filename;
 		std::vector<std::string> errors;
 	};

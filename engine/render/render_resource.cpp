@@ -25,6 +25,13 @@ namespace
 			return std::vector<char>(0);
 		}
 	}
+
+	//Conversion tables
+	const std::pair<const char*, display::Access> g_display_access_converison[] =
+	{
+		{"Static", display::Access::Static},
+		{"Dynamic", display::Access::Dynamic}
+	};
 }
 
 void render::BoolResource::Load(LoadContext& load_context)
@@ -56,7 +63,7 @@ void render::TextureResource::Load(LoadContext& load_context)
 	if (texture_buffer.size() > 0)
 	{
 		//Load the texture
-		m_shader_resource_handle = display::CreateTextureResource(load_context.device, reinterpret_cast<void*>(&texture_buffer[0]), texture_buffer.size(), texture_filename);
+		m_shader_resource_handle = display::CreateTextureResource(load_context.device, reinterpret_cast<void*>(&texture_buffer[0]), texture_buffer.size(), load_context.name);
 
 		if (!m_shader_resource_handle.IsValid())
 		{
@@ -72,6 +79,25 @@ void render::TextureResource::Load(LoadContext& load_context)
 
 void render::ConstantBufferResource::Load(LoadContext& load_context)
 {
+	auto& xml_element = load_context.current_xml_element;
+	display::ConstantBufferDesc constant_buffer_desc;
+
+	if (!QuerySizeAttribute(xml_element, "size", &constant_buffer_desc.size))
+	{
+		AddError(load_context, "Constant buffer <%s> needs the attribute size", load_context.name);
+		return;
+	}
+
+	//Read access, by default static
+	QueryEnumAttribute(xml_element, "access", &constant_buffer_desc.access, g_display_access_converison);
+
+	//Create constant buffer
+	m_constant_buffer_handle = display::CreateConstantBuffer(load_context.device, constant_buffer_desc, load_context.name);
+
+	if (!m_constant_buffer_handle.IsValid())
+	{
+		AddError(load_context, "Error creating constant buffer <%s>, display error <%>", load_context.name, display::GetLastErrorMessage(load_context.device));
+	}
 }
 
 void render::RootSignatureResource::Load(LoadContext& load_context)
