@@ -4,12 +4,12 @@
 <Resource type="Texture" name="SampleTexture">texture.dds</Resource>
 <Resource type="ConstantBuffer" name="GlobalConstantBuffer" size="10" access="Dynamic"/>
 <Resource type="RootSignature" name="GraphicsRootSignature">
-	<rootparam index="0" type="DescriptorTable">
-		<range base_shader_register="0" size="1" type="ShaderResource" visibility="Pixel"/>
-    <range base_shader_register="0" size="1" type="ConstantBuffer" visibility="All"/>
-	</rootparam>
-	<staticsample shader_register="0" visibility="Pixel"/> 
-	<staticsample shader_register="1" visibility="Pixel" filter="Linear"/> 
+	<RootParam index="0" type="DescriptorTable">
+		<Range base_shader_register="0" size="1" type="ShaderResource" visibility="Pixel"/>
+    <Range base_shader_register="0" size="1" type="ConstantBuffer" visibility="All"/>
+	</RootParam>
+	<StaticSample shader_register="0" visibility="Pixel"/> 
+	<StaticSample shader_register="1" visibility="Pixel" filter="Linear"/> 
 </Resource>
 </Global>
 <Passes>
