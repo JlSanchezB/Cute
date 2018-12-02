@@ -16,7 +16,7 @@ namespace render
 	public:
 		DECLARE_RENDER_CLASS("Bool");
 
-		void Load(LoadContext* load_context) override;
+		void Load(LoadContext& load_context) override;
 	};
 
 	//Texture resource
@@ -26,7 +26,7 @@ namespace render
 	public:
 		DECLARE_RENDER_CLASS("Texture");
 
-		void Load(LoadContext* load_context) override;
+		void Load(LoadContext& load_context) override;
 	};
 
 	//Constant buffer resource
@@ -36,7 +36,7 @@ namespace render
 	public:
 		DECLARE_RENDER_CLASS("ConstantBuffer");
 
-		void Load(LoadContext* load_context) override;
+		void Load(LoadContext& load_context) override;
 	};
 
 	//Root signature resource
@@ -46,7 +46,7 @@ namespace render
 	public:
 		DECLARE_RENDER_CLASS("RootSignature");
 
-		void Load(LoadContext* load_context) override;
+		void Load(LoadContext& load_context) override;
 	};
 }
 #endif //RENDER_RESOURCE_H_

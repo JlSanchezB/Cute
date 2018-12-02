@@ -101,6 +101,9 @@
     <ClInclude Include="render\render_resource.h">
       <Filter>render</Filter>
     </ClInclude>
+    <ClInclude Include="render\render_common.h">
+      <Filter>render</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="display\pc_dx12\display.cpp">
@@ -143,6 +146,9 @@
       <Filter>ext\tinyxml2</Filter>
     </ClCompile>
     <ClCompile Include="render\render.cpp">
+      <Filter>render</Filter>
+    </ClCompile>
+    <ClCompile Include="render\render_resource.cpp">
       <Filter>render</Filter>
     </ClCompile>
   </ItemGroup>

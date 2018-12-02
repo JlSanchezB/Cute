@@ -1,21 +1,12 @@
 #include "render.h"
 #include <ext/tinyxml2/tinyxml2.h>
 #include "render_resource.h"
+#include <core/log.h>
+#include "render_common.h"
 
+#include <memory>
+#include <unordered_map>
 #include <stdarg.h>
-namespace
-{
-	void AddError(render::LoadContext& load_context, const char* message, ...)
-	{
-		char buffer[1024];
-		va_list args;
-		va_start(args, message);
-		vsnprintf_s(buffer, 1024, 1024 - 1, message, args);
-		va_end(args);
-
-		load_context.errors.push_back(buffer);
-	}
-}
 
 namespace render
 {
@@ -64,11 +55,16 @@ namespace render
 				{
 					auto& factory = resource_factory_it->second;
 
+					assert(factory.get());
+
 					//Create resource container
 					auto resource_instance = factory->Create();
 
+					assert(resource_instance);
+					assert(strcmp(resource_instance->Type(), resource_type) == 0);
+
 					//Load resource
-					resource_instance->Load(&load_context);
+					resource_instance->Load(load_context);
 
 					//Add to the globals
 					m_global_resources_map[resource_name].reset(resource_instance);

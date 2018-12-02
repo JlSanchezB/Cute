@@ -4,9 +4,8 @@
 #ifndef RENDER_H_
 #define RENDER_H_
 
+#include <vector>
 #include <memory>
-#include <unordered_map>
-#include <core/log.h>
 
 namespace display
 {
@@ -56,8 +55,9 @@ namespace render
 	public:
 		virtual ~Resource() {};
 		//Load from XML node and returns the Resource
-		virtual void Load(LoadContext* load_context) = 0;
-		//Return type
+		virtual void Load(LoadContext& load_context) = 0;
+		
+		//Return type, it will be defined with DECLARE_RENDER_CLASS
 		virtual const char* Type() const = 0;
 	};
 	
