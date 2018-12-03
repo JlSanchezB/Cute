@@ -5,10 +5,30 @@
 #define RENDER_RESOURCE_H_
 
 #include "render.h"
-#include <display/display_handle.h>
+#include <display/display.h>
 
 namespace render
 {
+	//Resource that can be created outside the render pass system, just a display handle
+	template<typename HANDLE>
+	class DisplayHandleResource : public Resource
+	{
+		HANDLE m_handle;
+	public:
+		void Init(HANDLE& handle)
+		{
+			m_handle = std::move(handle);
+		}
+		void Destroy(display::Device* device) override
+		{
+			display::DestroyHandle(device, m_handle);
+		}
+		HANDLE& GetHandle()
+		{
+			return m_handle;
+		}
+	};
+
 	//Bool resource
 	class BoolResource : Resource
 	{
@@ -20,9 +40,8 @@ namespace render
 	};
 
 	//Texture resource
-	class TextureResource : Resource
+	class TextureResource : DisplayHandleResource<display::ShaderResourceHandle>
 	{
-		display::ShaderResourceHandle m_shader_resource_handle;
 	public:
 		DECLARE_RENDER_CLASS("Texture");
 
@@ -30,9 +49,8 @@ namespace render
 	};
 
 	//Constant buffer resource
-	class ConstantBufferResource : Resource
+	class ConstantBufferResource : DisplayHandleResource<display::ConstantBufferHandle>
 	{
-		display::ConstantBufferHandle m_constant_buffer_handle;
 	public:
 		DECLARE_RENDER_CLASS("ConstantBuffer");
 
@@ -40,9 +58,8 @@ namespace render
 	};
 
 	//Root signature resource
-	class RootSignatureResource : Resource
+	class RootSignatureResource : DisplayHandleResource<display::RootSignatureHandle>
 	{
-		display::RootSignatureHandle m_root_signature_handle;
 	public:
 		DECLARE_RENDER_CLASS("RootSignature");
 

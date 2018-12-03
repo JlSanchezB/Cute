@@ -6,7 +6,7 @@
 
 namespace display
 {
-	enum class RootSignatureParameterType
+	enum class RootSignatureParameterType : uint8_t
 	{
 		Constants,
 		ConstantBuffer,
@@ -15,7 +15,7 @@ namespace display
 		DescriptorTable
 	};
 
-	enum class DescriptorTableParameterType
+	enum class DescriptorTableParameterType : uint8_t
 	{
 		ConstantBuffer,
 		UnorderAccessBuffer,
@@ -23,7 +23,7 @@ namespace display
 		Sampler
 	};
 
-	enum class ShaderVisibility
+	enum class ShaderVisibility : uint8_t
 	{
 		All,
 		Vertex,
@@ -33,7 +33,7 @@ namespace display
 		Pixel
 	};
 
-	enum class Format
+	enum class Format : uint8_t
 	{
 		UNKNOWN, //Used for structure buffers
 		R32G32_FLOAT,
@@ -45,20 +45,20 @@ namespace display
 		R16_UINT
 	};
 
-	enum class FillMode
+	enum class FillMode : uint8_t
 	{
 		Wireframe,
 		Solid
 	};
 
-	enum class CullMode
+	enum class CullMode : uint8_t
 	{
 		None,
 		Front,
 		Back
 	};
 
-	enum class Blend
+	enum class Blend : uint8_t
 	{
 		Zero,
 		One,
@@ -66,7 +66,7 @@ namespace display
 		InvSrcAlpha
 	};
 
-	enum class ComparationFunction
+	enum class ComparationFunction : uint8_t
 	{
 		Never,
 		Less,
@@ -78,60 +78,60 @@ namespace display
 		Always
 	};
 
-	enum class Topology
+	enum class Topology : uint8_t
 	{
 		Triangle
 	};
 
-	enum class PrimitiveTopology
+	enum class PrimitiveTopology : uint8_t
 	{
 		TriangleList
 	};
 
-	enum class BlendOp
+	enum class BlendOp : uint8_t
 	{
 		Add,
 		Substract
 	};
 
-	enum class InputType
+	enum class InputType : uint8_t
 	{
 		Vertex,
 		Instance
 	};
 
-	enum class TextureAddressMode
+	enum class TextureAddressMode : uint8_t
 	{
 		Wrap,
 		Mirror,
 		Clamp
 	};
 
-	enum class Filter
+	enum class Filter : uint8_t
 	{
 		Point,
 		Linear,
 		Anisotropic
 	};
 
-	enum class Access
+	enum class Access : uint8_t
 	{
 		Static, //Only change in the initialization, never touch again
 		Dynamic, //Upload from the CPU to the GPU one per frame
 	};
 
-	enum class ShaderResourceType
+	enum class ShaderResourceType : uint8_t
 	{
 		Buffer,
 		Texture2D
 	};
 
-	enum class RenderTargetType
+	enum class RenderTargetType : uint8_t
 	{
 		Texture2D
 	};
 
-	enum class ResourceState
+	enum class ResourceState : uint8_t
 	{
 		RenderTarget,
 		PixelShaderResource,

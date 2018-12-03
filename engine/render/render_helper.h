@@ -36,12 +36,27 @@ namespace
 	}
 
 	template <>
-	bool QueryAttribute<size_t>(render::LoadContext& load_context, tinyxml2::XMLElement* xml_element, const char* name, size_t& value, AttributeType attribute_type)
+	inline bool QueryAttribute<size_t>(render::LoadContext& load_context, tinyxml2::XMLElement* xml_element, const char* name, size_t& value, AttributeType attribute_type)
 	{
 		int64_t int64_value;
 		if (QueryAttribute(load_context, xml_element, name, int64_value, attribute_type))
 		{
 			value = static_cast<size_t>(int64_value);
+			return true;
+		}
+		else
+		{
+			return false;
+		}
+	}
+
+	template <>
+	inline bool QueryAttribute<uint16_t>(render::LoadContext& load_context, tinyxml2::XMLElement* xml_element, const char* name, uint16_t& value, AttributeType attribute_type)
+	{
+		unsigned int uint_value;
+		if (QueryAttribute(load_context, xml_element, name, uint_value, attribute_type))
+		{
+			value = static_cast<uint16_t>(uint_value);
 			return true;
 		}
 		else

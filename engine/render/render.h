@@ -55,8 +55,10 @@ namespace render
 	{
 	public:
 		virtual ~Resource() {};
-		//Load from XML node and returns the Resource
+		//Load from XML node
 		virtual void Load(LoadContext& load_context) = 0;
+		//Destroy device handles
+		virtual void Destroy(display::Device* device) {};
 		
 		//Return type, it will be defined with DECLARE_RENDER_CLASS
 		virtual const char* Type() const = 0;

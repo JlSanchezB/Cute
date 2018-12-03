@@ -195,5 +195,45 @@ namespace display
 		//Execute compute
 		void ExecuteCompute(const ExecuteComputeDesc& execute_compute_desc);
 	};
+
+	template<typename HANDLE>
+	void DestroyHandle(Device* device, HANDLE& handle);
+
+	template<>
+	inline void DestroyHandle(Device* device, RootSignatureHandle& handle)
+	{
+		DestroyRootSignature(device, handle);
+	}
+
+	template<>
+	inline void DestroyHandle(Device* device, PipelineStateHandle& handle)
+	{
+		DestroyPipelineState(device, handle);
+	}
+
+	template<>
+	inline void DestroyHandle(Device* device, UnorderedAccessBufferHandle& handle)
+	{
+		DestroyUnorderedAccessBuffer(device, handle);
+	}
+
+	template<>
+	inline void DestroyHandle(Device* device, ConstantBufferHandle& handle)
+	{
+		DestroyConstantBuffer(device, handle);
+	}
+
+	template<>
+	inline void DestroyHandle(Device* device, ShaderResourceHandle& handle)
+	{
+		DestroyShaderResource(device, handle);
+	}
+
+	template<>
+	inline void DestroyHandle(Device* device, DescriptorTableHandle& handle)
+	{
+		DestroyDescriptorTable(device, handle);
+	}
+
 }
 #endif DISPLAY_H_

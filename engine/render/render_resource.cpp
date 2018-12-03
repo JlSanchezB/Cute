@@ -105,9 +105,9 @@ void render::TextureResource::Load(LoadContext& load_context)
 	if (texture_buffer.size() > 0)
 	{
 		//Load the texture
-		m_shader_resource_handle = display::CreateTextureResource(load_context.device, reinterpret_cast<void*>(&texture_buffer[0]), texture_buffer.size(), load_context.name);
+		GetHandle() = display::CreateTextureResource(load_context.device, reinterpret_cast<void*>(&texture_buffer[0]), texture_buffer.size(), load_context.name);
 
-		if (!m_shader_resource_handle.IsValid())
+		if (!GetHandle().IsValid())
 		{
 			AddError(load_context, "Error creating texture <%s>, display error <%>", texture_filename, display::GetLastErrorMessage(load_context.device));
 		}
@@ -121,53 +121,72 @@ void render::TextureResource::Load(LoadContext& load_context)
 
 void render::ConstantBufferResource::Load(LoadContext& load_context)
 {
-	auto& xml_element = load_context.current_xml_element;
-	display::ConstantBufferDesc constant_buffer_desc;
-
-	
-	bool valid = QueryAttribute(load_context, xml_element, "size", constant_buffer_desc.size, AttributeType::NonOptional);
-	valid |= QueryTableAttribute(load_context, xml_element, "access", constant_buffer_desc.access, g_display_access_conversion, AttributeType::Optional);
-
-	if (valid)
-	{
-		//Create constant buffer
-		m_constant_buffer_handle = display::CreateConstantBuffer(load_context.device, constant_buffer_desc, load_context.name);
-
-		if (!m_constant_buffer_handle.IsValid())
-		{
-			AddError(load_context, "Error creating constant buffer <%s>, display error <%>", load_context.name, display::GetLastErrorMessage(load_context.device));
-		}
-	}
+	AddError(load_context, "Constant buffer declaraction not supported from render passes, only game");
 }
 
 void render::RootSignatureResource::Load(LoadContext& load_context)
 {
 	display::RootSignatureDesc root_signature_desc;
 
-	auto xml_element = load_context.current_xml_element->FirstChildElement();
+	auto xml_element_root = load_context.current_xml_element->FirstChildElement();
 
-	while (xml_element)
+	while (xml_element_root)
 	{
-		if (strcmp(xml_element->Name(), "RootParam") == 0)
+		if (strcmp(xml_element_root->Name(), "RootParam") == 0)
 		{
 			//New root param
 			auto& current_root_param = root_signature_desc.root_parameters[root_signature_desc.num_root_parameters++];
 
-			QueryTableAttribute(load_context, xml_element, "type", current_root_param.type, g_display_root_signature_parameter_type_conversion, AttributeType::NonOptional);
-			QueryTableAttribute(load_context, xml_element, "visibility", current_root_param.visibility, g_display_shader_visibility_conversion, AttributeType::Optional);
+			QueryTableAttribute(load_context, xml_element_root, "type", current_root_param.type, g_display_root_signature_parameter_type_conversion, AttributeType::NonOptional);
+			QueryTableAttribute(load_context, xml_element_root, "visibility", current_root_param.visibility, g_display_shader_visibility_conversion, AttributeType::Optional);
 		
+			if (current_root_param.type == display::RootSignatureParameterType::DescriptorTable)
+			{
+				//Read ranges
+				auto xml_element_range = xml_element_root->FirstChildElement();
+
+				while (xml_element_range)
+				{
+					//Add range
+					if (strcmp(xml_element_range->Name(), "RootParam") == 0)
+					{
+						if (current_root_param.table.num_ranges == display::RootSignatureTable::kNumMaxRanges)
+						{
+							AddError(load_context, "Max number of range reach in root signature <%s>", load_context.name);
+						}
+						else
+						{
+							auto& range = current_root_param.table.range[current_root_param.table.num_ranges++];
+
+							QueryTableAttribute(load_context, xml_element_range, "type", range.type, g_display_descriptor_table_parameter_type_conversion, AttributeType::NonOptional);
+							QueryAttribute(load_context, xml_element_range, "base_shader_register", range.base_shader_register, AttributeType::NonOptional);
+							QueryAttribute(load_context, xml_element_range, "size", range.size, AttributeType::NonOptional);
+						}
+					}
+					else
+					{
+						AddError(load_context, "Expected Range element inside root signature <%s>", load_context.name);
+					}
+					xml_element_range = xml_element_range->NextSiblingElement();
+				}
+			}
+			else
+			{
+				//Read basic root constant
+				QueryAttribute(load_context, xml_element_root, "shader_register", current_root_param.root_param.shader_register, AttributeType::NonOptional);
+				QueryAttribute(load_context, xml_element_root, "num_constants", current_root_param.root_param.num_constants, AttributeType::Optional);
+			}
 		}
-		else if (strcmp(xml_element->Name(), "StaticSample") == 0)
+		else if (strcmp(xml_element_root->Name(), "StaticSample") == 0)
 		{
 
 		}
 		else
 		{
-			AddError(load_context, "Invalid xml element found <%s> in root signature <%s>", xml_element->Name(), load_context.name);
-			return;
+			AddError(load_context, "Invalid xml element found <%s> in root signature <%s>", xml_element_root->Name(), load_context.name);
 		}
 
-		xml_element = xml_element->NextSiblingElement();
+		xml_element_root = xml_element_root->NextSiblingElement();
 	}
 
 	//Create root signature
