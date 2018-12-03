@@ -146,7 +146,7 @@
     <ClInclude Include="ext\imgui\imstb_truetype.h" />
     <ClInclude Include="ext\tinyxml2\tinyxml2.h" />
     <ClInclude Include="render\render.h" />
-    <ClInclude Include="render\render_common.h" />
+    <ClInclude Include="render\render_helper.h" />
     <ClInclude Include="render\render_resource.h" />
   </ItemGroup>
   <ItemGroup>

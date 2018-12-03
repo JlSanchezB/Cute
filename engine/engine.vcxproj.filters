@@ -101,7 +101,7 @@
     <ClInclude Include="render\render_resource.h">
       <Filter>render</Filter>
     </ClInclude>
-    <ClInclude Include="render\render_common.h">
+    <ClInclude Include="render\render_helper.h">
       <Filter>render</Filter>
     </ClInclude>
   </ItemGroup>

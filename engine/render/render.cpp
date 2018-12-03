@@ -2,7 +2,7 @@
 #include <ext/tinyxml2/tinyxml2.h>
 #include "render_resource.h"
 #include <core/log.h>
-#include "render_common.h"
+#include "render_helper.h"
 
 #include <memory>
 #include <unordered_map>

@@ -1,6 +1,6 @@
 #include "render_resource.h"
 #include <ext/tinyxml2/tinyxml2.h>
-#include "render_common.h"
+#include "render_helper.h"
 #include <display/display.h>
 
 #include <fstream>
@@ -124,21 +124,19 @@ void render::ConstantBufferResource::Load(LoadContext& load_context)
 	auto& xml_element = load_context.current_xml_element;
 	display::ConstantBufferDesc constant_buffer_desc;
 
-	if (!QuerySizeAttribute(xml_element, "size", &constant_buffer_desc.size))
+	
+	bool valid = QueryAttribute(load_context, xml_element, "size", constant_buffer_desc.size, AttributeType::NonOptional);
+	valid |= QueryTableAttribute(load_context, xml_element, "access", constant_buffer_desc.access, g_display_access_conversion, AttributeType::Optional);
+
+	if (valid)
 	{
-		AddError(load_context, "Constant buffer <%s> needs the attribute size", load_context.name);
-		return;
-	}
+		//Create constant buffer
+		m_constant_buffer_handle = display::CreateConstantBuffer(load_context.device, constant_buffer_desc, load_context.name);
 
-	//Read access, by default static
-	QueryEnumAttribute(xml_element, "access", &constant_buffer_desc.access, g_display_access_conversion);
-
-	//Create constant buffer
-	m_constant_buffer_handle = display::CreateConstantBuffer(load_context.device, constant_buffer_desc, load_context.name);
-
-	if (!m_constant_buffer_handle.IsValid())
-	{
-		AddError(load_context, "Error creating constant buffer <%s>, display error <%>", load_context.name, display::GetLastErrorMessage(load_context.device));
+		if (!m_constant_buffer_handle.IsValid())
+		{
+			AddError(load_context, "Error creating constant buffer <%s>, display error <%>", load_context.name, display::GetLastErrorMessage(load_context.device));
+		}
 	}
 }
 
@@ -155,17 +153,9 @@ void render::RootSignatureResource::Load(LoadContext& load_context)
 			//New root param
 			auto& current_root_param = root_signature_desc.root_parameters[root_signature_desc.num_root_parameters++];
 
-			if (!QueryEnumAttribute(xml_element, "type", &current_root_param.type, g_display_root_signature_parameter_type_conversion))
-			{
-				AddError(load_context, "Root signature param type is not valid for <%> root signature", load_context.name);
-				return;
-			}
-
-			if (!QueryEnumAttribute(xml_element, "visibility", &current_root_param.visibility, g_display_shader_visibility_conversion))
-			{
-				AddError(load_context, "Root signature param visibility is not valid for <%> root signature", load_context.name);
-				return;
-			}
+			QueryTableAttribute(load_context, xml_element, "type", current_root_param.type, g_display_root_signature_parameter_type_conversion, AttributeType::NonOptional);
+			QueryTableAttribute(load_context, xml_element, "visibility", current_root_param.visibility, g_display_shader_visibility_conversion, AttributeType::Optional);
+		
 		}
 		else if (strcmp(xml_element->Name(), "StaticSample") == 0)
 		{
