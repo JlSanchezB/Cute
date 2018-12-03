@@ -19,6 +19,11 @@ namespace
 		NonOptional
 	};
 
+	template<typename>
+	struct ConversionTable
+	{
+	};
+
 	//Template interface to Query a value from a XML element
 	template <typename TYPE>
 	bool QueryAttribute(render::LoadContext& load_context, tinyxml2::XMLElement* xml_element, const char* name, TYPE& value, AttributeType attribute_type)
@@ -66,8 +71,8 @@ namespace
 	}
 
 	//Template interface to Query a value and match in a table for a XML element
-	template <typename TYPE, typename CONVERSION_TABLE>
-	bool QueryTableAttribute(render::LoadContext& load_context, tinyxml2::XMLElement* xml_element, const char* name, TYPE& value, const CONVERSION_TABLE& conversion_table, AttributeType attribute_type)
+	template <typename TYPE>
+	bool QueryTableAttribute(render::LoadContext& load_context, tinyxml2::XMLElement* xml_element, const char* name, TYPE& value, AttributeType attribute_type)
 	{
 		const char* string_value;
 		if (!xml_element->QueryStringAttribute(name, &string_value) == tinyxml2::XML_SUCCESS)
@@ -81,6 +86,7 @@ namespace
 		}
 		else
 		{
+			auto& conversion_table = ConversionTable<TYPE>::table;
 			//Convert the table
 			//Check the conversion table for it
 			for (size_t i = 0; i < std::size(conversion_table); ++i)

@@ -27,51 +27,75 @@ namespace
 	}
 
 	//Conversion tables
-	const std::pair<const char*, display::Access> g_display_access_conversion[] =
+	template<>
+	struct ConversionTable<display::Access>
 	{
-		{"Static", display::Access::Static},
-		{"Dynamic", display::Access::Dynamic}
+		constexpr static std::pair<const char*, display::Access> table[] =
+		{
+			{"Static", display::Access::Static},
+			{"Dynamic", display::Access::Dynamic}
+		};
+	};
+	
+	template<>
+	struct ConversionTable<display::RootSignatureParameterType>
+	{
+		constexpr static std::pair<const char*, display::RootSignatureParameterType> table[] =
+		{
+			{"Constantbuffer", display::RootSignatureParameterType::ConstantBuffer},
+			{"Constants", display::RootSignatureParameterType::Constants},
+			{"DescriptorTable", display::RootSignatureParameterType::DescriptorTable},
+			{"ShaderResource", display::RootSignatureParameterType::ShaderResource},
+			{"UnorderedAccessBuffer", display::RootSignatureParameterType::UnorderAccessBuffer}
+		};
 	};
 
-	const std::pair<const char*, display::RootSignatureParameterType> g_display_root_signature_parameter_type_conversion[] =
+	template<>
+	struct ConversionTable<display::DescriptorTableParameterType>
 	{
-		{"Constantbuffer", display::RootSignatureParameterType::ConstantBuffer},
-		{"Constants", display::RootSignatureParameterType::Constants},
-		{"DescriptorTable", display::RootSignatureParameterType::DescriptorTable},
-		{"ShaderResource", display::RootSignatureParameterType::ShaderResource},
-		{"UnorderedAccessBuffer", display::RootSignatureParameterType::UnorderAccessBuffer}
+		constexpr static std::pair<const char*, display::DescriptorTableParameterType> table[] =
+		{
+			{"Constantbuffer", display::DescriptorTableParameterType::ConstantBuffer},
+			{"UnorderAccessBuffer", display::DescriptorTableParameterType::UnorderAccessBuffer},
+			{"ShaderResource", display::DescriptorTableParameterType::ShaderResource},
+			{"Sampler", display::DescriptorTableParameterType::Sampler}
+		};
 	};
 
-	const std::pair<const char*, display::DescriptorTableParameterType> g_display_descriptor_table_parameter_type_conversion[] =
+	template<>
+	struct ConversionTable<display::ShaderVisibility>
 	{
-		{"Constantbuffer", display::DescriptorTableParameterType::ConstantBuffer},
-		{"UnorderAccessBuffer", display::DescriptorTableParameterType::UnorderAccessBuffer},
-		{"ShaderResource", display::DescriptorTableParameterType::ShaderResource},
-		{"Sampler", display::DescriptorTableParameterType::Sampler}
+		constexpr static std::pair<const char*, display::ShaderVisibility> table[] =
+		{
+			{"All", display::ShaderVisibility::All},
+			{"Domain", display::ShaderVisibility::Domain},
+			{"Geometry", display::ShaderVisibility::Geometry},
+			{"Hull", display::ShaderVisibility::Hull},
+			{"Pixel", display::ShaderVisibility::Pixel},
+			{"Vertex", display::ShaderVisibility::Vertex}
+		};
 	};
 
-	const std::pair<const char*, display::ShaderVisibility> g_display_shader_visibility_conversion[] =
+	template<>
+	struct ConversionTable<display::Filter>
 	{
-		{"All", display::ShaderVisibility::All},
-		{"Domain", display::ShaderVisibility::Domain},
-		{"Geometry", display::ShaderVisibility::Geometry},
-		{"Hull", display::ShaderVisibility::Hull},
-		{"Pixel", display::ShaderVisibility::Pixel},
-		{"Vertex", display::ShaderVisibility::Vertex}
+		constexpr static std::pair<const char*, display::Filter> table[] =
+		{
+			{"Point", display::Filter::Point},
+			{"Linear", display::Filter::Linear},
+			{"Anisotropic", display::Filter::Anisotropic}
+		};
 	};
 
-	const std::pair<const char*, display::Filter> g_display_filter_conversion[] =
+	template<>
+	struct ConversionTable<display::TextureAddressMode>
 	{
-		{"Point", display::Filter::Point},
-		{"Linear", display::Filter::Linear},
-		{"Anisotropic", display::Filter::Anisotropic}
-	};
-
-	const std::pair<const char*, display::TextureAddressMode> g_display_texture_address_mode[] =
-	{
-		{"Wrap", display::TextureAddressMode::Wrap},
-		{"Mirror", display::TextureAddressMode::Mirror},
-		{"Clamp", display::TextureAddressMode::Clamp}
+		constexpr static std::pair<const char*, display::TextureAddressMode> table[] =
+		{
+			{"Wrap", display::TextureAddressMode::Wrap},
+			{"Mirror", display::TextureAddressMode::Mirror},
+			{"Clamp", display::TextureAddressMode::Clamp}
+		};
 	};
 	
 }
@@ -139,8 +163,8 @@ void render::RootSignatureResource::Load(LoadContext& load_context)
 
 			if (root_signature_desc.num_root_parameters < display::kMaxNumRootParameters)
 			{
-				QueryTableAttribute(load_context, xml_element_root, "type", current_root_param.type, g_display_root_signature_parameter_type_conversion, AttributeType::NonOptional);
-				QueryTableAttribute(load_context, xml_element_root, "visibility", current_root_param.visibility, g_display_shader_visibility_conversion, AttributeType::Optional);
+				QueryTableAttribute(load_context, xml_element_root, "type", current_root_param.type, AttributeType::NonOptional);
+				QueryTableAttribute(load_context, xml_element_root, "visibility", current_root_param.visibility, AttributeType::Optional);
 
 				if (current_root_param.type == display::RootSignatureParameterType::DescriptorTable)
 				{
@@ -161,7 +185,7 @@ void render::RootSignatureResource::Load(LoadContext& load_context)
 							{
 								auto& range = current_root_param.table.range[current_root_param.table.num_ranges++];
 
-								QueryTableAttribute(load_context, xml_element_range, "type", range.type, g_display_descriptor_table_parameter_type_conversion, AttributeType::NonOptional);
+								QueryTableAttribute(load_context, xml_element_range, "type", range.type, AttributeType::NonOptional);
 								QueryAttribute(load_context, xml_element_range, "base_shader_register", range.base_shader_register, AttributeType::NonOptional);
 								QueryAttribute(load_context, xml_element_range, "size", range.size, AttributeType::NonOptional);
 							}
@@ -193,12 +217,12 @@ void render::RootSignatureResource::Load(LoadContext& load_context)
 			if (root_signature_desc.num_static_samplers <= display::kMaxNumStaticSamplers)
 			{
 				QueryAttribute(load_context, xml_element_root, "shader_register", current_static_sampler.shader_register, AttributeType::NonOptional);
-				QueryTableAttribute(load_context, xml_element_root, "visibility", current_static_sampler.visibility, g_display_shader_visibility_conversion, AttributeType::Optional);
+				QueryTableAttribute(load_context, xml_element_root, "visibility", current_static_sampler.visibility, AttributeType::Optional);
 				
-				QueryTableAttribute(load_context, xml_element_root, "filter", current_static_sampler.filter, g_display_filter_conversion, AttributeType::Optional);
-				QueryTableAttribute(load_context, xml_element_root, "address_u", current_static_sampler.address_u, g_display_texture_address_mode, AttributeType::Optional);
-				QueryTableAttribute(load_context, xml_element_root, "address_v", current_static_sampler.address_v, g_display_texture_address_mode, AttributeType::Optional);
-				QueryTableAttribute(load_context, xml_element_root, "address_w", current_static_sampler.address_w, g_display_texture_address_mode, AttributeType::Optional);
+				QueryTableAttribute(load_context, xml_element_root, "filter", current_static_sampler.filter, AttributeType::Optional);
+				QueryTableAttribute(load_context, xml_element_root, "address_u", current_static_sampler.address_u, AttributeType::Optional);
+				QueryTableAttribute(load_context, xml_element_root, "address_v", current_static_sampler.address_v, AttributeType::Optional);
+				QueryTableAttribute(load_context, xml_element_root, "address_w", current_static_sampler.address_w, AttributeType::Optional);
 			}
 			else
 			{
