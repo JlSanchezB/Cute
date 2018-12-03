@@ -906,5 +906,5 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow)
 
 	HelloWorldGame hello_world_game;
 
-	return platform::Run("Hello world", param, HelloWorldGame::kInitWidth, HelloWorldGame::kInitHeight, &hello_world_game);
+	return platform::Run("Display Test", param, HelloWorldGame::kInitWidth, HelloWorldGame::kInitHeight, &hello_world_game);
 }
