@@ -65,5 +65,50 @@ namespace render
 
 		void Load(LoadContext& load_context) override;
 	};
+
+	//Render target resource
+	class RenderTargetResource : DisplayHandleResource<display::RenderTargetHandle>
+	{
+	public:
+		DECLARE_RENDER_CLASS("RenderTarget");
+
+		void Load(LoadContext& load_context) override;
+	};
+
+	//Depth buffer
+	class DepthBufferResource : DisplayHandleResource<display::DepthBufferHandle>
+	{
+	public:
+		DECLARE_RENDER_CLASS("DepthBuffer");
+
+		void Load(LoadContext& load_context) override;
+	};
+
+	//Graphics pipeline state resource
+	class GraphicsPipelineStateResource : DisplayHandleResource<display::PipelineStateHandle>
+	{
+	public:
+		DECLARE_RENDER_CLASS("GraphicsPipelineState");
+
+		void Load(LoadContext& load_context) override;
+	};
+
+	//Compute pipeline state resource
+	class ComputePipelineStateResource : DisplayHandleResource<display::PipelineStateHandle>
+	{
+	public:
+		DECLARE_RENDER_CLASS("ComputePipelineState");
+
+		void Load(LoadContext& load_context) override;
+	};
+
+	//Descriptor table resource
+	class DescriptorTableResource : DisplayHandleResource<display::DescriptorTableHandle>
+	{
+	public:
+		DECLARE_RENDER_CLASS("DescriptorTable");
+
+		void Load(LoadContext& load_context) override;
+	};
 }
 #endif //RENDER_RESOURCE_H_
