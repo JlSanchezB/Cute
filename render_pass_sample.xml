@@ -19,7 +19,10 @@
 	  <ClearRenderTarget colour="0,0,0,0"/>
     <SetRootSignature>GraphicsRootSignature</SetRootSignature>
     <SetPipelineState>
-      <Resource type="GraphicsPipelineState" name="pipeline test 1" root_signature="GraphicsRootSignature">
+      <Resource type="GraphicsPipelineState" name="pipeline test 1">
+        <RootSignature>
+          GraphicsRootSignature
+        </RootSignature>
         <InputLayouts>
           <Input name="POSITION" index="0" format="R32G32B32A32_FLOAT" slot="0"/>
           <Input name="TEXCOORD" index="0" format="R32G32_FLOAT" slot="0" aligned_offset="16"/>

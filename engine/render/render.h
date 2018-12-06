@@ -40,6 +40,7 @@ namespace render
 		const char* name;
 		const char* render_passes_filename;
 		std::vector<std::string> errors;
+		render::System* render_system;
 	};
 
 	//Context used for rendering a pass
@@ -123,6 +124,23 @@ namespace render
 		std::unique_ptr<FactoryInterface<Pass>> factory = std::make_unique<Factory<Pass, PASS>>();
 		return RegisterResourceFactory(system, PASS::kClassName, factory);
 	}
+
+	//Get Resource by name
+	Resource* GetResource(System* system, const char* name);
+
+	template<typename RESOURCE>
+	inline RESOURCE* GetResource(System* system, const char* name)
+	{
+		Resource* resource = GetResource(system, name);
+		if (resource && strcmp(resource->Type(), RESOURCE::kClassName) == 0)
+		{
+			return reinterpret_cast<RESOURCE*>(resource);
+		}
+		return nullptr;
+	}
+
+	//Get Pass by name
+	Pass* GetPass(System* system, const char* name);
 }
 
 #endif //RENDER_H_

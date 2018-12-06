@@ -16,8 +16,8 @@ namespace render
 		//Load from passes declaration file
 		bool Load(LoadContext& load_context);
 
-		using ResourceFactoryMap = std::unordered_map<const char*, std::unique_ptr<FactoryInterface<Resource>>>;
-		using PassFactoryMap = std::unordered_map<const char*, std::unique_ptr<FactoryInterface<Pass>>>;
+		using ResourceFactoryMap = std::unordered_map<std::string, std::unique_ptr<FactoryInterface<Resource>>>;
+		using PassFactoryMap = std::unordered_map<std::string, std::unique_ptr<FactoryInterface<Pass>>>;
 
 		//Resource factories
 		ResourceFactoryMap m_resource_factories_map;
@@ -25,8 +25,8 @@ namespace render
 		//Pass factories
 		PassFactoryMap m_pass_factories_map;
 
-		using ResourceMap = std::unordered_map<const char*, std::unique_ptr<Resource>>;
-		using PassMap = std::unordered_map<const char*, std::unique_ptr<Pass>>;
+		using ResourceMap = std::unordered_map<std::string, std::unique_ptr<Resource>>;
+		using PassMap = std::unordered_map<std::string, std::unique_ptr<Pass>>;
 
 		//Gobal resources defined in the passes declaration
 		ResourceMap m_global_resources_map;
@@ -155,6 +155,7 @@ namespace render
 		LoadContext load_context;
 		load_context.device = device;
 		load_context.render_passes_filename = pass_descriptor_file;
+		load_context.render_system = system;
 
 		bool success = system->Load(load_context);
 
@@ -209,6 +210,32 @@ namespace render
 
 		system->m_pass_factories_map[pass_type] = std::move(pass_factory);
 		return true;
+	}
+
+	Resource * GetResource(System* system, const char * name)
+	{
+		auto it_game = system->m_game_resources_map.find(name);
+		if (it_game != system->m_game_resources_map.end())
+		{
+			return it_game->second.get();
+		}
+
+		auto it_global = system->m_global_resources_map.find(name);
+		if (it_global != system->m_global_resources_map.end())
+		{
+			return it_global->second.get();
+		}
+		return nullptr;
+	}
+
+	Pass * GetPass(System* system, const char * name)
+	{
+		auto it = system->m_passes_map.find(name);
+		if (it != system->m_passes_map.end())
+		{
+			return it->second.get();
+		}
+		return nullptr;
 	}
 
 }

@@ -30,7 +30,7 @@ namespace render
 	};
 
 	//Bool resource
-	class BoolResource : Resource
+	class BoolResource : public Resource
 	{
 		bool m_value;
 	public:
@@ -40,7 +40,7 @@ namespace render
 	};
 
 	//Texture resource
-	class TextureResource : DisplayHandleResource<display::ShaderResourceHandle>
+	class TextureResource : public DisplayHandleResource<display::ShaderResourceHandle>
 	{
 	public:
 		DECLARE_RENDER_CLASS("Texture");
@@ -49,7 +49,7 @@ namespace render
 	};
 
 	//Constant buffer resource
-	class ConstantBufferResource : DisplayHandleResource<display::ConstantBufferHandle>
+	class ConstantBufferResource : public DisplayHandleResource<display::ConstantBufferHandle>
 	{
 	public:
 		DECLARE_RENDER_CLASS("ConstantBuffer");
@@ -58,7 +58,7 @@ namespace render
 	};
 
 	//Root signature resource
-	class RootSignatureResource : DisplayHandleResource<display::RootSignatureHandle>
+	class RootSignatureResource : public DisplayHandleResource<display::RootSignatureHandle>
 	{
 	public:
 		DECLARE_RENDER_CLASS("RootSignature");
@@ -67,7 +67,7 @@ namespace render
 	};
 
 	//Render target resource
-	class RenderTargetResource : DisplayHandleResource<display::RenderTargetHandle>
+	class RenderTargetResource : public DisplayHandleResource<display::RenderTargetHandle>
 	{
 	public:
 		DECLARE_RENDER_CLASS("RenderTarget");
@@ -76,7 +76,7 @@ namespace render
 	};
 
 	//Depth buffer
-	class DepthBufferResource : DisplayHandleResource<display::DepthBufferHandle>
+	class DepthBufferResource : public DisplayHandleResource<display::DepthBufferHandle>
 	{
 	public:
 		DECLARE_RENDER_CLASS("DepthBuffer");
@@ -85,7 +85,7 @@ namespace render
 	};
 
 	//Graphics pipeline state resource
-	class GraphicsPipelineStateResource : DisplayHandleResource<display::PipelineStateHandle>
+	class GraphicsPipelineStateResource : public DisplayHandleResource<display::PipelineStateHandle>
 	{
 	public:
 		DECLARE_RENDER_CLASS("GraphicsPipelineState");
@@ -94,7 +94,7 @@ namespace render
 	};
 
 	//Compute pipeline state resource
-	class ComputePipelineStateResource : DisplayHandleResource<display::PipelineStateHandle>
+	class ComputePipelineStateResource : public DisplayHandleResource<display::PipelineStateHandle>
 	{
 	public:
 		DECLARE_RENDER_CLASS("ComputePipelineState");
@@ -103,7 +103,7 @@ namespace render
 	};
 
 	//Descriptor table resource
-	class DescriptorTableResource : DisplayHandleResource<display::DescriptorTableHandle>
+	class DescriptorTableResource : public DisplayHandleResource<display::DescriptorTableHandle>
 	{
 	public:
 		DECLARE_RENDER_CLASS("DescriptorTable");

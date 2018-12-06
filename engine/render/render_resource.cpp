@@ -100,149 +100,192 @@ namespace
 	
 }
 
-void render::BoolResource::Load(LoadContext& load_context)
+namespace render
 {
-	const char* value = load_context.current_xml_element->GetText();
-
-	if (strcmp(value, "True") == 0)
+	void BoolResource::Load(LoadContext& load_context)
 	{
-		m_value = true;
-	}
-	else if(strcmp(value, "False") == 0)
-	{
-		m_value = false;
-	}
-	else
-	{
-		AddError(load_context, "BoolResource <%s> doesn't have a 'True' or 'False' value", load_context.name);
-	}
-}
+		const char* value = load_context.current_xml_element->GetText();
 
-void render::TextureResource::Load(LoadContext& load_context)
-{
-	const char* texture_filename = load_context.current_xml_element->GetText();
-
-	//Load the texture file
-	std::vector<char> texture_buffer;
-	texture_buffer = ReadFileToBuffer(texture_filename);
-
-	if (texture_buffer.size() > 0)
-	{
-		//Load the texture
-		GetHandle() = display::CreateTextureResource(load_context.device, reinterpret_cast<void*>(&texture_buffer[0]), texture_buffer.size(), load_context.name);
-
-		if (!GetHandle().IsValid())
+		if (strcmp(value, "True") == 0)
 		{
-			AddError(load_context, "Error creating texture <%s>, display error <%>", texture_filename, display::GetLastErrorMessage(load_context.device));
+			m_value = true;
+		}
+		else if (strcmp(value, "False") == 0)
+		{
+			m_value = false;
+		}
+		else
+		{
+			AddError(load_context, "BoolResource <%s> doesn't have a 'True' or 'False' value", load_context.name);
 		}
 	}
-	else
+
+	void TextureResource::Load(LoadContext& load_context)
 	{
-		AddError(load_context, "Texture resource could not read file <%s>", texture_filename);
-	}
+		const char* texture_filename = load_context.current_xml_element->GetText();
 
-}
+		//Load the texture file
+		std::vector<char> texture_buffer;
+		texture_buffer = ReadFileToBuffer(texture_filename);
 
-void render::ConstantBufferResource::Load(LoadContext& load_context)
-{
-	AddError(load_context, "Constant buffer declaraction not supported from render passes, only game");
-}
-
-void render::RootSignatureResource::Load(LoadContext& load_context)
-{
-	display::RootSignatureDesc root_signature_desc;
-
-	auto xml_element_root = load_context.current_xml_element->FirstChildElement();
-
-	while (xml_element_root)
-	{
-		if (strcmp(xml_element_root->Name(), "RootParam") == 0)
+		if (texture_buffer.size() > 0)
 		{
-			//New root param
-			auto& current_root_param = root_signature_desc.root_parameters[root_signature_desc.num_root_parameters++];
+			//Load the texture
+			GetHandle() = display::CreateTextureResource(load_context.device, reinterpret_cast<void*>(&texture_buffer[0]), texture_buffer.size(), load_context.name);
 
-			if (root_signature_desc.num_root_parameters < display::kMaxNumRootParameters)
+			if (!GetHandle().IsValid())
 			{
-				QueryTableAttribute(load_context, xml_element_root, "type", current_root_param.type, AttributeType::NonOptional);
-				QueryTableAttribute(load_context, xml_element_root, "visibility", current_root_param.visibility, AttributeType::Optional);
-
-				if (current_root_param.type == display::RootSignatureParameterType::DescriptorTable)
-				{
-					//Read ranges
-					auto xml_element_range = xml_element_root->FirstChildElement();
-
-					while (xml_element_range)
-					{
-						//Add range
-						if (strcmp(xml_element_range->Name(), "RootParam") == 0)
-						{
-							if (current_root_param.table.num_ranges == display::RootSignatureTable::kNumMaxRanges)
-							{
-								AddError(load_context, "Max number of range reach in root signature <%s>", load_context.name);
-								return;
-							}
-							else
-							{
-								auto& range = current_root_param.table.range[current_root_param.table.num_ranges++];
-
-								QueryTableAttribute(load_context, xml_element_range, "type", range.type, AttributeType::NonOptional);
-								QueryAttribute(load_context, xml_element_range, "base_shader_register", range.base_shader_register, AttributeType::NonOptional);
-								QueryAttribute(load_context, xml_element_range, "size", range.size, AttributeType::NonOptional);
-							}
-						}
-						else
-						{
-							AddError(load_context, "Expected Range element inside root signature <%s>", load_context.name);
-						}
-						xml_element_range = xml_element_range->NextSiblingElement();
-					}
-				}
-				else
-				{
-					//Read basic root constant
-					QueryAttribute(load_context, xml_element_root, "shader_register", current_root_param.root_param.shader_register, AttributeType::NonOptional);
-					QueryAttribute(load_context, xml_element_root, "num_constants", current_root_param.root_param.num_constants, AttributeType::Optional);
-				}
-			}
-			else
-			{
-				AddError(load_context, "Max number of root parameters reach in root signature <%s>", load_context.name);
-				return;
-			}
-		}
-		else if (strcmp(xml_element_root->Name(), "StaticSample") == 0)
-		{
-			//New static sampler
-			auto& current_static_sampler = root_signature_desc.static_samplers[root_signature_desc.num_static_samplers++];
-			if (root_signature_desc.num_static_samplers <= display::kMaxNumStaticSamplers)
-			{
-				QueryAttribute(load_context, xml_element_root, "shader_register", current_static_sampler.shader_register, AttributeType::NonOptional);
-				QueryTableAttribute(load_context, xml_element_root, "visibility", current_static_sampler.visibility, AttributeType::Optional);
-				
-				QueryTableAttribute(load_context, xml_element_root, "filter", current_static_sampler.filter, AttributeType::Optional);
-				QueryTableAttribute(load_context, xml_element_root, "address_u", current_static_sampler.address_u, AttributeType::Optional);
-				QueryTableAttribute(load_context, xml_element_root, "address_v", current_static_sampler.address_v, AttributeType::Optional);
-				QueryTableAttribute(load_context, xml_element_root, "address_w", current_static_sampler.address_w, AttributeType::Optional);
-			}
-			else
-			{
-				AddError(load_context, "Max number of static sampler reach in root signature <%s>", load_context.name);
-				return;
+				AddError(load_context, "Error creating texture <%s>, display error <%>", texture_filename, display::GetLastErrorMessage(load_context.device));
 			}
 		}
 		else
 		{
-			AddError(load_context, "Invalid xml element found <%s> in root signature <%s>", xml_element_root->Name(), load_context.name);
+			AddError(load_context, "Texture resource could not read file <%s>", texture_filename);
 		}
 
-		xml_element_root = xml_element_root->NextSiblingElement();
 	}
 
-	//Create root signature
-	GetHandle() = display::CreateRootSignature(load_context.device, root_signature_desc, load_context.name);
-
-	if (!GetHandle().IsValid())
+	void ConstantBufferResource::Load(LoadContext& load_context)
 	{
-		AddError(load_context, "Error creating root signature <%s>, display error <%>", load_context.name, display::GetLastErrorMessage(load_context.device));
+		AddError(load_context, "Constant buffer declaraction not supported from render passes, only game");
+	}
+
+	void RootSignatureResource::Load(LoadContext& load_context)
+	{
+		display::RootSignatureDesc root_signature_desc;
+
+		auto xml_element_root = load_context.current_xml_element->FirstChildElement();
+
+		while (xml_element_root)
+		{
+			if (strcmp(xml_element_root->Name(), "RootParam") == 0)
+			{
+				//New root param
+				auto& current_root_param = root_signature_desc.root_parameters[root_signature_desc.num_root_parameters++];
+
+				if (root_signature_desc.num_root_parameters < display::kMaxNumRootParameters)
+				{
+					QueryTableAttribute(load_context, xml_element_root, "type", current_root_param.type, AttributeType::NonOptional);
+					QueryTableAttribute(load_context, xml_element_root, "visibility", current_root_param.visibility, AttributeType::Optional);
+
+					if (current_root_param.type == display::RootSignatureParameterType::DescriptorTable)
+					{
+						//Read ranges
+						auto xml_element_range = xml_element_root->FirstChildElement();
+
+						while (xml_element_range)
+						{
+							//Add range
+							if (strcmp(xml_element_range->Name(), "RootParam") == 0)
+							{
+								if (current_root_param.table.num_ranges == display::RootSignatureTable::kNumMaxRanges)
+								{
+									AddError(load_context, "Max number of range reach in root signature <%s>", load_context.name);
+									return;
+								}
+								else
+								{
+									auto& range = current_root_param.table.range[current_root_param.table.num_ranges++];
+
+									QueryTableAttribute(load_context, xml_element_range, "type", range.type, AttributeType::NonOptional);
+									QueryAttribute(load_context, xml_element_range, "base_shader_register", range.base_shader_register, AttributeType::NonOptional);
+									QueryAttribute(load_context, xml_element_range, "size", range.size, AttributeType::NonOptional);
+								}
+							}
+							else
+							{
+								AddError(load_context, "Expected Range element inside root signature <%s>", load_context.name);
+							}
+							xml_element_range = xml_element_range->NextSiblingElement();
+						}
+					}
+					else
+					{
+						//Read basic root constant
+						QueryAttribute(load_context, xml_element_root, "shader_register", current_root_param.root_param.shader_register, AttributeType::NonOptional);
+						QueryAttribute(load_context, xml_element_root, "num_constants", current_root_param.root_param.num_constants, AttributeType::Optional);
+					}
+				}
+				else
+				{
+					AddError(load_context, "Max number of root parameters reach in root signature <%s>", load_context.name);
+					return;
+				}
+			}
+			else if (strcmp(xml_element_root->Name(), "StaticSample") == 0)
+			{
+				//New static sampler
+				auto& current_static_sampler = root_signature_desc.static_samplers[root_signature_desc.num_static_samplers++];
+				if (root_signature_desc.num_static_samplers <= display::kMaxNumStaticSamplers)
+				{
+					QueryAttribute(load_context, xml_element_root, "shader_register", current_static_sampler.shader_register, AttributeType::NonOptional);
+					QueryTableAttribute(load_context, xml_element_root, "visibility", current_static_sampler.visibility, AttributeType::Optional);
+
+					QueryTableAttribute(load_context, xml_element_root, "filter", current_static_sampler.filter, AttributeType::Optional);
+					QueryTableAttribute(load_context, xml_element_root, "address_u", current_static_sampler.address_u, AttributeType::Optional);
+					QueryTableAttribute(load_context, xml_element_root, "address_v", current_static_sampler.address_v, AttributeType::Optional);
+					QueryTableAttribute(load_context, xml_element_root, "address_w", current_static_sampler.address_w, AttributeType::Optional);
+				}
+				else
+				{
+					AddError(load_context, "Max number of static sampler reach in root signature <%s>", load_context.name);
+					return;
+				}
+			}
+			else
+			{
+				AddError(load_context, "Invalid xml element found <%s> in root signature <%s>", xml_element_root->Name(), load_context.name);
+			}
+
+			xml_element_root = xml_element_root->NextSiblingElement();
+		}
+
+		//Create root signature
+		GetHandle() = display::CreateRootSignature(load_context.device, root_signature_desc, load_context.name);
+
+		if (!GetHandle().IsValid())
+		{
+			AddError(load_context, "Error creating root signature <%s>, display error <%>", load_context.name, display::GetLastErrorMessage(load_context.device));
+		}
+	}
+
+	void RenderTargetResource::Load(LoadContext & load_context)
+	{
+	}
+
+	void DepthBufferResource::Load(LoadContext & load_context)
+	{
+	}
+
+	void GraphicsPipelineStateResource::Load(LoadContext & load_context)
+	{
+		display::PipelineStateDesc pipeline_state_desc;
+
+		auto xml_element_root = load_context.current_xml_element->FirstChildElement();
+
+		if (strcmp(xml_element_root->Name(), "RootSignature") == 0)
+		{
+			//Root signature
+			//Find resource
+			RootSignatureResource* root_signature = GetResource<RootSignatureResource>(load_context.render_system, xml_element_root->GetText());
+
+			if (root_signature)
+			{ 
+				pipeline_state_desc.root_signature = root_signature->GetHandle();
+			}
+			else
+			{
+				AddError(load_context, "RootSignature <%s> doesn't exist", xml_element_root->GetText());
+			}
+		}
+
+	}
+
+	void ComputePipelineStateResource::Load(LoadContext & load_context)
+	{
+	}
+
+	void DescriptorTableResource::Load(LoadContext & load_context)
+	{
 	}
 }
