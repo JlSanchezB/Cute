@@ -13,6 +13,11 @@ namespace
 		load_context.errors.push_back(buffer);
 	}
 
+	inline bool CheckNodeName(tinyxml2::XMLElement* xml_element, const char* name)
+	{
+		return strcmp(xml_element->Name(), name) == 0;
+	}
+
 	enum class AttributeType
 	{
 		Optional,

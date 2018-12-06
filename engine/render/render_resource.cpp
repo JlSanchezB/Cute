@@ -97,7 +97,32 @@ namespace
 			{"Clamp", display::TextureAddressMode::Clamp}
 		};
 	};
-	
+
+	template<>
+	struct ConversionTable<display::InputType>
+	{
+		constexpr static std::pair<const char*, display::InputType> table[] =
+		{
+			{"Instance", display::InputType::Instance},
+			{"Vertex", display::InputType::Vertex}
+		};
+	};
+
+	template<>
+	struct ConversionTable<display::Format>
+	{
+		constexpr static std::pair<const char*, display::Format> table[] =
+		{
+			{"UNKNOWN", display::Format::UNKNOWN},
+			{"R32G32_FLOAT", display::Format::R32G32_FLOAT},
+			{"R32G32B32_FLOAT", display::Format::R32G32B32_FLOAT},
+			{"R32G32B32A32_FLOAT", display::Format::R32G32B32A32_FLOAT},
+			{"R8G8B8A8_UNORM", display::Format::R8G8B8A8_UNORM},
+			{"R8G8B8A8_UNORM_SRGB", display::Format::R8G8B8A8_UNORM_SRGB},
+			{"R32_UINT", display::Format::R32_UINT},
+			{"R16_UINT", display::Format::R16_UINT}
+		};
+	};
 }
 
 namespace render
@@ -261,9 +286,12 @@ namespace render
 	{
 		display::PipelineStateDesc pipeline_state_desc;
 
+		std::vector<char> vertex_shader;
+		std::vector<char> pixel_shader;
+		
 		auto xml_element_root = load_context.current_xml_element->FirstChildElement();
 
-		if (strcmp(xml_element_root->Name(), "RootSignature") == 0)
+		if (CheckNodeName(xml_element_root, "RootSignature"))
 		{
 			//Root signature
 			//Find resource
@@ -275,8 +303,84 @@ namespace render
 			}
 			else
 			{
-				AddError(load_context, "RootSignature <%s> doesn't exist", xml_element_root->GetText());
+				AddError(load_context, "RootSignature <%s> doesn't exist in pipeline <%s>", xml_element_root->GetText(), load_context.name);
 			}
+		}
+		else if (CheckNodeName(xml_element_root, "InputLayouts"))
+		{
+			auto xml_element_input = xml_element_root->FirstChildElement();
+
+			while (xml_element_input)
+			{
+				if (CheckNodeName(xml_element_input, "Input"))
+				{
+					if (pipeline_state_desc.input_layout.num_elements <= display::kMaxNumInputLayoutElements)
+					{
+						auto& input_layout = pipeline_state_desc.input_layout.elements[pipeline_state_desc.input_layout.num_elements++];
+
+						input_layout.semantic_name = xml_element_input->Attribute("semantic_name");
+						if (input_layout.semantic_name == nullptr)
+						{
+							AddError(load_context, "Semantic name must be defined in pipeline state <%s>", load_context.name);
+						}
+						QueryAttribute(load_context, xml_element_input, "semantic_index", input_layout.semantic_index, AttributeType::NonOptional);
+						QueryTableAttribute(load_context, xml_element_input, "format", input_layout.format, AttributeType::NonOptional);
+						QueryAttribute(load_context, xml_element_input, "input_slot", input_layout.input_slot, AttributeType::NonOptional);
+						QueryAttribute(load_context, xml_element_input, "aligned_offset", input_layout.aligned_offset, AttributeType::NonOptional);
+						QueryTableAttribute(load_context, xml_element_input, "input_type", input_layout.input_type, AttributeType::NonOptional);
+						QueryAttribute(load_context, xml_element_input, "instance_step_rate", input_layout.instance_step_rate, AttributeType::NonOptional);
+					}
+					else
+					{
+						AddError(load_context, "Max number of static sampler reach in pipeline state <%s>", load_context.name);
+						return;
+					}
+				}
+				else
+				{
+					AddError(load_context, "Only <Input> nodes are allow inside the input layout in pipeline state <%s>", load_context.name);
+				}
+				xml_element_input = xml_element_input->NextSiblingElement();
+			}
+		}
+		else if (CheckNodeName(xml_element_root, "Shader"))
+		{
+			const char* pixel_shader_entry = xml_element_root->Attribute("pixelshader_entry");
+			const char* vertex_shader_entry = xml_element_root->Attribute("vertexshader_entry");
+			const char* target_postfix = xml_element_root->Attribute("target");
+
+			if (pixel_shader_entry && target_postfix)
+			{
+				//Compile shader
+				char target[128] = "ps_";
+				strcat_s(target, target_postfix);
+				display::CompileShaderDesc compile_shader_desc;
+				compile_shader_desc.code = xml_element_root->GetText();
+				compile_shader_desc.entry_point = pixel_shader_entry;
+				compile_shader_desc.target = target;
+				if (!display::CompileShader(load_context.device, compile_shader_desc, pixel_shader))
+				{
+					AddError(load_context, "Error compile shader for pipeline state <%s>, errors: <%s>", load_context.name, display::GetLastErrorMessage(load_context.device));
+				}
+			}
+			if (vertex_shader_entry && target_postfix)
+			{
+				//Compile shader
+				char target[128] = "vs_";
+				strcat_s(target, target_postfix);
+				display::CompileShaderDesc compile_shader_desc;
+				compile_shader_desc.code = xml_element_root->GetText();
+				compile_shader_desc.entry_point = pixel_shader_entry;
+				compile_shader_desc.target = target;
+				if (!display::CompileShader(load_context.device, compile_shader_desc, vertex_shader))
+				{
+					AddError(load_context, "Error compile shader for pipeline state <%s>, errors: <%s>", load_context.name, display::GetLastErrorMessage(load_context.device));
+				}
+			}
+		}
+		else if (CheckNodeName(xml_element_root, "Rasterization"))
+		{
+
 		}
 
 	}
