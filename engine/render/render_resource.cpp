@@ -538,5 +538,51 @@ namespace render
 
 	void DescriptorTableResource::Load(LoadContext & load_context)
 	{
+		display::DescriptorTableDesc descriptor_table_desc;
+
+		QueryTableAttribute(load_context, load_context.current_xml_element, "access", descriptor_table_desc.access, AttributeType::Optional);
+
+		auto xml_element_root = load_context.current_xml_element->FirstChildElement();
+
+		while (xml_element_root)
+		{
+			if (CheckNodeName(xml_element_root, "Descriptor"))
+			{
+				const char* resource_name = xml_element_root->GetText();
+				
+				if (descriptor_table_desc.num_descriptors == descriptor_table_desc.kNumMaxDescriptors)
+				{
+					AddError(load_context, "Number max of descriptor reach in descriptor table <%s>", load_context.name);
+					return;
+				}
+
+				//Find resource
+				if (auto resource = GetResource<ConstantBufferResource>(load_context.render_system, resource_name))
+				{
+					descriptor_table_desc.AddDescriptor(resource->GetHandle());
+				}
+				else if (auto resource = GetResource<TextureResource>(load_context.render_system, resource_name))
+				{
+					descriptor_table_desc.AddDescriptor(resource->GetHandle());
+				}
+				else
+				{
+					AddError(load_context, "Descriptor <%s> doesn't exist in descriptor table <%s>", xml_element_root->GetText(), load_context.name);
+				}
+			}
+			else
+			{
+				AddError(load_context, "Only <Descriptor> nodes are supported inside a table descriptor <%s>", load_context.name);
+			}
+			xml_element_root = xml_element_root->NextSiblingElement();
+		}
+
+		//Create pipeline state
+		GetHandle() = display::CreateDescriptorTable(load_context.device, descriptor_table_desc);
+
+		if (!GetHandle().IsValid())
+		{
+			AddError(load_context, "Error creating descriptor table <%s>, display error <%>", load_context.name, display::GetLastErrorMessage(load_context.device));
+		}
 	}
 }
