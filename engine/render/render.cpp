@@ -39,6 +39,9 @@ namespace render
 
 		//Load resource
 		void LoadResource(LoadContext& load_context);
+
+		//Load Pass
+		void LoadPass(LoadContext& load_context);
 	};
 
 	void System::LoadResource(LoadContext& load_context)
@@ -68,6 +71,8 @@ namespace render
 					//Load resource
 					resource_instance->Load(load_context);
 
+					core::LogInfo("Created Resource <%s> type <%s>", resource_name, resource_type);
+
 					//Add to the globals
 					m_global_resources_map[resource_name].reset(resource_instance);
 				}
@@ -85,6 +90,11 @@ namespace render
 		{
 			AddError(load_context, "Resource has not attribute type or name");
 		}
+	}
+
+	void System::LoadPass(LoadContext& load_context)
+	{
+
 	}
 
 	bool System::Load(LoadContext& load_context)
@@ -132,7 +142,18 @@ namespace render
 		}
 
 		//Load Passes
+		tinyxml2::XMLElement* passes = root->FirstChildElement("Passes");
+		if (passes)
+		{
+			tinyxml2::XMLElement* pass = global->FirstChildElement();
+			while (pass)
+			{
+				load_context.current_xml_element = pass;
+				LoadPass(load_context);
 
+				pass = pass->NextSiblingElement();
+			}
+		}
 		return (load_context.errors.size() == 0);
 	}
 

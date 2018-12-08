@@ -147,6 +147,7 @@
     <ClInclude Include="ext\tinyxml2\tinyxml2.h" />
     <ClInclude Include="render\render.h" />
     <ClInclude Include="render\render_helper.h" />
+    <ClInclude Include="render\render_pass.h" />
     <ClInclude Include="render\render_resource.h" />
   </ItemGroup>
   <ItemGroup>

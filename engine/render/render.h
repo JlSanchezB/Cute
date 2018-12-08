@@ -71,9 +71,9 @@ namespace render
 	public:
 		virtual ~Pass() {};
 		//Load from XML node and returns the Resource
-		virtual void Load(LoadContext* load_context) = 0;
+		virtual void Load(LoadContext& load_context) = 0;
 		//Render the pass
-		virtual void Render(RenderContext* render_context) const = 0;
+		virtual void Render(RenderContext& render_context) const = 0;
 	};
 
 	//Factory helper classes
