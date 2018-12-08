@@ -1,6 +1,6 @@
 <Root>
 <Global>
-  <Resource type="bool" name="PostProcessActivated">true</Resource>
+  <Resource type="Bool" name="PostProcessActivated">True</Resource>
   <Resource type="Texture" name="SampleTexture">texture.dds</Resource>
   <Resource type="RootSignature" name="GraphicsRootSignature">
 	  <RootParam index="0" type="DescriptorTable">

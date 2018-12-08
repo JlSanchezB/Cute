@@ -272,13 +272,15 @@ namespace render
 
 					if (current_root_param.type == display::RootSignatureParameterType::DescriptorTable)
 					{
+						current_root_param.table.num_ranges = 0;
+
 						//Read ranges
 						auto xml_element_range = xml_element_root->FirstChildElement();
 
 						while (xml_element_range)
 						{
 							//Add range
-							if (strcmp(xml_element_range->Name(), "RootParam") == 0)
+							if (strcmp(xml_element_range->Name(), "Range") == 0)
 							{
 								if (current_root_param.table.num_ranges == display::RootSignatureTable::kNumMaxRanges)
 								{

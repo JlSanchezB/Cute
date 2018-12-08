@@ -109,26 +109,31 @@ namespace render
 		load_context.xml_doc = &xml_doc;
 
 		//Load global resources
-		tinyxml2::XMLElement* resource = root->FirstChildElement("Global");
-		while (resource)
+		tinyxml2::XMLElement* global = root->FirstChildElement("Global");
+		if (global)
 		{
-			if (strcmp(resource->Name(), "Resource") == 0)
+			tinyxml2::XMLElement* resource = global->FirstChildElement();
+			while (resource)
 			{
-				//It is a resource
-				load_context.current_xml_element = resource;
+				if (strcmp(resource->Name(), "Resource") == 0)
+				{
+					//It is a resource
+					load_context.current_xml_element = resource;
 
-				LoadResource(load_context);
-			}
-			else
-			{
-				AddError(load_context, "Global element <%s> not supported", resource->Name());
-			}
+					LoadResource(load_context);
+				}
+				else
+				{
+					AddError(load_context, "Global element <%s> not supported", resource->Name());
+				}
 
-			resource = resource->NextSiblingElement();
+				resource = resource->NextSiblingElement();
+			}
 		}
 
+		//Load Passes
 
-		return true;
+		return (load_context.errors.size() > 1);
 	}
 
 

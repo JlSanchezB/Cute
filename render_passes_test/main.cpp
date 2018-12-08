@@ -1,5 +1,6 @@
 #include <core/platform.h>
 #include <display/display.h>
+#include <render/render.h>
 
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN             // Exclude rarely-used stuff from Windows headers.
@@ -40,6 +41,8 @@ public:
 
 	display::Device* m_device;
 
+	render::System* m_render_pass_system;
+
 	void OnInit() override
 	{
 		display::DeviceInitParams device_init_params;
@@ -59,9 +62,17 @@ public:
 		}
 
 		SetDevice(m_device);
+
+		//Create render pass system
+		m_render_pass_system = render::CreateRenderPassSystem();
+
+		//Load render pass sample
+		std::vector<std::string> errors;
+		render::LoadPassDescriptorFile(m_render_pass_system, m_device, "render_pass_sample.xml", errors);
 	}
 	void OnDestroy() override
 	{
+		render::DestroyRenderPassSystem(m_render_pass_system);
 		display::DestroyDevice(m_device);
 	}
 	void OnTick(double total_time, float elapsed_time) override
