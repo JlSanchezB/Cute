@@ -42,7 +42,7 @@ namespace
 	{
 		constexpr static std::pair<const char*, display::RootSignatureParameterType> table[] =
 		{
-			{"Constantbuffer", display::RootSignatureParameterType::ConstantBuffer},
+			{"ConstantBuffer", display::RootSignatureParameterType::ConstantBuffer},
 			{"Constants", display::RootSignatureParameterType::Constants},
 			{"DescriptorTable", display::RootSignatureParameterType::DescriptorTable},
 			{"ShaderResource", display::RootSignatureParameterType::ShaderResource},
@@ -55,7 +55,7 @@ namespace
 	{
 		constexpr static std::pair<const char*, display::DescriptorTableParameterType> table[] =
 		{
-			{"Constantbuffer", display::DescriptorTableParameterType::ConstantBuffer},
+			{"ConstantBuffer", display::DescriptorTableParameterType::ConstantBuffer},
 			{"UnorderAccessBuffer", display::DescriptorTableParameterType::UnorderAccessBuffer},
 			{"ShaderResource", display::DescriptorTableParameterType::ShaderResource},
 			{"Sampler", display::DescriptorTableParameterType::Sampler}

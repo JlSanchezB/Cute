@@ -133,7 +133,7 @@ namespace render
 
 		//Load Passes
 
-		return (load_context.errors.size() > 1);
+		return (load_context.errors.size() == 0);
 	}
 
 
