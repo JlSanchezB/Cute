@@ -12,11 +12,13 @@ namespace render
 	//Context pass, list of commands to send to the GPU, it will use it own command list
 	class ContextPass : public Pass
 	{
-		std::vector<Pass*> m_passes;
+		display::CommandListHandle m_command_list_handle;
+		std::vector<std::unique_ptr<Pass>> m_passes;
 
 	public:
 		DECLARE_RENDER_CLASS("Pass");
 
+		void Destroy(display::Device* device) override;
 		void Load(LoadContext& load_context) override;
 	};
 

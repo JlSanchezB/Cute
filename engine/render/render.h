@@ -72,8 +72,13 @@ namespace render
 		virtual ~Pass() {};
 		//Load from XML node and returns the Resource
 		virtual void Load(LoadContext& load_context) = 0;
+		//Destroy device handles
+		virtual void Destroy(display::Device* device) {};
 		//Render the pass
-		virtual void Render(RenderContext& render_context) const = 0;
+		virtual void Render(RenderContext& render_context) const {};
+
+		//Return type, it will be defined with DECLARE_RENDER_CLASS
+		virtual const char* Type() const = 0;
 	};
 
 	//Factory helper classes
@@ -119,10 +124,10 @@ namespace render
 
 	//Register pass factory helper
 	template<typename PASS>
-	inline bool RegisterPassType(System* system)
+	inline bool RegisterPassFactory(System* system)
 	{
 		std::unique_ptr<FactoryInterface<Pass>> factory = std::make_unique<Factory<Pass, PASS>>();
-		return RegisterResourceFactory(system, PASS::kClassName, factory);
+		return RegisterPassFactory(system, PASS::kClassName, factory);
 	}
 
 	//Get Resource by name

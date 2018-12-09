@@ -149,6 +149,7 @@
     <ClInclude Include="render\render_helper.h" />
     <ClInclude Include="render\render_pass.h" />
     <ClInclude Include="render\render_resource.h" />
+    <ClInclude Include="render\render_system.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="core\imgui_render.cpp" />
@@ -165,6 +166,7 @@
     <ClCompile Include="ext\imgui\imgui_widgets.cpp" />
     <ClCompile Include="ext\tinyxml2\tinyxml2.cpp" />
     <ClCompile Include="render\render.cpp" />
+    <ClCompile Include="render\render_pass.cpp" />
     <ClCompile Include="render\render_resource.cpp" />
   </ItemGroup>
   <ItemGroup>

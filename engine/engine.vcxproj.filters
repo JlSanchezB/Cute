@@ -107,6 +107,9 @@
     <ClInclude Include="render\render_pass.h">
       <Filter>render</Filter>
     </ClInclude>
+    <ClInclude Include="render\render_system.h">
+      <Filter>render</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="display\pc_dx12\display.cpp">
@@ -152,6 +155,9 @@
       <Filter>render</Filter>
     </ClCompile>
     <ClCompile Include="render\render_resource.cpp">
+      <Filter>render</Filter>
+    </ClCompile>
+    <ClCompile Include="render\render_pass.cpp">
       <Filter>render</Filter>
     </ClCompile>
   </ItemGroup>

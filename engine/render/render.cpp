@@ -1,49 +1,15 @@
 #include "render.h"
 #include <ext/tinyxml2/tinyxml2.h>
-#include "render_resource.h"
 #include <core/log.h>
 #include "render_helper.h"
+#include "render_system.h"
+#include "render_resource.h"
+#include "render_pass.h"
 
-#include <memory>
-#include <unordered_map>
 #include <stdarg.h>
 
 namespace render
 {
-	//Internal render pass system implementation
-	struct System
-	{
-		//Load from passes declaration file
-		bool Load(LoadContext& load_context);
-
-		using ResourceFactoryMap = std::unordered_map<std::string, std::unique_ptr<FactoryInterface<Resource>>>;
-		using PassFactoryMap = std::unordered_map<std::string, std::unique_ptr<FactoryInterface<Pass>>>;
-
-		//Resource factories
-		ResourceFactoryMap m_resource_factories_map;
-
-		//Pass factories
-		PassFactoryMap m_pass_factories_map;
-
-		using ResourceMap = std::unordered_map<std::string, std::unique_ptr<Resource>>;
-		using PassMap = std::unordered_map<std::string, std::unique_ptr<Pass>>;
-
-		//Gobal resources defined in the passes declaration
-		ResourceMap m_global_resources_map;
-
-		//Game resource added by the game
-		ResourceMap m_game_resources_map;
-
-		//Passes defined in the passes declaration
-		PassMap m_passes_map;
-
-		//Load resource
-		void LoadResource(LoadContext& load_context);
-
-		//Load Pass
-		void LoadPass(LoadContext& load_context);
-	};
-
 	void System::LoadResource(LoadContext& load_context)
 	{
 		//Get type and name
@@ -92,9 +58,39 @@ namespace render
 		}
 	}
 
-	void System::LoadPass(LoadContext& load_context)
+	Pass* System::LoadPass(LoadContext& load_context)
 	{
+		//Create the pass
+		const char* pass_type = load_context.current_xml_element->Name();
+		const char* pass_name = load_context.current_xml_element->Attribute("name");
 
+		
+		auto& pass_factory_it = m_pass_factories_map.find(pass_type);
+		if (pass_factory_it != m_pass_factories_map.end())
+		{
+			//Load the pass
+			auto& factory = pass_factory_it->second;
+
+			assert(factory.get());
+
+			//Create pass instance
+			auto pass_instance = factory->Create();
+
+			assert(pass_instance);
+			assert(strcmp(pass_instance->Type(), pass_type) == 0);
+
+			load_context.name = pass_type;
+
+			//Load pass
+			pass_instance->Load(load_context);
+
+			return pass_instance;
+		}
+		else
+		{
+			AddError(load_context, "Pass type <%s> is not register", pass_type);
+			return nullptr;
+		}
 	}
 
 	bool System::Load(LoadContext& load_context)
@@ -142,16 +138,48 @@ namespace render
 		}
 
 		//Load Passes
-		tinyxml2::XMLElement* passes = root->FirstChildElement("Passes");
-		if (passes)
+		tinyxml2::XMLElement* passes_element = root->FirstChildElement("Passes");
+		if (passes_element)
 		{
-			tinyxml2::XMLElement* pass = global->FirstChildElement();
-			while (pass)
+			tinyxml2::XMLElement* pass_element = passes_element->FirstChildElement();
+			while (pass_element)
 			{
-				load_context.current_xml_element = pass;
-				LoadPass(load_context);
+				if (CheckNodeName(pass_element, "Pass"))
+				{
+					const char* pass_name = pass_element->Attribute("name");
+					if (pass_name)
+					{
+						auto pass_it = m_passes_map.find(pass_name);
+						if (pass_it == m_passes_map.end())
+						{
+							load_context.current_xml_element = pass_element;
+							load_context.name = pass_name;
 
-				pass = pass->NextSiblingElement();
+							//It is a root pass (usually a context pass), must have name so the game can find it
+
+							Pass* pass = LoadPass(load_context);
+
+							//Add it to the pass map
+							m_passes_map[pass_name].reset(pass);
+
+							core::LogInfo("Created Pass <%s>", pass_name);
+						}
+						else
+						{
+							AddError(load_context, "Pass <%s> already exist, discarting new one", pass_name);
+						}
+					}
+					else
+					{
+						AddError(load_context, "Pass inside the node <Passes> must have name attribute");
+					}
+				}
+				else
+				{
+					AddError(load_context, "Only nodes <Pass> are supported inside the node <Passes>");
+				}
+
+				pass_element = pass_element->NextSiblingElement();
 			}
 		}
 		return (load_context.errors.size() == 0);
@@ -162,11 +190,20 @@ namespace render
 	{
 		System* system = new System();
 
-		//Register all basic resources factories and passes
+		//Register all basic resources factories
 		RegisterResourceFactory<BoolResource>(system);
 		RegisterResourceFactory<TextureResource>(system);
 		RegisterResourceFactory<ConstantBufferResource>(system);
 		RegisterResourceFactory<RootSignatureResource>(system);
+
+		//Register all basic passes factories
+		RegisterPassFactory<ContextPass>(system);
+		RegisterPassFactory<SetRenderTargetPass>(system);
+		RegisterPassFactory<ClearRenderTargetPass>(system);
+		RegisterPassFactory<SetRootSignaturePass>(system);
+		RegisterPassFactory<SetPipelineStatePass>(system);
+		RegisterPassFactory<SetDescriptorTablePass>(system);
+		RegisterPassFactory<DrawFullScreenQuadPass>(system);
 
 		return system;
 	}
