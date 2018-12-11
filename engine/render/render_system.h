@@ -37,7 +37,10 @@ namespace render
 		PassMap m_passes_map;
 
 		//Load resource
-		void LoadResource(LoadContext& load_context);
+		std::string LoadResource(LoadContext& load_context, const char* prefix = nullptr);
+
+		//Get resource reference, it can be the name of the resource or the resource itself
+		std::string GetResourceReference(LoadContext& load_context);
 
 		//Load Pass
 		Pass* LoadPass(LoadContext& load_context);

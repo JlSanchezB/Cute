@@ -33,18 +33,39 @@ namespace render
 	}
 	void SetRenderTargetPass::Load(LoadContext & load_context)
 	{
+		auto xml_element_render_target = load_context.current_xml_element->FirstChildElement("RenderTarget");
+
+		size_t i = 0;
+		while (xml_element_render_target)
+		{
+			load_context.current_xml_element = xml_element_render_target;
+			m_render_target_name[i] = load_context.render_system->GetResourceReference(load_context);
+
+			i++;
+			xml_element_render_target = xml_element_render_target->NextSiblingElement();
+
+			if (i == display::kMaxNumRenderTargets)
+			{
+				AddError(load_context, "Max number of render target reached loading the pass SetRenderTargets");
+				return;
+			}
+		}
+		
 	}
 	void ClearRenderTargetPass::Load(LoadContext & load_context)
 	{
 	}
 	void SetRootSignaturePass::Load(LoadContext & load_context)
 	{
+		m_rootsignature_name = load_context.render_system->GetResourceReference(load_context);
 	}
 	void SetPipelineStatePass::Load(LoadContext & load_context)
 	{
+		m_pipeline_state_name = load_context.render_system->GetResourceReference(load_context);
 	}
 	void SetDescriptorTablePass::Load(LoadContext & load_context)
 	{
+		m_descriptor_table_name = load_context.render_system->GetResourceReference(load_context);
 	}
 	void DrawFullScreenQuadPass::Load(LoadContext & load_context)
 	{

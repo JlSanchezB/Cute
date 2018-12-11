@@ -20,14 +20,12 @@
     <SetRootSignature>GraphicsRootSignature</SetRootSignature>
     <SetPipelineState>
       <Resource type="GraphicsPipelineState" name="pipeline test 1">
-        <RootSignature>
-          GraphicsRootSignature
-        </RootSignature>
+        <RootSignature>GraphicsRootSignature</RootSignature>
         <InputLayouts>
-          <Input name="POSITION" index="0" format="R32G32B32A32_FLOAT" slot="0"/>
-          <Input name="TEXCOORD" index="0" format="R32G32_FLOAT" slot="0" aligned_offset="16"/>
+          <Input semantic_name="POSITION" semantic_index="0" format="R32G32B32A32_FLOAT" input_slot="0"/>
+          <Input semantic_name="TEXCOORD" semantic_index="0" format="R32G32_FLOAT" input_slot="0" aligned_offset="16"/>
         </InputLayouts>
-        <Shader pixelshader_entry="ps_main" vertex_shader_entry="vs_main" target="5.0">
+        <Shader pixelshader_entry="ps_main" vertexshader_entry="vs_main" target="5_0">
           Texture2D texture_test : t0;
           SamplerState static_sampler : s1;
 
@@ -59,7 +57,7 @@
       </Resource>
     </SetPipelineState>
     <SetDescriptorTable pipe="Graphics" root_param="0">
-      <Resource type="DescriptorTable">
+      <Resource type="DescriptorTable" name="descriptor test 1">
         <Descriptor>SampleTexture</Descriptor>
         <Descriptor>GameGlobal</Descriptor>
       </Resource>

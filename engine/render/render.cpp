@@ -10,7 +10,7 @@
 
 namespace render
 {
-	void System::LoadResource(LoadContext& load_context)
+	std::string System::LoadResource(LoadContext& load_context, const char* prefix)
 	{
 		//Get type and name
 		const char* resource_type = load_context.current_xml_element->Attribute("type");
@@ -40,7 +40,17 @@ namespace render
 					core::LogInfo("Created Resource <%s> type <%s>", resource_name, resource_type);
 
 					//Add to the globals
-					m_global_resources_map[resource_name].reset(resource_instance);
+					if (prefix)
+					{
+						std::string name = std::string(prefix) + resource_name;
+						m_global_resources_map[name].reset(resource_instance);
+						return name;
+					}
+					else
+					{
+						m_global_resources_map[resource_name].reset(resource_instance);
+						return resource_name;
+					}
 				}
 				else
 				{
@@ -55,6 +65,23 @@ namespace render
 		else
 		{
 			AddError(load_context, "Resource has not attribute type or name");
+		}
+		return std::string();
+	}
+
+	std::string System::GetResourceReference(LoadContext & load_context)
+	{
+		//Check if is a resource
+		if (auto xml_resource_element = load_context.current_xml_element->FirstChildElement("Resource"))
+		{
+			//It is a resource, load it using as prefix the pass name and return the name 
+			load_context.current_xml_element = xml_resource_element;
+			return LoadResource(load_context, load_context.pass_name);
+		}
+		else
+		{
+			//The resource is in the value
+			return std::string(load_context.current_xml_element->GetText());
 		}
 	}
 
@@ -154,6 +181,7 @@ namespace render
 						{
 							load_context.current_xml_element = pass_element;
 							load_context.name = pass_name;
+							load_context.pass_name = pass_name;
 
 							//It is a root pass (usually a context pass), must have name so the game can find it
 
@@ -195,6 +223,9 @@ namespace render
 		RegisterResourceFactory<TextureResource>(system);
 		RegisterResourceFactory<ConstantBufferResource>(system);
 		RegisterResourceFactory<RootSignatureResource>(system);
+		RegisterResourceFactory<GraphicsPipelineStateResource>(system);
+		RegisterResourceFactory<ComputePipelineStateResource>(system);
+		RegisterResourceFactory<DescriptorTableResource>(system);
 
 		//Register all basic passes factories
 		RegisterPassFactory<ContextPass>(system);

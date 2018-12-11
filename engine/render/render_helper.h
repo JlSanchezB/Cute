@@ -49,45 +49,60 @@ namespace
 	inline bool QueryAttribute<size_t>(render::LoadContext& load_context, tinyxml2::XMLElement* xml_element, const char* name, size_t& value, AttributeType attribute_type)
 	{
 		int64_t int64_value;
-		if (QueryAttribute(load_context, xml_element, name, int64_value, attribute_type))
+		if (!xml_element->QueryAttribute(name, &int64_value) == tinyxml2::XML_SUCCESS)
 		{
-			value = static_cast<size_t>(int64_value);
-			return true;
+			//Only add error if it was non optional
+			if (attribute_type == AttributeType::NonOptional)
+			{
+				AddError(load_context, "Error reading non optional attribute <%s> in node <%s>", name, load_context.name);
+				return false;
+			}
 		}
 		else
 		{
-			return false;
+			value = static_cast<size_t>(int64_value);
 		}
+		return true;
 	}
 
 	template <>
 	inline bool QueryAttribute<uint8_t>(render::LoadContext& load_context, tinyxml2::XMLElement* xml_element, const char* name, uint8_t& value, AttributeType attribute_type)
 	{
 		unsigned int unsigned_int_value;
-		if (QueryAttribute(load_context, xml_element, name, unsigned_int_value, attribute_type))
+		if (!xml_element->QueryAttribute(name, &unsigned_int_value) == tinyxml2::XML_SUCCESS)
 		{
-			value = static_cast<uint8_t>(unsigned_int_value);
-			return true;
+			//Only add error if it was non optional
+			if (attribute_type == AttributeType::NonOptional)
+			{
+				AddError(load_context, "Error reading non optional attribute <%s> in node <%s>", name, load_context.name);
+				return false;
+			}
 		}
 		else
 		{
-			return false;
+			value = static_cast<uint8_t>(unsigned_int_value);
 		}
+		return true;
 	}
 
 	template <>
 	inline bool QueryAttribute<uint16_t>(render::LoadContext& load_context, tinyxml2::XMLElement* xml_element, const char* name, uint16_t& value, AttributeType attribute_type)
 	{
-		unsigned int uint_value;
-		if (QueryAttribute(load_context, xml_element, name, uint_value, attribute_type))
+		unsigned int unsigned_int_value;
+		if (!xml_element->QueryAttribute(name, &unsigned_int_value) == tinyxml2::XML_SUCCESS)
 		{
-			value = static_cast<uint16_t>(uint_value);
-			return true;
+			//Only add error if it was non optional
+			if (attribute_type == AttributeType::NonOptional)
+			{
+				AddError(load_context, "Error reading non optional attribute <%s> in node <%s>", name, load_context.name);
+				return false;
+			}
 		}
 		else
 		{
-			return false;
+			value = static_cast<uint16_t>(unsigned_int_value);
 		}
+		return true;
 	}
 
 	//Template interface to Query a value and match in a table for a XML element

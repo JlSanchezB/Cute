@@ -411,9 +411,9 @@ namespace render
 							QueryAttribute(load_context, xml_element_input, "semantic_index", input_layout.semantic_index, AttributeType::NonOptional);
 							QueryTableAttribute(load_context, xml_element_input, "format", input_layout.format, AttributeType::NonOptional);
 							QueryAttribute(load_context, xml_element_input, "input_slot", input_layout.input_slot, AttributeType::NonOptional);
-							QueryAttribute(load_context, xml_element_input, "aligned_offset", input_layout.aligned_offset, AttributeType::NonOptional);
-							QueryTableAttribute(load_context, xml_element_input, "input_type", input_layout.input_type, AttributeType::NonOptional);
-							QueryAttribute(load_context, xml_element_input, "instance_step_rate", input_layout.instance_step_rate, AttributeType::NonOptional);
+							QueryAttribute(load_context, xml_element_input, "aligned_offset", input_layout.aligned_offset, AttributeType::Optional);
+							QueryTableAttribute(load_context, xml_element_input, "input_type", input_layout.input_type, AttributeType::Optional);
+							QueryAttribute(load_context, xml_element_input, "instance_step_rate", input_layout.instance_step_rate, AttributeType::Optional);
 						}
 						else
 						{
@@ -447,6 +447,11 @@ namespace render
 					{
 						AddError(load_context, "Error compile shader for pipeline state <%s>, errors: <%s>", load_context.name, display::GetLastErrorMessage(load_context.device));
 					}
+					else
+					{
+						pipeline_state_desc.pixel_shader.data = pixel_shader.data();
+						pipeline_state_desc.pixel_shader.size = pixel_shader.size();
+					}
 				}
 				if (vertex_shader_entry && target_postfix)
 				{
@@ -455,11 +460,16 @@ namespace render
 					strcat_s(target, target_postfix);
 					display::CompileShaderDesc compile_shader_desc;
 					compile_shader_desc.code = xml_element_root->GetText();
-					compile_shader_desc.entry_point = pixel_shader_entry;
+					compile_shader_desc.entry_point = vertex_shader_entry;
 					compile_shader_desc.target = target;
 					if (!display::CompileShader(load_context.device, compile_shader_desc, vertex_shader))
 					{
 						AddError(load_context, "Error compile shader for pipeline state <%s>, errors: <%s>", load_context.name, display::GetLastErrorMessage(load_context.device));
+					}
+					else
+					{
+						pipeline_state_desc.vertex_shader.data = vertex_shader.data();
+						pipeline_state_desc.vertex_shader.size = vertex_shader.size();
 					}
 				}
 			}
@@ -493,16 +503,16 @@ namespace render
 						if (render_target_count < display::kMaxNumRenderTargets)
 						{
 
-							QueryTableAttribute(load_context, xml_element_root, "format", format, AttributeType::Optional);
+							QueryTableAttribute(load_context, xml_element_render_target, "format", format, AttributeType::Optional);
 
-							QueryAttribute(load_context, xml_element_root, "blend_enable", blend.blend_enable, AttributeType::Optional);
-							QueryTableAttribute(load_context, xml_element_root, "src_blend", blend.src_blend, AttributeType::Optional);
-							QueryTableAttribute(load_context, xml_element_root, "dest_blend", blend.dest_blend, AttributeType::Optional);
-							QueryTableAttribute(load_context, xml_element_root, "blend_op", blend.blend_op, AttributeType::Optional);
-							QueryTableAttribute(load_context, xml_element_root, "alpha_src_blend", blend.alpha_src_blend, AttributeType::Optional);
-							QueryTableAttribute(load_context, xml_element_root, "alpha_dest_blend", blend.alpha_dest_blend, AttributeType::Optional);
-							QueryTableAttribute(load_context, xml_element_root, "alpha_blend_op", blend.alpha_blend_op, AttributeType::Optional);
-							QueryAttribute(load_context, xml_element_root, "write_mask", blend.write_mask, AttributeType::Optional);
+							QueryAttribute(load_context, xml_element_render_target, "blend_enable", blend.blend_enable, AttributeType::Optional);
+							QueryTableAttribute(load_context, xml_element_render_target, "src_blend", blend.src_blend, AttributeType::Optional);
+							QueryTableAttribute(load_context, xml_element_render_target, "dest_blend", blend.dest_blend, AttributeType::Optional);
+							QueryTableAttribute(load_context, xml_element_render_target, "blend_op", blend.blend_op, AttributeType::Optional);
+							QueryTableAttribute(load_context, xml_element_render_target, "alpha_src_blend", blend.alpha_src_blend, AttributeType::Optional);
+							QueryTableAttribute(load_context, xml_element_render_target, "alpha_dest_blend", blend.alpha_dest_blend, AttributeType::Optional);
+							QueryTableAttribute(load_context, xml_element_render_target, "alpha_blend_op", blend.alpha_blend_op, AttributeType::Optional);
+							QueryAttribute(load_context, xml_element_render_target, "write_mask", blend.write_mask, AttributeType::Optional);
 						}
 						else
 						{
@@ -516,6 +526,7 @@ namespace render
 					}
 					xml_element_render_target = xml_element_render_target->NextSiblingElement();
 				}
+				pipeline_state_desc.num_render_targets = static_cast<uint8_t>(render_target_count);
 			}
 			else
 			{
