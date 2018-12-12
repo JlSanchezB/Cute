@@ -57,10 +57,8 @@
       </Resource>
     </SetPipelineState>
     <SetDescriptorTable pipe="Graphics" root_param="0">
-      <Resource type="DescriptorTable" name="descriptor test 1">
-        <Descriptor>SampleTexture</Descriptor>
-        <Descriptor>GameGlobal</Descriptor>
-      </Resource>
+      <Descriptor>SampleTexture</Descriptor>
+      <Descriptor>GameGlobal</Descriptor>
     </SetDescriptorTable>
     <DrawFullScreenQuad/>
   </Pass>

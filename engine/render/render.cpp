@@ -265,6 +265,10 @@ namespace render
 
 			errors = std::move(load_context.errors);
 		}
+		else
+		{
+			core::LogInfo("Render pass descriptor file <%s> loaded", pass_descriptor_file);
+		}
 		return success;
 	}
 

@@ -62,8 +62,11 @@ namespace render
 
 	class SetDescriptorTablePass : public Pass
 	{
-		std::string m_descriptor_table_name;
-
+		//Static resource used
+		std::string m_descriptor_table_static_name;
+		//If there is a descriptor table, that resource will be build the first time that it is executed, as it knows the constants buffer
+		std::vector<std::string> m_descriptor_table;
+	
 	public:
 		DECLARE_RENDER_CLASS("SetDescriptorTable");
 

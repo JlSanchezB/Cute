@@ -65,7 +65,21 @@ namespace render
 	}
 	void SetDescriptorTablePass::Load(LoadContext & load_context)
 	{
-		m_descriptor_table_name = load_context.render_system->GetResourceReference(load_context);
+		auto xml_element_resource = load_context.current_xml_element->FirstChildElement("Resource");
+		if (xml_element_resource)
+		{
+			//It is a resource
+			m_descriptor_table_static_name = load_context.render_system->GetResourceReference(load_context);
+			return;
+		}
+		auto xml_element_descriptor = load_context.current_xml_element->FirstChildElement("Descriptor");
+		if (xml_element_descriptor)
+		{
+			m_descriptor_table.push_back(xml_element_descriptor->GetText());
+
+			//It is a descriptor list, names need to be solve during render
+			xml_element_descriptor = xml_element_descriptor->NextSiblingElement();
+		}
 	}
 	void DrawFullScreenQuadPass::Load(LoadContext & load_context)
 	{
