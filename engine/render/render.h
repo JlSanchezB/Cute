@@ -75,6 +75,10 @@ namespace render
 		virtual void Load(LoadContext& load_context) = 0;
 		//Destroy device handles
 		virtual void Destroy(display::Device* device) {};
+
+		//Init pass, called when a render context is created for this pass
+		virtual void InitPass(RenderContext& render_context, display::Device* device) {};
+
 		//Render the pass
 		virtual void Render(RenderContext& render_context) const {};
 
@@ -102,9 +106,6 @@ namespace render
 
 	//Destroy render pass system
 	void DestroyRenderPassSystem(System* system, display::Device* device);
-
-	//Load render pass descriptor file
-	bool LoadPassDescriptorFile(System* system, display::Device* device, const char* pass_descriptor_file, std::vector<std::string>& errors);
 
 	//Add global resource, allows the game to add global resources that the pass system can access them
 	bool AddGameResource(System* system, const char* name, std::unique_ptr<Resource>& resource);
@@ -147,6 +148,15 @@ namespace render
 
 	//Get Pass by name
 	Pass* GetPass(System* system, const char* name);
+
+	//Load render pass descriptor file
+	bool LoadPassDescriptorFile(System* system, display::Device* device, const char* pass_descriptor_file, std::vector<std::string>& errors);
+
+	//Create a render context for rendering a pass
+	RenderContext* CreateRenderContext(System* system, display::Device* device, const char* pass);
+
+	//Destroy render context for rendering a pass
+	void DestroyRenderContext(System* system, display::Device* device, RenderContext* render_context);
 }
 
 #endif //RENDER_H_

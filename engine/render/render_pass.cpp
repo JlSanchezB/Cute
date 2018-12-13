@@ -36,6 +36,13 @@ namespace render
 			xml_element = xml_element->NextSiblingElement();
 		}
 	}
+	void ContextPass::InitPass(RenderContext & render_context, display::Device* device)
+	{
+		for (auto& item : m_passes)
+		{
+			item->InitPass(render_context, device);
+		}
+	}
 	void SetRenderTargetPass::Load(LoadContext & load_context)
 	{
 		auto xml_element_render_target = load_context.current_xml_element->FirstChildElement("RenderTarget");

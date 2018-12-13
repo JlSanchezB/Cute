@@ -294,6 +294,31 @@ namespace render
 		return success;
 	}
 
+	RenderContext * CreateRenderContext(System * system, display::Device * device, const char * pass)
+	{
+		//Get pass
+		auto render_pass = GetPass(system, pass);
+		if (render_pass)
+		{
+			//Create Render Context
+			RenderContext* render_context = system->m_render_context_pool.Alloc();
+
+			//Allow the passes to init the render context 
+			render_pass->InitPass(*render_context, device);
+
+			return render_context;
+		}
+
+		return nullptr;
+	}
+
+	void DestroyRenderContext(System * system, display::Device * device, RenderContext * render_context)
+	{
+		//Destroy context resources
+
+		system->m_render_context_pool.Free(render_context);
+	}
+
 	bool AddGameResource(System * system, const char * name, std::unique_ptr<Resource>& resource)
 	{
 		if ((system->m_global_resources_map.find(name) != system->m_global_resources_map.end()) ||

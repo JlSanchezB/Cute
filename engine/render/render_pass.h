@@ -20,6 +20,7 @@ namespace render
 
 		void Destroy(display::Device* device) override;
 		void Load(LoadContext& load_context) override;
+		void InitPass(RenderContext& render_context, display::Device* device) override;
 	};
 
 	class SetRenderTargetPass : public Pass

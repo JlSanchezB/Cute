@@ -6,6 +6,7 @@
 
 #include <memory>
 #include <unordered_map>
+#include <core/simple_pool.h>
 
 namespace render
 {
@@ -35,6 +36,9 @@ namespace render
 
 		//Passes defined in the passes declaration
 		PassMap m_passes_map;
+
+		//Render context created
+		core::SimplePool<RenderContext, 256> m_render_context_pool;
 
 		//Load resource
 		std::string LoadResource(LoadContext& load_context, const char* prefix = nullptr);
