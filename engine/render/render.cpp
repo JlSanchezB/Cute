@@ -8,6 +8,19 @@
 
 #include <stdarg.h>
 
+namespace
+{
+	template<class CONTAINER>
+	void DestroyResources(display::Device* device, CONTAINER& container)
+	{
+		for (auto& item : container)
+		{
+			item.second->Destroy(device);
+		}
+		container.clear();
+	}
+}
+
 namespace render
 {
 	std::string System::LoadResource(LoadContext& load_context, const char* prefix)
@@ -239,8 +252,13 @@ namespace render
 		return system;
 	}
 
-	void DestroyRenderPassSystem(System * system)
+	void DestroyRenderPassSystem(System * system, display::Device* device)
 	{
+		//Destroy resources and passes
+		DestroyResources(device, system->m_game_resources_map);
+		DestroyResources(device, system->m_global_resources_map);
+		DestroyResources(device, system->m_passes_map);
+
 		delete system;
 	}
 
@@ -264,6 +282,10 @@ namespace render
 			}
 
 			errors = std::move(load_context.errors);
+
+			//Clear all resources created from the file
+			DestroyResources(device, system->m_global_resources_map);
+			DestroyResources(device, system->m_passes_map);
 		}
 		else
 		{

@@ -12,6 +12,11 @@ namespace render
 		{
 			display::DestroyCommandList(device, m_command_list_handle);
 		}
+
+		for (auto& item : m_passes)
+		{
+			item->Destroy(device);
+		}
 	}
 	void ContextPass::Load(LoadContext & load_context)
 	{

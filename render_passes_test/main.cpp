@@ -72,7 +72,8 @@ public:
 	}
 	void OnDestroy() override
 	{
-		render::DestroyRenderPassSystem(m_render_pass_system);
+		render::DestroyRenderPassSystem(m_render_pass_system, m_device);
+
 		display::DestroyDevice(m_device);
 	}
 	void OnTick(double total_time, float elapsed_time) override
