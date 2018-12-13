@@ -59,6 +59,16 @@ namespace render
 	}
 	void ClearRenderTargetPass::Load(LoadContext & load_context)
 	{
+		colour[0] = colour[1] = colour[2] = colour[3] = 0.f;
+		const char* colour_text = load_context.current_xml_element->Attribute("colour");
+		if (colour_text)
+		{
+			//Read four floats
+			if (sscanf_s(colour_text, "%f,%f,%f,%f", &colour[0], &colour[1], &colour[2], &colour[3]) != 4)
+			{
+				AddError(load_context, "Colour can not be read from <%s>", colour_text);
+			}
+		}
 	}
 	void SetRootSignaturePass::Load(LoadContext & load_context)
 	{

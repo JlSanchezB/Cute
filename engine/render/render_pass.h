@@ -34,6 +34,7 @@ namespace render
 
 	class ClearRenderTargetPass : public Pass
 	{
+		float colour[4];
 	public:
 		DECLARE_RENDER_CLASS("ClearRenderTarget");
 
