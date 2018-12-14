@@ -6,6 +6,7 @@
 
 #include <vector>
 #include <memory>
+#include <unordered_map>
 
 namespace display
 {
@@ -30,6 +31,7 @@ namespace render
 {
 	//System
 	struct System;
+	class RenderContext;
 
 	//Context used for loading a pass
 	struct LoadContext
@@ -43,15 +45,6 @@ namespace render
 		std::vector<std::string> errors;
 		render::System* render_system;
 	};
-
-	//Context used for rendering a pass
-	//It will include all the information that the render pass manager needs for rendering a pass
-	class RenderContext
-	{
-	public:
-
-	};
-
 	//Base resource class
 	class Resource
 	{
@@ -99,6 +92,17 @@ namespace render
 		{
 			return reinterpret_cast<TYPE*> (new SPECIALISED());
 		}
+	};
+
+	//Context used for rendering a pass
+	//It will include all the information that the render pass manager needs for rendering a pass
+	class RenderContext
+	{
+	public:
+		//Add render resource to this pass instance
+		void AddRenderResource(const char* name, std::unique_ptr<Resource>& resource);
+		//Resource associated to this pass instance
+		Resource* GetRenderResource(const char* name);
 	};
 
 	//Create render pass system
@@ -153,7 +157,7 @@ namespace render
 	bool LoadPassDescriptorFile(System* system, display::Device* device, const char* pass_descriptor_file, std::vector<std::string>& errors);
 
 	//Create a render context for rendering a pass
-	RenderContext* CreateRenderContext(System* system, display::Device* device, const char* pass);
+	RenderContext* CreateRenderContext(System* system, display::Device* device, const char* pass, std::unordered_map<std::string, std::unique_ptr<Resource>>& init_resources);
 
 	//Destroy render context for rendering a pass
 	void DestroyRenderContext(System* system, display::Device* device, RenderContext* render_context);

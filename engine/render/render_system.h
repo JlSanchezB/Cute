@@ -10,6 +10,17 @@
 
 namespace render
 {
+	class RenderContextInternal : public RenderContext
+	{
+	public:
+		RenderContextInternal(std::unordered_map<std::string, std::unique_ptr<Resource>>& init_resources)
+		{
+			m_resources_map = std::move(init_resources);
+		}
+		//Resources associated to this pass
+		std::unordered_map<std::string, std::unique_ptr<Resource>> m_resources_map;
+	};
+
 	//Internal render pass system implementation
 	struct System
 	{
@@ -38,7 +49,7 @@ namespace render
 		PassMap m_passes_map;
 
 		//Render context created
-		core::SimplePool<RenderContext, 256> m_render_context_pool;
+		core::SimplePool<RenderContextInternal, 256> m_render_context_pool;
 
 		//Load resource
 		std::string LoadResource(LoadContext& load_context, const char* prefix = nullptr);

@@ -23,6 +23,23 @@ namespace
 
 namespace render
 {
+	void RenderContext::AddRenderResource(const char * name, std::unique_ptr<Resource>& resource)
+	{
+		auto render_context = reinterpret_cast<RenderContextInternal*>(this);
+		render_context->m_resources_map[name] = std::move(resource);
+	}
+
+	Resource * RenderContext::GetRenderResource(const char * name)
+	{
+		auto render_context = reinterpret_cast<RenderContextInternal*>(this);
+		const auto& it = render_context->m_resources_map.find(name);
+		if (it != render_context->m_resources_map.end())
+		{
+			return it->second.get();
+		}
+		return nullptr;
+	}
+
 	std::string System::LoadResource(LoadContext& load_context, const char* prefix)
 	{
 		//Get type and name
@@ -294,14 +311,14 @@ namespace render
 		return success;
 	}
 
-	RenderContext * CreateRenderContext(System * system, display::Device * device, const char * pass)
+	RenderContext * CreateRenderContext(System * system, display::Device * device, const char * pass, std::unordered_map<std::string, std::unique_ptr<Resource>>& init_resources)
 	{
 		//Get pass
 		auto render_pass = GetPass(system, pass);
 		if (render_pass)
 		{
 			//Create Render Context
-			RenderContext* render_context = system->m_render_context_pool.Alloc();
+			RenderContextInternal* render_context = system->m_render_context_pool.Alloc(init_resources);
 
 			//Allow the passes to init the render context 
 			render_pass->InitPass(*render_context, device);
@@ -314,9 +331,11 @@ namespace render
 
 	void DestroyRenderContext(System * system, display::Device * device, RenderContext * render_context)
 	{
+		auto render_context_internal = reinterpret_cast<RenderContextInternal*>(render_context);
 		//Destroy context resources
+		DestroyResources(device, render_context_internal->m_resources_map);
 
-		system->m_render_context_pool.Free(render_context);
+		system->m_render_context_pool.Free(render_context_internal);
 	}
 
 	bool AddGameResource(System * system, const char * name, std::unique_ptr<Resource>& resource)
