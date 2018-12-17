@@ -19,24 +19,26 @@ namespace display
 		//Transfert resources to render target and calculate the handles in the render target heap
 		for (size_t i = 0; i < num_targets; ++i)
 		{
-			auto& render_target = device->Get(render_target_array[i]);
+			//Render target handle inside the ring buffer (if it exist)
+			auto frame_render_target = GetRingResource(device, render_target_array[i], device->m_frame_index);
+			auto& render_target = device->Get(frame_render_target);
 			if (render_target.current_state != D3D12_RESOURCE_STATE_RENDER_TARGET)
 			{
 				command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(render_target.resource.Get(), render_target.current_state, D3D12_RESOURCE_STATE_RENDER_TARGET));
 				render_target.current_state = D3D12_RESOURCE_STATE_RENDER_TARGET;
 			}
 
-			render_target_handles[i] = device->m_render_target_pool.GetDescriptor(render_target_array[i]);
+			render_target_handles[i] = device->m_render_target_pool.GetDescriptor(frame_render_target);
 		}
 
 		if (depth_stencil.IsValid())
 		{
-			auto& depth_buffer = device->Get(depth_stencil);
+			auto& depth_buffer = device->Get(GetRingResource(device, depth_stencil, device->m_frame_index));
 			command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(depth_buffer.resource.Get(), depth_buffer.current_state, D3D12_RESOURCE_STATE_DEPTH_WRITE));
 			depth_buffer.current_state = D3D12_RESOURCE_STATE_DEPTH_WRITE;
 		}
 
-		command_list->OMSetRenderTargets(static_cast<UINT>(num_targets), render_target_handles, FALSE, depth_stencil.IsValid() ? &device->m_depth_buffer_pool.GetDescriptor(depth_stencil) : nullptr);
+		command_list->OMSetRenderTargets(static_cast<UINT>(num_targets), render_target_handles, FALSE, depth_stencil.IsValid() ? &device->m_depth_buffer_pool.GetDescriptor(GetRingResource(device, depth_stencil, device->m_frame_index)) : nullptr);
 	}
 
 	void Context::ClearRenderTargetColour(const WeakRenderTargetHandle& render_target_handle, const float colour[4])
@@ -45,9 +47,11 @@ namespace display
 		Device* device = dx12_context->device;
 		const auto& command_list = dx12_context->command_list;
 
-		auto& render_target = device->Get(render_target_handle);
+		auto& frame_render_target_handle = GetRingResource(device, render_target_handle, device->m_frame_index);
 
-		command_list->ClearRenderTargetView(device->m_render_target_pool.GetDescriptor(render_target_handle), colour, 0, nullptr);
+		auto& render_target = device->Get(frame_render_target_handle);
+
+		command_list->ClearRenderTargetView(device->m_render_target_pool.GetDescriptor(frame_render_target_handle), colour, 0, nullptr);
 	}
 	void Context::SetRootSignature(const Pipe& pipe, const WeakRootSignatureHandle & root_signature_handle)
 	{

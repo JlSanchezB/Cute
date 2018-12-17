@@ -165,22 +165,6 @@ namespace
 	
 		return resource_handle;
 	}
-
-	//Delete the handle and the ring resource if exist
-	template<typename HANDLE, typename POOL>
-	void DeleteRingResource(display::Device * device, HANDLE& handle, POOL& pool)
-	{
-		HANDLE next_handle = std::move(handle);
-		while (next_handle.IsValid())
-		{
-			HANDLE current_handle = std::move(next_handle);
-			auto& resource = device->Get(current_handle);
-			next_handle = std::move(resource.next_handle);
-
-			//Delete current handle
-			pool.Free(current_handle);
-		}
-	}
 }
 
 namespace display

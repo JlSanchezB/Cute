@@ -263,22 +263,30 @@ namespace display
 		//Create frame resources
 		device->m_frame_resources.resize(params.num_frames);
 
+		//Alloc handle for the back buffer
+		device->m_back_buffer_render_target = device->m_render_target_pool.Alloc();
+
+		//Ring buffer
+		RenderTargetHandle* handle_ptr = &device->m_back_buffer_render_target;
+
 		for (size_t i = 0; i < params.num_frames; ++i)
 		{
 			auto& frame_resource = device->m_frame_resources[i];
 
-			//Alloc handle for the back buffer
-			frame_resource.render_target = device->m_render_target_pool.Alloc();
-
 			//Create back buffer for each frame
-			{
-				auto& render_target = device->m_render_target_pool[frame_resource.render_target];
-				ThrowIfFailed(device->m_swap_chain->GetBuffer(static_cast<UINT>(i), IID_PPV_ARGS(&render_target.resource)));
-				device->m_native_device->CreateRenderTargetView(render_target.resource.Get(), nullptr, device->m_render_target_pool.GetDescriptor(frame_resource.render_target));
-				render_target.current_state = D3D12_RESOURCE_STATE_PRESENT;
-			}
-
+			auto& render_target = device->m_render_target_pool[*handle_ptr];
+			ThrowIfFailed(device->m_swap_chain->GetBuffer(static_cast<UINT>(i), IID_PPV_ARGS(&render_target.resource)));
+			device->m_native_device->CreateRenderTargetView(render_target.resource.Get(), nullptr, device->m_render_target_pool.GetDescriptor(*handle_ptr));
+			render_target.current_state = D3D12_RESOURCE_STATE_PRESENT;
+			
 			ThrowIfFailed(device->m_native_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&frame_resource.command_allocator)));
+
+			//Link to the next resource
+			if (i != params.num_frames - 1)
+			{
+				render_target.next_handle = device->m_render_target_pool.Alloc();
+				handle_ptr = &render_target.next_handle;
+			}
 		}
 
 		// Create synchronization objects for deferred delete resources
@@ -335,10 +343,7 @@ namespace display
 		CloseHandle(device->m_resource_deferred_delete_event);
 
 		//Destroy back buffers
-		for (auto& frame_resource : device->m_frame_resources)
-		{
-			device->m_render_target_pool.Free(frame_resource.render_target);
-		}
+		DeleteRingResource(device, device->m_back_buffer_render_target, device->m_render_target_pool);
 
 		//Destroy  command lists
 		device->m_command_list_pool.Free(device->m_present_command_list);
@@ -378,9 +383,10 @@ namespace display
 			// Release the resources holding references to the swap chain (requirement of
 			// IDXGISwapChain::ResizeBuffers) and reset the frame fence values to the
 			// current fence value.
+			WeakRenderTargetHandle back_buffer_handle = device->m_back_buffer_render_target;
 			for (size_t i = 0; i < device->m_frame_resources.size(); ++i)
 			{
-				device->Get(device->m_frame_resources[i].render_target).resource.Reset();
+				device->Get(GetRingResource(device, back_buffer_handle, i)).resource.Reset();
 				device->m_frame_resources[i].fence_value = device->m_frame_resources[device->m_frame_index].fence_value;
 			}
 
@@ -398,9 +404,9 @@ namespace display
 			for (size_t i = 0; i < device->m_frame_resources.size(); ++i)
 			{
 				auto& frame_resource = device->m_frame_resources[i];
-				auto& render_target = device->Get(frame_resource.render_target);
+				auto& render_target = device->Get(GetRingResource(device, back_buffer_handle, i));
 				ThrowIfFailed(device->m_swap_chain->GetBuffer(static_cast<UINT>(i), IID_PPV_ARGS(&render_target.resource)));
-				device->m_native_device->CreateRenderTargetView(render_target.resource.Get(), nullptr, device->m_render_target_pool.GetDescriptor(frame_resource.render_target));
+				device->m_native_device->CreateRenderTargetView(render_target.resource.Get(), nullptr, device->m_render_target_pool.GetDescriptor(GetRingResource(device, back_buffer_handle, i)));
 				render_target.current_state = D3D12_RESOURCE_STATE_PRESENT;
 			}
 
@@ -460,7 +466,7 @@ namespace display
 		platform::PresentCallback(context);
 
 		// Indicate that the back buffer will now be used to present.
-		auto& back_buffer = device->Get(device->m_frame_resources[device->m_frame_index].render_target);
+		auto& back_buffer = device->Get(GetRingResource(device, WeakRenderTargetHandle(device->m_back_buffer_render_target), device->m_frame_index));
 		if (back_buffer.current_state != D3D12_RESOURCE_STATE_PRESENT)
 		{
 			command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(back_buffer.resource.Get(), back_buffer.current_state, D3D12_RESOURCE_STATE_PRESENT));
@@ -582,10 +588,10 @@ namespace display
 		device->m_command_queue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
 	}
 
-	//Get back buffer
+	//Get back buffer (ring resource)
 	WeakRenderTargetHandle GetBackBuffer(Device* device)
 	{
-		return device->m_frame_resources[device->m_frame_index].render_target;
+		return device->m_back_buffer_render_target;
 	}
 
 	RootSignatureHandle CreateRootSignature(Device * device, const RootSignatureDesc& root_signature_desc, const char* name)

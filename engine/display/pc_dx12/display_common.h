@@ -213,9 +213,11 @@ namespace display
 		{
 			ComPtr<ID3D12CommandAllocator> command_allocator;
 			UINT64 fence_value;
-			RenderTargetHandle render_target;
 		};
 		std::vector< FrameResources> m_frame_resources;
+
+		//Back buffer (ring resource buffer)
+		RenderTargetHandle m_back_buffer_render_target;
 
 		//Global resources
 		ComPtr<ID3D12CommandQueue> m_command_queue;
@@ -251,12 +253,12 @@ namespace display
 			RootSignatureDesc desc;
 		};
 		using PipelineState = ComPtr<ID3D12PipelineState>;
-		struct RenderTarget
+		struct RenderTarget : RingResourceSupport<RenderTargetHandle>
 		{
 			ComPtr<ID3D12Resource> resource;
 			D3D12_RESOURCE_STATES current_state;
 		};
-		struct DepthBuffer
+		struct DepthBuffer : RingResourceSupport<DepthBufferHandle>
 		{
 			ComPtr<ID3D12Resource> resource;
 			D3D12_RESOURCE_STATES current_state;
@@ -522,6 +524,22 @@ namespace display
 		}
 
 		return handle;
+	}
+
+	//Delete the handle and the ring resource if exist
+	template<typename HANDLE, typename POOL>
+	void DeleteRingResource(display::Device * device, HANDLE& handle, POOL& pool)
+	{
+		HANDLE next_handle = std::move(handle);
+		while (next_handle.IsValid())
+		{
+			HANDLE current_handle = std::move(next_handle);
+			auto& resource = device->Get(current_handle);
+			next_handle = std::move(resource.next_handle);
+
+			//Delete current handle
+			pool.Free(current_handle);
+		}
 	}
 }
 
