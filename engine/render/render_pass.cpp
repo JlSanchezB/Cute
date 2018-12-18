@@ -3,6 +3,7 @@
 #include "render_helper.h"
 #include <display/display.h>
 #include "render_system.h"
+#include "render_resource.h"
 
 namespace render
 {
@@ -94,14 +95,69 @@ namespace render
 			m_descriptor_table_static_name = load_context.render_system->GetResourceReference(load_context);
 			return;
 		}
+
 		auto xml_element_descriptor = load_context.current_xml_element->FirstChildElement("Descriptor");
 		if (xml_element_descriptor)
 		{
-			m_descriptor_table.push_back(xml_element_descriptor->GetText());
+			//It is a descriptor that has to be created during init pass
+			m_descriptor_table_static_name = "DescriptorTable" + rand();
 
-			//It is a descriptor list, names need to be solve during render
-			xml_element_descriptor = xml_element_descriptor->NextSiblingElement();
+			while (xml_element_descriptor)
+			{
+				m_descriptor_table.push_back(xml_element_descriptor->GetText());
+
+				//It is a descriptor list, names need to be solve during render
+				xml_element_descriptor = xml_element_descriptor->NextSiblingElement();
+			}
+			//The descriptor table will be created during init pass
+
+			return;
 		}
+		
+		AddError(load_context, "SetDescriptorTablePass uknown definition");
+	}
+	void SetDescriptorTablePass::InitPass(RenderContext & render_context, display::Device * device)
+	{
+		//Create a descriptor table resource and add it to render context
+		display::DescriptorTableDesc descriptor_table_desc;
+		descriptor_table_desc.access = display::Access::Dynamic;
+
+		for (auto& descriptor : m_descriptor_table)
+		{
+			Resource* resource = render_context.GetRenderResource(descriptor.c_str());
+
+			if (resource)
+			{
+				if (strcmp(resource->Type(), "ConstantBuffer") == 0)
+				{
+					ConstantBufferResource* constant_buffer_resource = reinterpret_cast<ConstantBufferResource*>(resource);
+					descriptor_table_desc.AddDescriptor(constant_buffer_resource->GetHandle());
+				}
+				else if (strcmp(resource->Type(), "Texture") == 0)
+				{
+					TextureResource* texture_resource = reinterpret_cast<TextureResource*>(resource);
+					descriptor_table_desc.AddDescriptor(texture_resource->GetHandle());
+				}
+				else if (strcmp(resource->Type(), "RenderTarget") == 0)
+				{
+					RenderTargetResource* render_target_resource = reinterpret_cast<RenderTargetResource*>(resource);
+					descriptor_table_desc.AddDescriptor(render_target_resource->GetHandle());
+				}
+			}
+		}
+
+		//Create descriptor table
+		DescriptorTableResource* descriptor_table_resource = new DescriptorTableResource();
+
+		display::DescriptorTableHandle descriptor_table_handle = display::CreateDescriptorTable(device, descriptor_table_desc);
+
+		if (descriptor_table_handle.IsValid())
+		{
+			descriptor_table_resource->Init(descriptor_table_handle);
+			std::unique_ptr<Resource> resource(dynamic_cast<Resource*>(descriptor_table_resource));
+			render_context.AddRenderResource(m_descriptor_table_static_name.c_str(), resource);
+		}
+
 	}
 	void DrawFullScreenQuadPass::Load(LoadContext & load_context)
 	{

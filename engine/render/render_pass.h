@@ -73,6 +73,7 @@ namespace render
 		DECLARE_RENDER_CLASS("SetDescriptorTable");
 
 		void Load(LoadContext& load_context) override;
+		void InitPass(RenderContext& render_context, display::Device* device) override;
 	};
 
 	class DrawFullScreenQuadPass : public Pass
