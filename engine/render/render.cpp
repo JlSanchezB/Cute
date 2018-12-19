@@ -40,7 +40,7 @@ namespace render
 		}
 
 		//Then check system resources
-		return GetResource(render_context->m_render_pass_system, name);
+		return render::GetResource(render_context->m_render_pass_system, name);
 	}
 
 	std::string System::LoadResource(LoadContext& load_context, const char* prefix)

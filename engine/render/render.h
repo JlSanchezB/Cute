@@ -94,7 +94,7 @@ namespace render
 	{
 		TYPE* Create() override
 		{
-			return reinterpret_cast<TYPE*> (new SPECIALISED());
+			return dynamic_cast<TYPE*> (new SPECIALISED());
 		}
 	};
 
@@ -107,6 +107,17 @@ namespace render
 		void AddRenderResource(const char* name, std::unique_ptr<Resource>& resource);
 		//Resource associated to this pass instance
 		Resource* GetRenderResource(const char* name);
+
+		template<typename RESOURCE>
+		inline RESOURCE* GetResource(const char* name)
+		{
+			Resource* resource = GetRenderResource(name);
+			if (resource && strcmp(resource->Type(), RESOURCE::kClassName) == 0)
+			{
+				return dynamic_cast<RESOURCE*>(resource);
+			}
+			return nullptr;
+		}
 	};
 
 	//Create render pass system
@@ -149,7 +160,7 @@ namespace render
 		Resource* resource = GetResource(system, name);
 		if (resource && strcmp(resource->Type(), RESOURCE::kClassName) == 0)
 		{
-			return reinterpret_cast<RESOURCE*>(resource);
+			return dynamic_cast<RESOURCE*>(resource);
 		}
 		return nullptr;
 	}
