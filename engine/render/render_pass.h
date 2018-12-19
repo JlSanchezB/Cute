@@ -20,7 +20,7 @@ namespace render
 
 		void Destroy(display::Device* device) override;
 		void Load(LoadContext& load_context) override;
-		void InitPass(RenderContext& render_context, display::Device* device) override;
+		void InitPass(RenderContext& render_context, display::Device* device, ErrorContext& errors) override;
 	};
 
 	class SetRenderTargetPass : public Pass
@@ -73,7 +73,7 @@ namespace render
 		DECLARE_RENDER_CLASS("SetDescriptorTable");
 
 		void Load(LoadContext& load_context) override;
-		void InitPass(RenderContext& render_context, display::Device* device) override;
+		void InitPass(RenderContext& render_context, display::Device* device, ErrorContext& errors) override;
 	};
 
 	class DrawFullScreenQuadPass : public Pass

@@ -33,8 +33,13 @@ namespace render
 	struct System;
 	class RenderContext;
 
+	struct ErrorContext
+	{
+		std::vector<std::string> errors;
+	};
+
 	//Context used for loading a pass
-	struct LoadContext
+	struct LoadContext : ErrorContext
 	{
 		display::Device* device;
 		tinyxml2::XMLDocument* xml_doc;
@@ -42,7 +47,6 @@ namespace render
 		const char* pass_name;
 		const char* name;
 		const char* render_passes_filename;
-		std::vector<std::string> errors;
 		render::System* render_system;
 	};
 	//Base resource class
@@ -70,7 +74,7 @@ namespace render
 		virtual void Destroy(display::Device* device) {};
 
 		//Init pass, called when a render context is created for this pass
-		virtual void InitPass(RenderContext& render_context, display::Device* device) {};
+		virtual void InitPass(RenderContext& render_context, display::Device* device, ErrorContext& errors) {};
 
 		//Render the pass
 		virtual void Render(RenderContext& render_context) const {};
@@ -157,7 +161,7 @@ namespace render
 	bool LoadPassDescriptorFile(System* system, display::Device* device, const char* pass_descriptor_file, std::vector<std::string>& errors);
 
 	//Create a render context for rendering a pass
-	RenderContext* CreateRenderContext(System* system, display::Device* device, const char* pass, std::unordered_map<std::string, std::unique_ptr<Resource>>& init_resources);
+	RenderContext* CreateRenderContext(System* system, display::Device* device, const char* pass, std::unordered_map<std::string, std::unique_ptr<Resource>>& init_resources, std::vector<std::string>& errors);
 
 	//Destroy render context for rendering a pass
 	void DestroyRenderContext(System* system, display::Device* device, RenderContext* render_context);

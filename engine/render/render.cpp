@@ -311,7 +311,7 @@ namespace render
 		return success;
 	}
 
-	RenderContext * CreateRenderContext(System * system, display::Device * device, const char * pass, std::unordered_map<std::string, std::unique_ptr<Resource>>& init_resources)
+	RenderContext * CreateRenderContext(System * system, display::Device * device, const char * pass, std::unordered_map<std::string, std::unique_ptr<Resource>>& init_resources, std::vector<std::string>& errors)
 	{
 		//Get pass
 		auto render_pass = GetPass(system, pass);
@@ -320,8 +320,10 @@ namespace render
 			//Create Render Context
 			RenderContextInternal* render_context = system->m_render_context_pool.Alloc(init_resources);
 
+			ErrorContext errors_context;
+
 			//Allow the passes to init the render context 
-			render_pass->InitPass(*render_context, device);
+			render_pass->InitPass(*render_context, device, errors_context);
 
 			return render_context;
 		}

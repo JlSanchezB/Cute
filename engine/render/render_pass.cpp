@@ -37,11 +37,11 @@ namespace render
 			xml_element = xml_element->NextSiblingElement();
 		}
 	}
-	void ContextPass::InitPass(RenderContext & render_context, display::Device* device)
+	void ContextPass::InitPass(RenderContext & render_context, display::Device* device, ErrorContext& errors)
 	{
 		for (auto& item : m_passes)
 		{
-			item->InitPass(render_context, device);
+			item->InitPass(render_context, device, errors);
 		}
 	}
 	void SetRenderTargetPass::Load(LoadContext & load_context)
@@ -116,7 +116,7 @@ namespace render
 		
 		AddError(load_context, "SetDescriptorTablePass uknown definition");
 	}
-	void SetDescriptorTablePass::InitPass(RenderContext & render_context, display::Device * device)
+	void SetDescriptorTablePass::InitPass(RenderContext & render_context, display::Device * device, ErrorContext& errors)
 	{
 		//Create a descriptor table resource and add it to render context
 		display::DescriptorTableDesc descriptor_table_desc;
@@ -144,6 +144,10 @@ namespace render
 					descriptor_table_desc.AddDescriptor(render_target_resource->GetHandle());
 				}
 			}
+			else
+			{
+				AddError(errors, "Descriptor <%s> doesn't exist in the resource maps", descriptor.c_str());
+			}
 		}
 
 		//Create descriptor table
@@ -156,6 +160,10 @@ namespace render
 			descriptor_table_resource->Init(descriptor_table_handle);
 			std::unique_ptr<Resource> resource(dynamic_cast<Resource*>(descriptor_table_resource));
 			render_context.AddRenderResource(m_descriptor_table_static_name.c_str(), resource);
+		}
+		else
+		{
+			AddError(errors, "Error creation descritpor table, display errors:", display::GetLastErrorMessage(device));
 		}
 
 	}

@@ -2,7 +2,7 @@
 
 namespace
 {
-	inline void AddError(render::LoadContext& load_context, const char* message, ...)
+	inline void AddError(render::ErrorContext& load_context, const char* message, ...)
 	{
 		char buffer[1024];
 		va_list args;
