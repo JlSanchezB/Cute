@@ -102,22 +102,6 @@ namespace render
 		return std::string();
 	}
 
-	std::string System::GetResourceReference(LoadContext & load_context)
-	{
-		//Check if is a resource
-		if (auto xml_resource_element = load_context.current_xml_element->FirstChildElement("Resource"))
-		{
-			//It is a resource, load it using as prefix the pass name and return the name 
-			load_context.current_xml_element = xml_resource_element;
-			return LoadResource(load_context, load_context.pass_name);
-		}
-		else
-		{
-			//The resource is in the value
-			return std::string(load_context.current_xml_element->GetText());
-		}
-	}
-
 	Pass* System::LoadPass(LoadContext& load_context)
 	{
 		//Create the pass
@@ -255,6 +239,7 @@ namespace render
 		RegisterResourceFactory<BoolResource>(system);
 		RegisterResourceFactory<TextureResource>(system);
 		RegisterResourceFactory<ConstantBufferResource>(system);
+		RegisterResourceFactory<VertexBufferResource>(system);
 		RegisterResourceFactory<RootSignatureResource>(system);
 		RegisterResourceFactory<GraphicsPipelineStateResource>(system);
 		RegisterResourceFactory<ComputePipelineStateResource>(system);
@@ -434,4 +419,35 @@ namespace render
 		return nullptr;
 	}
 
+	std::string LoadContext::GetResourceReference(LoadContext & load_context)
+	{
+		//Check if is a resource
+		if (auto xml_resource_element = load_context.current_xml_element->FirstChildElement("Resource"))
+		{
+			//It is a resource, load it using as prefix the pass name and return the name 
+			load_context.current_xml_element = xml_resource_element;
+			return load_context.render_system->LoadResource(load_context, load_context.pass_name);
+		}
+		else
+		{
+			//The resource is in the value
+			return std::string(load_context.current_xml_element->GetText());
+		}
+	}
+
+	bool LoadContext::AddResource(const char * name, std::unique_ptr<Resource>& resource)
+	{
+		if ((render_system->m_global_resources_map.find(name) == render_system->m_global_resources_map.end()) &&
+			(render_system->m_game_resources_map.find(name) == render_system->m_game_resources_map.end()))
+		{
+			render_system->m_global_resources_map[name] = std::move(resource);
+			return true;
+		}
+		else
+		{
+			resource.release();
+			core::LogWarning("Global Resource <%s> has been already added, discarting the new resource");
+			return false;
+		}
+	}
 }

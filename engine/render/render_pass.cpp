@@ -53,7 +53,7 @@ namespace render
 		while (xml_element_render_target)
 		{
 			load_context.current_xml_element = xml_element_render_target;
-			m_render_target_name[i] = load_context.render_system->GetResourceReference(load_context);
+			m_render_target_name[i] = load_context.GetResourceReference(load_context);
 
 			i++;
 			xml_element_render_target = xml_element_render_target->NextSiblingElement();
@@ -81,11 +81,11 @@ namespace render
 	}
 	void SetRootSignaturePass::Load(LoadContext & load_context)
 	{
-		m_rootsignature_name = load_context.render_system->GetResourceReference(load_context);
+		m_rootsignature_name = load_context.GetResourceReference(load_context);
 	}
 	void SetPipelineStatePass::Load(LoadContext & load_context)
 	{
-		m_pipeline_state_name = load_context.render_system->GetResourceReference(load_context);
+		m_pipeline_state_name = load_context.GetResourceReference(load_context);
 	}
 	void SetDescriptorTablePass::Load(LoadContext & load_context)
 	{
@@ -93,7 +93,7 @@ namespace render
 		if (xml_element_resource)
 		{
 			//It is a resource
-			m_descriptor_table_static_name = load_context.render_system->GetResourceReference(load_context);
+			m_descriptor_table_static_name = load_context.GetResourceReference(load_context);
 			return;
 		}
 
@@ -166,5 +166,31 @@ namespace render
 	}
 	void DrawFullScreenQuadPass::Load(LoadContext & load_context)
 	{
+		//Create vertex buffer resource if it doesn't exist
+		if (GetResource(load_context.render_system, "DrawFullScreenQuadPassVertexBuffer") == nullptr)
+		{
+			struct VertexData
+			{
+				float position[4];
+				float tex[2];
+			};
+
+			VertexData vertex_data[3] =
+			{
+				{{-1.f, 1.f, 1.f, 1.f},{0.f, 0.f}},
+				{{3.f, 1.f, 1.f, 1.f},{2.f, 0.f}},
+				{{-1.f, -3.f, 1.f, 1.f},{0.f, 2.f}}
+			};
+
+			display::VertexBufferDesc vertex_buffer_desc;
+			vertex_buffer_desc.init_data = vertex_data;
+			vertex_buffer_desc.size = sizeof(vertex_data);
+			vertex_buffer_desc.stride = sizeof(VertexData);
+
+			display::VertexBufferHandle vertex_buffer = display::CreateVertexBuffer(load_context.device, vertex_buffer_desc, "fullscreen_quad");
+
+			//Add the resource
+			load_context.AddResource("DrawFullScreenQuadPassVertexBuffer", CreateResourceFromHandle<VertexBufferResource>(vertex_buffer));
+		}
 	}
 }

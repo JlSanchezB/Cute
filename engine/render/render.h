@@ -32,6 +32,7 @@ namespace render
 	//System
 	struct System;
 	class RenderContext;
+	class Resource;
 
 	struct ErrorContext
 	{
@@ -48,6 +49,12 @@ namespace render
 		const char* name;
 		const char* render_passes_filename;
 		render::System* render_system;
+
+		//Get resource reference, it can be the name of the resource or the resource itself
+		std::string GetResourceReference(LoadContext& load_context);
+
+		//Add resource
+		bool AddResource(const char* name, std::unique_ptr<Resource>& resource);
 	};
 	//Base resource class
 	class Resource
@@ -126,7 +133,7 @@ namespace render
 	//Destroy render pass system
 	void DestroyRenderPassSystem(System*& system, display::Device* device);
 
-	//Add global resource, allows the game to add global resources that the pass system can access them
+	//Add game resource, allows the game to add global resources that the pass system can access them
 	bool AddGameResource(System* system, const char* name, std::unique_ptr<Resource>& resource);
 
 	//Register resource factory
@@ -170,6 +177,7 @@ namespace render
 
 	//Load render pass descriptor file
 	bool LoadPassDescriptorFile(System* system, display::Device* device, const char* pass_descriptor_file, std::vector<std::string>& errors);
+
 
 	//Create a render context for rendering a pass
 	using ResourceMap = std::unordered_map<std::string, std::unique_ptr<Resource>>;

@@ -57,6 +57,16 @@ namespace render
 		void Load(LoadContext& load_context) override;
 	};
 
+	//Vertex buffer resource
+	class VertexBufferResource : public DisplayHandleResource<display::VertexBufferHandle>
+	{
+	public:
+		DECLARE_RENDER_CLASS("VertexBuffer");
+
+		void Load(LoadContext& load_context) override {};
+	};
+
+
 	//Root signature resource
 	class RootSignatureResource : public DisplayHandleResource<display::RootSignatureHandle>
 	{
