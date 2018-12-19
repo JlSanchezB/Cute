@@ -332,14 +332,31 @@ namespace render
 
 			errors = std::move(errors_context.errors);
 
-			return render_context;
+			if (errors.empty())
+			{
+				core::LogInfo("Created a render pass from definition pass <%s>", pass);
+				return render_context;
+			}
+			else
+			{
+				core::LogError("Errors creating a render pass from definition pass <%s>:", pass);
+				for (auto& error : errors)
+				{
+					core::LogError(error.c_str());
+				}
+
+				RenderContext * render_context_ref = dynamic_cast<RenderContext*>(render_context);
+				DestroyRenderContext(system, device, render_context_ref);
+				return nullptr;
+			}
+			
 		}
 		else
 		{
 			errors.push_back(std::string("Pass <") + pass + "not found");
+			core::LogError("Errors creating a render pass, definition pass <%s> doesn't exist", pass);
+			return nullptr;
 		}
-
-		return nullptr;
 	}
 
 	void DestroyRenderContext(System * system, display::Device * device, RenderContext*& render_context)
