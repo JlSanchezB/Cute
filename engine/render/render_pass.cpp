@@ -4,6 +4,7 @@
 #include <display/display.h>
 #include "render_system.h"
 #include "render_resource.h"
+#include <string>
 
 namespace render
 {
@@ -100,7 +101,7 @@ namespace render
 		if (xml_element_descriptor)
 		{
 			//It is a descriptor that has to be created during init pass
-			m_descriptor_table_static_name = "DescriptorTable" + rand();
+			m_descriptor_table_static_name = std::string("DescriptorTable_") + std::to_string(rand());
 
 			while (xml_element_descriptor)
 			{
@@ -150,16 +151,12 @@ namespace render
 			}
 		}
 
-		//Create descriptor table
-		DescriptorTableResource* descriptor_table_resource = new DescriptorTableResource();
-
 		display::DescriptorTableHandle descriptor_table_handle = display::CreateDescriptorTable(device, descriptor_table_desc);
 
 		if (descriptor_table_handle.IsValid())
 		{
-			descriptor_table_resource->Init(descriptor_table_handle);
-			std::unique_ptr<Resource> resource(dynamic_cast<Resource*>(descriptor_table_resource));
-			render_context.AddRenderResource(m_descriptor_table_static_name.c_str(), resource);
+			//Create resource handle
+			render_context.AddRenderResource(m_descriptor_table_static_name.c_str(), CreateResourceFromHandle<DescriptorTableResource>(descriptor_table_handle));
 		}
 		else
 		{

@@ -12,7 +12,7 @@
   </Resource>
 </Global>
 <Passes>
-  <Pass name="main" type="Viewport3D">
+  <Pass name="Main" type="Viewport3D">
 	  <SetRenderTarget>
 		  <RenderTarget>BackBuffer</RenderTarget>
 	  </SetRenderTarget>

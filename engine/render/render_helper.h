@@ -1,4 +1,5 @@
 #include <stdarg.h>
+#include <ext/tinyxml2/tinyxml2.h>
 
 namespace
 {
@@ -11,6 +12,16 @@ namespace
 		va_end(args);
 
 		load_context.errors.push_back(buffer);
+	}
+	template<typename RESOURCE, typename HANDLE>
+	inline std::unique_ptr<render::Resource> CreateResourceFromHandle(HANDLE&& handle)
+	{
+		RESOURCE* resource = new RESOURCE();
+		resource->Init(handle);
+
+		std::unique_ptr<render::Resource> resource_unique;
+		resource_unique.reset(dynamic_cast<render::Resource*>(resource));
+		return resource_unique;
 	}
 
 	inline bool CheckNodeName(tinyxml2::XMLElement* xml_element, const char* name)

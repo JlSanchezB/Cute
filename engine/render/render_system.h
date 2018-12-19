@@ -10,15 +10,19 @@
 
 namespace render
 {
+	struct System;
+
 	class RenderContextInternal : public RenderContext
 	{
 	public:
-		RenderContextInternal(std::unordered_map<std::string, std::unique_ptr<Resource>>& init_resources)
+		RenderContextInternal(System* system, ResourceMap& init_resources) : m_render_pass_system(system)
 		{
 			m_resources_map = std::move(init_resources);
 		}
 		//Resources associated to this pass
-		std::unordered_map<std::string, std::unique_ptr<Resource>> m_resources_map;
+		ResourceMap m_resources_map;
+		//Render pass system
+		System* m_render_pass_system;
 	};
 
 	//Internal render pass system implementation

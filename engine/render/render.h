@@ -161,7 +161,8 @@ namespace render
 	bool LoadPassDescriptorFile(System* system, display::Device* device, const char* pass_descriptor_file, std::vector<std::string>& errors);
 
 	//Create a render context for rendering a pass
-	RenderContext* CreateRenderContext(System* system, display::Device* device, const char* pass, std::unordered_map<std::string, std::unique_ptr<Resource>>& init_resources, std::vector<std::string>& errors);
+	using ResourceMap = std::unordered_map<std::string, std::unique_ptr<Resource>>;
+	RenderContext* CreateRenderContext(System* system, display::Device* device, const char* pass, ResourceMap& init_resources, std::vector<std::string>& errors);
 
 	//Destroy render context for rendering a pass
 	void DestroyRenderContext(System* system, display::Device* device, RenderContext* render_context);

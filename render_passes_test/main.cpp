@@ -1,6 +1,8 @@
 #include <core/platform.h>
 #include <display/display.h>
 #include <render/render.h>
+#include <render/render_resource.h>
+#include <render/render_helper.h>
 
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN             // Exclude rarely-used stuff from Windows headers.
@@ -41,7 +43,9 @@ public:
 
 	display::Device* m_device;
 
-	render::System* m_render_pass_system;
+	render::System* m_render_pass_system = nullptr;
+
+	render::RenderContext* m_render_context = nullptr;
 
 	void OnInit() override
 	{
@@ -63,16 +67,41 @@ public:
 
 		SetDevice(m_device);
 
+		//Create constant buffer with the time
+		display::ConstantBufferHandle game_constant_buffer;
+		display::ConstantBufferDesc constant_buffer_desc;
+		constant_buffer_desc.access = display::Access::Dynamic;
+		constant_buffer_desc.size = 16;
+		game_constant_buffer = display::CreateConstantBuffer(m_device, constant_buffer_desc, "GameConstantBuffer");
+
 		//Create render pass system
 		m_render_pass_system = render::CreateRenderPassSystem();
 
 		//Load render pass sample
 		std::vector<std::string> errors;
-		render::LoadPassDescriptorFile(m_render_pass_system, m_device, "render_pass_sample.xml", errors);
+		if (render::LoadPassDescriptorFile(m_render_pass_system, m_device, "render_pass_sample.xml", errors))
+		{
+			//Create pass
+			render::ResourceMap init_resource_map;
+			init_resource_map["GameGlobal"] = CreateResourceFromHandle<render::ConstantBufferResource>(game_constant_buffer);
+
+			m_render_context = render::CreateRenderContext(m_render_pass_system, m_device, "Main", init_resource_map, errors);
+
+		}
 	}
 	void OnDestroy() override
 	{
-		render::DestroyRenderPassSystem(m_render_pass_system, m_device);
+		if (m_render_pass_system)
+		{
+			render::DestroyRenderPassSystem(m_render_pass_system, m_device);
+
+			if (m_render_context)
+			{
+				render::DestroyRenderContext(m_render_pass_system, m_device, m_render_context);
+			}
+		}
+
+
 
 		display::DestroyDevice(m_device);
 	}

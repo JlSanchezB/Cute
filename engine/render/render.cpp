@@ -31,13 +31,16 @@ namespace render
 
 	Resource * RenderContext::GetRenderResource(const char * name)
 	{
+		//First check context resources
 		auto render_context = reinterpret_cast<RenderContextInternal*>(this);
 		const auto& it = render_context->m_resources_map.find(name);
 		if (it != render_context->m_resources_map.end())
 		{
 			return it->second.get();
 		}
-		return nullptr;
+
+		//Then check system resources
+		return GetResource(render_context->m_render_pass_system, name);
 	}
 
 	std::string System::LoadResource(LoadContext& load_context, const char* prefix)
@@ -311,21 +314,27 @@ namespace render
 		return success;
 	}
 
-	RenderContext * CreateRenderContext(System * system, display::Device * device, const char * pass, std::unordered_map<std::string, std::unique_ptr<Resource>>& init_resources, std::vector<std::string>& errors)
+	RenderContext * CreateRenderContext(System * system, display::Device * device, const char * pass, ResourceMap& init_resources, std::vector<std::string>& errors)
 	{
 		//Get pass
 		auto render_pass = GetPass(system, pass);
 		if (render_pass)
 		{
 			//Create Render Context
-			RenderContextInternal* render_context = system->m_render_context_pool.Alloc(init_resources);
+			RenderContextInternal* render_context = system->m_render_context_pool.Alloc(system, init_resources);
 
 			ErrorContext errors_context;
 
 			//Allow the passes to init the render context 
 			render_pass->InitPass(*render_context, device, errors_context);
 
+			errors = std::move(errors_context.errors);
+
 			return render_context;
+		}
+		else
+		{
+			errors.push_back(std::string("Pass <") + pass + "not found");
 		}
 
 		return nullptr;
