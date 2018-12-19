@@ -113,7 +113,7 @@ namespace render
 	System* CreateRenderPassSystem();
 
 	//Destroy render pass system
-	void DestroyRenderPassSystem(System* system, display::Device* device);
+	void DestroyRenderPassSystem(System*& system, display::Device* device);
 
 	//Add global resource, allows the game to add global resources that the pass system can access them
 	bool AddGameResource(System* system, const char* name, std::unique_ptr<Resource>& resource);
@@ -165,7 +165,7 @@ namespace render
 	RenderContext* CreateRenderContext(System* system, display::Device* device, const char* pass, ResourceMap& init_resources, std::vector<std::string>& errors);
 
 	//Destroy render context for rendering a pass
-	void DestroyRenderContext(System* system, display::Device* device, RenderContext* render_context);
+	void DestroyRenderContext(System* system, display::Device* device, RenderContext*& render_context);
 }
 
 #endif //RENDER_H_

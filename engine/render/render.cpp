@@ -272,7 +272,7 @@ namespace render
 		return system;
 	}
 
-	void DestroyRenderPassSystem(System * system, display::Device* device)
+	void DestroyRenderPassSystem(System *& system, display::Device* device)
 	{
 		//Destroy resources and passes
 		DestroyResources(device, system->m_game_resources_map);
@@ -280,6 +280,8 @@ namespace render
 		DestroyResources(device, system->m_passes_map);
 
 		delete system;
+
+		system = nullptr;
 	}
 
 	bool LoadPassDescriptorFile(System* system, display::Device* device, const char * pass_descriptor_file, std::vector<std::string>& errors)
@@ -340,13 +342,15 @@ namespace render
 		return nullptr;
 	}
 
-	void DestroyRenderContext(System * system, display::Device * device, RenderContext * render_context)
+	void DestroyRenderContext(System * system, display::Device * device, RenderContext*& render_context)
 	{
 		auto render_context_internal = reinterpret_cast<RenderContextInternal*>(render_context);
 		//Destroy context resources
 		DestroyResources(device, render_context_internal->m_resources_map);
 
 		system->m_render_context_pool.Free(render_context_internal);
+		
+		render_context = nullptr;
 	}
 
 	bool AddGameResource(System * system, const char * name, std::unique_ptr<Resource>& resource)

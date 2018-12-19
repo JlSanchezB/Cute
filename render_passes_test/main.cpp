@@ -93,12 +93,12 @@ public:
 	{
 		if (m_render_pass_system)
 		{
-			render::DestroyRenderPassSystem(m_render_pass_system, m_device);
-
 			if (m_render_context)
 			{
 				render::DestroyRenderContext(m_render_pass_system, m_device, m_render_context);
 			}
+
+			render::DestroyRenderPassSystem(m_render_pass_system, m_device);
 		}
 
 
