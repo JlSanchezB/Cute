@@ -16,11 +16,8 @@ namespace
 	template<typename RESOURCE, typename HANDLE>
 	inline std::unique_ptr<render::Resource> CreateResourceFromHandle(HANDLE&& handle)
 	{
-		RESOURCE* resource = new RESOURCE();
-		resource->Init(handle);
-
-		std::unique_ptr<render::Resource> resource_unique;
-		resource_unique.reset(dynamic_cast<render::Resource*>(resource));
+		std::unique_ptr<RESOURCE> resource_unique = std::make_unique<RESOURCE>();
+		resource_unique->Init(handle);
 		return resource_unique;
 	}
 
