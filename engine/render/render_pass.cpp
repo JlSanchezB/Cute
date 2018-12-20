@@ -45,26 +45,64 @@ namespace render
 			item->InitPass(render_context, device, errors);
 		}
 	}
+	void ContextPass::Render(RenderContext & render_context) const
+	{
+		//Open context
+		render_context.display_context = display::OpenCommandList(render_context.display_device, m_command_list_handle);
+
+		for (auto& item : m_passes)
+		{
+			item->Render(render_context);
+		}
+
+		//Close context
+		display::CloseCommandList(render_context.display_device, render_context.display_context);
+	}
+	void ContextPass::Execute(RenderContext & render_context) const
+	{
+		for (auto& item : m_passes)
+		{
+			item->Execute(render_context);
+		}
+
+		display::ExecuteCommandList(render_context.display_device, m_command_list_handle);
+	}
+
 	void SetRenderTargetPass::Load(LoadContext & load_context)
 	{
+		m_num_render_targets = 0;
+
 		auto xml_element_render_target = load_context.current_xml_element->FirstChildElement("RenderTarget");
 
-		size_t i = 0;
 		while (xml_element_render_target)
 		{
 			load_context.current_xml_element = xml_element_render_target;
-			m_render_target_name[i] = load_context.GetResourceReference(load_context);
+			m_render_target_name[m_num_render_targets] = load_context.GetResourceReference(load_context);
 
-			i++;
+			m_num_render_targets++;
 			xml_element_render_target = xml_element_render_target->NextSiblingElement();
 
-			if (i == display::kMaxNumRenderTargets)
+			if (m_num_render_targets == display::kMaxNumRenderTargets)
 			{
 				AddError(load_context, "Max number of render target reached loading the pass SetRenderTargets");
 				return;
 			}
 		}
-		
+	}
+	void SetRenderTargetPass::Render(RenderContext & render_context) const
+	{
+		//Get render target
+		std::array<display::WeakRenderTargetHandle, display::kMaxNumRenderTargets> render_targets;
+		for (uint8_t i = 0; i < m_num_render_targets; ++i)
+		{
+			RenderTargetReferenceResource* render_target = render_context.GetResource<RenderTargetReferenceResource>(m_render_target_name[i].c_str());
+			if (render_target)
+			{
+				render_targets[i] = render_target->GetHandle();
+			}
+		}
+
+		render_context.display_context->SetRenderTargets(m_num_render_targets, render_targets.data(), display::WeakDepthBufferHandle());
 	}
 	void ClearRenderTargetPass::Load(LoadContext & load_context)
 	{
@@ -77,6 +115,16 @@ namespace render
 			{
 				AddError(load_context, "Colour can not be read from <%s>", colour_text);
 			}
+		}
+		m_render_target_name = load_context.GetResourceReference(load_context);
+	}
+	void ClearRenderTargetPass::Render(RenderContext & render_context) const
+	{
+		//Get render target
+		RenderTargetReferenceResource* render_target = render_context.GetResource<RenderTargetReferenceResource>(m_render_target_name.c_str());
+		if (render_target)
+		{
+			render_context.display_context->ClearRenderTargetColour(render_target->GetHandle(), colour);
 		}
 	}
 	void SetRootSignaturePass::Load(LoadContext & load_context)

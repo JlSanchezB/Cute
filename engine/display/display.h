@@ -224,6 +224,12 @@ namespace display
 	}
 
 	template<>
+	inline void DestroyHandle(Device* device, RenderTargetHandle& handle)
+	{
+		DestroyRenderTarget(device, handle);
+	}
+
+	template<>
 	inline void DestroyHandle(Device* device, ShaderResourceHandle& handle)
 	{
 		DestroyShaderResource(device, handle);

@@ -84,6 +84,7 @@ public:
 			//Create pass
 			render::ResourceMap init_resource_map;
 			init_resource_map["GameGlobal"] = CreateResourceFromHandle<render::ConstantBufferResource>(game_constant_buffer);
+			init_resource_map["BackBuffer"] = CreateResourceFromHandle<render::RenderTargetReferenceResource>(display::GetBackBuffer(m_device));
 
 			m_render_context = render::CreateRenderContext(m_render_pass_system, m_device, "Main", init_resource_map, errors);
 
@@ -108,6 +109,11 @@ public:
 	void OnTick(double total_time, float elapsed_time) override
 	{
 		display::BeginFrame(m_device);
+
+		//Capture pass
+		render::CaptureRenderContext(m_render_pass_system, m_device, m_render_context);
+		//Execute pass
+		render::ExecuteRenderContext(m_render_pass_system, m_device, m_render_context);
 
 		display::EndFrame(m_device);
 	}

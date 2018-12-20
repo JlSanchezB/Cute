@@ -240,6 +240,8 @@ namespace render
 		RegisterResourceFactory<TextureResource>(system);
 		RegisterResourceFactory<ConstantBufferResource>(system);
 		RegisterResourceFactory<VertexBufferResource>(system);
+		RegisterResourceFactory<RenderTargetResource>(system);
+		RegisterResourceFactory<RenderTargetReferenceResource>(system);
 		RegisterResourceFactory<RootSignatureResource>(system);
 		RegisterResourceFactory<GraphicsPipelineStateResource>(system);
 		RegisterResourceFactory<ComputePipelineStateResource>(system);
@@ -308,7 +310,7 @@ namespace render
 		if (render_pass)
 		{
 			//Create Render Context
-			RenderContextInternal* render_context = system->m_render_context_pool.Alloc(system, init_resources);
+			RenderContextInternal* render_context = system->m_render_context_pool.Alloc(system, init_resources, render_pass);
 
 			ErrorContext errors_context;
 
@@ -353,6 +355,22 @@ namespace render
 		system->m_render_context_pool.Free(render_context_internal);
 		
 		render_context = nullptr;
+	}
+
+	void CaptureRenderContext(System * system, display::Device * device, RenderContext * render_context)
+	{
+		//Open and capture all command list in the render context
+		render_context->display_device = device;
+
+		render_context->root_pass->Render(*render_context);
+	}
+
+	void ExecuteRenderContext(System * system, display::Device * device, RenderContext * render_context)
+	{
+		//Open and capture all command list in the render context
+		render_context->display_device = device;
+
+		render_context->root_pass->Execute(*render_context);
 	}
 
 	bool AddGameResource(System * system, const char * name, std::unique_ptr<Resource>& resource)

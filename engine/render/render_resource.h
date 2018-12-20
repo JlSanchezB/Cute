@@ -10,7 +10,7 @@
 namespace render
 {
 	//Resource that can be created outside the render pass system, just a display handle
-	template<typename HANDLE>
+	template<typename HANDLE, bool REFERENCE = false>
 	class DisplayHandleResource : public Resource
 	{
 		HANDLE m_handle;
@@ -21,7 +21,10 @@ namespace render
 		}
 		void Destroy(display::Device* device) override
 		{
-			display::DestroyHandle(device, m_handle);
+			if constexpr (!REFERENCE)
+			{
+				display::DestroyHandle(device, m_handle);
+			}
 		}
 		HANDLE& GetHandle()
 		{
@@ -85,6 +88,14 @@ namespace render
 		void Load(LoadContext& load_context) override;
 	};
 
+	//Render target reference resource, it is a reference to a weak handle render target, can not be destroy by the system (BackBuffer)
+	class RenderTargetReferenceResource : public DisplayHandleResource<display::WeakRenderTargetHandle, true>
+	{
+	public:
+		DECLARE_RENDER_CLASS("RenderTargetReference");
+		void Destroy(display::Device* device) override {};
+		void Load(LoadContext& load_context) override {};
+	};
 	//Depth buffer
 	class DepthBufferResource : public DisplayHandleResource<display::DepthBufferHandle>
 	{

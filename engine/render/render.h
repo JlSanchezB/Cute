@@ -83,8 +83,11 @@ namespace render
 		//Init pass, called when a render context is created for this pass
 		virtual void InitPass(RenderContext& render_context, display::Device* device, ErrorContext& errors) {};
 
-		//Render the pass
+		//Render the pass, capture all command list
 		virtual void Render(RenderContext& render_context) const {};
+
+		//Execute all command list
+		virtual void Execute(RenderContext& render_context) const {};
 
 		//Return type, it will be defined with DECLARE_RENDER_CLASS
 		virtual const char* Type() const = 0;
@@ -125,6 +128,13 @@ namespace render
 			}
 			return nullptr;
 		}
+
+		//Root pass for the cotnext
+		Pass* root_pass = nullptr;
+		//display context
+		display::Context* display_context = nullptr;
+		//device
+		display::Device* display_device = nullptr;
 	};
 
 	//Create render pass system
@@ -185,6 +195,13 @@ namespace render
 
 	//Destroy render context for rendering a pass
 	void DestroyRenderContext(System* system, display::Device* device, RenderContext*& render_context);
+
+	//Capture render context
+	void CaptureRenderContext(System* system, display::Device* device, RenderContext* render_context);
+
+	//Execute render context
+	void ExecuteRenderContext(System* system, display::Device* device, RenderContext* render_context);
+
 }
 
 #endif //RENDER_H_

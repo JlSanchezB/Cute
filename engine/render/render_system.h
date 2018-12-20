@@ -15,8 +15,9 @@ namespace render
 	class RenderContextInternal : public RenderContext
 	{
 	public:
-		RenderContextInternal(System* system, ResourceMap& init_resources) : m_render_pass_system(system)
+		RenderContextInternal(System* system, ResourceMap& init_resources, Pass* _root_pass) : m_render_pass_system(system)
 		{
+			root_pass = _root_pass;
 			m_resources_map = std::move(init_resources);
 		}
 		//Resources associated to this pass

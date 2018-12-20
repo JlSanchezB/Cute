@@ -21,25 +21,30 @@ namespace render
 		void Destroy(display::Device* device) override;
 		void Load(LoadContext& load_context) override;
 		void InitPass(RenderContext& render_context, display::Device* device, ErrorContext& errors) override;
+		void Render(RenderContext& render_context) const override;
+		void Execute(RenderContext& render_context) const override;
 	};
 
 	class SetRenderTargetPass : public Pass
 	{
 		std::array<std::string, display::kMaxNumRenderTargets> m_render_target_name;
-
+		uint8_t m_num_render_targets;
 	public:
 		DECLARE_RENDER_CLASS("SetRenderTarget");
 
 		void Load(LoadContext& load_context) override;
+		void Render(RenderContext& render_context) const override;
 	};
 
 	class ClearRenderTargetPass : public Pass
 	{
+		std::string m_render_target_name;
 		float colour[4];
 	public:
 		DECLARE_RENDER_CLASS("ClearRenderTarget");
 
 		void Load(LoadContext& load_context) override;
+		void Render(RenderContext& render_context) const override;
 	};
 
 	class SetRootSignaturePass : public Pass
