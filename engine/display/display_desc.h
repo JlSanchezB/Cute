@@ -81,7 +81,7 @@ namespace display
 		uint16_t semantic_index;
 		Format format;
 		uint16_t input_slot;
-		uint32_t aligned_offset;
+		uint32_t aligned_offset = 0;
 		InputType input_type = InputType::Vertex;
 		uint32_t instance_step_rate = 0;
 		

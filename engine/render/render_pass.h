@@ -49,12 +49,16 @@ namespace render
 
 	class SetRootSignaturePass : public Pass
 	{
+		//Pipe
+		display::Pipe m_pipe = display::Pipe::Graphics;
+		//Root signature name
 		std::string m_rootsignature_name;
 
 	public:
 		DECLARE_RENDER_CLASS("SetRootSignature");
 
 		void Load(LoadContext& load_context) override;
+		void Render(RenderContext& render_context) const override;
 	};
 
 	class SetPipelineStatePass : public Pass
@@ -65,10 +69,15 @@ namespace render
 		DECLARE_RENDER_CLASS("SetPipelineState");
 
 		void Load(LoadContext& load_context) override;
+		void Render(RenderContext& render_context) const override;
 	};
 
 	class SetDescriptorTablePass : public Pass
 	{
+		//Root parameter
+		uint8_t m_root_parameter = 0;
+		//Pipe
+		display::Pipe m_pipe = display::Pipe::Graphics;
 		//Static resource used
 		std::string m_descriptor_table_static_name;
 		//If there is a descriptor table, that resource will be build the first time that it is executed, as it knows the constants buffer
@@ -79,6 +88,7 @@ namespace render
 
 		void Load(LoadContext& load_context) override;
 		void InitPass(RenderContext& render_context, display::Device* device, ErrorContext& errors) override;
+		void Render(RenderContext& render_context) const override;
 	};
 
 	class DrawFullScreenQuadPass : public Pass
@@ -87,6 +97,7 @@ namespace render
 		DECLARE_RENDER_CLASS("DrawFullScreenQuad");
 
 		void Load(LoadContext& load_context) override;
+		void Render(RenderContext& render_context) const override;
 	};
 }
 

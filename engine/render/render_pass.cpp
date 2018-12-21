@@ -6,6 +6,20 @@
 #include "render_resource.h"
 #include <string>
 
+namespace
+{
+	//Conversion tables
+	template<>
+	struct ConversionTable<display::Pipe>
+	{
+		constexpr static std::pair<const char*, display::Pipe> table[] =
+		{
+			{"Graphics", display::Pipe::Graphics},
+			{"Compute", display::Pipe::Compute}
+		};
+	};
+}
+
 namespace render
 {
 	void ContextPass::Destroy(display::Device * device)
@@ -23,7 +37,7 @@ namespace render
 	void ContextPass::Load(LoadContext & load_context)
 	{
 		//This pass is a list of passes that get added into a context
-		m_command_list_handle = display::CreateCommandList(load_context.device, load_context.name);
+		m_command_list_handle = display::CreateCommandList(load_context.device, load_context.pass_name);
 
 		auto xml_element = load_context.current_xml_element->FirstChildElement();
 
@@ -129,14 +143,34 @@ namespace render
 	}
 	void SetRootSignaturePass::Load(LoadContext & load_context)
 	{
+		QueryTableAttribute(load_context, load_context.current_xml_element, "pipe", m_pipe, AttributeType::Optional);
 		m_rootsignature_name = load_context.GetResourceReference(load_context);
+	}
+	void SetRootSignaturePass::Render(RenderContext & render_context) const
+	{
+		RootSignatureResource* root_signature = render_context.GetResource<RootSignatureResource>(m_rootsignature_name.c_str());
+		if (root_signature)
+		{
+			render_context.display_context->SetRootSignature(m_pipe, root_signature->GetHandle());
+		}
 	}
 	void SetPipelineStatePass::Load(LoadContext & load_context)
 	{
 		m_pipeline_state_name = load_context.GetResourceReference(load_context);
 	}
+	void SetPipelineStatePass::Render(RenderContext & render_context) const
+	{
+		GraphicsPipelineStateResource* pipeline_state = render_context.GetResource<GraphicsPipelineStateResource>(m_pipeline_state_name.c_str());
+		if (pipeline_state)
+		{
+			render_context.display_context->SetPipelineState(pipeline_state->GetHandle());
+		}
+	}
 	void SetDescriptorTablePass::Load(LoadContext & load_context)
 	{
+		QueryAttribute(load_context, load_context.current_xml_element, "root_param", m_root_parameter, AttributeType::NonOptional);
+		QueryTableAttribute(load_context, load_context.current_xml_element, "pipe", m_pipe, AttributeType::Optional);
+
 		auto xml_element_resource = load_context.current_xml_element->FirstChildElement("Resource");
 		if (xml_element_resource)
 		{
@@ -212,6 +246,14 @@ namespace render
 		}
 
 	}
+	void SetDescriptorTablePass::Render(RenderContext & render_context) const
+	{
+		DescriptorTableResource* descriptor_table = render_context.GetResource<DescriptorTableResource>(m_descriptor_table_static_name.c_str());
+		if (descriptor_table)
+		{
+			render_context.display_context->SetDescriptorTable(m_pipe, m_root_parameter, descriptor_table->GetHandle());
+		}
+	}
 	void DrawFullScreenQuadPass::Load(LoadContext & load_context)
 	{
 		//Create vertex buffer resource if it doesn't exist
@@ -239,6 +281,18 @@ namespace render
 
 			//Add the resource
 			load_context.AddResource("DrawFullScreenQuadPassVertexBuffer", CreateResourceFromHandle<VertexBufferResource>(vertex_buffer));
+		}
+	}
+	void DrawFullScreenQuadPass::Render(RenderContext & render_context) const
+	{
+		VertexBufferResource* vertex_buffer = render_context.GetResource<VertexBufferResource>("DrawFullScreenQuadPassVertexBuffer");
+		if (vertex_buffer)
+		{
+			render_context.display_context->SetVertexBuffers(0, 1, &vertex_buffer->GetHandle());
+
+			display::DrawDesc draw_desc;
+			draw_desc.vertex_count = 3;
+			render_context.display_context->Draw(draw_desc);
 		}
 	}
 }

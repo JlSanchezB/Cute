@@ -26,8 +26,14 @@
           <Input semantic_name="TEXCOORD" semantic_index="0" format="R32G32_FLOAT" input_slot="0" aligned_offset="16"/>
         </InputLayouts>
         <Shader pixelshader_entry="ps_main" vertexshader_entry="vs_main" target="5_0">
+          struct GameConstant
+          {
+            float4 time;
+          };
+          
           Texture2D texture_test : t0;
           SamplerState static_sampler : s1;
+          GameConstant game_constant : c0;
 
           struct PSInput
           {
@@ -52,7 +58,7 @@
         </Shader>
         <Rasterization/>
         <RenderTargets>
-          <RenderTarget format="R8G8B8A8_UNORM_SRGB"/>
+          <RenderTarget format="R8G8B8A8_UNORM"/>
         </RenderTargets>
       </Resource>
     </SetPipelineState>
