@@ -88,6 +88,8 @@ public:
 
 			m_render_context = render::CreateRenderContext(m_render_pass_system, m_device, "Main", init_resource_map, errors);
 
+			m_render_context->width = m_width;
+			m_render_context->height = m_height;
 		}
 	}
 	void OnDestroy() override
@@ -122,6 +124,12 @@ public:
 	{
 		m_width = width;
 		m_height = height;
+
+		if (m_render_context)
+		{
+			m_render_context->width = m_width;
+			m_render_context->height = m_height;
+		}
 	}
 };
 

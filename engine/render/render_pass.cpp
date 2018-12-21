@@ -117,6 +117,16 @@ namespace render
 		}
 
 		render_context.display_context->SetRenderTargets(m_num_render_targets, render_targets.data(), display::WeakDepthBufferHandle());
+
+		//Set Viewport and Scissors
+		//Set viewport
+		display::Viewport viewport(static_cast<float>(render_context.width), static_cast<float>(render_context.height));
+		viewport.top_left_x = 0;
+		viewport.top_left_y = 0;
+		render_context.display_context->SetViewport(viewport);
+
+		//Set Scissor Rect
+		render_context.display_context->SetScissorRect(display::Rect(0, 0, render_context.width, render_context.height));
 	}
 	void ClearRenderTargetPass::Load(LoadContext & load_context)
 	{

@@ -135,6 +135,10 @@ namespace render
 		display::Context* display_context = nullptr;
 		//device
 		display::Device* display_device = nullptr;
+		
+		//Windows size
+		uint32_t width = 0;
+		uint32_t height = 0;
 	};
 
 	//Create render pass system
