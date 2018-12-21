@@ -5,6 +5,7 @@
 #define RENDER_PASS_H_
 
 #include "render.h"
+#include "render_resource.h"
 #include <display/display.h>
 
 namespace render
@@ -38,7 +39,7 @@ namespace render
 
 	class ClearRenderTargetPass : public Pass
 	{
-		std::string m_render_target_name;
+		ResourceReference<RenderTargetReferenceResource> m_render_target;
 		float colour[4];
 	public:
 		DECLARE_RENDER_CLASS("ClearRenderTarget");
@@ -52,7 +53,7 @@ namespace render
 		//Pipe
 		display::Pipe m_pipe = display::Pipe::Graphics;
 		//Root signature name
-		std::string m_rootsignature_name;
+		ResourceReference<RootSignatureResource> m_rootsignature;
 
 	public:
 		DECLARE_RENDER_CLASS("SetRootSignature");
@@ -63,7 +64,7 @@ namespace render
 
 	class SetPipelineStatePass : public Pass
 	{
-		std::string m_pipeline_state_name;
+		ResourceReference<GraphicsPipelineStateResource> m_pipeline_state;
 
 	public:
 		DECLARE_RENDER_CLASS("SetPipelineState");
@@ -78,10 +79,12 @@ namespace render
 		uint8_t m_root_parameter = 0;
 		//Pipe
 		display::Pipe m_pipe = display::Pipe::Graphics;
-		//Static resource used
-		std::string m_descriptor_table_static_name;
 		//If there is a descriptor table, that resource will be build the first time that it is executed, as it knows the constants buffer
-		std::vector<std::string> m_descriptor_table;
+		std::vector<std::string> m_descriptor_table_names;
+
+		//Static resource used
+		ResourceReference<DescriptorTableResource> m_descriptor_table;
+		
 	
 	public:
 		DECLARE_RENDER_CLASS("SetDescriptorTable");

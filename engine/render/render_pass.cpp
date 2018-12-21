@@ -130,12 +130,12 @@ namespace render
 				AddError(load_context, "Colour can not be read from <%s>", colour_text);
 			}
 		}
-		m_render_target_name = load_context.GetResourceReference(load_context);
+		m_render_target.Set(load_context.GetResourceReference(load_context));
 	}
 	void ClearRenderTargetPass::Render(RenderContext & render_context) const
 	{
 		//Get render target
-		RenderTargetReferenceResource* render_target = render_context.GetResource<RenderTargetReferenceResource>(m_render_target_name.c_str());
+		RenderTargetReferenceResource* render_target = m_render_target.Get(render_context);
 		if (render_target)
 		{
 			render_context.display_context->ClearRenderTargetColour(render_target->GetHandle(), colour);
@@ -144,11 +144,11 @@ namespace render
 	void SetRootSignaturePass::Load(LoadContext & load_context)
 	{
 		QueryTableAttribute(load_context, load_context.current_xml_element, "pipe", m_pipe, AttributeType::Optional);
-		m_rootsignature_name = load_context.GetResourceReference(load_context);
+		m_rootsignature.Set(load_context.GetResourceReference(load_context));
 	}
 	void SetRootSignaturePass::Render(RenderContext & render_context) const
 	{
-		RootSignatureResource* root_signature = render_context.GetResource<RootSignatureResource>(m_rootsignature_name.c_str());
+		RootSignatureResource* root_signature = m_rootsignature.Get(render_context);
 		if (root_signature)
 		{
 			render_context.display_context->SetRootSignature(m_pipe, root_signature->GetHandle());
@@ -156,11 +156,11 @@ namespace render
 	}
 	void SetPipelineStatePass::Load(LoadContext & load_context)
 	{
-		m_pipeline_state_name = load_context.GetResourceReference(load_context);
+		m_pipeline_state.Set(load_context.GetResourceReference(load_context));
 	}
 	void SetPipelineStatePass::Render(RenderContext & render_context) const
 	{
-		GraphicsPipelineStateResource* pipeline_state = render_context.GetResource<GraphicsPipelineStateResource>(m_pipeline_state_name.c_str());
+		GraphicsPipelineStateResource* pipeline_state = m_pipeline_state.Get(render_context);
 		if (pipeline_state)
 		{
 			render_context.display_context->SetPipelineState(pipeline_state->GetHandle());
@@ -175,7 +175,7 @@ namespace render
 		if (xml_element_resource)
 		{
 			//It is a resource
-			m_descriptor_table_static_name = load_context.GetResourceReference(load_context);
+			m_descriptor_table.Set(load_context.GetResourceReference(load_context));
 			return;
 		}
 
@@ -183,11 +183,11 @@ namespace render
 		if (xml_element_descriptor)
 		{
 			//It is a descriptor that has to be created during init pass
-			m_descriptor_table_static_name = std::string("DescriptorTable_") + std::to_string(rand());
+			m_descriptor_table.Set(std::string("DescriptorTable_") + std::to_string(rand()));
 
 			while (xml_element_descriptor)
 			{
-				m_descriptor_table.push_back(xml_element_descriptor->GetText());
+				m_descriptor_table_names.push_back(xml_element_descriptor->GetText());
 
 				//It is a descriptor list, names need to be solve during render
 				xml_element_descriptor = xml_element_descriptor->NextSiblingElement();
@@ -205,7 +205,7 @@ namespace render
 		display::DescriptorTableDesc descriptor_table_desc;
 		descriptor_table_desc.access = display::Access::Dynamic;
 
-		for (auto& descriptor : m_descriptor_table)
+		for (auto& descriptor : m_descriptor_table_names)
 		{
 			Resource* resource = render_context.GetRenderResource(descriptor.c_str());
 
@@ -238,7 +238,7 @@ namespace render
 		if (descriptor_table_handle.IsValid())
 		{
 			//Create resource handle
-			render_context.AddRenderResource(m_descriptor_table_static_name.c_str(), CreateResourceFromHandle<DescriptorTableResource>(descriptor_table_handle));
+			render_context.AddRenderResource(m_descriptor_table.GetResourceName().c_str(), CreateResourceFromHandle<DescriptorTableResource>(descriptor_table_handle));
 		}
 		else
 		{
@@ -248,7 +248,7 @@ namespace render
 	}
 	void SetDescriptorTablePass::Render(RenderContext & render_context) const
 	{
-		DescriptorTableResource* descriptor_table = render_context.GetResource<DescriptorTableResource>(m_descriptor_table_static_name.c_str());
+		DescriptorTableResource* descriptor_table = m_descriptor_table.Get(render_context);
 		if (descriptor_table)
 		{
 			render_context.display_context->SetDescriptorTable(m_pipe, m_root_parameter, descriptor_table->GetHandle());

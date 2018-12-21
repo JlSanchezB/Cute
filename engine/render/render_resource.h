@@ -9,6 +9,27 @@
 
 namespace render
 {
+	//Resource reference, used to save in a pass and can be recovered using the render context
+	template<class RESOURCE>
+	class ResourceReference
+	{
+		std::string m_resource;
+	public:
+		void Set(const std::string& resource)
+		{
+			m_resource = resource;
+		}
+		std::string GetResourceName() const
+		{
+			return m_resource;
+		}
+		RESOURCE* Get(RenderContext& render_context) const
+		{
+			return render_context.GetResource<RESOURCE>(m_resource.c_str());
+		}
+	};
+
+
 	//Resource that can be created outside the render pass system, just a display handle
 	template<typename HANDLE, bool REFERENCE = false>
 	class DisplayHandleResource : public Resource
