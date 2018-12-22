@@ -110,6 +110,9 @@
     <ClInclude Include="render\render_system.h">
       <Filter>render</Filter>
     </ClInclude>
+    <ClInclude Include="core\string_hash.h">
+      <Filter>core</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="display\pc_dx12\display.cpp">

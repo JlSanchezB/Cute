@@ -86,7 +86,7 @@ namespace render
 		const char* resource_name = load_context.current_xml_element->Attribute("name");
 		if (resource_type && resource_name)
 		{
-			auto& resource_factory_it = m_resource_factories_map.find(resource_type);
+			auto& resource_factory_it = m_resource_factories_map.find(StringHash32(resource_type));
 			if (resource_factory_it != m_resource_factories_map.end())
 			{
 				if (m_global_resources_map.find(resource_name) == m_global_resources_map.end())
@@ -99,7 +99,7 @@ namespace render
 					auto resource_instance = factory->Create();
 
 					assert(resource_instance);
-					assert(strcmp(resource_instance->Type(), resource_type) == 0);
+					assert(resource_instance->Type() == StringHash32(resource_type));
 
 					load_context.name = resource_name;
 
@@ -145,7 +145,7 @@ namespace render
 		const char* pass_name = load_context.current_xml_element->Attribute("name");
 
 		
-		auto& pass_factory_it = m_pass_factories_map.find(pass_type);
+		auto& pass_factory_it = m_pass_factories_map.find(StringHash32(pass_type));
 		if (pass_factory_it != m_pass_factories_map.end())
 		{
 			//Load the pass
@@ -157,7 +157,7 @@ namespace render
 			auto pass_instance = factory->Create();
 
 			assert(pass_instance);
-			assert(strcmp(pass_instance->Type(), pass_type) == 0);
+			assert(pass_instance->Type() == StringHash32(pass_type));
 
 			load_context.name = pass_type;
 
@@ -424,7 +424,7 @@ namespace render
 		}
 	}
 
-	bool RegisterResourceFactory(System * system, const char * resource_type, std::unique_ptr<FactoryInterface<Resource>>& resource_factory)
+	bool RegisterResourceFactory(System * system, const StringHash32& resource_type, std::unique_ptr<FactoryInterface<Resource>>& resource_factory)
 	{
 		if (system->m_resource_factories_map.find(resource_type) != system->m_resource_factories_map.end())
 		{
@@ -435,7 +435,7 @@ namespace render
 		return true;
 	}
 
-	bool RegisterPassFactory(System * system, const char * pass_type, std::unique_ptr<FactoryInterface<Pass>>& pass_factory)
+	bool RegisterPassFactory(System * system, const StringHash32& pass_type, std::unique_ptr<FactoryInterface<Pass>>& pass_factory)
 	{
 		if (system->m_resource_factories_map.find(pass_type) != system->m_resource_factories_map.end())
 		{

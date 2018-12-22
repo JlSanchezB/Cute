@@ -222,17 +222,17 @@ namespace render
 
 			if (resource)
 			{
-				if (strcmp(resource->Type(), "ConstantBuffer") == 0)
+				if (resource->Type() == "ConstantBuffer"_sh32)
 				{
 					ConstantBufferResource* constant_buffer_resource = dynamic_cast<ConstantBufferResource*>(resource);
 					descriptor_table_desc.AddDescriptor(constant_buffer_resource->GetHandle());
 				}
-				else if (strcmp(resource->Type(), "Texture") == 0)
+				else if (resource->Type() == "Texture"_sh32)
 				{
 					TextureResource* texture_resource = dynamic_cast<TextureResource*>(resource);
 					descriptor_table_desc.AddDescriptor(texture_resource->GetHandle());
 				}
-				else if (strcmp(resource->Type(), "RenderTarget") == 0)
+				else if (resource->Type() == "RenderTarget"_sh32)
 				{
 					RenderTargetResource* render_target_resource = dynamic_cast<RenderTargetResource*>(resource);
 					descriptor_table_desc.AddDescriptor(render_target_resource->GetHandle());

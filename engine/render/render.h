@@ -7,6 +7,7 @@
 #include <vector>
 #include <memory>
 #include <unordered_map>
+#include <core/string_hash.h>
 
 namespace display
 {
@@ -21,11 +22,11 @@ namespace tinyxml2
 }
 
 #define DECLARE_RENDER_CLASS(name) \
-	const char* Type() const \
+	const StringHash32 Type() const override\
 	{ \
-		return name; \
+		return StringHash32(name); \
 	}; \
-	inline static const char* kClassName = name;
+	inline static const StringHash32 kClassName = StringHash32(name);
 
 namespace render
 {
@@ -67,7 +68,7 @@ namespace render
 		virtual void Destroy(display::Device* device) {};
 		
 		//Return type, it will be defined with DECLARE_RENDER_CLASS
-		virtual const char* Type() const = 0;
+		virtual const StringHash32 Type() const = 0;
 	};
 	
 	//Base Pass class
@@ -90,7 +91,7 @@ namespace render
 		virtual void Execute(RenderContext& render_context) const {};
 
 		//Return type, it will be defined with DECLARE_RENDER_CLASS
-		virtual const char* Type() const = 0;
+		virtual const StringHash32 Type() const = 0;
 	};
 
 	//Factory helper classes
@@ -122,7 +123,7 @@ namespace render
 		inline RESOURCE* GetResource(const char* name) const
 		{
 			Resource* resource = GetRenderResource(name);
-			if (resource && strcmp(resource->Type(), RESOURCE::kClassName) == 0)
+			if (resource && resource->Type() == RESOURCE::kClassName)
 			{
 				return dynamic_cast<RESOURCE*>(resource);
 			}
@@ -164,10 +165,10 @@ namespace render
 	bool AddGameResource(System* system, const char* name, std::unique_ptr<Resource>& resource);
 
 	//Register resource factory
-	bool RegisterResourceFactory(System* system, const char * resource_type, std::unique_ptr<FactoryInterface<Resource>>& resource_factory);
+	bool RegisterResourceFactory(System* system, const StringHash32& resource_type, std::unique_ptr<FactoryInterface<Resource>>& resource_factory);
 
 	//Register pass factory
-	bool RegisterPassFactory(System* system, const char * pass_type, std::unique_ptr<FactoryInterface<Pass>>& pass_factory);
+	bool RegisterPassFactory(System* system, const StringHash32& pass_type, std::unique_ptr<FactoryInterface<Pass>>& pass_factory);
 
 	//Register resource factory helper
 	template<typename RESOURCE>
@@ -192,7 +193,7 @@ namespace render
 	inline RESOURCE* GetResource(System* system, const char* name)
 	{
 		Resource* resource = GetResource(system, name);
-		if (resource && strcmp(resource->Type(), RESOURCE::kClassName) == 0)
+		if (resource && resource->Type() == RESOURCE::kClassName)
 		{
 			return dynamic_cast<RESOURCE*>(resource);
 		}

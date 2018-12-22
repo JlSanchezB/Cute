@@ -129,6 +129,7 @@
     <ClInclude Include="core\platform.h" />
     <ClInclude Include="core\ring_buffer.h" />
     <ClInclude Include="core\simple_pool.h" />
+    <ClInclude Include="core\string_hash.h" />
     <ClInclude Include="display\display.h" />
     <ClInclude Include="display\display_desc.h" />
     <ClInclude Include="display\display_enum.h" />

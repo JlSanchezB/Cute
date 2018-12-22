@@ -44,8 +44,8 @@ namespace render
 		//Load from passes declaration file
 		bool Load(LoadContext& load_context);
 
-		using ResourceFactoryMap = std::unordered_map<std::string, std::unique_ptr<FactoryInterface<Resource>>>;
-		using PassFactoryMap = std::unordered_map<std::string, std::unique_ptr<FactoryInterface<Pass>>>;
+		using ResourceFactoryMap = std::unordered_map<StringHash32, std::unique_ptr<FactoryInterface<Resource>>>;
+		using PassFactoryMap = std::unordered_map<StringHash32, std::unique_ptr<FactoryInterface<Pass>>>;
 
 		//Resource factories
 		ResourceFactoryMap m_resource_factories_map;
