@@ -116,10 +116,10 @@ namespace render
 		//Add render resource to this pass instance
 		void AddRenderResource(const char* name, std::unique_ptr<Resource>& resource);
 		//Resource associated to this pass instance
-		Resource* GetRenderResource(const char* name);
+		Resource* GetRenderResource(const char* name) const;
 
 		template<typename RESOURCE>
-		inline RESOURCE* GetResource(const char* name)
+		inline RESOURCE* GetResource(const char* name) const
 		{
 			Resource* resource = GetRenderResource(name);
 			if (resource && strcmp(resource->Type(), RESOURCE::kClassName) == 0)
@@ -129,16 +129,29 @@ namespace render
 			return nullptr;
 		}
 
-		//Root pass for the cotnext
-		Pass* root_pass = nullptr;
-		//display context
-		display::Context* display_context = nullptr;
-		//device
-		display::Device* display_device = nullptr;
-		
-		//Windows size
-		uint32_t width = 0;
-		uint32_t height = 0;
+		//Get root pass been rendering
+		Pass* GetRootPass() const;
+
+		//Get display device
+		display::Device* GetDevice() const;
+
+		//Get display Context
+		display::Context* GetContext() const;
+
+		struct PassInfo
+		{
+			uint32_t width;
+			uint32_t height;
+		};
+
+		//Get pass info
+		const PassInfo& GetPassInfo() const;
+
+		//Set display context
+		void SetContext(display::Context* context);
+
+		//Update pass info
+		void UpdatePassInfo(const PassInfo& pass_info);
 	};
 
 	//Create render pass system
@@ -195,16 +208,16 @@ namespace render
 
 	//Create a render context for rendering a pass
 	using ResourceMap = std::unordered_map<std::string, std::unique_ptr<Resource>>;
-	RenderContext* CreateRenderContext(System* system, display::Device* device, const char* pass, ResourceMap& init_resources, std::vector<std::string>& errors);
+	RenderContext* CreateRenderContext(System* system, display::Device* device, const char* pass, const RenderContext::PassInfo& pass_info, ResourceMap& init_resources, std::vector<std::string>& errors);
 
 	//Destroy render context for rendering a pass
-	void DestroyRenderContext(System* system, display::Device* device, RenderContext*& render_context);
+	void DestroyRenderContext(System* system, RenderContext*& render_context);
 
 	//Capture render context
-	void CaptureRenderContext(System* system, display::Device* device, RenderContext* render_context);
+	void CaptureRenderContext(System* system, RenderContext* render_context);
 
 	//Execute render context
-	void ExecuteRenderContext(System* system, display::Device* device, RenderContext* render_context);
+	void ExecuteRenderContext(System* system, RenderContext* render_context);
 
 }
 

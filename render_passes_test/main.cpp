@@ -86,10 +86,11 @@ public:
 			init_resource_map["GameGlobal"] = CreateResourceFromHandle<render::ConstantBufferResource>(game_constant_buffer);
 			init_resource_map["BackBuffer"] = CreateResourceFromHandle<render::RenderTargetReferenceResource>(display::GetBackBuffer(m_device));
 
-			m_render_context = render::CreateRenderContext(m_render_pass_system, m_device, "Main", init_resource_map, errors);
+			render::RenderContext::PassInfo pass_info;
+			pass_info.width = m_width;
+			pass_info.height = m_height;
 
-			m_render_context->width = m_width;
-			m_render_context->height = m_height;
+			m_render_context = render::CreateRenderContext(m_render_pass_system, m_device, "Main", pass_info, init_resource_map, errors);
 		}
 	}
 	void OnDestroy() override
@@ -98,7 +99,7 @@ public:
 		{
 			if (m_render_context)
 			{
-				render::DestroyRenderContext(m_render_pass_system, m_device, m_render_context);
+				render::DestroyRenderContext(m_render_pass_system, m_render_context);
 			}
 
 			render::DestroyRenderPassSystem(m_render_pass_system, m_device);
@@ -113,9 +114,9 @@ public:
 		display::BeginFrame(m_device);
 
 		//Capture pass
-		render::CaptureRenderContext(m_render_pass_system, m_device, m_render_context);
+		render::CaptureRenderContext(m_render_pass_system, m_render_context);
 		//Execute pass
-		render::ExecuteRenderContext(m_render_pass_system, m_device, m_render_context);
+		render::ExecuteRenderContext(m_render_pass_system, m_render_context);
 
 		display::EndFrame(m_device);
 	}
@@ -127,8 +128,10 @@ public:
 
 		if (m_render_context)
 		{
-			m_render_context->width = m_width;
-			m_render_context->height = m_height;
+			render::RenderContext::PassInfo pass_info = m_render_context->GetPassInfo();
+			pass_info.width = m_width;
+			pass_info.height = m_height;
+			m_render_context->UpdatePassInfo(pass_info);
 		}
 	}
 };

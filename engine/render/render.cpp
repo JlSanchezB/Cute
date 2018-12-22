@@ -29,10 +29,10 @@ namespace render
 		render_context->m_resources_map[name] = std::move(resource);
 	}
 
-	Resource * RenderContext::GetRenderResource(const char * name)
+	Resource * RenderContext::GetRenderResource(const char * name) const
 	{
 		//First check context resources
-		auto render_context = reinterpret_cast<RenderContextInternal*>(this);
+		auto render_context = reinterpret_cast<const RenderContextInternal*>(this);
 		const auto& it = render_context->m_resources_map.find(name);
 		if (it != render_context->m_resources_map.end())
 		{
@@ -41,6 +41,42 @@ namespace render
 
 		//Then check system resources
 		return render::GetResource(render_context->m_render_pass_system, name);
+	}
+
+	Pass * RenderContext::GetRootPass() const
+	{
+		auto render_context = reinterpret_cast<const RenderContextInternal*>(this);
+		return render_context->m_root_pass;
+	}
+
+	display::Device * RenderContext::GetDevice() const
+	{
+		auto render_context = reinterpret_cast<const RenderContextInternal*>(this);
+		return render_context->m_display_device;
+	}
+
+	display::Context * RenderContext::GetContext() const
+	{
+		auto render_context = reinterpret_cast<const RenderContextInternal*>(this);
+		return render_context->m_display_context;
+	}
+
+	const RenderContext::PassInfo& RenderContext::GetPassInfo() const
+	{
+		auto render_context = reinterpret_cast<const RenderContextInternal*>(this);
+		return render_context->m_pass_info;
+	}
+
+	void RenderContext::SetContext(display::Context * context)
+	{
+		auto render_context = reinterpret_cast<RenderContextInternal*>(this);
+		render_context->m_display_context = context;
+	}
+
+	void RenderContext::UpdatePassInfo(const PassInfo & pass_info)
+	{
+		auto render_context = reinterpret_cast<RenderContextInternal*>(this);
+		render_context->m_pass_info = pass_info;
 	}
 
 	std::string System::LoadResource(LoadContext& load_context, const char* prefix)
@@ -303,14 +339,14 @@ namespace render
 		return success;
 	}
 
-	RenderContext * CreateRenderContext(System * system, display::Device * device, const char * pass, ResourceMap& init_resources, std::vector<std::string>& errors)
+	RenderContext * CreateRenderContext(System * system, display::Device * device, const char * pass, const RenderContext::PassInfo& pass_info, ResourceMap& init_resources, std::vector<std::string>& errors)
 	{
 		//Get pass
 		auto render_pass = GetPass(system, pass);
 		if (render_pass)
 		{
 			//Create Render Context
-			RenderContextInternal* render_context = system->m_render_context_pool.Alloc(system, init_resources, render_pass);
+			RenderContextInternal* render_context = system->m_render_context_pool.Alloc(system, device, pass_info, init_resources, render_pass);
 
 			ErrorContext errors_context;
 
@@ -332,8 +368,8 @@ namespace render
 					core::LogError(error.c_str());
 				}
 
-				RenderContext * render_context_ref = dynamic_cast<RenderContext*>(render_context);
-				DestroyRenderContext(system, device, render_context_ref);
+				RenderContext * render_context_ref = reinterpret_cast<RenderContext*>(render_context);
+				DestroyRenderContext(system, render_context_ref);
 				return nullptr;
 			}
 			
@@ -346,31 +382,31 @@ namespace render
 		}
 	}
 
-	void DestroyRenderContext(System * system, display::Device * device, RenderContext*& render_context)
+	void DestroyRenderContext(System * system, RenderContext*& render_context)
 	{
 		auto render_context_internal = reinterpret_cast<RenderContextInternal*>(render_context);
 		//Destroy context resources
-		DestroyResources(device, render_context_internal->m_resources_map);
+		DestroyResources(render_context_internal->m_display_device, render_context_internal->m_resources_map);
 
 		system->m_render_context_pool.Free(render_context_internal);
 		
 		render_context = nullptr;
 	}
 
-	void CaptureRenderContext(System * system, display::Device * device, RenderContext * render_context)
+	void CaptureRenderContext(System * system, RenderContext * render_context)
 	{
-		//Open and capture all command list in the render context
-		render_context->display_device = device;
+		auto render_context_internal = reinterpret_cast<RenderContextInternal*>(render_context);
 
-		render_context->root_pass->Render(*render_context);
+		//Open and capture all command list in the render context
+		render_context_internal->m_root_pass->Render(*render_context);
 	}
 
-	void ExecuteRenderContext(System * system, display::Device * device, RenderContext * render_context)
+	void ExecuteRenderContext(System * system, RenderContext * render_context)
 	{
+		auto render_context_internal = reinterpret_cast<RenderContextInternal*>(render_context);
 		//Open and capture all command list in the render context
-		render_context->display_device = device;
 
-		render_context->root_pass->Execute(*render_context);
+		render_context_internal->m_root_pass->Execute(*render_context);
 	}
 
 	bool AddGameResource(System * system, const char * name, std::unique_ptr<Resource>& resource)

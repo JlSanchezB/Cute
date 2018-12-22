@@ -62,7 +62,7 @@ namespace render
 	void ContextPass::Render(RenderContext & render_context) const
 	{
 		//Open context
-		render_context.display_context = display::OpenCommandList(render_context.display_device, m_command_list_handle);
+		render_context.SetContext(display::OpenCommandList(render_context.GetDevice(), m_command_list_handle));
 
 		for (auto& item : m_passes)
 		{
@@ -70,7 +70,7 @@ namespace render
 		}
 
 		//Close context
-		display::CloseCommandList(render_context.display_device, render_context.display_context);
+		display::CloseCommandList(render_context.GetDevice(), render_context.GetContext());
 	}
 	void ContextPass::Execute(RenderContext & render_context) const
 	{
@@ -79,7 +79,7 @@ namespace render
 			item->Execute(render_context);
 		}
 
-		display::ExecuteCommandList(render_context.display_device, m_command_list_handle);
+		display::ExecuteCommandList(render_context.GetDevice(), m_command_list_handle);
 	}
 
 	void SetRenderTargetPass::Load(LoadContext & load_context)
@@ -115,18 +115,19 @@ namespace render
 				render_targets[i] = render_target->GetHandle();
 			}
 		}
+		RenderContext::PassInfo pass_info = render_context.GetPassInfo();
 
-		render_context.display_context->SetRenderTargets(m_num_render_targets, render_targets.data(), display::WeakDepthBufferHandle());
+		render_context.GetContext()->SetRenderTargets(m_num_render_targets, render_targets.data(), display::WeakDepthBufferHandle());
 
 		//Set Viewport and Scissors
 		//Set viewport
-		display::Viewport viewport(static_cast<float>(render_context.width), static_cast<float>(render_context.height));
+		display::Viewport viewport(static_cast<float>(pass_info.width), static_cast<float>(pass_info.height));
 		viewport.top_left_x = 0;
 		viewport.top_left_y = 0;
-		render_context.display_context->SetViewport(viewport);
+		render_context.GetContext()->SetViewport(viewport);
 
 		//Set Scissor Rect
-		render_context.display_context->SetScissorRect(display::Rect(0, 0, render_context.width, render_context.height));
+		render_context.GetContext()->SetScissorRect(display::Rect(0, 0, pass_info.width, pass_info.height));
 	}
 	void ClearRenderTargetPass::Load(LoadContext & load_context)
 	{
@@ -148,7 +149,7 @@ namespace render
 		RenderTargetReferenceResource* render_target = m_render_target.Get(render_context);
 		if (render_target)
 		{
-			render_context.display_context->ClearRenderTargetColour(render_target->GetHandle(), colour);
+			render_context.GetContext()->ClearRenderTargetColour(render_target->GetHandle(), colour);
 		}
 	}
 	void SetRootSignaturePass::Load(LoadContext & load_context)
@@ -161,7 +162,7 @@ namespace render
 		RootSignatureResource* root_signature = m_rootsignature.Get(render_context);
 		if (root_signature)
 		{
-			render_context.display_context->SetRootSignature(m_pipe, root_signature->GetHandle());
+			render_context.GetContext()->SetRootSignature(m_pipe, root_signature->GetHandle());
 		}
 	}
 	void SetPipelineStatePass::Load(LoadContext & load_context)
@@ -173,7 +174,7 @@ namespace render
 		GraphicsPipelineStateResource* pipeline_state = m_pipeline_state.Get(render_context);
 		if (pipeline_state)
 		{
-			render_context.display_context->SetPipelineState(pipeline_state->GetHandle());
+			render_context.GetContext()->SetPipelineState(pipeline_state->GetHandle());
 		}
 	}
 	void SetDescriptorTablePass::Load(LoadContext & load_context)
@@ -261,7 +262,7 @@ namespace render
 		DescriptorTableResource* descriptor_table = m_descriptor_table.Get(render_context);
 		if (descriptor_table)
 		{
-			render_context.display_context->SetDescriptorTable(m_pipe, m_root_parameter, descriptor_table->GetHandle());
+			render_context.GetContext()->SetDescriptorTable(m_pipe, m_root_parameter, descriptor_table->GetHandle());
 		}
 	}
 	void DrawFullScreenQuadPass::Load(LoadContext & load_context)
@@ -298,11 +299,11 @@ namespace render
 		VertexBufferResource* vertex_buffer = render_context.GetResource<VertexBufferResource>("DrawFullScreenQuadPassVertexBuffer");
 		if (vertex_buffer)
 		{
-			render_context.display_context->SetVertexBuffers(0, 1, &vertex_buffer->GetHandle());
+			render_context.GetContext()->SetVertexBuffers(0, 1, &vertex_buffer->GetHandle());
 
 			display::DrawDesc draw_desc;
 			draw_desc.vertex_count = 3;
-			render_context.display_context->Draw(draw_desc);
+			render_context.GetContext()->Draw(draw_desc);
 		}
 	}
 }

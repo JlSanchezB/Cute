@@ -15,15 +15,27 @@ namespace render
 	class RenderContextInternal : public RenderContext
 	{
 	public:
-		RenderContextInternal(System* system, ResourceMap& init_resources, Pass* _root_pass) : m_render_pass_system(system)
+		RenderContextInternal(System* system, display::Device* device, const PassInfo& pass_info, ResourceMap& init_resources, Pass* _root_pass) :
+			m_render_pass_system(system),
+			m_display_device(device),
+			m_pass_info(pass_info)
 		{
-			root_pass = _root_pass;
+			m_root_pass = _root_pass;
 			m_resources_map = std::move(init_resources);
 		}
 		//Resources associated to this pass
 		ResourceMap m_resources_map;
 		//Render pass system
 		System* m_render_pass_system;
+		//Root pass for the cotnext
+		Pass* m_root_pass = nullptr;
+		//display context
+		display::Context* m_display_context = nullptr;
+		//device
+		display::Device* m_display_device = nullptr;
+
+		//Windows size
+		PassInfo m_pass_info;
 	};
 
 	//Internal render pass system implementation
