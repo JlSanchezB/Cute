@@ -113,6 +113,18 @@ public:
 	{
 		display::BeginFrame(m_device);
 
+		//Update time
+		render::ConstantBufferResource* game_global_resource = m_render_context->GetResource<render::ConstantBufferResource>("GameGlobal");
+
+		struct GameConstantBuffer
+		{
+			float time[4];
+		};
+		GameConstantBuffer game_constant_buffer = { { static_cast<float>(total_time), elapsed_time, 0.f, 0.f } };
+		
+		//Update game constant buffer
+		display::UpdateResourceBuffer(m_device, game_global_resource->GetHandle(), &game_constant_buffer, sizeof(game_constant_buffer));
+
 		//Capture pass
 		render::CaptureRenderContext(m_render_pass_system, m_render_context);
 		//Execute pass

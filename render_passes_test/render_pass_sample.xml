@@ -53,7 +53,8 @@
 
           float4 ps_main(PSInput input) : SV_TARGET
           {
-            return texture_test.Sample(static_sampler, input.tex);
+            float2 wave_tex = input.tex + 0.01f * float2(cos(10.f * (game_constant.time.x + input.tex.x)), sin(10.f * (game_constant.time.x + input.tex.y)));
+            return texture_test.Sample(static_sampler, wave_tex);
           }
         </Shader>
         <Rasterization/>
