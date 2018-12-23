@@ -22,11 +22,11 @@ namespace tinyxml2
 }
 
 #define DECLARE_RENDER_CLASS(name) \
-	const StringHash32 Type() const override\
+	const RenderClassType Type() const override\
 	{ \
-		return StringHash32(name); \
+		return RenderClassType(name); \
 	}; \
-	inline static const StringHash32 kClassName = StringHash32(name);
+	inline static const RenderClassType kClassName = RenderClassType(name);
 
 namespace render
 {
@@ -34,6 +34,8 @@ namespace render
 	struct System;
 	class RenderContext;
 	class Resource;
+
+	using RenderClassType = StringHash32<"RenderClassType"_namespace>;
 
 	struct ErrorContext
 	{
@@ -68,7 +70,7 @@ namespace render
 		virtual void Destroy(display::Device* device) {};
 		
 		//Return type, it will be defined with DECLARE_RENDER_CLASS
-		virtual const StringHash32 Type() const = 0;
+		virtual const RenderClassType Type() const = 0;
 	};
 	
 	//Base Pass class
@@ -91,7 +93,7 @@ namespace render
 		virtual void Execute(RenderContext& render_context) const {};
 
 		//Return type, it will be defined with DECLARE_RENDER_CLASS
-		virtual const StringHash32 Type() const = 0;
+		virtual const RenderClassType Type() const = 0;
 	};
 
 	//Factory helper classes
@@ -165,10 +167,10 @@ namespace render
 	bool AddGameResource(System* system, const char* name, std::unique_ptr<Resource>& resource);
 
 	//Register resource factory
-	bool RegisterResourceFactory(System* system, const StringHash32& resource_type, std::unique_ptr<FactoryInterface<Resource>>& resource_factory);
+	bool RegisterResourceFactory(System* system, const RenderClassType& resource_type, std::unique_ptr<FactoryInterface<Resource>>& resource_factory);
 
 	//Register pass factory
-	bool RegisterPassFactory(System* system, const StringHash32& pass_type, std::unique_ptr<FactoryInterface<Pass>>& pass_factory);
+	bool RegisterPassFactory(System* system, const RenderClassType& pass_type, std::unique_ptr<FactoryInterface<Pass>>& pass_factory);
 
 	//Register resource factory helper
 	template<typename RESOURCE>
