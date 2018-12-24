@@ -12,7 +12,7 @@
 
 namespace
 {
-	std::vector<char> ReadFileToBuffer(const char* file)
+	std::vector<uint8_t> ReadFileToBuffer(const char* file)
 	{
 		std::ifstream root_signature_file(file, std::ios::binary | std::ios::ate);
 		if (root_signature_file.good())
@@ -20,14 +20,14 @@ namespace
 			std::streamsize size = root_signature_file.tellg();
 			root_signature_file.seekg(0, std::ios::beg);
 
-			std::vector<char> buffer(size);
-			root_signature_file.read(buffer.data(), size);
+			std::vector<uint8_t> buffer(size);
+			root_signature_file.read(reinterpret_cast<char*>(buffer.data()), size);
 
 			return buffer;
 		}
 		else
 		{
-			return std::vector<char>(0);
+			return std::vector<uint8_t>(0);
 		}
 	}
 }
@@ -77,20 +77,26 @@ public:
 		//Create render pass system
 		m_render_pass_system = render::CreateRenderPassSystem();
 
-		//Load render pass sample
-		std::vector<std::string> errors;
-		if (render::LoadPassDescriptorFile(m_render_pass_system, m_device, "render_pass_sample.xml", errors))
+		//Read file
+		auto descriptor_file =  ReadFileToBuffer("render_pass_sample.xml");
+
+		if (descriptor_file.size() > 0)
 		{
-			//Create pass
-			render::ResourceMap init_resource_map;
-			init_resource_map["GameGlobal"] = CreateResourceFromHandle<render::ConstantBufferResource>(game_constant_buffer);
-			init_resource_map["BackBuffer"] = CreateResourceFromHandle<render::RenderTargetResource>(display::GetBackBuffer(m_device));
+			//Load render pass sample
+			std::vector<std::string> errors;
+			if (render::LoadPassDescriptorFile(m_render_pass_system, m_device, descriptor_file, errors))
+			{
+				//Create pass
+				render::ResourceMap init_resource_map;
+				init_resource_map["GameGlobal"] = CreateResourceFromHandle<render::ConstantBufferResource>(game_constant_buffer);
+				init_resource_map["BackBuffer"] = CreateResourceFromHandle<render::RenderTargetResource>(display::GetBackBuffer(m_device));
 
-			render::RenderContext::PassInfo pass_info;
-			pass_info.width = m_width;
-			pass_info.height = m_height;
+				render::RenderContext::PassInfo pass_info;
+				pass_info.width = m_width;
+				pass_info.height = m_height;
 
-			m_render_context = render::CreateRenderContext(m_render_pass_system, m_device, "Main", pass_info, init_resource_map, errors);
+				m_render_context = render::CreateRenderContext(m_render_pass_system, m_device, "Main", pass_info, init_resource_map, errors);
+			}
 		}
 	}
 	void OnDestroy() override

@@ -50,7 +50,6 @@ namespace render
 		tinyxml2::XMLElement* current_xml_element;
 		const char* pass_name;
 		const char* name;
-		const char* render_passes_filename;
 		render::System* render_system;
 
 		//Get resource reference, it can be the name of the resource or the resource itself
@@ -164,7 +163,7 @@ namespace render
 	void DestroyRenderPassSystem(System*& system, display::Device* device);
 
 	//Load render pass descriptor file
-	bool LoadPassDescriptorFile(System* system, display::Device* device, const char* pass_descriptor_file, std::vector<std::string>& errors);
+	bool LoadPassDescriptorFile(System* system, display::Device* device, const std::vector<uint8_t>& descriptor_file, std::vector<std::string>& errors);
 
 	//Add game resource, allows the game to add global resources that the pass system can access them
 	bool AddGameResource(System* system, const char* name, std::unique_ptr<Resource>& resource);

@@ -185,14 +185,15 @@ namespace render
 		}
 	}
 
-	bool System::Load(LoadContext& load_context)
+	bool System::Load(LoadContext& load_context, const std::vector<uint8_t>& descriptor_file)
 	{
 		tinyxml2::XMLDocument xml_doc;
 
-		tinyxml2::XMLError result = xml_doc.LoadFile(load_context.render_passes_filename);
+		tinyxml2::XMLError result = xml_doc.Parse(reinterpret_cast<const char*>(descriptor_file.data()), descriptor_file.size());
+
 		if (result != tinyxml2::XML_SUCCESS)
 		{
-			AddError(load_context, "File <%s> doesn't exist", load_context.render_passes_filename);
+			AddError(load_context, "Error parsing the descriptor file");
 			return false;
 		}
 
@@ -318,19 +319,18 @@ namespace render
 		system = nullptr;
 	}
 
-	bool LoadPassDescriptorFile(System* system, display::Device* device, const char * pass_descriptor_file, std::vector<std::string>& errors)
+	bool LoadPassDescriptorFile(System* system, display::Device* device, const std::vector<uint8_t>& descriptor_file, std::vector<std::string>& errors)
 	{
 		LoadContext load_context;
 		load_context.device = device;
-		load_context.render_passes_filename = pass_descriptor_file;
 		load_context.render_system = system;
 
-		bool success = system->Load(load_context);
+		bool success = system->Load(load_context, descriptor_file);
 
 		if (!success)
 		{
 			//Log the errors
-			core::LogError("Errors loading render pass descriptor file <%s>:", pass_descriptor_file);
+			core::LogError("Errors loading render pass descriptor file");
 
 			for (auto& error : load_context.errors)
 			{
@@ -345,7 +345,7 @@ namespace render
 		}
 		else
 		{
-			core::LogInfo("Render pass descriptor file <%s> loaded", pass_descriptor_file);
+			core::LogInfo("Render pass descriptor file loaded");
 		}
 		return success;
 	}

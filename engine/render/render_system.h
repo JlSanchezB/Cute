@@ -44,7 +44,7 @@ namespace render
 	struct System
 	{
 		//Load from passes declaration file
-		bool Load(LoadContext& load_context);
+		bool Load(LoadContext& load_context, const std::vector<uint8_t>& descriptor_file);
 
 		using ResourceFactoryMap = std::unordered_map<RenderClassType, std::unique_ptr<FactoryInterface<Resource>>>;
 		using PassFactoryMap = std::unordered_map<RenderClassType, std::unique_ptr<FactoryInterface<Pass>>>;
