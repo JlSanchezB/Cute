@@ -28,6 +28,9 @@ namespace core
 		//Vector of the data associated to this pool
 		std::array<DataStorage, SIZE> m_data;
 
+		//Size
+		size_t m_size;
+
 	public:
 		SimplePool()
 		{
@@ -45,6 +48,7 @@ namespace core
 			}
 
 			m_first_free_allocated = 0;
+			m_size = 0;
 		}
 
 		~SimplePool()
@@ -55,6 +59,11 @@ namespace core
 				//Destroy DATA
 				(&data)->~DATA();
 			});
+		}
+
+		size_t Size() const
+		{
+			return m_size;
 		}
 
 		template<typename VISITOR>
@@ -86,6 +95,8 @@ namespace core
 		template<typename ...Args>
 		DATA* Alloc(Args && ...args)
 		{
+			assert(m_size <= m_data.size());
+
 			if (m_first_free_allocated == kInvalidIndex)
 			{
 				//Error
@@ -99,6 +110,7 @@ namespace core
 			DATA* data = new(&m_data[m_first_free_allocated]) DATA(std::forward<Args>(args)...);
 
 			m_first_free_allocated = next_free_slot;
+			m_size++;
 
 			return data;
 		}
@@ -108,6 +120,7 @@ namespace core
 			//Find the index
 			size_t index = data - reinterpret_cast<DATA*>(m_data.data());
 			assert(index < m_data.size());
+			assert(m_size > 0);
 
 			//Free DATA
 			(reinterpret_cast<DATA*>(&m_data[index]))->~DATA();
@@ -122,6 +135,8 @@ namespace core
 				m_data[index].next_free_slot = m_first_free_allocated;
 				m_first_free_allocated = index;
 			}
+
+			m_size--;
 		}
 	};
 }
