@@ -116,8 +116,8 @@ namespace render
 	class RenderContext
 	{
 	public:
-		//Add render resource to this pass instance
-		void AddRenderResource(const char* name, std::unique_ptr<Resource>& resource);
+		//Add pass resource to this pass instance
+		void AddPassResource(const char* name, std::unique_ptr<Resource>& resource);
 		//Resource associated to this pass instance
 		Resource* GetRenderResource(const char* name) const;
 
@@ -163,6 +163,9 @@ namespace render
 	//Destroy render pass system
 	void DestroyRenderPassSystem(System*& system, display::Device* device);
 
+	//Load render pass descriptor file
+	bool LoadPassDescriptorFile(System* system, display::Device* device, const char* pass_descriptor_file, std::vector<std::string>& errors);
+
 	//Add game resource, allows the game to add global resources that the pass system can access them
 	bool AddGameResource(System* system, const char* name, std::unique_ptr<Resource>& resource);
 
@@ -204,10 +207,6 @@ namespace render
 
 	//Get Pass by name
 	Pass* GetPass(System* system, const char* name);
-
-	//Load render pass descriptor file
-	bool LoadPassDescriptorFile(System* system, display::Device* device, const char* pass_descriptor_file, std::vector<std::string>& errors);
-
 
 	//Create a render context for rendering a pass
 	using ResourceMap = std::unordered_map<std::string, std::unique_ptr<Resource>>;

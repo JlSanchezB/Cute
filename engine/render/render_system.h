@@ -21,10 +21,12 @@ namespace render
 			m_pass_info(pass_info)
 		{
 			m_root_pass = _root_pass;
-			m_resources_map = std::move(init_resources);
+			m_game_resources_map = std::move(init_resources);
 		}
-		//Resources associated to this pass
-		ResourceMap m_resources_map;
+		//Game resources associated to this pass
+		ResourceMap m_game_resources_map;
+		//Pass resources associated to this pass
+		ResourceMap m_pass_resources_map;
 		//Render pass system
 		System* m_render_pass_system;
 		//Root pass for the cotnext

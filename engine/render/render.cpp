@@ -23,20 +23,32 @@ namespace
 
 namespace render
 {
-	void RenderContext::AddRenderResource(const char * name, std::unique_ptr<Resource>& resource)
+	void RenderContext::AddPassResource(const char * name, std::unique_ptr<Resource>& resource)
 	{
 		auto render_context = reinterpret_cast<RenderContextInternal*>(this);
-		render_context->m_resources_map[name] = std::move(resource);
+		render_context->m_game_resources_map[name] = std::move(resource);
 	}
 
 	Resource * RenderContext::GetRenderResource(const char * name) const
 	{
-		//First check context resources
 		auto render_context = reinterpret_cast<const RenderContextInternal*>(this);
-		const auto& it = render_context->m_resources_map.find(name);
-		if (it != render_context->m_resources_map.end())
+
+		//First check pass context resources
 		{
-			return it->second.get();
+			const auto& it = render_context->m_game_resources_map.find(name);
+			if (it != render_context->m_game_resources_map.end())
+			{
+				return it->second.get();
+			}
+		}
+
+		//Second check pass context resources
+		{
+			const auto& it = render_context->m_pass_resources_map.find(name);
+			if (it != render_context->m_pass_resources_map.end())
+			{
+				return it->second.get();
+			}
 		}
 
 		//Then check system resources
@@ -386,7 +398,8 @@ namespace render
 	{
 		auto render_context_internal = reinterpret_cast<RenderContextInternal*>(render_context);
 		//Destroy context resources
-		DestroyResources(render_context_internal->m_display_device, render_context_internal->m_resources_map);
+		DestroyResources(render_context_internal->m_display_device, render_context_internal->m_game_resources_map);
+		DestroyResources(render_context_internal->m_display_device, render_context_internal->m_pass_resources_map);
 
 		system->m_render_context_pool.Free(render_context_internal);
 		

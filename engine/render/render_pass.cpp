@@ -249,7 +249,7 @@ namespace render
 		if (descriptor_table_handle.IsValid())
 		{
 			//Create resource handle
-			render_context.AddRenderResource(m_descriptor_table.GetResourceName().c_str(), CreateResourceFromHandle<DescriptorTableResource>(descriptor_table_handle));
+			render_context.AddPassResource(m_descriptor_table.GetResourceName().c_str(), CreateResourceFromHandle<DescriptorTableResource>(descriptor_table_handle));
 		}
 		else
 		{
