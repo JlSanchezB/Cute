@@ -47,6 +47,9 @@ public:
 
 	render::RenderContext* m_render_context = nullptr;
 
+	//Game constant buffer
+	display::ConstantBufferHandle m_game_constant_buffer;
+
 	//Last valid descriptor file
 	std::vector<uint8_t> m_render_system_descriptor_buffer;
 
@@ -80,11 +83,10 @@ public:
 		SetDevice(m_device);
 
 		//Create constant buffer with the time
-		display::ConstantBufferHandle game_constant_buffer;
 		display::ConstantBufferDesc constant_buffer_desc;
 		constant_buffer_desc.access = display::Access::Dynamic;
 		constant_buffer_desc.size = 16;
-		game_constant_buffer = display::CreateConstantBuffer(m_device, constant_buffer_desc, "GameConstantBuffer");
+		m_game_constant_buffer = display::CreateConstantBuffer(m_device, constant_buffer_desc, "GameConstantBuffer");
 
 		//Create render pass system
 		m_render_pass_system = render::CreateRenderPassSystem();
@@ -103,7 +105,7 @@ public:
 			{
 				//Create pass
 				render::ResourceMap init_resource_map;
-				init_resource_map["GameGlobal"] = CreateResourceFromHandle<render::ConstantBufferResource>(game_constant_buffer);
+				init_resource_map["GameGlobal"] = CreateResourceFromHandle<render::ConstantBufferResource>(display::WeakConstantBufferHandle(m_game_constant_buffer));
 				init_resource_map["BackBuffer"] = CreateResourceFromHandle<render::RenderTargetResource>(display::GetBackBuffer(m_device));
 
 				render::RenderContext::PassInfo pass_info;
@@ -125,8 +127,9 @@ public:
 
 			render::DestroyRenderPassSystem(m_render_pass_system, m_device);
 		}
-
-
+		
+		//Destroy handles
+		display::DestroyHandle(m_device, m_game_constant_buffer);
 
 		display::DestroyDevice(m_device);
 	}
@@ -135,7 +138,6 @@ public:
 		display::BeginFrame(m_device);
 
 		//Update time
-		render::ConstantBufferResource* game_global_resource = m_render_context->GetResource<render::ConstantBufferResource>("GameGlobal");
 
 		struct GameConstantBuffer
 		{
@@ -144,7 +146,7 @@ public:
 		GameConstantBuffer game_constant_buffer = { { static_cast<float>(total_time), elapsed_time, 0.f, 0.f } };
 		
 		//Update game constant buffer
-		display::UpdateResourceBuffer(m_device, game_global_resource->GetHandle(), &game_constant_buffer, sizeof(game_constant_buffer));
+		display::UpdateResourceBuffer(m_device, m_game_constant_buffer, &game_constant_buffer, sizeof(game_constant_buffer));
 
 		//Capture pass
 		render::CaptureRenderContext(m_render_pass_system, m_render_context);
