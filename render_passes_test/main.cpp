@@ -47,6 +47,15 @@ public:
 
 	render::RenderContext* m_render_context = nullptr;
 
+	//Last valid descriptor file
+	std::vector<uint8_t> m_render_system_descriptor_buffer;
+
+	//Buffer used for the render passes text editor
+	std::array<char, 1024 * 128> m_text_buffer = {0};
+
+	//Display imgui edit descriptor file
+	bool m_show_edit_descriptor_file = false;
+
 	void OnInit() override
 	{
 		display::DeviceInitParams device_init_params;
@@ -78,13 +87,16 @@ public:
 		m_render_pass_system = render::CreateRenderPassSystem();
 
 		//Read file
-		auto descriptor_file =  ReadFileToBuffer("render_pass_sample.xml");
+		m_render_system_descriptor_buffer =  ReadFileToBuffer("render_pass_sample.xml");
 
-		if (descriptor_file.size() > 0)
+		if (m_render_system_descriptor_buffer.size() > 0)
 		{
+			//Copy to the text editor buffer
+			memcpy(m_text_buffer.data(), m_render_system_descriptor_buffer.data(), m_render_system_descriptor_buffer.size());
+
 			//Load render pass sample
 			std::vector<std::string> errors;
-			if (render::LoadPassDescriptorFile(m_render_pass_system, m_device, descriptor_file, errors))
+			if (render::LoadPassDescriptorFile(m_render_pass_system, m_device, m_render_system_descriptor_buffer, errors))
 			{
 				//Create pass
 				render::ResourceMap init_resource_map;
@@ -150,6 +162,36 @@ public:
 			pass_info.width = m_width;
 			pass_info.height = m_height;
 			m_render_context->UpdatePassInfo(pass_info);
+		}
+	}
+
+	void OnAddImguiMenu() override
+	{
+		//Add menu for modifying the render system descriptor file
+		if (ImGui::BeginMenu("RenderSystem"))
+		{
+			m_show_edit_descriptor_file = ImGui::MenuItem("Edit descriptor file");
+			ImGui::EndMenu();
+		}
+	}
+
+	void OnImguiRender() override
+	{
+		if (m_show_edit_descriptor_file)
+		{
+			if (!ImGui::Begin("Render System Descriptor File", &m_show_edit_descriptor_file))
+			{
+				ImGui::End();
+				return;
+			}
+
+			ImGui::InputTextMultiline("file", m_text_buffer.data(), m_text_buffer.size(), ImVec2(-1.0f, ImGui::GetTextLineHeight() * 32), ImGuiInputTextFlags_AllowTabInput);
+			if (ImGui::Button("Reset"))
+			{
+				memcpy(m_text_buffer.data(), m_render_system_descriptor_buffer.data(), m_render_system_descriptor_buffer.size());
+			}
+
+			ImGui::End();
 		}
 	}
 };

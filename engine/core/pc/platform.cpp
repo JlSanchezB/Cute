@@ -262,6 +262,9 @@ namespace
 		{
 			g_imgui_log_enable = core::LogRender();
 		}
+
+		//Render game imgui
+		game->OnImguiRender();
 	}
 }
 

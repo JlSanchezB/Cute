@@ -27,6 +27,7 @@ namespace platform
 		virtual void OnTick(double total_time, float elapsed_time) = 0;
 		virtual void OnSizeChange(uint32_t width, uint32_t height, bool minimized) = 0;
 		virtual void OnAddImguiMenu() {};
+		virtual void OnImguiRender() {};
 	};
 
 	char Run(const char* name, void* param, uint32_t width, uint32_t height, Game* game);
