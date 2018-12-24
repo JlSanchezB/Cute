@@ -541,7 +541,7 @@ namespace render
 
 		if (!GetHandle().IsValid())
 		{
-			AddError(load_context, "Error creating pipeline state <%s>, display error <%>", load_context.name, display::GetLastErrorMessage(load_context.device));
+			AddError(load_context, "Error creating pipeline state <%s>, display error <%s>", load_context.name, display::GetLastErrorMessage(load_context.device));
 		}
 	}
 

@@ -135,19 +135,24 @@ public:
 			//Load render pass sample
 			std::vector<std::string> errors;
 			size_t buffer_size = strlen(m_text_buffer.data()) + 1;
-			if (render::LoadPassDescriptorFile(m_render_pass_system, m_device, m_text_buffer.data(), buffer_size, errors))
+			
+			if (!render::LoadPassDescriptorFile(m_render_pass_system, m_device, m_text_buffer.data(), buffer_size, errors))
 			{
-				//Create pass
-				render::ResourceMap init_resource_map;
-				init_resource_map["GameGlobal"] = CreateResourceFromHandle<render::ConstantBufferResource>(display::WeakConstantBufferHandle(m_game_constant_buffer));
-				init_resource_map["BackBuffer"] = CreateResourceFromHandle<render::RenderTargetResource>(display::GetBackBuffer(m_device));
-
-				render::RenderContext::PassInfo pass_info;
-				pass_info.width = m_width;
-				pass_info.height = m_height;
-
-				m_render_context = render::CreateRenderContext(m_render_pass_system, m_device, "Main", pass_info, init_resource_map, errors);
+				core::LogError("Failed to load the new descriptor file, reverting changes");
 			}
+
+
+			//Create pass
+			render::ResourceMap init_resource_map;
+			init_resource_map["GameGlobal"] = CreateResourceFromHandle<render::ConstantBufferResource>(display::WeakConstantBufferHandle(m_game_constant_buffer));
+			init_resource_map["BackBuffer"] = CreateResourceFromHandle<render::RenderTargetResource>(display::GetBackBuffer(m_device));
+
+			render::RenderContext::PassInfo pass_info;
+			pass_info.width = m_width;
+			pass_info.height = m_height;
+
+			//Still load it if it fail, as it will use the last valid one
+			m_render_context = render::CreateRenderContext(m_render_pass_system, m_device, "Main", pass_info, init_resource_map, errors);
 
 			m_render_system_descriptor_load_requested = false;
 		}
@@ -162,10 +167,13 @@ public:
 		//Update game constant buffer
 		display::UpdateResourceBuffer(m_device, m_game_constant_buffer, &game_constant_buffer, sizeof(game_constant_buffer));
 
-		//Capture pass
-		render::CaptureRenderContext(m_render_pass_system, m_render_context);
-		//Execute pass
-		render::ExecuteRenderContext(m_render_pass_system, m_render_context);
+		if (m_render_context)
+		{
+			//Capture pass
+			render::CaptureRenderContext(m_render_pass_system, m_render_context);
+			//Execute pass
+			render::ExecuteRenderContext(m_render_pass_system, m_render_context);
+		}
 
 		display::EndFrame(m_device);
 	}
