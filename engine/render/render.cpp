@@ -321,6 +321,10 @@ namespace render
 
 	bool LoadPassDescriptorFile(System* system, display::Device* device, const std::vector<uint8_t>& descriptor_file, std::vector<std::string>& errors)
 	{
+		//Save the resources and passes map
+		System::ResourceMap global_resources_map_old = std::move(system->m_global_resources_map);
+		System::PassMap passes_map_old = std::move(system->m_passes_map);
+
 		LoadContext load_context;
 		load_context.device = device;
 		load_context.render_system = system;
@@ -342,11 +346,20 @@ namespace render
 			//Clear all resources created from the file
 			DestroyResources(device, system->m_global_resources_map);
 			DestroyResources(device, system->m_passes_map);
+
+			//Reset all values
+			system->m_global_resources_map = std::move(global_resources_map_old);
+			system->m_passes_map = std::move(passes_map_old);
 		}
 		else
 		{
+			//We can delete old resources and passes
+			DestroyResources(device, global_resources_map_old);
+			DestroyResources(device, passes_map_old);
+
 			core::LogInfo("Render pass descriptor file loaded");
 		}
+
 		return success;
 	}
 
