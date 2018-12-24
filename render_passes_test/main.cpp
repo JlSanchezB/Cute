@@ -56,6 +56,9 @@ public:
 	//Display imgui edit descriptor file
 	bool m_show_edit_descriptor_file = false;
 
+	//Reload render passes file from the text editor
+	bool m_render_system_descriptor_load_requested = false;
+
 	void OnInit() override
 	{
 		display::DeviceInitParams device_init_params;
@@ -189,6 +192,12 @@ public:
 			if (ImGui::Button("Reset"))
 			{
 				memcpy(m_text_buffer.data(), m_render_system_descriptor_buffer.data(), m_render_system_descriptor_buffer.size());
+			}
+			if (ImGui::Button("Load"))
+			{
+				//Request a load from the text buffer 
+				m_render_system_descriptor_load_requested = true;
+				m_show_edit_descriptor_file = false;
 			}
 
 			ImGui::End();

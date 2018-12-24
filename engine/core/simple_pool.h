@@ -49,7 +49,17 @@ namespace core
 
 		~SimplePool()
 		{
-			//Call destructors for all DATA left
+			//Delete allocated ones
+			Visit([](DATA& data)
+			{
+				//Destroy DATA
+				(&data)->~DATA();
+			});
+		}
+
+		template<typename VISITOR>
+		void Visit(VISITOR&& visit_item)
+		{
 			std::vector<bool> allocated;
 			allocated.resize(m_data.size());
 
@@ -67,8 +77,8 @@ namespace core
 				//Check if it is allocated
 				if (allocated[i])
 				{
-					//Destroy DATA
-					(reinterpret_cast<DATA*>(&m_data[i]))->~DATA();
+					//Visit data
+					visit_item(*(reinterpret_cast<DATA*>(&m_data[i])));
 				}
 			}
 		}
