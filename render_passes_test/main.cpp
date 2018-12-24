@@ -62,6 +62,11 @@ public:
 	//Reload render passes file from the text editor
 	bool m_render_system_descriptor_load_requested = false;
 
+	//Show errors in imguid modal window
+	bool m_show_errors = false;
+	std::vector<std::string> m_render_system_errors;
+	std::vector<std::string> m_render_system_context_errors;
+
 	void OnInit() override
 	{
 		display::DeviceInitParams device_init_params;
@@ -132,13 +137,16 @@ public:
 				render::DestroyRenderContext(m_render_pass_system, m_render_context);
 			}
 
+			//Reset errors
+			m_render_system_errors.clear();
+
 			//Load render pass sample
-			std::vector<std::string> errors;
 			size_t buffer_size = strlen(m_text_buffer.data()) + 1;
 			
-			if (!render::LoadPassDescriptorFile(m_render_pass_system, m_device, m_text_buffer.data(), buffer_size, errors))
+			if (!render::LoadPassDescriptorFile(m_render_pass_system, m_device, m_text_buffer.data(), buffer_size, m_render_system_errors))
 			{
 				core::LogError("Failed to load the new descriptor file, reverting changes");
+				m_show_errors = true;
 			}
 
 
@@ -152,7 +160,11 @@ public:
 			pass_info.height = m_height;
 
 			//Still load it if it fail, as it will use the last valid one
-			m_render_context = render::CreateRenderContext(m_render_pass_system, m_device, "Main", pass_info, init_resource_map, errors);
+			m_render_context = render::CreateRenderContext(m_render_pass_system, m_device, "Main", pass_info, init_resource_map, m_render_system_context_errors);
+			if (m_render_context == nullptr)
+			{
+				m_show_errors = true;
+			}
 
 			m_render_system_descriptor_load_requested = false;
 		}
@@ -224,6 +236,31 @@ public:
 			}
 
 			ImGui::End();
+		}
+
+		if (m_show_errors)
+		{
+			//Show modal window with the errors
+			ImGui::OpenPopup("Errors loading the render pass descriptors");
+			if (ImGui::BeginPopupModal("Errors loading the render pass descriptors", NULL, ImGuiWindowFlags_AlwaysAutoResize))
+			{
+				for (auto& error : m_render_system_errors)
+				{
+					ImGui::Text(error.c_str());
+				}
+				for (auto& error : m_render_system_context_errors)
+				{
+					ImGui::Text(error.c_str());
+				}
+				ImGui::Separator();
+
+				if (ImGui::Button("OK", ImVec2(120, 0)))
+				{
+					ImGui::CloseCurrentPopup();
+					m_show_errors = false;
+				}
+				ImGui::EndPopup();
+			}
 		}
 	}
 };
