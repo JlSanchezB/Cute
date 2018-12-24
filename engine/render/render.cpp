@@ -185,11 +185,11 @@ namespace render
 		}
 	}
 
-	bool System::Load(LoadContext& load_context, const std::vector<uint8_t>& descriptor_file)
+	bool System::Load(LoadContext& load_context, const char* descriptor_file_buffer, size_t descriptor_file_buffer_size)
 	{
 		tinyxml2::XMLDocument xml_doc;
 
-		tinyxml2::XMLError result = xml_doc.Parse(reinterpret_cast<const char*>(descriptor_file.data()), descriptor_file.size());
+		tinyxml2::XMLError result = xml_doc.Parse(descriptor_file_buffer, descriptor_file_buffer_size);
 
 		if (result != tinyxml2::XML_SUCCESS)
 		{
@@ -319,8 +319,16 @@ namespace render
 		system = nullptr;
 	}
 
-	bool LoadPassDescriptorFile(System* system, display::Device* device, const std::vector<uint8_t>& descriptor_file, std::vector<std::string>& errors)
+	bool LoadPassDescriptorFile(System* system, display::Device* device, const char* descriptor_file_buffer, size_t descriptor_file_buffer_size, std::vector<std::string>& errors)
 	{
+		//Only can be loaded if there are not context related to it
+		if (system->m_render_context_pool.Size() > 0)
+		{
+			core::LogError("Errors loading render pass descriptor file, there are still old render context associated to the system");
+			errors.emplace_back("Errors loading render pass descriptor file, there are still old render context associated to the system");
+			return false;
+		}
+
 		//Save the resources and passes map
 		System::ResourceMap global_resources_map_old = std::move(system->m_global_resources_map);
 		System::PassMap passes_map_old = std::move(system->m_passes_map);
@@ -329,7 +337,7 @@ namespace render
 		load_context.device = device;
 		load_context.render_system = system;
 
-		bool success = system->Load(load_context, descriptor_file);
+		bool success = system->Load(load_context, descriptor_file_buffer, descriptor_file_buffer_size);
 
 		if (!success)
 		{

@@ -98,23 +98,9 @@ public:
 		{
 			//Copy to the text editor buffer
 			memcpy(m_text_buffer.data(), m_render_system_descriptor_buffer.data(), m_render_system_descriptor_buffer.size());
-
-			//Load render pass sample
-			std::vector<std::string> errors;
-			if (render::LoadPassDescriptorFile(m_render_pass_system, m_device, m_render_system_descriptor_buffer, errors))
-			{
-				//Create pass
-				render::ResourceMap init_resource_map;
-				init_resource_map["GameGlobal"] = CreateResourceFromHandle<render::ConstantBufferResource>(display::WeakConstantBufferHandle(m_game_constant_buffer));
-				init_resource_map["BackBuffer"] = CreateResourceFromHandle<render::RenderTargetResource>(display::GetBackBuffer(m_device));
-
-				render::RenderContext::PassInfo pass_info;
-				pass_info.width = m_width;
-				pass_info.height = m_height;
-
-				m_render_context = render::CreateRenderContext(m_render_pass_system, m_device, "Main", pass_info, init_resource_map, errors);
-			}
 		}
+
+		m_render_system_descriptor_load_requested = true;
 	}
 	void OnDestroy() override
 	{
@@ -137,8 +123,36 @@ public:
 	{
 		display::BeginFrame(m_device);
 
-		//Update time
+		//Recreate the descriptor file and context if requested
+		if (m_render_system_descriptor_load_requested)
+		{
+			//Remove the render context
+			if (m_render_context)
+			{
+				render::DestroyRenderContext(m_render_pass_system, m_render_context);
+			}
 
+			//Load render pass sample
+			std::vector<std::string> errors;
+			size_t buffer_size = strlen(m_text_buffer.data()) + 1;
+			if (render::LoadPassDescriptorFile(m_render_pass_system, m_device, m_text_buffer.data(), buffer_size, errors))
+			{
+				//Create pass
+				render::ResourceMap init_resource_map;
+				init_resource_map["GameGlobal"] = CreateResourceFromHandle<render::ConstantBufferResource>(display::WeakConstantBufferHandle(m_game_constant_buffer));
+				init_resource_map["BackBuffer"] = CreateResourceFromHandle<render::RenderTargetResource>(display::GetBackBuffer(m_device));
+
+				render::RenderContext::PassInfo pass_info;
+				pass_info.width = m_width;
+				pass_info.height = m_height;
+
+				m_render_context = render::CreateRenderContext(m_render_pass_system, m_device, "Main", pass_info, init_resource_map, errors);
+			}
+
+			m_render_system_descriptor_load_requested = false;
+		}
+
+		//Update time
 		struct GameConstantBuffer
 		{
 			float time[4];
@@ -199,7 +213,6 @@ public:
 			{
 				//Request a load from the text buffer 
 				m_render_system_descriptor_load_requested = true;
-				m_show_edit_descriptor_file = false;
 			}
 
 			ImGui::End();

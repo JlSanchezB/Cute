@@ -163,7 +163,7 @@ namespace render
 	void DestroyRenderPassSystem(System*& system, display::Device* device);
 
 	//Load render pass descriptor file
-	bool LoadPassDescriptorFile(System* system, display::Device* device, const std::vector<uint8_t>& descriptor_file, std::vector<std::string>& errors);
+	bool LoadPassDescriptorFile(System* system, display::Device* device, const char* descriptor_file_buffer, size_t descriptor_file_buffer_size, std::vector<std::string>& errors);
 
 	//Add game resource, allows the game to add global resources that the pass system can access them
 	bool AddGameResource(System* system, const char* name, std::unique_ptr<Resource>& resource);

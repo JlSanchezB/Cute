@@ -383,6 +383,7 @@ void imgui_render::Draw(display::Context* context)
 		//Grow
 		current_vertex_buffer_size = draw_data->TotalVtxCount + 5000;
 
+		//Destroy old vertex buffer
 		display::DestroyVertexBuffer(device, g_vertex_buffer);
 
 		//Create a new one
@@ -398,6 +399,9 @@ void imgui_render::Draw(display::Context* context)
 	{
 		//Grow
 		current_index_buffer_size = draw_data->TotalIdxCount + 10000;
+
+		//Destroy old index buffer
+		display::DestroyIndexBuffer(device, g_index_buffer);
 
 		//Create new one
 		display::IndexBufferDesc index_buffer_desc;

@@ -77,6 +77,8 @@ namespace core
 		//Private constructor of a handle, only a pool can create valid handles
 		Handle(TYPE index)
 		{
+			//The destination handle needs to be invalid
+			assert(Accessor::m_index == Accessor::kInvalid);
 			HandleAccessor::m_index = index;
 		}
 
@@ -100,6 +102,8 @@ namespace core
 
 		Handle(Handle&& a)
 		{
+			//The destination handle needs to be invalid
+			assert(Accessor::m_index == Accessor::kInvalid);
 			Accessor::m_index = a.m_index;
 			a.m_index = Accessor::kInvalid;
 		}
@@ -108,6 +112,8 @@ namespace core
 
 		Handle& operator=(Handle&& a)
 		{
+			//The destination handle needs to be invalid
+			assert(Accessor::m_index == Accessor::kInvalid);
 			Accessor::m_index = a.m_index;
 			a.m_index = Accessor::kInvalid;
 			return *this;
@@ -115,6 +121,8 @@ namespace core
 
 		~Handle()
 		{
+			//Only invalid index can be destructed, if not we will have leaks
+			assert(Accessor::m_index == Accessor::kInvalid);
 		}
 	};
 
