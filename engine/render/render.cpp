@@ -289,7 +289,6 @@ namespace render
 		RegisterResourceFactory<ConstantBufferResource>(system);
 		RegisterResourceFactory<VertexBufferResource>(system);
 		RegisterResourceFactory<RenderTargetResource>(system);
-		RegisterResourceFactory<RenderTargetReferenceResource>(system);
 		RegisterResourceFactory<RootSignatureResource>(system);
 		RegisterResourceFactory<GraphicsPipelineStateResource>(system);
 		RegisterResourceFactory<ComputePipelineStateResource>(system);

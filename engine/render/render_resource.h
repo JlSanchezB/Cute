@@ -31,25 +31,36 @@ namespace render
 
 
 	//Resource that can be created outside the render pass system, just a display handle
-	template<typename HANDLE, bool REFERENCE = false>
+	//If a handle is valid, means that can be deleted by the render system, if it is a weak point means that the countrol outside
+	template<typename HANDLE>
 	class DisplayHandleResource : public Resource
 	{
 		HANDLE m_handle;
+		using WEAKHANDLE = typename HANDLE::WeakHandleVersion;
+		WEAKHANDLE m_weak_handle;
 	public:
 		void Init(HANDLE& handle)
 		{
+			//It is a self destroy handle
 			m_handle = std::move(handle);
+			m_weak_handle = m_handle;
+		}
+		void Init(WEAKHANDLE& handle)
+		{
+			//It is a reference, the live is not controlled by the render system
+			m_handle = HANDLE();
+			m_weak_handle = handle;
 		}
 		void Destroy(display::Device* device) override
 		{
-			if constexpr (!REFERENCE)
+			if (m_handle.IsValid())
 			{
 				display::DestroyHandle(device, m_handle);
 			}
 		}
-		HANDLE& GetHandle()
+		WEAKHANDLE& GetHandle()
 		{
-			return m_handle;
+			return m_weak_handle;
 		}
 	};
 
@@ -109,14 +120,6 @@ namespace render
 		void Load(LoadContext& load_context) override;
 	};
 
-	//Render target reference resource, it is a reference to a weak handle render target, can not be destroy by the system (BackBuffer)
-	class RenderTargetReferenceResource : public DisplayHandleResource<display::WeakRenderTargetHandle, true>
-	{
-	public:
-		DECLARE_RENDER_CLASS("RenderTargetReference");
-		void Destroy(display::Device* device) override {};
-		void Load(LoadContext& load_context) override {};
-	};
 	//Depth buffer
 	class DepthBufferResource : public DisplayHandleResource<display::DepthBufferHandle>
 	{

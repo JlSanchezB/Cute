@@ -233,7 +233,7 @@ namespace render
 		if (texture_buffer.size() > 0)
 		{
 			//Load the texture
-			GetHandle() = display::CreateTextureResource(load_context.device, reinterpret_cast<void*>(&texture_buffer[0]), texture_buffer.size(), load_context.name);
+			Init(display::CreateTextureResource(load_context.device, reinterpret_cast<void*>(&texture_buffer[0]), texture_buffer.size(), load_context.name));
 
 			if (!GetHandle().IsValid())
 			{
@@ -345,7 +345,7 @@ namespace render
 		}
 
 		//Create root signature
-		GetHandle() = display::CreateRootSignature(load_context.device, root_signature_desc, load_context.name);
+		Init(display::CreateRootSignature(load_context.device, root_signature_desc, load_context.name));
 
 		if (!GetHandle().IsValid())
 		{
@@ -537,7 +537,7 @@ namespace render
 		}
 
 		//Create pipeline state
-		GetHandle() = display::CreatePipelineState(load_context.device, pipeline_state_desc, load_context.name);
+		Init(display::CreatePipelineState(load_context.device, pipeline_state_desc, load_context.name));
 
 		if (!GetHandle().IsValid())
 		{
@@ -591,7 +591,7 @@ namespace render
 		}
 
 		//Create pipeline state
-		GetHandle() = display::CreateDescriptorTable(load_context.device, descriptor_table_desc);
+		Init(display::CreateDescriptorTable(load_context.device, descriptor_table_desc));
 
 		if (!GetHandle().IsValid())
 		{

@@ -87,6 +87,8 @@ namespace core
 		friend class WeakHandle;
 
 	public:
+		using WeakHandleVersion = WeakHandle<ENUM, TYPE>;
+
 		//Public constructor
 		Handle()
 		{

@@ -109,7 +109,7 @@ namespace render
 		std::array<display::WeakRenderTargetHandle, display::kMaxNumRenderTargets> render_targets;
 		for (uint8_t i = 0; i < m_num_render_targets; ++i)
 		{
-			RenderTargetReferenceResource* render_target = render_context.GetResource<RenderTargetReferenceResource>(m_render_target_name[i].c_str());
+			RenderTargetResource* render_target = render_context.GetResource<RenderTargetResource>(m_render_target_name[i].c_str());
 			if (render_target)
 			{
 				render_targets[i] = render_target->GetHandle();
@@ -146,7 +146,7 @@ namespace render
 	void ClearRenderTargetPass::Render(RenderContext & render_context) const
 	{
 		//Get render target
-		RenderTargetReferenceResource* render_target = m_render_target.Get(render_context);
+		RenderTargetResource* render_target = m_render_target.Get(render_context);
 		if (render_target)
 		{
 			render_context.GetContext()->ClearRenderTargetColour(render_target->GetHandle(), colour);

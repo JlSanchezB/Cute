@@ -39,7 +39,7 @@ namespace render
 
 	class ClearRenderTargetPass : public Pass
 	{
-		ResourceReference<RenderTargetReferenceResource> m_render_target;
+		ResourceReference<RenderTargetResource> m_render_target;
 		float colour[4];
 	public:
 		DECLARE_RENDER_CLASS("ClearRenderTarget");

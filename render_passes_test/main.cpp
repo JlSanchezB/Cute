@@ -84,7 +84,7 @@ public:
 			//Create pass
 			render::ResourceMap init_resource_map;
 			init_resource_map["GameGlobal"] = CreateResourceFromHandle<render::ConstantBufferResource>(game_constant_buffer);
-			init_resource_map["BackBuffer"] = CreateResourceFromHandle<render::RenderTargetReferenceResource>(display::GetBackBuffer(m_device));
+			init_resource_map["BackBuffer"] = CreateResourceFromHandle<render::RenderTargetResource>(display::GetBackBuffer(m_device));
 
 			render::RenderContext::PassInfo pass_info;
 			pass_info.width = m_width;
