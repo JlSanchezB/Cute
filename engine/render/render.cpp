@@ -23,13 +23,13 @@ namespace
 
 namespace render
 {
-	void RenderContext::AddPassResource(const char * name, std::unique_ptr<Resource>& resource)
+	void RenderContext::AddPassResource(const ResourceName& name, std::unique_ptr<Resource>& resource)
 	{
 		auto render_context = reinterpret_cast<RenderContextInternal*>(this);
 		render_context->m_game_resources_map[name] = std::move(resource);
 	}
 
-	Resource * RenderContext::GetRenderResource(const char * name) const
+	Resource * RenderContext::GetRenderResource(const ResourceName& name) const
 	{
 		auto render_context = reinterpret_cast<const RenderContextInternal*>(this);
 
@@ -91,14 +91,23 @@ namespace render
 		render_context->m_pass_info = pass_info;
 	}
 
-	std::string System::LoadResource(LoadContext& load_context, const char* prefix)
+	ResourceName System::LoadResource(LoadContext& load_context, const char* prefix)
 	{
 		//Get type and name
-		const char* resource_type = load_context.current_xml_element->Attribute("type");
-		const char* resource_name = load_context.current_xml_element->Attribute("name");
-		if (resource_type && resource_name)
+		const char* resource_type_string = load_context.current_xml_element->Attribute("type");
+		const char* resource_name_string = load_context.current_xml_element->Attribute("name");
+		std::string prefix_name_string;
+		if (prefix)
 		{
-			auto& resource_factory_it = m_resource_factories_map.find(RenderClassType(resource_type));
+			prefix_name_string = std::string(prefix) + resource_name_string;
+			resource_name_string = prefix_name_string.c_str();
+		}
+
+		RenderClassType resource_type(resource_type_string);
+		ResourceName resource_name(resource_name_string);
+		if (resource_type_string && resource_name_string)
+		{
+			auto& resource_factory_it = m_resource_factories_map.find(resource_type);
 			if (resource_factory_it != m_resource_factories_map.end())
 			{
 				if (m_global_resources_map.find(resource_name) == m_global_resources_map.end())
@@ -111,43 +120,35 @@ namespace render
 					auto resource_instance = factory->Create();
 
 					assert(resource_instance);
-					assert(resource_instance->Type() == RenderClassType(resource_type));
+					assert(resource_instance->Type() == resource_type);
 
-					load_context.name = resource_name;
+					load_context.name = resource_name_string;
 
 					//Load resource
 					resource_instance->Load(load_context);
 
-					core::LogInfo("Created Resource <%s> type <%s>", resource_name, resource_type);
+					core::LogInfo("Created Resource <%s> type <%s>", resource_name_string, resource_type_string);
 
-					//Add to the globals
-					if (prefix)
-					{
-						std::string name = std::string(prefix) + resource_name;
-						m_global_resources_map[name].reset(resource_instance);
-						return name;
-					}
-					else
-					{
-						m_global_resources_map[resource_name].reset(resource_instance);
-						return resource_name;
-					}
+					//Add to the globals	
+					m_global_resources_map[resource_name].reset(resource_instance);
+					return resource_name;
+
 				}
 				else
 				{
-					AddError(load_context, "Resource name <%s> has been already added", resource_name);
+					AddError(load_context, "Resource name <%s> has been already added", resource_name_string);
 				}
 			}
 			else
 			{
-				AddError(load_context, "Resource type <%s> is not register", resource_type);
+				AddError(load_context, "Resource type <%s> is not register", resource_type_string);
 			}
 		}
 		else
 		{
 			AddError(load_context, "Resource has not attribute type or name");
 		}
-		return std::string();
+		return ResourceName();
 	}
 
 	Pass* System::LoadPass(LoadContext& load_context)
@@ -442,7 +443,7 @@ namespace render
 		render_context_internal->m_root_pass->Execute(*render_context);
 	}
 
-	bool AddGameResource(System * system, const char * name, std::unique_ptr<Resource>& resource)
+	bool AddGameResource(System * system, const ResourceName& name, std::unique_ptr<Resource>& resource)
 	{
 		if ((system->m_global_resources_map.find(name) != system->m_global_resources_map.end()) ||
 			(system->m_game_resources_map.find(name) != system->m_game_resources_map.end()))
@@ -480,7 +481,7 @@ namespace render
 		return true;
 	}
 
-	Resource * GetResource(System* system, const char * name)
+	Resource * GetResource(System* system, const ResourceName& name)
 	{
 		auto it_game = system->m_game_resources_map.find(name);
 		if (it_game != system->m_game_resources_map.end())
@@ -506,7 +507,7 @@ namespace render
 		return nullptr;
 	}
 
-	std::string LoadContext::GetResourceReference(LoadContext & load_context)
+	ResourceName LoadContext::GetResourceReference(LoadContext & load_context)
 	{
 		//Check if is a resource
 		if (auto xml_resource_element = load_context.current_xml_element->FirstChildElement("Resource"))
@@ -518,11 +519,11 @@ namespace render
 		else
 		{
 			//The resource is in the value
-			return std::string(load_context.current_xml_element->GetText());
+			return ResourceName(load_context.current_xml_element->GetText());
 		}
 	}
 
-	bool LoadContext::AddResource(const char * name, std::unique_ptr<Resource>& resource)
+	bool LoadContext::AddResource(const ResourceName& name, std::unique_ptr<Resource>& resource)
 	{
 		if ((render_system->m_global_resources_map.find(name) == render_system->m_global_resources_map.end()) &&
 			(render_system->m_game_resources_map.find(name) == render_system->m_game_resources_map.end()))
@@ -533,7 +534,7 @@ namespace render
 		else
 		{
 			resource.release();
-			core::LogWarning("Global Resource <%s> has been already added, discarting the new resource");
+			core::LogWarning("Global Resource has been already added, discarting the new resource");
 			return false;
 		}
 	}

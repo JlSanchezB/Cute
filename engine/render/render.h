@@ -36,6 +36,7 @@ namespace render
 	class Resource;
 
 	using RenderClassType = StringHash32<"RenderClassType"_namespace>;
+	using ResourceName = StringHash32<"ResourceName"_namespace>;
 
 	struct ErrorContext
 	{
@@ -53,10 +54,10 @@ namespace render
 		render::System* render_system;
 
 		//Get resource reference, it can be the name of the resource or the resource itself
-		std::string GetResourceReference(LoadContext& load_context);
+		ResourceName GetResourceReference(LoadContext& load_context);
 
 		//Add resource
-		bool AddResource(const char* name, std::unique_ptr<Resource>& resource);
+		bool AddResource(const ResourceName& name, std::unique_ptr<Resource>& resource);
 	};
 	//Base resource class
 	class Resource
@@ -116,12 +117,12 @@ namespace render
 	{
 	public:
 		//Add pass resource to this pass instance
-		void AddPassResource(const char* name, std::unique_ptr<Resource>& resource);
+		void AddPassResource(const ResourceName& name , std::unique_ptr<Resource>& resource);
 		//Resource associated to this pass instance
-		Resource* GetRenderResource(const char* name) const;
+		Resource* GetRenderResource(const ResourceName& name) const;
 
 		template<typename RESOURCE>
-		inline RESOURCE* GetResource(const char* name) const
+		inline RESOURCE* GetResource(const ResourceName& name) const
 		{
 			Resource* resource = GetRenderResource(name);
 			if (resource && resource->Type() == RESOURCE::kClassName)
@@ -166,7 +167,7 @@ namespace render
 	bool LoadPassDescriptorFile(System* system, display::Device* device, const char* descriptor_file_buffer, size_t descriptor_file_buffer_size, std::vector<std::string>& errors);
 
 	//Add game resource, allows the game to add global resources that the pass system can access them
-	bool AddGameResource(System* system, const char* name, std::unique_ptr<Resource>& resource);
+	bool AddGameResource(System* system, const ResourceName& name, std::unique_ptr<Resource>& resource);
 
 	//Register resource factory
 	bool RegisterResourceFactory(System* system, const RenderClassType& resource_type, std::unique_ptr<FactoryInterface<Resource>>& resource_factory);
@@ -191,10 +192,10 @@ namespace render
 	}
 
 	//Get Resource by name
-	Resource* GetResource(System* system, const char* name);
+	Resource* GetResource(System* system, const ResourceName& name);
 
 	template<typename RESOURCE>
-	inline RESOURCE* GetResource(System* system, const char* name)
+	inline RESOURCE* GetResource(System* system, const ResourceName& name)
 	{
 		Resource* resource = GetResource(system, name);
 		if (resource && resource->Type() == RESOURCE::kClassName)
@@ -208,7 +209,7 @@ namespace render
 	Pass* GetPass(System* system, const char* name);
 
 	//Create a render context for rendering a pass
-	using ResourceMap = std::unordered_map<std::string, std::unique_ptr<Resource>>;
+	using ResourceMap = std::unordered_map<ResourceName, std::unique_ptr<Resource>>;
 	RenderContext* CreateRenderContext(System* system, display::Device* device, const char* pass, const RenderContext::PassInfo& pass_info, ResourceMap& init_resources, std::vector<std::string>& errors);
 
 	//Destroy render context for rendering a pass

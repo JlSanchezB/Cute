@@ -380,7 +380,7 @@ namespace render
 			{
 				//Root signature
 				//Find resource
-				RootSignatureResource* root_signature = GetResource<RootSignatureResource>(load_context.render_system, xml_element_root->GetText());
+				RootSignatureResource* root_signature = GetResource<RootSignatureResource>(load_context.render_system, ResourceName(xml_element_root->GetText()));
 
 				if (root_signature)
 				{
@@ -561,7 +561,7 @@ namespace render
 		{
 			if (CheckNodeName(xml_element_root, "Descriptor"))
 			{
-				const char* resource_name = xml_element_root->GetText();
+				ResourceName resource_name(xml_element_root->GetText());
 				
 				if (descriptor_table_desc.num_descriptors == descriptor_table_desc.kNumMaxDescriptors)
 				{

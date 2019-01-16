@@ -104,11 +104,16 @@ namespace core
 	{
 		TYPE m_hash;
 	public:
+		constexpr explicit StringHashT()
+		{
+			m_hash = static_cast<TYPE>(-1);
+		}
+
 		constexpr explicit StringHashT(const char* data)
 		{
 			m_hash = calculate_hash<TYPE>(data);
 		}
-		constexpr explicit StringHashT(const HashConst<TYPE>& data)
+		constexpr StringHashT(const HashConst<TYPE>& data)
 		{
 			m_hash = data.GetHash();
 		}

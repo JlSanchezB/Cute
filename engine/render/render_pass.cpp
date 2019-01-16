@@ -91,7 +91,7 @@ namespace render
 		while (xml_element_render_target)
 		{
 			load_context.current_xml_element = xml_element_render_target;
-			m_render_target_name[m_num_render_targets] = load_context.GetResourceReference(load_context);
+			m_render_target[m_num_render_targets].Set(load_context.GetResourceReference(load_context));
 
 			m_num_render_targets++;
 			xml_element_render_target = xml_element_render_target->NextSiblingElement();
@@ -109,7 +109,7 @@ namespace render
 		std::array<display::WeakRenderTargetHandle, display::kMaxNumRenderTargets> render_targets;
 		for (uint8_t i = 0; i < m_num_render_targets; ++i)
 		{
-			RenderTargetResource* render_target = render_context.GetResource<RenderTargetResource>(m_render_target_name[i].c_str());
+			RenderTargetResource* render_target = m_render_target[i].Get(render_context);
 			if (render_target)
 			{
 				render_targets[i] = render_target->GetHandle();
@@ -194,7 +194,7 @@ namespace render
 		if (xml_element_descriptor)
 		{
 			//It is a descriptor that has to be created during init pass
-			m_descriptor_table.Set(std::string("DescriptorTable_") + std::to_string(rand()));
+			m_descriptor_table.Set(ResourceName((std::string("DescriptorTable_") + std::to_string(rand())).c_str()));
 
 			while (xml_element_descriptor)
 			{
@@ -218,7 +218,7 @@ namespace render
 
 		for (auto& descriptor : m_descriptor_table_names)
 		{
-			Resource* resource = render_context.GetRenderResource(descriptor.c_str());
+			Resource* resource = render_context.GetRenderResource(ResourceName(descriptor.c_str()));
 
 			if (resource)
 			{
@@ -249,7 +249,7 @@ namespace render
 		if (descriptor_table_handle.IsValid())
 		{
 			//Create resource handle
-			render_context.AddPassResource(m_descriptor_table.GetResourceName().c_str(), CreateResourceFromHandle<DescriptorTableResource>(descriptor_table_handle));
+			render_context.AddPassResource(m_descriptor_table.GetResourceName(), CreateResourceFromHandle<DescriptorTableResource>(descriptor_table_handle));
 		}
 		else
 		{
@@ -268,7 +268,7 @@ namespace render
 	void DrawFullScreenQuadPass::Load(LoadContext & load_context)
 	{
 		//Create vertex buffer resource if it doesn't exist
-		if (GetResource(load_context.render_system, "DrawFullScreenQuadPassVertexBuffer") == nullptr)
+		if (GetResource(load_context.render_system, "DrawFullScreenQuadPassVertexBuffer"_sh32) == nullptr)
 		{
 			struct VertexData
 			{
@@ -291,12 +291,12 @@ namespace render
 			display::VertexBufferHandle vertex_buffer = display::CreateVertexBuffer(load_context.device, vertex_buffer_desc, "fullscreen_quad");
 
 			//Add the resource
-			load_context.AddResource("DrawFullScreenQuadPassVertexBuffer", CreateResourceFromHandle<VertexBufferResource>(vertex_buffer));
+			load_context.AddResource("DrawFullScreenQuadPassVertexBuffer"_sh32, CreateResourceFromHandle<VertexBufferResource>(vertex_buffer));
 		}
 	}
 	void DrawFullScreenQuadPass::Render(RenderContext & render_context) const
 	{
-		VertexBufferResource* vertex_buffer = render_context.GetResource<VertexBufferResource>("DrawFullScreenQuadPassVertexBuffer");
+		VertexBufferResource* vertex_buffer = render_context.GetResource<VertexBufferResource>("DrawFullScreenQuadPassVertexBuffer"_sh32);
 		if (vertex_buffer)
 		{
 			render_context.GetContext()->SetVertexBuffers(0, 1, &vertex_buffer->GetHandle());

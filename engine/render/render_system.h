@@ -55,7 +55,7 @@ namespace render
 		//Pass factories
 		PassFactoryMap m_pass_factories_map;
 
-		using ResourceMap = std::unordered_map<std::string, std::unique_ptr<Resource>>;
+		using ResourceMap = std::unordered_map<ResourceName, std::unique_ptr<Resource>>;
 		using PassMap = std::unordered_map<std::string, std::unique_ptr<Pass>>;
 
 		//Gobal resources defined in the passes declaration
@@ -71,7 +71,7 @@ namespace render
 		core::SimplePool<RenderContextInternal, 256> m_render_context_pool;
 
 		//Load resource
-		std::string LoadResource(LoadContext& load_context, const char* prefix = nullptr);
+		ResourceName LoadResource(LoadContext& load_context, const char* prefix = nullptr);
 
 		//Load Pass
 		Pass* LoadPass(LoadContext& load_context);

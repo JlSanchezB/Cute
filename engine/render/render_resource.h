@@ -13,19 +13,19 @@ namespace render
 	template<class RESOURCE>
 	class ResourceReference
 	{
-		std::string m_resource;
+		ResourceName m_resource;
 	public:
-		void Set(const std::string& resource)
+		void Set(const ResourceName& resource_name)
 		{
-			m_resource = resource;
+			m_resource = resource_name;
 		}
-		std::string GetResourceName() const
+		ResourceName GetResourceName() const
 		{
 			return m_resource;
 		}
 		RESOURCE* Get(RenderContext& render_context) const
 		{
-			return render_context.GetResource<RESOURCE>(m_resource.c_str());
+			return render_context.GetResource<RESOURCE>(m_resource);
 		}
 	};
 

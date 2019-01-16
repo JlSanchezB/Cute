@@ -28,7 +28,7 @@ namespace render
 
 	class SetRenderTargetPass : public Pass
 	{
-		std::array<std::string, display::kMaxNumRenderTargets> m_render_target_name;
+		std::array<ResourceReference<RenderTargetResource>, display::kMaxNumRenderTargets> m_render_target;
 		uint8_t m_num_render_targets;
 	public:
 		DECLARE_RENDER_CLASS("SetRenderTarget");
