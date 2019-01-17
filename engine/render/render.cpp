@@ -240,15 +240,16 @@ namespace render
 			{
 				if (CheckNodeName(pass_element, "Pass"))
 				{
-					const char* pass_name = pass_element->Attribute("name");
-					if (pass_name)
+					const char* pass_name_string = pass_element->Attribute("name");
+					PassName pass_name(pass_name_string);
+					if (pass_name_string)
 					{
 						auto pass_it = m_passes_map.find(pass_name);
 						if (pass_it == m_passes_map.end())
 						{
 							load_context.current_xml_element = pass_element;
-							load_context.name = pass_name;
-							load_context.pass_name = pass_name;
+							load_context.name = pass_name_string;
+							load_context.pass_name = pass_name_string;
 
 							//It is a root pass (usually a context pass), must have name so the game can find it
 
@@ -257,11 +258,11 @@ namespace render
 							//Add it to the pass map
 							m_passes_map[pass_name].reset(pass);
 
-							core::LogInfo("Created Pass <%s>", pass_name);
+							core::LogInfo("Created Pass <%s>", pass_name_string);
 						}
 						else
 						{
-							AddError(load_context, "Pass <%s> already exist, discarting new one", pass_name);
+							AddError(load_context, "Pass <%s> already exist, discarting new one", pass_name_string);
 						}
 					}
 					else
@@ -372,7 +373,7 @@ namespace render
 		return success;
 	}
 
-	RenderContext * CreateRenderContext(System * system, display::Device * device, const char * pass, const RenderContext::PassInfo& pass_info, ResourceMap& init_resources, std::vector<std::string>& errors)
+	RenderContext * CreateRenderContext(System * system, display::Device * device, const PassName& pass, const RenderContext::PassInfo& pass_info, ResourceMap& init_resources, std::vector<std::string>& errors)
 	{
 		//Get pass
 		auto render_pass = GetPass(system, pass);
@@ -390,12 +391,12 @@ namespace render
 
 			if (errors.empty())
 			{
-				core::LogInfo("Created a render pass from definition pass <%s>", pass);
+				core::LogInfo("Created a render pass from definition pass");
 				return render_context;
 			}
 			else
 			{
-				core::LogError("Errors creating a render pass from definition pass <%s>:", pass);
+				core::LogError("Errors creating a render pass from definition pass");
 				for (auto& error : errors)
 				{
 					core::LogError(error.c_str());
@@ -409,8 +410,8 @@ namespace render
 		}
 		else
 		{
-			errors.push_back(std::string("Pass <") + pass + "not found");
-			core::LogError("Errors creating a render pass, definition pass <%s> doesn't exist", pass);
+			errors.push_back(std::string("Pass not found"));
+			core::LogError("Errors creating a render pass, definition pass doesn't exist");
 			return nullptr;
 		}
 	}
@@ -497,7 +498,7 @@ namespace render
 		return nullptr;
 	}
 
-	Pass * GetPass(System* system, const char * name)
+	Pass * GetPass(System* system, const PassName& name)
 	{
 		auto it = system->m_passes_map.find(name);
 		if (it != system->m_passes_map.end())

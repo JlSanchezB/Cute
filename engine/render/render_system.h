@@ -56,7 +56,7 @@ namespace render
 		PassFactoryMap m_pass_factories_map;
 
 		using ResourceMap = std::unordered_map<ResourceName, std::unique_ptr<Resource>>;
-		using PassMap = std::unordered_map<std::string, std::unique_ptr<Pass>>;
+		using PassMap = std::unordered_map<PassName, std::unique_ptr<Pass>>;
 
 		//Gobal resources defined in the passes declaration
 		ResourceMap m_global_resources_map;

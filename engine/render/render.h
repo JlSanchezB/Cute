@@ -37,6 +37,7 @@ namespace render
 
 	using RenderClassType = StringHash32<"RenderClassType"_namespace>;
 	using ResourceName = StringHash32<"ResourceName"_namespace>;
+	using PassName = StringHash32<"PassName"_namespace>;
 
 	struct ErrorContext
 	{
@@ -206,11 +207,11 @@ namespace render
 	}
 
 	//Get Pass by name
-	Pass* GetPass(System* system, const char* name);
+	Pass* GetPass(System* system, const PassName& name);
 
 	//Create a render context for rendering a pass
 	using ResourceMap = std::unordered_map<ResourceName, std::unique_ptr<Resource>>;
-	RenderContext* CreateRenderContext(System* system, display::Device* device, const char* pass, const RenderContext::PassInfo& pass_info, ResourceMap& init_resources, std::vector<std::string>& errors);
+	RenderContext* CreateRenderContext(System* system, display::Device* device, const PassName& pass, const RenderContext::PassInfo& pass_info, ResourceMap& init_resources, std::vector<std::string>& errors);
 
 	//Destroy render context for rendering a pass
 	void DestroyRenderContext(System* system, RenderContext*& render_context);

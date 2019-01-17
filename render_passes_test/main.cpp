@@ -160,7 +160,7 @@ public:
 			pass_info.height = m_height;
 
 			//Still load it if it fail, as it will use the last valid one
-			m_render_context = render::CreateRenderContext(m_render_pass_system, m_device, "Main", pass_info, init_resource_map, m_render_system_context_errors);
+			m_render_context = render::CreateRenderContext(m_render_pass_system, m_device, "Main"_sh32, pass_info, init_resource_map, m_render_system_context_errors);
 			if (m_render_context == nullptr)
 			{
 				m_show_errors = true;
