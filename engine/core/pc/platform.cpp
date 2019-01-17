@@ -8,6 +8,7 @@
 #include <windows.h>
 #include <chrono>
 #include <core/imgui_render.h>
+#include "core/string_hash.h"
 
 namespace display
 {
@@ -299,6 +300,10 @@ namespace platform
 
 	char Run(const char* name, void* param, uint32_t width, uint32_t height, Game* game)
 	{
+#ifdef _STRING_HASH_MAP_ENABLED_
+		core::CreateStringHashMap();
+#endif
+
 		HINSTANCE hInstance = *(reinterpret_cast<HINSTANCE*>(param));
 
 		// Initialize the window class.
@@ -380,6 +385,8 @@ namespace platform
 
 		} while (true);
 
+		core::LogInfo("Closing game");
+
 		//Destroy all imgui resources
 		imgui_render::DestroyResources(g_device);
 		//Destroy Imgui
@@ -387,6 +394,10 @@ namespace platform
 
 		//Destroy callback
 		game->OnDestroy();
+
+#ifdef _STRING_HASH_MAP_ENABLED_
+		core::DestroyStringHashMap();
+#endif
 
 		// Return this part of the WM_QUIT message to Windows.
 		return static_cast<char>(msg.wParam);

@@ -7,9 +7,27 @@
 #define STRING_HASH_H_
 
 #include <stdint.h>
+#include <functional>
+
+#define _STRING_HASH_MAP_ENABLED_
 
 namespace core
 {
+#ifdef _STRING_HASH_MAP_ENABLED_
+
+	//Internal functions used for keeping the string value of the hashes in non final configurations
+
+	const char* GetStringFromHash(uint64_t namespace_hash, uint64_t string_hash);
+	const char* GetStringFromHash(uint64_t namespace_hash, uint32_t string_hash);
+	const char* GetStringFromHash(uint64_t namespace_hash, uint16_t string_hash);
+	void AddStringHash(uint64_t namespace_hash, uint64_t string_hash, const char* string);
+	void AddStringHash(uint64_t namespace_hash, uint32_t string_hash, const char* string);
+	void AddStringHash(uint64_t namespace_hash, uint16_t string_hash, const char* string);
+
+	void CreateStringHashMap();
+	void DestroyStringHashMap();
+#endif
+
 	inline constexpr uint32_t hash_32_fnv1a(const char* data)
 	{
 		uint32_t hash = 0x811c9dc5;
@@ -87,14 +105,20 @@ namespace core
 	class HashConst
 	{
 		TYPE m_hash;
+		const char* m_value;
 	public:
-		constexpr HashConst(TYPE value)
+		constexpr HashConst(TYPE hash, const char* value)
 		{
-			m_hash = value;
+			m_hash = hash;
+			m_value = value;
 		}
 		TYPE GetHash() const
 		{
 			return m_hash;
+		}
+		const char* GetValue() const
+		{
+			return m_value;
 		}
 	};
 
@@ -112,10 +136,18 @@ namespace core
 		constexpr explicit StringHashT(const char* data)
 		{
 			m_hash = calculate_hash<TYPE>(data);
+
+#ifdef _STRING_HASH_MAP_ENABLED_
+			AddStringHash(NAMESPACE, m_hash, data);
+#endif
 		}
 		constexpr StringHashT(const HashConst<TYPE>& data)
 		{
 			m_hash = data.GetHash();
+
+#ifdef _STRING_HASH_MAP_ENABLED_
+			AddStringHash(NAMESPACE, m_hash, data.GetValue());
+#endif
 		}
 
 		TYPE GetHash() const
@@ -132,6 +164,18 @@ namespace core
 		{
 			return m_hash == b.GetHash();
 		}
+
+		const char* GetValue() const
+		{
+#ifdef _STRING_HASH_MAP_ENABLED_
+			return GetStringFromHash(NAMESPACE, m_hash);
+#else
+			//Returns a string with the hash
+			char buffer[128];
+			sprintf_s(buffer, "<%i>", m_hash);
+			return buffer;
+#endif
+		}
 	};
 }
 
@@ -146,24 +190,23 @@ using StringHash64 = core::StringHashT<NAMESPACE, uint64_t>;
 
 core::HashConst<uint16_t> constexpr operator "" _sh16(const char* str, size_t)
 {
-	return core::HashConst<uint16_t>(core::calculate_hash<uint16_t>(str));
+	return core::HashConst<uint16_t>(core::calculate_hash<uint16_t>(str), str);
 }
 
 core::HashConst<uint32_t> constexpr operator "" _sh32(const char* str, size_t)
 {
-	return core::HashConst<uint32_t>(core::calculate_hash<uint32_t>(str));
+	return core::HashConst<uint32_t>(core::calculate_hash<uint32_t>(str), str);
 }
 
 core::HashConst<uint64_t> constexpr operator "" _sh64(const char* str, size_t)
 {
-	return core::HashConst<uint64_t>(core::calculate_hash<uint64_t>(str));
+	return core::HashConst<uint64_t>(core::calculate_hash<uint64_t>(str), str);
 }
 
 uint64_t constexpr operator "" _namespace(const char* str, size_t)
 {
 	return core::calculate_hash<uint64_t>(str);
 }
-
 
 namespace std
 {

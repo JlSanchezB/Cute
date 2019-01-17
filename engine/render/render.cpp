@@ -391,12 +391,12 @@ namespace render
 
 			if (errors.empty())
 			{
-				core::LogInfo("Created a render pass from definition pass");
+				core::LogInfo("Created a render pass <%s> from definition pass", pass.GetValue());
 				return render_context;
 			}
 			else
 			{
-				core::LogError("Errors creating a render pass from definition pass");
+				core::LogError("Errors creating a render pass <%s> from definition pass", pass.GetValue());
 				for (auto& error : errors)
 				{
 					core::LogError(error.c_str());
@@ -411,7 +411,7 @@ namespace render
 		else
 		{
 			errors.push_back(std::string("Pass not found"));
-			core::LogError("Errors creating a render pass, definition pass doesn't exist");
+			core::LogError("Errors creating a render pass <%s>, definition pass doesn't exist", pass.GetValue());
 			return nullptr;
 		}
 	}
@@ -454,7 +454,7 @@ namespace render
 		}
 		else
 		{
-			core::LogWarning("Game Resource <%s> has been already added, discarting the new resource");
+			core::LogWarning("Game Resource <%s> has been already added, discarting the new resource", name.GetValue());
 			return false;
 		}
 	}
@@ -463,7 +463,7 @@ namespace render
 	{
 		if (system->m_resource_factories_map.find(resource_type) != system->m_resource_factories_map.end())
 		{
-			core::LogWarning("Resource <%s> has been already added, discarting new resource type", resource_type);
+			core::LogWarning("Resource <%s> has been already added, discarting new resource type", resource_type.GetValue());
 			return false;
 		}
 		system->m_resource_factories_map[resource_type] = std::move(resource_factory);
@@ -474,7 +474,7 @@ namespace render
 	{
 		if (system->m_resource_factories_map.find(pass_type) != system->m_resource_factories_map.end())
 		{
-			core::LogWarning("Pass <%s> has been already added, discarting new pass type", pass_type);
+			core::LogWarning("Pass <%s> has been already added, discarting new pass type", pass_type.GetValue());
 			return false;
 		}
 

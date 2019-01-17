@@ -163,6 +163,9 @@
     <ClCompile Include="render\render_pass.cpp">
       <Filter>render</Filter>
     </ClCompile>
+    <ClCompile Include="core\string_hash.cpp">
+      <Filter>core</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="tools\compile_shader.bat">

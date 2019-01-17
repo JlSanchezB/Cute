@@ -156,6 +156,7 @@
     <ClCompile Include="core\imgui_render.cpp" />
     <ClCompile Include="core\pc\log.cpp" />
     <ClCompile Include="core\pc\platform.cpp" />
+    <ClCompile Include="core\string_hash.cpp" />
     <ClCompile Include="display\pc_dx12\dds_loader.cpp" />
     <ClCompile Include="display\pc_dx12\descriptor_heap.cpp" />
     <ClCompile Include="display\pc_dx12\display.cpp" />
