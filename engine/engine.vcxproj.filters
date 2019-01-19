@@ -27,6 +27,9 @@
     <Filter Include="ext\tinyxml2">
       <UniqueIdentifier>{a3c8c9b3-f6cb-4403-986d-03dad38ccdb3}</UniqueIdentifier>
     </Filter>
+    <Filter Include="ecs">
+      <UniqueIdentifier>{5db7fbbf-26eb-4c9a-a45e-fd8a2748e404}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="display\display.h">
@@ -113,6 +116,9 @@
     <ClInclude Include="core\string_hash.h">
       <Filter>core</Filter>
     </ClInclude>
+    <ClInclude Include="ecs\entity_component_system.h">
+      <Filter>ecs</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="display\pc_dx12\display.cpp">
@@ -165,6 +171,9 @@
     </ClCompile>
     <ClCompile Include="core\string_hash.cpp">
       <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="ecs\entity_component_system.cpp">
+      <Filter>ecs</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

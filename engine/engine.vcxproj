@@ -139,6 +139,7 @@
     <ClInclude Include="display\pc_dx12\descriptor_heap.h" />
     <ClInclude Include="display\pc_dx12\display_common.h" />
     <ClInclude Include="display\pc_dx12\display_convert.h" />
+    <ClInclude Include="ecs\entity_component_system.h" />
     <ClInclude Include="ext\imgui\imconfig.h" />
     <ClInclude Include="ext\imgui\imgui.h" />
     <ClInclude Include="ext\imgui\imgui_internal.h" />
@@ -162,6 +163,7 @@
     <ClCompile Include="display\pc_dx12\display.cpp" />
     <ClCompile Include="display\pc_dx12\display_context.cpp" />
     <ClCompile Include="display\pc_dx12\display_resource.cpp" />
+    <ClCompile Include="ecs\entity_component_system.cpp" />
     <ClCompile Include="ext\imgui\imgui.cpp" />
     <ClCompile Include="ext\imgui\imgui_demo.cpp" />
     <ClCompile Include="ext\imgui\imgui_draw.cpp" />
