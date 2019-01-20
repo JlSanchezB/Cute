@@ -5,12 +5,14 @@
 #define ENTITY_COMPONENT_SYSTEM_H_
 
 #include <vector>
+#include <cassert>
 
 namespace ecs
 {
 	struct Database;
 
-	struct ComponentInitParameter
+	//Represent all information needed for the ECS about the component
+	struct Component
 	{
 		size_t size;
 		size_t align;
@@ -20,7 +22,7 @@ namespace ecs
 
 		//Capture the properties of the component
 		template<typename COMPONENT>
-		void Init()
+		void Capture()
 		{
 			size = sizeof(COMPONENT);
 			align = alignof(COMPONENT);
@@ -32,19 +34,21 @@ namespace ecs
 	struct DatabaseDesc
 	{
 		//List of components
-		std::vector<ComponentInitParameter> components;
+		std::vector<Component> components;
 		//Add component
 		template<typename COMPONENT>
 		void Add()
 		{
-			static_assert(std::is_convertible<COMPONENT*, Component*>::value, "Component class has to derived from ecs::Component");
-			static_assert(ComponentDesc<COMPONENT>::s_component_index == static_cast<size_t>(-1), "Component class can be used only once and only in one Database");
+			//Component class can be used only once and only in one Database
+			assert(ComponentDesc<COMPONENT>::s_component_index == static_cast<size_t>(-1));
 
-			ComponentInitParameter component_init_parameter;
-			component_init_parameter.Init<COMPONENT>();
-			components.push_back(component_init_parameter);
+			Component component;
+			//Capture the information needed
+			component.Capture<COMPONENT>();
+			//Added to the component list
+			components.push_back(component);
 
-			//Set the index to the component index, so it can be accessed faster
+			//Set the index to the component index, so the type of the component can be converted to the index inside component database
 			ComponentDesc<COMPONENT>::s_component_index = components.size() - 1;
 		}
 	};

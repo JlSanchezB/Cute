@@ -14,14 +14,15 @@ namespace ecs
 
 		static void Move(void* ptr_a, void* ptr_b)
 		{
-			COMPONENT& a = *ptr_a;
-			COMPONENT& b = *ptr_b;
+			COMPONENT& a = *(reinterpret_cast<COMPONENT*>(ptr_a));
+			COMPONENT& b = *(reinterpret_cast<COMPONENT*>(ptr_b));
+			
 			a = std::move(b);
 		}
 	};
 }
 
 //A specialization of the ComponentDesc needs to be defined
-#define DECLARE_COMPONENT(COMPONENT) using Component##COMPONENT = ComponentDesc<COMPONENT>;
+#define DECLARE_COMPONENT(COMPONENT) using Component##COMPONENT = ecs::ComponentDesc<COMPONENT>;
 
 #endif //ENTITY_COMPONENT_DESC_H_
