@@ -11,6 +11,23 @@ namespace ecs
 {
 	struct Database;
 
+	template<typename ...COMPONENTS>
+	struct EntityType
+	{
+		//Return the mask that represent this instance type, mask is a bit set with the components enabled
+		static uint64_t GetEntityTypeMask()
+		{
+			return ((1<< ComponentDesc<COMPONENTS>::s_component_index) | ...);
+		}
+
+		inline static size_t s_instance_type_index = static_cast<size_t>(-1);
+	};
+
+	struct Instance
+	{
+		uint32_t indirection_index;
+	};
+
 	//Represent all information needed for the ECS about the component
 	struct Component
 	{
@@ -36,12 +53,13 @@ namespace ecs
 		//List of components
 		std::vector<Component> components;
 
-		//Reserve size of instance types
-		size_t instance_type_reserve_size = 32;
+		//List of register entity types
+		std::vector<uint64_t> entity_types;
+
 
 		//Add component
 		template<typename COMPONENT>
-		void Add()
+		void AddComponent()
 		{
 			//Component class can be used only once and only in one Database
 			assert(ComponentDesc<COMPONENT>::s_component_index == static_cast<size_t>(-1));
@@ -55,11 +73,39 @@ namespace ecs
 			//Set the index to the component index, so the type of the component can be converted to the index inside component database
 			ComponentDesc<COMPONENT>::s_component_index = components.size() - 1;
 		}
+
+		//Add entity type
+		template<typename ENTITY_TYPE>
+		void AddEntityType()
+		{
+			assert(ENTITY_TYPE::s_instance_type_index == static_cast<size_t>(-1));
+			
+			entity_types.push_back(ENTITY_TYPE::GetEntityTypeMask());
+
+			ENTITY_TYPE::s_instance_type_index = entity_types.size() - 1;		
+		}
 	};
 
 	//Create database from a database description with the component lists
 	Database* CreateDatabase(const DatabaseDesc& database_desc);
 	void DestroyDatabase(Database*& database);
+
+	//Instance type can be register for better performance, recommended always use register instance types
+	template<typename InstanceType>
+	void RegisterInstanceType()
+	{
+		//InstanceType class can be used only once and only in one Database
+		assert(InstanceType::s_instance_type_index == static_cast<size_t>(-1));
+	}
+
+
+	//Alloc instance
+	template<typename InstanceType>
+	Instance* AllocInstance()
+	{
+		//Get saved instance type
+		uint64_t instance_type_index = InstanceType::s_instance_type_index;
+	}
 }
 
 #endif //ENTITY_COMPONENT_SYSTEM_H_

@@ -43,17 +43,25 @@ DECLARE_COMPONENT(TriangleShapeComponent);
 DECLARE_COMPONENT(CircleShapeComponent);
 DECLARE_COMPONENT(SquareShapeComponent);
 
+using TriangleEntityType = ecs::EntityType<PositionComponent, VelocityComponent, TriangleShapeComponent>;
+using CircleEntityType = ecs::EntityType<PositionComponent, VelocityComponent, CircleShapeComponent>;
+using SquareEntityType = ecs::EntityType<PositionComponent, VelocityComponent, SquareShapeComponent>;
+
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow)
 {
 	//Create ecs database
 
 	ecs::DatabaseDesc database_desc;
-	database_desc.Add<PositionComponent>();
-	database_desc.Add<VelocityComponent>();
-	database_desc.Add<OrientationComponent>();
-	database_desc.Add<TriangleShapeComponent>();
-	database_desc.Add<CircleShapeComponent>();
-	database_desc.Add<SquareShapeComponent>();
+	database_desc.AddComponent<PositionComponent>();
+	database_desc.AddComponent<VelocityComponent>();
+	database_desc.AddComponent<OrientationComponent>();
+	database_desc.AddComponent<TriangleShapeComponent>();
+	database_desc.AddComponent<CircleShapeComponent>();
+	database_desc.AddComponent<SquareShapeComponent>();
+
+	database_desc.AddEntityType<TriangleEntityType>();
+	database_desc.AddEntityType<CircleEntityType>();
+	database_desc.AddEntityType<SquareEntityType>();
 
 	ecs::Database* database = ecs::CreateDatabase(database_desc);
 }

@@ -2,10 +2,10 @@
 
 namespace ecs
 {
-	//Container with components for each instance type
-	struct InstanceTypeContainer
+	//Container with components for each entity type
+	struct EntityTypeContainer
 	{
-
+		uint64_t m_mask;
 	};
 
 	//Database
@@ -17,8 +17,8 @@ namespace ecs
 		//List of components
 		std::vector<Component> m_components;
 
-		//List of all instance types
-		std::vector<InstanceTypeContainer> m_instance_types;
+		//List of all entity types
+		std::vector<EntityTypeContainer> m_entity_types;
 	};
 
 	Database* CreateDatabase(const DatabaseDesc & database_desc)
@@ -28,9 +28,12 @@ namespace ecs
 		//Get all components information
 		database->m_components = database_desc.components;
 
-		//Reserve a buffer of instance types
-		//We want to avoid reallocations during filling up of the database
-		database->m_instance_types.reserve(database_desc.instance_type_reserve_size);
+		//Add all entity types registered
+		database->m_entity_types.resize(database_desc.entity_types.size());
+		for (size_t i = 0; i < database_desc.entity_types.size(); ++i)
+		{
+			database->m_entity_types[i].m_mask = database_desc.entity_types[i];
+		}
 
 		return database;
 	}
