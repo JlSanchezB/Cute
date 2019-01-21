@@ -35,6 +35,10 @@ namespace ecs
 	{
 		//List of components
 		std::vector<Component> components;
+
+		//Reserve size of instance types
+		size_t instance_type_reserve_size = 32;
+
 		//Add component
 		template<typename COMPONENT>
 		void Add()
@@ -55,7 +59,7 @@ namespace ecs
 
 	//Create database from a database description with the component lists
 	Database* CreateDatabase(const DatabaseDesc& database_desc);
-	void DestroyDatabase(Database* database);
+	void DestroyDatabase(Database*& database);
 }
 
 #endif //ENTITY_COMPONENT_SYSTEM_H_
