@@ -12,6 +12,7 @@ namespace ecs
 	struct Database;
 
 	using EntityTypeMask = uint64_t;
+	using InstanceIndirectionIndexType = uint32_t;
 
 	template<typename ...COMPONENTS>
 	struct EntityType
@@ -32,7 +33,7 @@ namespace ecs
 		//All instances will able to access the database associated to them
 		inline static Database* s_database;
 
-		uint32_t indirection_index;
+		InstanceIndirectionIndexType indirection_index;
 	};
 
 	//Represent all information needed for the ECS about the component
@@ -100,7 +101,7 @@ namespace ecs
 		void DestroyDatabase(Database*& database);
 
 		//Alloc instance
-		uint32_t AllocInstance(Database* database, const size_t& entity_type_index);
+		InstanceIndirectionIndexType AllocInstance(Database* database, const size_t& entity_type_index);
 	}
 
 	//Create database from a database description with the component lists

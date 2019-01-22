@@ -8,6 +8,14 @@ namespace ecs
 		EntityTypeMask m_mask;
 	};
 
+	//Represent a instance (in one zone, one instance type and the index)
+	struct InternalInstanceIndex
+	{
+		uint16_t zone_index;
+		uint16_t entity_type_index;
+		uint32_t instance_index;
+	};
+
 	//Database
 	//Our Database will have a list of instance types
 	//Instance types depends of the combination of components added to a instance
@@ -19,6 +27,9 @@ namespace ecs
 
 		//List of all entity types
 		std::vector<EntityTypeContainer> m_entity_types;
+
+		//List of indirection instance indexes
+		std::vector<InternalInstanceIndex> m_indirection_instance_table;
 	};
 
 	namespace internal
@@ -37,6 +48,9 @@ namespace ecs
 				database->m_entity_types[i].m_mask = database_desc.entity_types[i];
 			}
 
+			//Reserve memory for the indirection indexes
+			database->m_indirection_instance_table.reserve(1024);
+
 			return database;
 		}
 
@@ -46,9 +60,14 @@ namespace ecs
 			delete database;
 			database = nullptr;
 		}
-		uint32_t AllocInstance(Database * database, const size_t & entity_type_index)
+
+		InstanceIndirectionIndexType AllocInstance(Database * database, const size_t & entity_type_index)
 		{
-			return uint32_t();
+			//Allocate indirection index
+			database->m_indirection_instance_table.emplace_back(InternalInstanceIndex({ 0,0,0 }));
+			assert(database->m_indirection_instance_table.size() < std::numeric_limits<InstanceIndirectionIndexType>::max());
+			
+			return static_cast<InstanceIndirectionIndexType>(database->m_indirection_instance_table.size() - 1);
 		}
 	}
 }
