@@ -5,7 +5,7 @@ namespace ecs
 	//Container with components for each entity type
 	struct EntityTypeContainer
 	{
-		uint64_t m_mask;
+		EntityTypeMask m_mask;
 	};
 
 	//Database
@@ -21,27 +21,34 @@ namespace ecs
 		std::vector<EntityTypeContainer> m_entity_types;
 	};
 
-	Database* CreateDatabase(const DatabaseDesc & database_desc)
+	namespace internal
 	{
-		Database* database = new Database();
-
-		//Get all components information
-		database->m_components = database_desc.components;
-
-		//Add all entity types registered
-		database->m_entity_types.resize(database_desc.entity_types.size());
-		for (size_t i = 0; i < database_desc.entity_types.size(); ++i)
+		Database* CreateDatabase(const DatabaseDesc & database_desc)
 		{
-			database->m_entity_types[i].m_mask = database_desc.entity_types[i];
+			Database* database = new Database();
+
+			//Get all components information
+			database->m_components = database_desc.components;
+
+			//Add all entity types registered
+			database->m_entity_types.resize(database_desc.entity_types.size());
+			for (size_t i = 0; i < database_desc.entity_types.size(); ++i)
+			{
+				database->m_entity_types[i].m_mask = database_desc.entity_types[i];
+			}
+
+			return database;
 		}
 
-		return database;
-	}
-
-	void DestroyDatabase(Database*& database)
-	{
-		assert(database);
-		delete database;
-		database = nullptr;
+		void DestroyDatabase(Database*& database)
+		{
+			assert(database);
+			delete database;
+			database = nullptr;
+		}
+		uint32_t AllocInstance(Database * database, const size_t & entity_type_index)
+		{
+			return uint32_t();
+		}
 	}
 }

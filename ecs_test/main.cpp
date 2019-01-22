@@ -36,16 +36,20 @@ struct SquareShapeComponent
 	float side;
 };
 
-DECLARE_COMPONENT(PositionComponent);
-DECLARE_COMPONENT(VelocityComponent);
-DECLARE_COMPONENT(OrientationComponent);
-DECLARE_COMPONENT(TriangleShapeComponent);
-DECLARE_COMPONENT(CircleShapeComponent);
-DECLARE_COMPONENT(SquareShapeComponent);
+using Component_PositionComponent = ecs::ComponentDesc<PositionComponent>;
+using Component_VelocityComponent = ecs::ComponentDesc<VelocityComponent>;
+using Component_OrientationComponent = ecs::ComponentDesc<OrientationComponent>;
+using Component_TriangleShapeComponent = ecs::ComponentDesc<TriangleShapeComponent>;
+using Component_CircleShapeComponent = ecs::ComponentDesc<CircleShapeComponent>;
+using Component_SquareShapeComponent = ecs::ComponentDesc<SquareShapeComponent>;
 
 using TriangleEntityType = ecs::EntityType<PositionComponent, VelocityComponent, TriangleShapeComponent>;
 using CircleEntityType = ecs::EntityType<PositionComponent, VelocityComponent, CircleShapeComponent>;
 using SquareEntityType = ecs::EntityType<PositionComponent, VelocityComponent, SquareShapeComponent>;
+
+struct Game;
+using Instance = ecs::Instance<Game>;
+
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow)
 {
@@ -63,5 +67,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow)
 	database_desc.AddEntityType<CircleEntityType>();
 	database_desc.AddEntityType<SquareEntityType>();
 
-	ecs::Database* database = ecs::CreateDatabase(database_desc);
+	ecs::Database* database = ecs::CreateDatabase<Game>(database_desc);
+
+	Instance instance = ecs::AllocInstance<Game, TriangleEntityType>();
 }

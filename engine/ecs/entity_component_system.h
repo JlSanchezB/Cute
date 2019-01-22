@@ -11,20 +11,27 @@ namespace ecs
 {
 	struct Database;
 
+	using EntityTypeMask = uint64_t;
+
 	template<typename ...COMPONENTS>
 	struct EntityType
 	{
 		//Return the mask that represent this instance type, mask is a bit set with the components enabled
-		static uint64_t GetEntityTypeMask()
+		static EntityTypeMask GetEntityTypeMask()
 		{
-			return ((1<< ComponentDesc<COMPONENTS>::s_component_index) | ...);
+			return ((1 << ComponentDesc<COMPONENTS>::s_component_index) | ...);
 		}
 
 		inline static size_t s_instance_type_index = static_cast<size_t>(-1);
 	};
 
+	//Templated instance class, needs to be specialized in the client
+	template<typename DATABASE_NAME>
 	struct Instance
 	{
+		//All instances will able to access the database associated to them
+		inline static Database* s_database;
+
 		uint32_t indirection_index;
 	};
 
@@ -54,7 +61,7 @@ namespace ecs
 		std::vector<Component> components;
 
 		//List of register entity types
-		std::vector<uint64_t> entity_types;
+		std::vector<EntityTypeMask> entity_types;
 
 
 		//Add component
@@ -79,32 +86,51 @@ namespace ecs
 		void AddEntityType()
 		{
 			assert(ENTITY_TYPE::s_instance_type_index == static_cast<size_t>(-1));
-			
+
 			entity_types.push_back(ENTITY_TYPE::GetEntityTypeMask());
 
-			ENTITY_TYPE::s_instance_type_index = entity_types.size() - 1;		
+			ENTITY_TYPE::s_instance_type_index = entity_types.size() - 1;
 		}
 	};
 
-	//Create database from a database description with the component lists
-	Database* CreateDatabase(const DatabaseDesc& database_desc);
-	void DestroyDatabase(Database*& database);
-
-	//Instance type can be register for better performance, recommended always use register instance types
-	template<typename InstanceType>
-	void RegisterInstanceType()
+	namespace internal
 	{
-		//InstanceType class can be used only once and only in one Database
-		assert(InstanceType::s_instance_type_index == static_cast<size_t>(-1));
+		//Create database from a database description with the component lists
+		Database* CreateDatabase(const DatabaseDesc& database_desc);
+		void DestroyDatabase(Database*& database);
+
+		//Alloc instance
+		uint32_t AllocInstance(Database* database, const size_t& entity_type_index);
 	}
 
+	//Create database from a database description with the component lists
+	template<typename DATABASE_NAME>
+	Database* CreateDatabase(const DatabaseDesc& database_desc)
+	{
+		//Create the database
+		Database* database = internal::CreateDatabase(database_desc);
+		//Set the static fast access for the instances with this DATABASE_NAME
+		Instance<DATABASE_NAME>::s_database = database;
+
+		return database;
+	}
+	template<typename DATABASE_NAME>
+	void DestroyDatabase(Database*& database)
+	{
+		internal::DestroyDatabase(database);
+
+		//Reset fast access 
+		Instance<DATABASE_NAME>::s_database = nullptr;
+	}
 
 	//Alloc instance
-	template<typename InstanceType>
-	Instance* AllocInstance()
+	template<typename DATABASE_NAME, typename EntityType>
+	Instance<DATABASE_NAME> AllocInstance()
 	{
-		//Get saved instance type
-		uint64_t instance_type_index = InstanceType::s_instance_type_index;
+		Instance<DATABASE_NAME> instance;
+		instance.indirection_index = internal::AllocInstance(Instance<DATABASE_NAME>::s_database, EntityType::s_instance_type_index);
+
+		return instance;
 	}
 }
 
