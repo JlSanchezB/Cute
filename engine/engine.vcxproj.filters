@@ -122,6 +122,9 @@
     <ClInclude Include="ecs\entity_component_desc.h">
       <Filter>ecs</Filter>
     </ClInclude>
+    <ClInclude Include="core\virtual_alloc.h">
+      <Filter>core</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="display\pc_dx12\display.cpp">
@@ -177,6 +180,9 @@
     </ClCompile>
     <ClCompile Include="ecs\entity_component_system.cpp">
       <Filter>ecs</Filter>
+    </ClCompile>
+    <ClCompile Include="core\pc\virtual_alloc.cpp">
+      <Filter>core</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
