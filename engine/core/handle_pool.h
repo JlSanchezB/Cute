@@ -276,7 +276,7 @@ namespace core
 			else
 			{
 				//No more free handles, error
-				std::runtime_error::exception("Out of handles");
+				throw std::runtime_error::exception("Out of handles");
 				return HANDLE(HANDLE::kInvalid);
 			}
 		}

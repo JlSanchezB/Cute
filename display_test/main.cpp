@@ -123,7 +123,7 @@ public:
 
 		if (m_device != nullptr)
 		{
-			std::runtime_error::exception("Error creating the display device");
+			throw std::runtime_error::exception("Error creating the display device");
 		}
 
 		SetDevice(m_device);

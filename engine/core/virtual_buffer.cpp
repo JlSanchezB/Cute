@@ -6,7 +6,14 @@ namespace
 	//Calculate the page that represent the memory_offset
 	size_t calculate_page(size_t memory_offset, size_t page_size)
 	{
-		return (memory_offset / page_size);
+		if (memory_offset == 0)
+		{
+			return 0;
+		}
+		else
+		{
+			return ((memory_offset - 1) / page_size) + 1;
+		}
 	}
 }
 

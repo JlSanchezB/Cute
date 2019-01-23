@@ -12,19 +12,22 @@ namespace core
 	void * VirtualAlloc(void * ptr, size_t size, AllocFlags flags)
 	{
 		DWORD allocation_type = 0;
-		if (check_flag(flags, AllocFlags::Commit))
-		{
-			allocation_type |= MEM_COMMIT;
-		}
+		DWORD protection = 0;
 		if (check_flag(flags, AllocFlags::Reserve))
 		{
 			allocation_type |= MEM_RESERVE;
+			protection = PAGE_NOACCESS;
 		}
-		void* return_ptr = ::VirtualAlloc(ptr, size, allocation_type, 0);
+		if (check_flag(flags, AllocFlags::Commit))
+		{
+			allocation_type |= MEM_COMMIT;
+			protection = PAGE_READWRITE;
+		}
+		void* return_ptr = ::VirtualAlloc(ptr, size, allocation_type, protection);
 
 		if (return_ptr == nullptr)
 		{
-			std::runtime_error("Invalid virtual allocation");
+			throw std::runtime_error("Invalid virtual allocation");
 		}
 
 		return return_ptr;
@@ -39,12 +42,12 @@ namespace core
 		}
 		if (check_flag(flags, FreeFlags::Release))
 		{
-			free_type |= MEM_RESERVE;
+			free_type |= MEM_RELEASE;
 		}
 
 		if (!::VirtualFree(ptr, size, free_type))
 		{
-			std::runtime_error("Invalid virtual free");
+			throw std::runtime_error("Invalid virtual free");
 		}
 	}
 

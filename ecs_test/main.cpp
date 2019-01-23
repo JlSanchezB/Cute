@@ -1,5 +1,6 @@
 #include "ecs/entity_component_desc.h"
 #include "ecs/entity_component_system.h"
+#include "core/virtual_buffer.h"
 
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN             // Exclude rarely-used stuff from Windows headers.
@@ -53,8 +54,21 @@ using Instance = ecs::Instance<Game>;
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow)
 {
-	//Create ecs database
+	core::VirtualBuffer virtual_buffer(1024 * 1024 * 8);
 
+	virtual_buffer.SetCommitedSize(300);
+	static_cast<char*>(virtual_buffer.GetMemory())[299] = 1;
+	virtual_buffer.SetCommitedSize(30000);
+	static_cast<char*>(virtual_buffer.GetMemory())[30000 - 1] = 1;
+//	static_cast<char*>(virtual_buffer.GetMemory())[50000] = 1;
+	virtual_buffer.SetCommitedSize(2000);
+	virtual_buffer.SetCommitedSize(231231);
+	virtual_buffer.SetCommitedSize(0);
+//	static_cast<char*>(virtual_buffer.GetMemory())[1] = 1;
+	virtual_buffer.SetCommitedSize(1024 * 1024 * 8);
+
+
+	//Create ecs database
 	ecs::DatabaseDesc database_desc;
 	database_desc.AddComponent<PositionComponent>();
 	database_desc.AddComponent<VelocityComponent>();

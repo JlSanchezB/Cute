@@ -100,7 +100,7 @@ namespace core
 			if (m_first_free_allocated == kInvalidIndex)
 			{
 				//Error
-				std::runtime_error::exception("Simple pool is full");
+				throw std::runtime_error::exception("Simple pool is full");
 			}
 
 			//Get next free slot

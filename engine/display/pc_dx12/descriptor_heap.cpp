@@ -78,7 +78,7 @@ namespace display
 			}
 		}
 		//It doesn't fit in the list
-		std::runtime_error("No more free descriptors");
+		throw std::runtime_error("No more free descriptors");
 	}
 	void DescriptorHeapFreeList::DeallocDescriptors(Block & block)
 	{

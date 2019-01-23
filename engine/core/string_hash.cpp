@@ -106,7 +106,7 @@ namespace core
 					//Different string, that can not happen
 					//Collision detected, fatal error
 					core::LogError("Collision detected in string hashes, same hash <%i> in two values<'%s','%s'>", string_hash, string, string_hash_find->second.c_str());
-					std::runtime_error("Collision detected in string hashes");
+					throw std::runtime_error("Collision detected in string hashes");
 				}
 			}
 			else
