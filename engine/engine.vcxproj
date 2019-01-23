@@ -131,6 +131,7 @@
     <ClInclude Include="core\simple_pool.h" />
     <ClInclude Include="core\string_hash.h" />
     <ClInclude Include="core\virtual_alloc.h" />
+    <ClInclude Include="core\virtual_buffer.h" />
     <ClInclude Include="display\display.h" />
     <ClInclude Include="display\display_desc.h" />
     <ClInclude Include="display\display_enum.h" />
@@ -161,6 +162,7 @@
     <ClCompile Include="core\pc\platform.cpp" />
     <ClCompile Include="core\pc\virtual_alloc.cpp" />
     <ClCompile Include="core\string_hash.cpp" />
+    <ClCompile Include="core\virtual_buffer.cpp" />
     <ClCompile Include="display\pc_dx12\dds_loader.cpp" />
     <ClCompile Include="display\pc_dx12\descriptor_heap.cpp" />
     <ClCompile Include="display\pc_dx12\display.cpp" />

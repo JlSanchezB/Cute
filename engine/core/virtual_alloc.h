@@ -35,7 +35,7 @@ namespace core
 	};
 
 	void* VirtualAlloc(void* ptr, size_t size, AllocFlags flags);
-	void VirtualFree(void* ptr, FreeFlags flags);
+	void VirtualFree(void* ptr, size_t size, FreeFlags flags);
 	size_t GetPageSize();
 }
 

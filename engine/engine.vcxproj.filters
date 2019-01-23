@@ -125,6 +125,9 @@
     <ClInclude Include="core\virtual_alloc.h">
       <Filter>core</Filter>
     </ClInclude>
+    <ClInclude Include="core\virtual_buffer.h">
+      <Filter>core</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="display\pc_dx12\display.cpp">
@@ -182,6 +185,9 @@
       <Filter>ecs</Filter>
     </ClCompile>
     <ClCompile Include="core\pc\virtual_alloc.cpp">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="core\virtual_buffer.cpp">
       <Filter>core</Filter>
     </ClCompile>
   </ItemGroup>
