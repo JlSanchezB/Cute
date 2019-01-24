@@ -64,6 +64,11 @@ namespace ecs
 		//List of register entity types
 		std::vector<EntityTypeMask> entity_types;
 
+		//Number of zones
+		size_t num_zones = 1;
+
+		//Number max of entities per zone
+		size_t num_max_entities_zone = 1024;
 
 		//Add component
 		template<typename COMPONENT>

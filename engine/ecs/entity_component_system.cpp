@@ -1,4 +1,5 @@
 #include "entity_component_system.h"
+#include <core/virtual_buffer.h>
 
 namespace ecs
 {
@@ -6,6 +7,15 @@ namespace ecs
 	struct EntityTypeContainer
 	{
 		EntityTypeMask m_mask;
+
+		//Each component is a virtual buffer (some of them inited as zero)
+		std::vector<core::VirtualBuffer> m_components;
+	};
+
+	//Each zone has a list of entity type containers
+	struct ZoneContainer
+	{
+		std::vector<EntityTypeContainer> m_entity_types;
 	};
 
 	//Represent a instance (in one zone, one instance type and the index)
@@ -22,11 +32,16 @@ namespace ecs
 	//Each instance type will have a size and a set of memory blocks with all compoments memory
 	struct Database
 	{
+		//Fast access data
+		size_t m_num_components;
+		size_t m_num_entity_types;
+		size_t m_num_zones;
+
 		//List of components
 		std::vector<Component> m_components;
 
-		//List of all entity types
-		std::vector<EntityTypeContainer> m_entity_types;
+		//List of all zones
+		std::vector<ZoneContainer> m_zones;
 
 		//List of indirection instance indexes
 		std::vector<InternalInstanceIndex> m_indirection_instance_table;
@@ -36,18 +51,47 @@ namespace ecs
 	{
 		Database* CreateDatabase(const DatabaseDesc & database_desc)
 		{
+			assert(database_desc.num_zones > 0);
+			assert(database_desc.num_zones < std::numeric_limits<uint16_t>::max());
+			assert(database_desc.entity_types.size() < std::numeric_limits<uint16_t>::max());
+			assert(database_desc.components.size() < 64);
+
 			Database* database = new Database();
+
+			//Init sizes
+			database->m_num_zones = database_desc.num_zones;
+			database->m_num_components = database_desc.components.size();
+			database->m_num_entity_types = database_desc.entity_types.size();
 
 			//Get all components information
 			database->m_components = database_desc.components;
 
-			//Add all entity types registered
-			database->m_entity_types.resize(database_desc.entity_types.size());
-			for (size_t i = 0; i < database_desc.entity_types.size(); ++i)
-			{
-				database->m_entity_types[i].m_mask = database_desc.entity_types[i];
-			}
+			//Create all the zones
+			database->m_zones.resize(database_desc.num_zones);
 
+			//For each zone add the entity types
+			for (auto& zone : database->m_zones)
+			{
+				//Add all entity types registered
+				zone.m_entity_types.resize(database_desc.entity_types.size());
+				for (size_t i = 0; i < database_desc.entity_types.size(); ++i)
+				{
+					auto& entity_type = zone.m_entity_types[i];
+
+					entity_type.m_mask = database_desc.entity_types[i];
+
+					//Create all components needed
+					entity_type.m_components.reserve(database->m_num_components);
+
+					//Create all virtual buffers for each component
+					for (size_t j = 0; j < database->m_num_components; ++j)
+					{
+						const size_t compoment_buffer_size = database_desc.num_max_entities_zone * database->m_components[j].size;
+						entity_type.m_components.emplace_back((((1ul << j) & entity_type.m_mask) != 0 ) ? compoment_buffer_size : 0);
+					}
+				}
+			}
+			
 			//Reserve memory for the indirection indexes
 			database->m_indirection_instance_table.reserve(1024);
 

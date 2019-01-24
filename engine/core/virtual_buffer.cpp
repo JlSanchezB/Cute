@@ -21,8 +21,15 @@ namespace core
 {
 	VirtualBuffer::VirtualBuffer(size_t reserved_memory)
 	{
-		//Reserve memory
-		m_memory_base = static_cast<char*>(VirtualAlloc(nullptr, reserved_memory, AllocFlags::Reserve));
+		if (reserved_memory == 0)
+		{
+			m_memory_base = nullptr;
+		}
+		else
+		{
+			//Reserve memory
+			m_memory_base = static_cast<char*>(VirtualAlloc(nullptr, reserved_memory, AllocFlags::Reserve));
+		}
 
 		//Non commited memory
 		m_memory_commited = 0;

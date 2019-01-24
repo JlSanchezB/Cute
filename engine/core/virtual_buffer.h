@@ -19,7 +19,7 @@ namespace core
 		void SetCommitedSize(size_t new_size);
 
 		//Get memory
-		void* GetMemory() const
+		void* GetPtr() const
 		{
 			return m_memory_base;
 		}
