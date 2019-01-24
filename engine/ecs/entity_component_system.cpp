@@ -113,5 +113,12 @@ namespace ecs
 			
 			return static_cast<InstanceIndirectionIndexType>(database->m_indirection_instance_table.size() - 1);
 		}
+		void DeallocInstance(Database * database, InstanceIndirectionIndexType index)
+		{
+		}
+		void * GetComponentData(Database * database, InstanceIndirectionIndexType index, size_t component_index)
+		{
+			return nullptr;
+		}
 	}
 }

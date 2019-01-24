@@ -107,6 +107,13 @@ namespace ecs
 
 		//Alloc instance
 		InstanceIndirectionIndexType AllocInstance(Database* database, const size_t& entity_type_index);
+
+		//Dealloc instance
+		void DeallocInstance(Database* database, InstanceIndirectionIndexType index);
+
+		//Get component data
+		void* GetComponentData(Database* database, InstanceIndirectionIndexType index, size_t component_index);
+
 	}
 
 	//Create database from a database description with the component lists
