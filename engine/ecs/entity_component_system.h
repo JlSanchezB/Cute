@@ -6,6 +6,7 @@
 
 #include <vector>
 #include <cassert>
+#include <core/type_list.h>
 
 namespace ecs
 {
@@ -18,22 +19,31 @@ namespace ecs
 	struct EntityType
 	{
 		//Return the mask that represent this instance type, mask is a bit set with the components enabled
-		static EntityTypeMask GetEntityTypeMask()
+		template<typename DATABASE_DECLARATION>
+		constexpr static EntityTypeMask GetEntityTypeMask()
 		{
-			return ((1 << ComponentDesc<COMPONENTS>::s_component_index) | ...);
+			return ((1ul << DATABASE_DECLARATION::Components::template ElementIndex<ComponentDesc<COMPONENTS>>()) | ...);
 		}
-
-		inline static size_t s_instance_type_index = static_cast<size_t>(-1);
 	};
 
 	//Templated instance class, needs to be specialized in the client
-	template<typename DATABASE_NAME>
-	struct Instance
+	template<typename DATABASE_DECLARATION>
+	class Instance
+	{
+	public:
+		InstanceIndirectionIndexType indirection_index;
+	};
+
+
+	//Represent the database
+	template<typename COMPONENT_LIST, typename ENTITY_TYPE_LIST>
+	struct DatabaseDeclaration
 	{
 		//All instances will able to access the database associated to them
 		inline static Database* s_database;
 
-		InstanceIndirectionIndexType indirection_index;
+		using Components = COMPONENT_LIST;
+		using EntityTypes = ENTITY_TYPE_LIST;
 	};
 
 	//Represent all information needed for the ECS about the component
@@ -49,60 +59,26 @@ namespace ecs
 		template<typename COMPONENT>
 		void Capture()
 		{
-			size = sizeof(COMPONENT);
-			align = alignof(COMPONENT);
+			size = sizeof(typename COMPONENT::Type);
+			align = alignof(typename COMPONENT::Type);
 
-			move_operator = ComponentDesc<COMPONENT>::Move;
+			move_operator = COMPONENT::Move;
 		}
 	};
 
 	struct DatabaseDesc
 	{
-		//List of components
-		std::vector<Component> components;
-
-		//List of register entity types
-		std::vector<EntityTypeMask> entity_types;
-
 		//Number of zones
 		size_t num_zones = 1;
 
 		//Number max of entities per zone
 		size_t num_max_entities_zone = 1024;
-
-		//Add component
-		template<typename COMPONENT>
-		void AddComponent()
-		{
-			//Component class can be used only once and only in one Database
-			assert(ComponentDesc<COMPONENT>::s_component_index == static_cast<size_t>(-1));
-
-			Component component;
-			//Capture the information needed
-			component.Capture<COMPONENT>();
-			//Added to the component list
-			components.push_back(component);
-
-			//Set the index to the component index, so the type of the component can be converted to the index inside component database
-			ComponentDesc<COMPONENT>::s_component_index = components.size() - 1;
-		}
-
-		//Add entity type
-		template<typename ENTITY_TYPE>
-		void AddEntityType()
-		{
-			assert(ENTITY_TYPE::s_instance_type_index == static_cast<size_t>(-1));
-
-			entity_types.push_back(ENTITY_TYPE::GetEntityTypeMask());
-
-			ENTITY_TYPE::s_instance_type_index = entity_types.size() - 1;
-		}
 	};
 
 	namespace internal
 	{
 		//Create database from a database description with the component lists
-		Database* CreateDatabase(const DatabaseDesc& database_desc);
+		Database* CreateDatabase(const DatabaseDesc& database_desc, const std::vector<Component>& components, const std::vector<EntityTypeMask> entity_type_masks);
 		void DestroyDatabase(Database*& database);
 
 		//Alloc instance
@@ -116,32 +92,66 @@ namespace ecs
 
 	}
 
+	//Helpers to extract all the components
+	struct FillComponents
+	{
+		inline static std::vector<Component>* container;
+		template<typename COMPONENT>
+		static void Visit()
+		{
+			Component component;
+			//Capture the information needed
+			component.Capture<COMPONENT>();
+			//Added to the component list
+			container->push_back(component);
+		}
+	};
+
+	//Helpers to extract all the entity types
+	template<typename DATABASE_DECLARATION>
+	struct FillEntityTypes
+	{
+		inline static std::vector<EntityTypeMask>* container;
+		template<typename ENTITY_TYPE>
+		static void Visit()
+		{
+			container->push_back(ENTITY_TYPE::template GetEntityTypeMask<DATABASE_DECLARATION>());
+		}
+	};
+
 	//Create database from a database description with the component lists
-	template<typename DATABASE_NAME>
+	template<typename DATABASE_DECLARATION>
 	Database* CreateDatabase(const DatabaseDesc& database_desc)
 	{
+		//List of components using type_list visit
+		std::vector<Component> components;
+		FillComponents::container = &components;
+		DATABASE_DECLARATION::Components::template Visit<FillComponents>();
+
+		//List of register entity types using type_list visit
+		std::vector<EntityTypeMask> entity_types;
+		FillEntityTypes<DATABASE_DECLARATION>::container = &entity_types;
+		DATABASE_DECLARATION::EntityTypes::template Visit<FillEntityTypes<DATABASE_DECLARATION>>();
+
 		//Create the database
-		Database* database = internal::CreateDatabase(database_desc);
+		Database* database = internal::CreateDatabase(database_desc, components, entity_types);
 		//Set the static fast access for the instances with this DATABASE_NAME
-		Instance<DATABASE_NAME>::s_database = database;
+		DATABASE_DECLARATION::s_database = database;
 
 		return database;
 	}
-	template<typename DATABASE_NAME>
-	void DestroyDatabase(Database*& database)
+	template<typename DATABASE_DECLARATION>
+	void DestroyDatabase()
 	{
-		internal::DestroyDatabase(database);
-
-		//Reset fast access 
-		Instance<DATABASE_NAME>::s_database = nullptr;
+		internal::DestroyDatabase(DatabaseDeclaration<DATABASE_DECLARATION>::s_database);
 	}
 
 	//Alloc instance
-	template<typename DATABASE_NAME, typename EntityType>
-	Instance<DATABASE_NAME> AllocInstance()
+	template<typename DATABASE_DECLARATION, typename ENTITY_TYPE>
+	Instance<DATABASE_DECLARATION> AllocInstance()
 	{
-		Instance<DATABASE_NAME> instance;
-		instance.indirection_index = internal::AllocInstance(Instance<DATABASE_NAME>::s_database, EntityType::s_instance_type_index);
+		Instance<DATABASE_DECLARATION> instance;
+		instance.indirection_index = internal::AllocInstance(DATABASE_DECLARATION::s_database, DATABASE_DECLARATION::EntityTypes::template ElementIndex<ENTITY_TYPE>());
 
 		return instance;
 	}

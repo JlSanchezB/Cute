@@ -49,22 +49,22 @@ namespace ecs
 
 	namespace internal
 	{
-		Database* CreateDatabase(const DatabaseDesc & database_desc)
+		Database* CreateDatabase(const DatabaseDesc & database_desc, const std::vector<Component>& components, const std::vector<EntityTypeMask> entity_types)
 		{
 			assert(database_desc.num_zones > 0);
 			assert(database_desc.num_zones < std::numeric_limits<uint16_t>::max());
-			assert(database_desc.entity_types.size() < std::numeric_limits<uint16_t>::max());
-			assert(database_desc.components.size() < 64);
+			assert(entity_types.size() < std::numeric_limits<uint16_t>::max());
+			assert(components.size() < 64);
 
 			Database* database = new Database();
 
 			//Init sizes
 			database->m_num_zones = database_desc.num_zones;
-			database->m_num_components = database_desc.components.size();
-			database->m_num_entity_types = database_desc.entity_types.size();
+			database->m_num_components = components.size();
+			database->m_num_entity_types = entity_types.size();
 
 			//Get all components information
-			database->m_components = database_desc.components;
+			database->m_components = components;
 
 			//Create all the zones
 			database->m_zones.resize(database_desc.num_zones);
@@ -73,12 +73,12 @@ namespace ecs
 			for (auto& zone : database->m_zones)
 			{
 				//Add all entity types registered
-				zone.m_entity_types.resize(database_desc.entity_types.size());
-				for (size_t i = 0; i < database_desc.entity_types.size(); ++i)
+				zone.m_entity_types.resize(entity_types.size());
+				for (size_t i = 0; i < entity_types.size(); ++i)
 				{
 					auto& entity_type = zone.m_entity_types[i];
 
-					entity_type.m_mask = database_desc.entity_types[i];
+					entity_type.m_mask = entity_types[i];
 
 					//Create all components needed
 					entity_type.m_components.reserve(database->m_num_components);
@@ -87,7 +87,7 @@ namespace ecs
 					for (size_t j = 0; j < database->m_num_components; ++j)
 					{
 						const size_t compoment_buffer_size = database_desc.num_max_entities_zone * database->m_components[j].size;
-						entity_type.m_components.emplace_back((((1ul << j) & entity_type.m_mask) != 0 ) ? compoment_buffer_size : 0);
+						entity_type.m_components.emplace_back((((1ULL << j) & entity_type.m_mask) != 0 ) ? compoment_buffer_size : 0);
 					}
 				}
 			}

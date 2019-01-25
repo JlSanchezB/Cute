@@ -10,8 +10,6 @@ namespace ecs
 	template<typename COMPONENT>
 	struct ComponentDesc
 	{
-		inline static size_t s_component_index = static_cast<size_t>(-1);
-
 		static void Move(void* ptr_a, void* ptr_b)
 		{
 			COMPONENT& a = *(reinterpret_cast<COMPONENT*>(ptr_a));
@@ -19,10 +17,9 @@ namespace ecs
 			
 			a = std::move(b);
 		}
+
+		using Type = COMPONENT;
 	};
 }
-
-//A specialization of the ComponentDesc needs to be defined
-#define DECLARE_COMPONENT(COMPONENT) using Component##COMPONENT = ecs::ComponentDesc<COMPONENT>;
 
 #endif //ENTITY_COMPONENT_DESC_H_
