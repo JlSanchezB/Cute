@@ -3,21 +3,6 @@
 
 namespace ecs
 {
-	//Container with components for each entity type
-	struct EntityTypeContainer
-	{
-		EntityTypeMask m_mask;
-
-		//Each component is a virtual buffer (some of them inited as zero)
-		std::vector<core::VirtualBuffer> m_components;
-	};
-
-	//Each zone has a list of entity type containers
-	struct ZoneContainer
-	{
-		std::vector<EntityTypeContainer> m_entity_types;
-	};
-
 	//Represent a instance (in one zone, one instance type and the index)
 	struct InternalInstanceIndex
 	{
@@ -40,11 +25,23 @@ namespace ecs
 		//List of components
 		std::vector<Component> m_components;
 
-		//List of all zones
-		std::vector<ZoneContainer> m_zones;
+		//List of entity types
+		std::vector<EntityTypeMask> m_entity_types;
+
+		//Flat list of all component containers (one virtual buffer for each)
+		//Dimensions are <Zone, EntityType, Component>
+		std::vector<core::VirtualBuffer> m_component_containers;
 
 		//List of indirection instance indexes
 		std::vector<InternalInstanceIndex> m_indirection_instance_table;
+
+		//Access of the component virtual buffer
+		core::VirtualBuffer& GetStorage(uint16_t zone_index, uint16_t entity_type_index, uint8_t component_index)
+		{
+			const size_t index = component_index + m_num_components * entity_type_index + zone_index * (m_num_components * m_num_entity_types);
+
+			return m_component_containers[index];
+		}
 	};
 
 	namespace internal
@@ -66,28 +63,26 @@ namespace ecs
 			//Get all components information
 			database->m_components = components;
 
-			//Create all the zones
-			database->m_zones.resize(database_desc.num_zones);
+			//Get all entity types
+			database->m_entity_types = entity_types;
+
+			//Create all the components
+			const size_t num_components = database->m_num_zones * database->m_num_entity_types * database->m_num_components;
+			database->m_component_containers.reserve(num_components);
 
 			//For each zone add the entity types
-			for (auto& zone : database->m_zones)
+			for (size_t zone_index = 0; zone_index < database->m_num_zones; ++zone_index)
 			{
 				//Add all entity types registered
-				zone.m_entity_types.resize(entity_types.size());
-				for (size_t i = 0; i < entity_types.size(); ++i)
+				for (size_t entity_type_index = 0; entity_type_index < entity_types.size(); ++entity_type_index)
 				{
-					auto& entity_type = zone.m_entity_types[i];
-
-					entity_type.m_mask = entity_types[i];
-
-					//Create all components needed
-					entity_type.m_components.reserve(database->m_num_components);
+					auto& entity_type_mask = database->m_entity_types[entity_type_index];
 
 					//Create all virtual buffers for each component
-					for (size_t j = 0; j < database->m_num_components; ++j)
+					for (size_t component_index = 0; component_index < database->m_num_components; ++component_index)
 					{
-						const size_t compoment_buffer_size = database_desc.num_max_entities_zone * database->m_components[j].size;
-						entity_type.m_components.emplace_back((((1ULL << j) & entity_type.m_mask) != 0 ) ? compoment_buffer_size : 0);
+						const size_t compoment_buffer_size = database_desc.num_max_entities_zone * database->m_components[component_index].size;
+						database->m_component_containers.emplace_back((((1ULL << component_index) & entity_type_mask) != 0 ) ? compoment_buffer_size : 0);
 					}
 				}
 			}
