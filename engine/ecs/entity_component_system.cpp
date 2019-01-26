@@ -110,16 +110,25 @@ namespace ecs
 		}
 		void DeallocInstance(Database * database, InstanceIndirectionIndexType index)
 		{
+			//Add to the deallocate buffer
 		}
+
 		void * GetComponentData(Database * database, InstanceIndirectionIndexType index, size_t component_index)
 		{
-			return nullptr;
+			auto instance = database->m_indirection_instance_table[index];
+
+			uint8_t* data = reinterpret_cast<uint8_t*>(database->GetStorage(instance.zone_index, instance.entity_type_index, static_cast<uint8_t>(component_index)).GetPtr());
+
+			//Offset to the correct instance component
+			return data + database->m_components[component_index].size;
 		}
+
 		size_t GetInstanceType(Database * database, InstanceIndirectionIndexType index)
 		{
 			auto instance = database->m_indirection_instance_table[index];
 			return instance.entity_type_index;
 		}
+
 		EntityTypeMask GetInstanceTypeMask(Database * database, InstanceIndirectionIndexType index)
 		{
 			auto instance = database->m_indirection_instance_table[index];

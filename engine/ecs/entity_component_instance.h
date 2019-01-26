@@ -61,7 +61,7 @@ namespace ecs
 	template<typename COMPONENT>
 	inline COMPONENT& Instance<DATABASE_DECLARATION>::Get()
 	{
-		void* data = GetComponentData(DATABASE_DECLARATION::s_database, m_indirection_index, DATABASE_DECLARATION::template ComponentIndex<COMPONENT>());
+		void* data = internal::GetComponentData(DATABASE_DECLARATION::s_database, m_indirection_index, DATABASE_DECLARATION::template ComponentIndex<COMPONENT>());
 
 		return *reinterpret_cast<COMPONENT*>(data);
 	}
