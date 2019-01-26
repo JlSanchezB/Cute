@@ -7,14 +7,11 @@
 #include <vector>
 #include <cassert>
 #include <core/type_list.h>
+#include "entity_component_common.h"
+#include "entity_component_instance.h"
 
 namespace ecs
 {
-	struct Database;
-
-	using EntityTypeMask = uint64_t;
-	using InstanceIndirectionIndexType = uint32_t;
-
 	template<typename ...COMPONENTS>
 	struct EntityType
 	{
@@ -24,14 +21,6 @@ namespace ecs
 		{
 			return ((1ul << DATABASE_DECLARATION::Components::template ElementIndex<ComponentDesc<COMPONENTS>>()) | ...);
 		}
-	};
-
-	//Templated instance class, needs to be specialized in the client
-	template<typename DATABASE_DECLARATION>
-	class Instance
-	{
-	public:
-		InstanceIndirectionIndexType indirection_index;
 	};
 
 
@@ -88,7 +77,7 @@ namespace ecs
 		void DestroyDatabase(Database*& database);
 
 		//Alloc instance
-		InstanceIndirectionIndexType AllocInstance(Database* database, const size_t& entity_type_index);
+		InstanceIndirectionIndexType AllocInstance(Database* database, size_t entity_type_index);
 
 		//Dealloc instance
 		void DeallocInstance(Database* database, InstanceIndirectionIndexType index);
@@ -96,6 +85,11 @@ namespace ecs
 		//Get component data
 		void* GetComponentData(Database* database, InstanceIndirectionIndexType index, size_t component_index);
 
+		//Get instance type from a indirection index
+		size_t GetInstanceType(Database* database, InstanceIndirectionIndexType index);
+
+		//Get instance type mask from a indirection index
+		EntityTypeMask GetInstanceTypeMask(Database* database, InstanceIndirectionIndexType index);
 	}
 
 	//Helpers to extract all the components
@@ -157,7 +151,7 @@ namespace ecs
 	Instance<DATABASE_DECLARATION> AllocInstance()
 	{
 		Instance<DATABASE_DECLARATION> instance;
-		instance.indirection_index = internal::AllocInstance(DATABASE_DECLARATION::s_database, DATABASE_DECLARATION::EntityTypes::template ElementIndex<ENTITY_TYPE>());
+		instance.m_indirection_index = internal::AllocInstance(DATABASE_DECLARATION::s_database, DATABASE_DECLARATION::EntityTypes::template ElementIndex<ENTITY_TYPE>());
 
 		return instance;
 	}

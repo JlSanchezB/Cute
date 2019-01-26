@@ -100,7 +100,7 @@ namespace ecs
 			database = nullptr;
 		}
 
-		InstanceIndirectionIndexType AllocInstance(Database * database, const size_t & entity_type_index)
+		InstanceIndirectionIndexType AllocInstance(Database * database, size_t entity_type_index)
 		{
 			//Allocate indirection index
 			database->m_indirection_instance_table.emplace_back(InternalInstanceIndex({ 0,0,0 }));
@@ -114,6 +114,16 @@ namespace ecs
 		void * GetComponentData(Database * database, InstanceIndirectionIndexType index, size_t component_index)
 		{
 			return nullptr;
+		}
+		size_t GetInstanceType(Database * database, InstanceIndirectionIndexType index)
+		{
+			auto instance = database->m_indirection_instance_table[index];
+			return instance.entity_type_index;
+		}
+		EntityTypeMask GetInstanceTypeMask(Database * database, InstanceIndirectionIndexType index)
+		{
+			auto instance = database->m_indirection_instance_table[index];
+			return database->m_entity_types[instance.entity_type_index];
 		}
 	}
 }
