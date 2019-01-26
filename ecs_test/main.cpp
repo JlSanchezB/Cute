@@ -75,5 +75,5 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow)
 	ecs::DatabaseDesc database_desc;
 	ecs::Database* database = ecs::CreateDatabase<GameDatabase>(database_desc);
 
-	Instance instance = ecs::AllocInstance<GameDatabase, TriangleEntityType>();
+	Instance instance = ecs::AllocInstance<GameDatabase, TriangleEntityType>().InitDefault();
 }

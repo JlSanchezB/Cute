@@ -35,19 +35,6 @@ namespace core
 		}
 	};
 
-	template<typename FUNCTION, typename LAST_ELEMENT>
-	constexpr void visit()
-	{
-		FUNCTION::template Visit<LAST_ELEMENT>();
-	};
-
-	template<typename FUNCTION, typename ELEMENT1, typename ELEMENT2, typename ...REST_ELEMENTS>
-	constexpr void visit()
-	{
-		FUNCTION::template Visit<ELEMENT1>();
-		visit<FUNCTION, ELEMENT2, REST_ELEMENTS...>();
-	};
-
 	template <typename ...ELEMENTS>
 	struct TypeList
 	{
@@ -64,13 +51,26 @@ namespace core
 		{
 			return find_index<ELEMENT, 0, ELEMENTS...>();
 		}
-
-		template<typename FUNCTION>
-		constexpr static void Visit()
-		{
-			visit<FUNCTION, ELEMENTS...>();
-		}
 	};
+
+	//Helpers for iterating variadic templates lists
+	template<std::size_t N>
+	struct num { static const constexpr auto value = N; };
+
+	template <class F, std::size_t... Is>
+	constexpr void visit(F func, std::index_sequence<Is...>)
+	{
+		using expander = int[];
+		(void)expander {
+			0, ((void)func(num<Is>{}), 0)...
+		};
+	}
+
+	template <std::size_t N, typename F>
+	constexpr void visit(F func)
+	{
+		visit(func, std::make_index_sequence<N>());
+	}
 }
 
 #endif //VIRTUAL_ALLOC_H_

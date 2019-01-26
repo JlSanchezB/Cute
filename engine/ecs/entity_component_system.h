@@ -92,46 +92,29 @@ namespace ecs
 		EntityTypeMask GetInstanceTypeMask(Database* database, InstanceIndirectionIndexType index);
 	}
 
-	//Helpers to extract all the components
-	struct FillComponents
-	{
-		inline static std::vector<Component>* container;
-		template<typename COMPONENT>
-		static void Visit()
-		{
-			Component component;
-			//Capture the information needed
-			component.Capture<COMPONENT>();
-			//Added to the component list
-			container->push_back(component);
-		}
-	};
-
-	//Helpers to extract all the entity types
-	template<typename DATABASE_DECLARATION>
-	struct FillEntityTypes
-	{
-		inline static std::vector<EntityTypeMask>* container;
-		template<typename ENTITY_TYPE>
-		static void Visit()
-		{
-			container->push_back(ENTITY_TYPE::template EntityTypeMask<DATABASE_DECLARATION>());
-		}
-	};
-
 	//Create database from a database description with the component lists
 	template<typename DATABASE_DECLARATION>
 	Database* CreateDatabase(const DatabaseDesc& database_desc)
 	{
 		//List of components using type_list visit
 		std::vector<Component> components;
-		FillComponents::container = &components;
-		DATABASE_DECLARATION::Components::template Visit<FillComponents>();
+
+		core::visit<DATABASE_DECLARATION::Components::template Size()>([&](auto component_index)
+		{
+			Component component;
+			//Capture the information needed
+			component.Capture<DATABASE_DECLARATION::Components::template ElementType<component_index.value>>();
+			//Added to the component list
+			components.push_back(component);
+		});
 
 		//List of register entity types using type_list visit
 		std::vector<EntityTypeMask> entity_types;
-		FillEntityTypes<DATABASE_DECLARATION>::container = &entity_types;
-		DATABASE_DECLARATION::EntityTypes::template Visit<FillEntityTypes<DATABASE_DECLARATION>>();
+		core::visit<DATABASE_DECLARATION::EntityTypes::template Size()>([&](auto entity_type_index)
+		{
+			using EntityTypeIt = typename DATABASE_DECLARATION::EntityTypes::template ElementType<entity_type_index.value>;
+			entity_types.push_back(EntityTypeIt::template EntityTypeMask<DATABASE_DECLARATION>());
+		});
 
 		//Create the database
 		Database* database = internal::CreateDatabase(database_desc, components, entity_types);

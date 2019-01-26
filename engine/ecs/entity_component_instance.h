@@ -14,19 +14,19 @@ namespace ecs
 	{
 	public:
 		//Init all the components with the default constructor
-		void InitDefault();
+		constexpr Instance<DATABASE_DECLARATION> InitDefault();
 
 		//Init Components with constructor
 		template<typename ...COMPONENTS>
-		Instance<DATABASE_DECLARATION>& Init();
+		constexpr Instance<DATABASE_DECLARATION>& Init();
 
 		//Countains component
 		template<typename COMPONENT>
-		bool Contains();
+		constexpr bool Contains();
 
 		//Accessor to a component
 		template<typename COMPONENT>
-		COMPONENT& Get();
+		constexpr COMPONENT& Get();
 
 	private:
 		InstanceIndirectionIndexType m_indirection_index;
@@ -36,22 +36,34 @@ namespace ecs
 	};
 
 	template<typename DATABASE_DECLARATION>
-	inline void Instance<DATABASE_DECLARATION>::InitDefault()
+	constexpr inline Instance<DATABASE_DECLARATION> Instance<DATABASE_DECLARATION>::InitDefault()
 	{
 		//Calls the default contructor for all components of the instance
-		size_t instance_type_index = internal::GetInstanceType(DATABASE_DECLARATION::s_database, m_indirection_index);
+		EntityTypeMask entity_type_mask = internal::GetInstanceTypeMask(DATABASE_DECLARATION::s_database, m_indirection_index);
 
+		core::visit<DATABASE_DECLARATION::Components::template Size()>([&](auto component_index)
+		{
+			if (((1ULL << component_index.value) & entity_type_mask) != 0)
+			{
+				//Placement new with default constructor
+				void* data = internal::GetComponentData(DATABASE_DECLARATION::s_database, m_indirection_index, component_index.value);
+
+				new (data) typename DATABASE_DECLARATION::Components::template ElementType<component_index.value>();
+			}
+		});
+
+		return *this;
 	}
 	template<typename DATABASE_DECLARATION>
 	template<typename ...COMPONENTS>
-	inline Instance<DATABASE_DECLARATION>& Instance<DATABASE_DECLARATION>::Init()
+	constexpr inline Instance<DATABASE_DECLARATION>& Instance<DATABASE_DECLARATION>::Init()
 	{
 		
 		return *this;
 	}
 	template<typename DATABASE_DECLARATION>
 	template<typename COMPONENT>
-	inline bool Instance<DATABASE_DECLARATION>::Contains()
+	constexpr inline bool Instance<DATABASE_DECLARATION>::Contains()
 	{
 		EntityTypeMask entity_type_mask = internal::GetInstanceTypeMask(DATABASE_DECLARATION::s_database, m_indirection_index);
 		return (DATABASE_DECLARATION::EntityTypes::template EntityTypeMask<COMPONENT> & entity_type_mask) != 0;
@@ -59,7 +71,7 @@ namespace ecs
 
 	template<typename DATABASE_DECLARATION>
 	template<typename COMPONENT>
-	inline COMPONENT& Instance<DATABASE_DECLARATION>::Get()
+	constexpr inline COMPONENT& Instance<DATABASE_DECLARATION>::Get()
 	{
 		void* data = internal::GetComponentData(DATABASE_DECLARATION::s_database, m_indirection_index, DATABASE_DECLARATION::template ComponentIndex<COMPONENT>());
 
