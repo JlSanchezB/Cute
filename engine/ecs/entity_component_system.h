@@ -20,7 +20,7 @@ namespace ecs
 	{
 		//Return the mask that represent this instance type, mask is a bit set with the components enabled
 		template<typename DATABASE_DECLARATION>
-		constexpr static EntityTypeMask GetEntityTypeMask()
+		constexpr static EntityTypeMask EntityTypeMask()
 		{
 			return ((1ul << DATABASE_DECLARATION::Components::template ElementIndex<ComponentDesc<COMPONENTS>>()) | ...);
 		}
@@ -44,6 +44,12 @@ namespace ecs
 
 		using Components = COMPONENT_LIST;
 		using EntityTypes = ENTITY_TYPE_LIST;
+
+		template<typename COMPONENT>
+		constexpr size_t ComponentIndex()
+		{
+			return COMPONENT_LIST::template ElementIndex<COMPONENT>();
+		}
 	};
 
 	//Represent all information needed for the ECS about the component
@@ -115,7 +121,7 @@ namespace ecs
 		template<typename ENTITY_TYPE>
 		static void Visit()
 		{
-			container->push_back(ENTITY_TYPE::template GetEntityTypeMask<DATABASE_DECLARATION>());
+			container->push_back(ENTITY_TYPE::template EntityTypeMask<DATABASE_DECLARATION>());
 		}
 	};
 
