@@ -17,8 +17,8 @@ namespace ecs
 		constexpr Instance<DATABASE_DECLARATION> InitDefault();
 
 		//Init Components with constructor
-		template<typename ...COMPONENTS>
-		constexpr Instance<DATABASE_DECLARATION>& Init();
+		template<typename ...COMPONENTS, typename ...ARGS>
+		constexpr Instance<DATABASE_DECLARATION>& Init(ARGS&&... args);
 
 		//Countains component
 		template<typename COMPONENT>
@@ -55,10 +55,23 @@ namespace ecs
 		return *this;
 	}
 	template<typename DATABASE_DECLARATION>
-	template<typename ...COMPONENTS>
-	constexpr inline Instance<DATABASE_DECLARATION>& Instance<DATABASE_DECLARATION>::Init()
+	template<typename ...COMPONENTS, typename ...ARGS>
+	constexpr inline Instance<DATABASE_DECLARATION>& Instance<DATABASE_DECLARATION>::Init(ARGS&&... args)
 	{
-		
+		using InitComponentsList = std::tuple<COMPONENTS...>;
+
+		core::visit<sizeof...(COMPONENTS)>([&](auto component_index)
+		{
+			//Capture the type of the component in the list of component to init
+			using ComponentType = typename std::tuple_element<component_index.value, InitComponentsList>::type;
+			
+			//Get the memory in the database, we need to find the index for this component in the database
+			void* data = internal::GetComponentData(DATABASE_DECLARATION::s_database, m_indirection_index, DATABASE_DECLARATION::Components::template ElementIndex<ComponentDesc<ComponentType>>());
+
+			//Placement new
+			new (data) ComponentType(std::forward<ARGS>(args)...);
+		});
+
 		return *this;
 	}
 	template<typename DATABASE_DECLARATION>

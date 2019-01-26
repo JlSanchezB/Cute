@@ -119,6 +119,9 @@ namespace ecs
 
 			uint8_t* data = reinterpret_cast<uint8_t*>(database->GetStorage(instance.zone_index, instance.entity_type_index, static_cast<uint8_t>(component_index)).GetPtr());
 
+			//It needs to be a valid pointer, if not we are trying to access a component not register in the entity type
+			assert(data);
+
 			//Offset to the correct instance component
 			return data + database->m_components[component_index].size;
 		}
