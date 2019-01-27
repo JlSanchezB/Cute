@@ -35,15 +35,15 @@ namespace ecs
 		using EntityTypes = ENTITY_TYPE_LIST;
 
 		template<typename COMPONENT>
-		constexpr static size_t ComponentIndex()
+		constexpr static ComponentType ComponentIndex()
 		{
-			return COMPONENT_LIST::template ElementIndex<COMPONENT>();
+			return static_cast<ComponentType>(COMPONENT_LIST::template ElementIndex<COMPONENT>());
 		}
 
 		template<typename ENTITY_TYPE>
-		constexpr static size_t EntityTypeIndex()
+		constexpr static EntityTypeType EntityTypeIndex()
 		{
-			return ENTITY_TYPE_LIST::template ElementIndex<ENTITY_TYPE>();
+			return static_cast<EntityTypeType>(ENTITY_TYPE_LIST::template ElementIndex<ENTITY_TYPE>());
 		}
 
 		template<typename COMPONENT>

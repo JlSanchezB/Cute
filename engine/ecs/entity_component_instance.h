@@ -32,7 +32,7 @@ namespace ecs
 		InstanceIndirectionIndexType m_indirection_index;
 
 		template<typename DATABASE_DECLARATION, typename ENTITY_TYPE>
-		friend Instance<DATABASE_DECLARATION> AllocInstance();
+		friend Instance<DATABASE_DECLARATION> AllocInstance(ZoneType zone_index);
 	};
 
 	template<typename DATABASE_DECLARATION>

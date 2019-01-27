@@ -19,7 +19,7 @@ struct VelocityComponent
 struct OrientationComponent
 {
 	float angle;
-
+	OrientationComponent() {};
 	OrientationComponent(float _angle) : angle(_angle)
 	{
 	}
@@ -71,5 +71,5 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow)
 	ecs::DatabaseDesc database_desc;
 	ecs::Database* database = ecs::CreateDatabase<GameDatabase>(database_desc);
 
-	//Instance instance = ecs::AllocInstance<GameDatabase, TriangleEntityType>().InitDefault().Init<OrientationComponent>(3.5f);
+	Instance instance = ecs::AllocInstance<GameDatabase, TriangleEntityType>().InitDefault().Init<OrientationComponent>(3.5f);
 }

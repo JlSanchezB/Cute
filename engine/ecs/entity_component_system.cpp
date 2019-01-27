@@ -59,10 +59,22 @@ namespace ecs
 		InstanceIndexType AllocInstance(uint16_t zone_index, uint16_t entity_type_index)
 		{
 			const size_t index = entity_type_index + zone_index * m_num_entity_types;
+			const InstanceIndexType instance_index = static_cast<InstanceIndexType>(m_num_instances[index]++);
 
 			//Grow all components
+			const size_t component_begin_index = m_num_components * entity_type_index + zone_index * (m_num_components * m_num_entity_types);
+			for (size_t i = 0; i < m_num_components; ++i)
+			{
+				auto& component_container = m_component_containers[component_begin_index + i];
 
-			return static_cast<InstanceIndexType>(m_num_instances[index]++);
+				if (component_container.GetPtr())
+				{
+					//Grow the size
+					component_container.SetCommitedSize((instance_index + 1) * m_components[i].size);
+				}
+			}
+
+			return instance_index;
 		}
 	};
 
