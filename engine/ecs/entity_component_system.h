@@ -107,13 +107,13 @@ namespace ecs
 		void DestroyDatabase(Database*& database);
 
 		//Alloc instance
-		InstanceIndirectionIndexType AllocInstance(Database* database, size_t entity_type_index);
+		InstanceIndirectionIndexType AllocInstance(Database* database, ZoneType zone_index, EntityTypeType entity_type_index);
 
 		//Dealloc instance
 		void DeallocInstance(Database* database, InstanceIndirectionIndexType index);
 
 		//Get component data
-		void* GetComponentData(Database* database, InstanceIndirectionIndexType index, size_t component_index);
+		void* GetComponentData(Database* database, InstanceIndirectionIndexType index, ComponentType component_index);
 
 		//Get instance type from a indirection index
 		size_t GetInstanceType(Database* database, InstanceIndirectionIndexType index);
@@ -161,10 +161,10 @@ namespace ecs
 
 	//Alloc instance
 	template<typename DATABASE_DECLARATION, typename ENTITY_TYPE>
-	Instance<DATABASE_DECLARATION> AllocInstance()
+	Instance<DATABASE_DECLARATION> AllocInstance(ZoneType zone_index = 0)
 	{
 		Instance<DATABASE_DECLARATION> instance;
-		instance.m_indirection_index = internal::AllocInstance(DATABASE_DECLARATION::s_database, DATABASE_DECLARATION::template EntityTypeIndex<ENTITY_TYPE>());
+		instance.m_indirection_index = internal::AllocInstance(DATABASE_DECLARATION::s_database, zone_index, DATABASE_DECLARATION::template EntityTypeIndex<ENTITY_TYPE>());
 
 		return instance;
 	}

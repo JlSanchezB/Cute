@@ -3,12 +3,14 @@
 
 namespace ecs
 {
+	using InstanceIndexType = uint32_t;
+
 	//Represent a instance (in one zone, one instance type and the index)
 	struct InternalInstanceIndex
 	{
-		uint16_t zone_index;
-		uint16_t entity_type_index;
-		uint32_t instance_index;
+		ZoneType zone_index;
+		EntityTypeType entity_type_index;
+		InstanceIndexType instance_index;
 	};
 
 	//Database
@@ -32,6 +34,10 @@ namespace ecs
 		//Dimensions are <Zone, EntityType, Component>
 		std::vector<core::VirtualBuffer> m_component_containers;
 
+		//Flat list with the number of instances for each Zone/EntityType
+		//Dimensions are <Zone, EntityType>
+		std::vector<size_t> m_num_instances;
+
 		//List of indirection instance indexes
 		std::vector<InternalInstanceIndex> m_indirection_instance_table;
 
@@ -41,6 +47,22 @@ namespace ecs
 			const size_t index = component_index + m_num_components * entity_type_index + zone_index * (m_num_components * m_num_entity_types);
 
 			return m_component_containers[index];
+		}
+
+		InstanceIndexType GetNumInstances(uint16_t zone_index, uint16_t entity_type_index) const
+		{
+			const size_t index = entity_type_index + zone_index * m_num_entity_types;
+
+			return static_cast<InstanceIndexType>(m_num_instances[index]);
+		}
+
+		InstanceIndexType AllocInstance(uint16_t zone_index, uint16_t entity_type_index)
+		{
+			const size_t index = entity_type_index + zone_index * m_num_entity_types;
+
+			//Grow all components
+
+			return static_cast<InstanceIndexType>(m_num_instances[index]++);
 		}
 	};
 
@@ -87,6 +109,13 @@ namespace ecs
 				}
 			}
 			
+			//Init all num of instances to zero
+			database->m_num_instances.resize(database->m_num_zones * database->m_num_entity_types);
+			for (auto& num_instance : database->m_num_instances)
+			{
+				num_instance = 0;
+			}
+
 			//Reserve memory for the indirection indexes
 			database->m_indirection_instance_table.reserve(1024);
 
@@ -100,8 +129,11 @@ namespace ecs
 			database = nullptr;
 		}
 
-		InstanceIndirectionIndexType AllocInstance(Database * database, size_t entity_type_index)
+		InstanceIndirectionIndexType AllocInstance(Database * database, ZoneType zone_index, EntityTypeType entity_type_index)
 		{
+			//Alloc component data for this instance and create internal_instance_index
+			InternalInstanceIndex internal_instance_index { zone_index, entity_type_index, database->AllocInstance(zone_index, entity_type_index)};
+
 			//Allocate indirection index
 			database->m_indirection_instance_table.emplace_back(InternalInstanceIndex({ 0,0,0 }));
 			assert(database->m_indirection_instance_table.size() < std::numeric_limits<InstanceIndirectionIndexType>::max());
@@ -113,7 +145,7 @@ namespace ecs
 			//Add to the deallocate buffer
 		}
 
-		void * GetComponentData(Database * database, InstanceIndirectionIndexType index, size_t component_index)
+		void * GetComponentData(Database * database, InstanceIndirectionIndexType index, ComponentType component_index)
 		{
 			auto instance = database->m_indirection_instance_table[index];
 
