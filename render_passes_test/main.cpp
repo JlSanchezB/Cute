@@ -80,7 +80,7 @@ public:
 
 		m_device = display::CreateDevice(device_init_params);
 
-		if (m_device != nullptr)
+		if (m_device == nullptr)
 		{
 			throw std::runtime_error::exception("Error creating the display device");
 		}
