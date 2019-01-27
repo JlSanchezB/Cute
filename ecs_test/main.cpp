@@ -4,52 +4,68 @@
 #include <render/render_resource.h>
 #include <render/render_helper.h>
 #include <ecs/entity_component_system.h>
+#include <ext/glm/vec2.hpp>
 
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN             // Exclude rarely-used stuff from Windows headers.
 #endif
 #include <windows.h>
 #include <fstream>
+#include <random>
 
 struct PositionComponent
 {
-	float position[2];
-};
-
-struct VelocityComponent
-{
-	float velocity[2];
-};
-
-struct OrientationComponent
-{
+	glm::vec2 position;
 	float angle;
-	OrientationComponent() {};
-	OrientationComponent(float _angle) : angle(_angle)
+
+	PositionComponent(float x, float y, float _angle) : position(x, y), angle(_angle)
 	{
 	}
 };
 
+struct VelocityComponent
+{
+	glm::vec2 lineal_velocity;
+	float angle_velocity;
+
+	VelocityComponent(float x, float y, float m) : lineal_velocity(x, y), angle_velocity(m)
+	{
+	}
+};
+
+
 struct TriangleShapeComponent
 {
 	float size;
+
+	TriangleShapeComponent(float _size) : size(_size)
+	{
+	}
 };
 
 struct CircleShapeComponent
 {
-	float radius;
+	float size;
+
+	CircleShapeComponent(float _size) : size(_size)
+	{
+	}
 };
 
 struct SquareShapeComponent
 {
-	float side;
+	float size;
+
+	SquareShapeComponent(float _size) : size(_size)
+	{
+	}
 };
 
-using TriangleEntityType = ecs::EntityType<PositionComponent, VelocityComponent, OrientationComponent, TriangleShapeComponent>;
-using CircleEntityType = ecs::EntityType<PositionComponent, VelocityComponent, OrientationComponent, CircleShapeComponent>;
-using SquareEntityType = ecs::EntityType<PositionComponent, VelocityComponent, OrientationComponent, SquareShapeComponent>;
+using TriangleEntityType = ecs::EntityType<PositionComponent, VelocityComponent, TriangleShapeComponent>;
+using CircleEntityType = ecs::EntityType<PositionComponent, VelocityComponent, CircleShapeComponent>;
+using SquareEntityType = ecs::EntityType<PositionComponent, VelocityComponent, SquareShapeComponent>;
 
-using GameComponents = core::TypeList<PositionComponent, VelocityComponent, OrientationComponent, TriangleShapeComponent, CircleShapeComponent, SquareShapeComponent>;
+using GameComponents = core::TypeList<PositionComponent, VelocityComponent, TriangleShapeComponent, CircleShapeComponent, SquareShapeComponent>;
 using GameEntityTypes = core::TypeList<TriangleEntityType, CircleEntityType, SquareEntityType>;
 
 using GameDatabase = ecs::DatabaseDeclaration<GameComponents, GameEntityTypes>;
@@ -156,7 +172,40 @@ public:
 		ecs::DatabaseDesc database_desc;
 		ecs::CreateDatabase<GameDatabase>(database_desc);
 
-		Instance instance = ecs::AllocInstance<GameDatabase, TriangleEntityType>().InitDefault().Init<OrientationComponent>(3.5f);
+		//Allocate random instances
+		std::random_device rd;  //Will be used to obtain a seed for the random number engine
+		std::mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()
+		std::uniform_real_distribution<float> rand_position_x(-1.f, 1.0f);
+		std::uniform_real_distribution<float> rand_position_y(-1.f, 1.0f);
+		std::uniform_real_distribution<float> rand_position_angle(0.f, 2.f * 3.1415926f);
+		std::uniform_real_distribution<float> rand_lineal_velocity(-0.01f, 0.01f);
+		std::uniform_real_distribution<float> rand_angle_velocity(-0.01f, 0.01f);
+		std::uniform_real_distribution<float> rand_size(0.01f, 0.02f);
+
+		for (size_t i = 0; i < 1000; ++i)
+		{
+			ecs::AllocInstance<GameDatabase, CircleEntityType>()
+				.Init<PositionComponent>(rand_position_x(gen), rand_position_y(gen), rand_position_angle(gen))
+				.Init<VelocityComponent>(rand_lineal_velocity(gen), rand_lineal_velocity(gen), rand_angle_velocity(gen))
+				.Init<CircleShapeComponent>(rand_size(gen));
+		}
+
+		for (size_t i = 0; i < 1000; ++i)
+		{
+			ecs::AllocInstance<GameDatabase, TriangleEntityType>()
+				.Init<PositionComponent>(rand_position_x(gen), rand_position_y(gen), rand_position_angle(gen))
+				.Init<VelocityComponent>(rand_lineal_velocity(gen), rand_lineal_velocity(gen), rand_angle_velocity(gen))
+				.Init<TriangleShapeComponent>(rand_size(gen));
+		}
+
+		for (size_t i = 0; i < 1000; ++i)
+		{
+			ecs::AllocInstance<GameDatabase, SquareEntityType>()
+				.Init<PositionComponent>(rand_position_x(gen), rand_position_y(gen), rand_position_angle(gen))
+				.Init<VelocityComponent>(rand_lineal_velocity(gen), rand_lineal_velocity(gen), rand_angle_velocity(gen))
+				.Init<SquareShapeComponent>(rand_size(gen));
+		}
+		
 	}
 	void OnDestroy() override
 	{

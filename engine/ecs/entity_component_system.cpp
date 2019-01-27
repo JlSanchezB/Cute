@@ -147,7 +147,7 @@ namespace ecs
 			InternalInstanceIndex internal_instance_index { zone_index, entity_type_index, database->AllocInstance(zone_index, entity_type_index)};
 
 			//Allocate indirection index
-			database->m_indirection_instance_table.emplace_back(InternalInstanceIndex({ 0,0,0 }));
+			database->m_indirection_instance_table.emplace_back(internal_instance_index);
 			assert(database->m_indirection_instance_table.size() < std::numeric_limits<InstanceIndirectionIndexType>::max());
 			
 			return static_cast<InstanceIndirectionIndexType>(database->m_indirection_instance_table.size() - 1);

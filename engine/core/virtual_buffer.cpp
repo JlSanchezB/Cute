@@ -27,6 +27,10 @@ namespace core
 		}
 		else
 		{
+			//Need to round the memory to page size
+			size_t page_size = GetPageSize();
+			reserved_memory = ((reserved_memory / page_size) + 1) * page_size;
+
 			//Reserve memory
 			m_memory_base = static_cast<char*>(VirtualAlloc(nullptr, reserved_memory, AllocFlags::Reserve));
 		}
@@ -47,7 +51,7 @@ namespace core
 
 		//Check if the new size means new pages to be commited or released
 		size_t page_index = calculate_page(m_memory_commited, page_size);
-		size_t new_page_index = calculate_page(m_memory_commited + new_size, page_size);
+		size_t new_page_index = calculate_page(new_size, page_size);
 
 		if (new_size == 0)
 		{
