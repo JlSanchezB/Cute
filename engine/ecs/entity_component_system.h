@@ -35,9 +35,27 @@ namespace ecs
 		using EntityTypes = ENTITY_TYPE_LIST;
 
 		template<typename COMPONENT>
-		constexpr size_t ComponentIndex()
+		constexpr static size_t ComponentIndex()
 		{
 			return COMPONENT_LIST::template ElementIndex<COMPONENT>();
+		}
+
+		template<typename ENTITY_TYPE>
+		constexpr static size_t EntityTypeIndex()
+		{
+			return ENTITY_TYPE_LIST::template ElementIndex<ENTITY_TYPE>();
+		}
+
+		template<typename COMPONENT>
+		constexpr static EntityTypeMask ComponentMask()
+		{
+			return (1ULL << ComponentIndex<COMPONENT>());
+		}
+
+		template<typename ENTITY_TYPE>
+		constexpr static EntityTypeMask EntityTypeMask()
+		{
+			return ENTITY_TYPE_LIST::template EntityTypeMask<ENTITY_TYPE>();
 		}
 	};
 
@@ -146,7 +164,7 @@ namespace ecs
 	Instance<DATABASE_DECLARATION> AllocInstance()
 	{
 		Instance<DATABASE_DECLARATION> instance;
-		instance.m_indirection_index = internal::AllocInstance(DATABASE_DECLARATION::s_database, DATABASE_DECLARATION::EntityTypes::template ElementIndex<ENTITY_TYPE>());
+		instance.m_indirection_index = internal::AllocInstance(DATABASE_DECLARATION::s_database, DATABASE_DECLARATION::template EntityTypeIndex<ENTITY_TYPE>());
 
 		return instance;
 	}

@@ -66,7 +66,7 @@ namespace ecs
 			using ComponentType = typename std::tuple_element<component_index.value, InitComponentsList>::type;
 			
 			//Get the memory in the database, we need to find the index for this component in the database
-			void* data = internal::GetComponentData(DATABASE_DECLARATION::s_database, m_indirection_index, DATABASE_DECLARATION::Components::template ElementIndex<ComponentType>());
+			void* data = internal::GetComponentData(DATABASE_DECLARATION::s_database, m_indirection_index, DATABASE_DECLARATION::template ComponentIndex<ComponentType>());
 
 			//Placement new
 			new (data) ComponentType(std::forward<ARGS>(args)...);
@@ -79,7 +79,7 @@ namespace ecs
 	constexpr inline bool Instance<DATABASE_DECLARATION>::Contains()
 	{
 		EntityTypeMask entity_type_mask = internal::GetInstanceTypeMask(DATABASE_DECLARATION::s_database, m_indirection_index);
-		return (DATABASE_DECLARATION::EntityTypes::template EntityTypeMask<COMPONENT> & entity_type_mask) != 0;
+		return (DATABASE_DECLARATION::template ComponentMask<COMPONENT> & entity_type_mask) != 0;
 	}
 
 	template<typename DATABASE_DECLARATION>
