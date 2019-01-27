@@ -1,4 +1,3 @@
-#include "ecs/entity_component_desc.h"
 #include "ecs/entity_component_system.h"
 #include "core/virtual_buffer.h"
 
@@ -41,18 +40,11 @@ struct SquareShapeComponent
 	float side;
 };
 
-using Component_PositionComponent = ecs::ComponentDesc<PositionComponent>;
-using Component_VelocityComponent = ecs::ComponentDesc<VelocityComponent>;
-using Component_OrientationComponent = ecs::ComponentDesc<OrientationComponent>;
-using Component_TriangleShapeComponent = ecs::ComponentDesc<TriangleShapeComponent>;
-using Component_CircleShapeComponent = ecs::ComponentDesc<CircleShapeComponent>;
-using Component_SquareShapeComponent = ecs::ComponentDesc<SquareShapeComponent>;
-
 using TriangleEntityType = ecs::EntityType<PositionComponent, VelocityComponent, OrientationComponent, TriangleShapeComponent>;
 using CircleEntityType = ecs::EntityType<PositionComponent, VelocityComponent, OrientationComponent, CircleShapeComponent>;
 using SquareEntityType = ecs::EntityType<PositionComponent, VelocityComponent, OrientationComponent, SquareShapeComponent>;
 
-using GameComponents = core::TypeList<Component_PositionComponent, Component_VelocityComponent, Component_OrientationComponent, Component_TriangleShapeComponent, Component_CircleShapeComponent, Component_SquareShapeComponent>;
+using GameComponents = core::TypeList<PositionComponent, VelocityComponent, OrientationComponent, TriangleShapeComponent, CircleShapeComponent, SquareShapeComponent>;
 using GameEntityTypes = core::TypeList<TriangleEntityType, CircleEntityType, SquareEntityType>;
 
 using GameDatabase = ecs::DatabaseDeclaration<GameComponents, GameEntityTypes>;

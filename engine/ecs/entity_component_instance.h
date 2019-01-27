@@ -66,7 +66,7 @@ namespace ecs
 			using ComponentType = typename std::tuple_element<component_index.value, InitComponentsList>::type;
 			
 			//Get the memory in the database, we need to find the index for this component in the database
-			void* data = internal::GetComponentData(DATABASE_DECLARATION::s_database, m_indirection_index, DATABASE_DECLARATION::Components::template ElementIndex<ComponentDesc<ComponentType>>());
+			void* data = internal::GetComponentData(DATABASE_DECLARATION::s_database, m_indirection_index, DATABASE_DECLARATION::Components::template ElementIndex<ComponentType>());
 
 			//Placement new
 			new (data) ComponentType(std::forward<ARGS>(args)...);

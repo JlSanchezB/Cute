@@ -119,9 +119,6 @@
     <ClInclude Include="ecs\entity_component_system.h">
       <Filter>ecs</Filter>
     </ClInclude>
-    <ClInclude Include="ecs\entity_component_desc.h">
-      <Filter>ecs</Filter>
-    </ClInclude>
     <ClInclude Include="core\virtual_alloc.h">
       <Filter>core</Filter>
     </ClInclude>

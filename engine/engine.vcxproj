@@ -143,7 +143,6 @@
     <ClInclude Include="display\pc_dx12\display_common.h" />
     <ClInclude Include="display\pc_dx12\display_convert.h" />
     <ClInclude Include="ecs\entity_component_common.h" />
-    <ClInclude Include="ecs\entity_component_desc.h" />
     <ClInclude Include="ecs\entity_component_instance.h" />
     <ClInclude Include="ecs\entity_component_system.h" />
     <ClInclude Include="ext\imgui\imconfig.h" />

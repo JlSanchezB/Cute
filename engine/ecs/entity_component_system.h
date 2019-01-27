@@ -19,7 +19,7 @@ namespace ecs
 		template<typename DATABASE_DECLARATION>
 		constexpr static EntityTypeMask EntityTypeMask()
 		{
-			return ((1ul << DATABASE_DECLARATION::Components::template ElementIndex<ComponentDesc<COMPONENTS>>()) | ...);
+			return ((1ul << DATABASE_DECLARATION::Components::template ElementIndex<COMPONENTS>()) | ...);
 		}
 	};
 
@@ -41,6 +41,18 @@ namespace ecs
 		}
 	};
 
+	template<typename COMPONENT>
+	struct ComponentMoveDeclaration
+	{
+		static void Move(void* ptr_a, void* ptr_b)
+		{
+			COMPONENT& a = *(reinterpret_cast<COMPONENT*>(ptr_a));
+			COMPONENT& b = *(reinterpret_cast<COMPONENT*>(ptr_b));
+
+			a = std::move(b);
+		}
+	};
+
 	//Represent all information needed for the ECS about the component
 	struct Component
 	{
@@ -54,10 +66,10 @@ namespace ecs
 		template<typename COMPONENT>
 		void Capture()
 		{
-			size = sizeof(typename COMPONENT::Type);
-			align = alignof(typename COMPONENT::Type);
+			size = sizeof(COMPONENT);
+			align = alignof(COMPONENT);
 
-			move_operator = COMPONENT::Move;
+			move_operator = ComponentMoveDeclaration<COMPONENT>::Move;
 		}
 	};
 
