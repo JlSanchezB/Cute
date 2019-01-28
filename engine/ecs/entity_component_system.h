@@ -13,6 +13,12 @@
 namespace ecs
 {
 	template<typename ...COMPONENTS>
+	using ComponentList = core::TypeList<COMPONENTS...>;
+
+	template<typename ...COMPONENTS>
+	using EntityTypeList = core::TypeList<COMPONENTS...>;
+
+	template<typename ...COMPONENTS>
 	struct EntityType
 	{
 		//Return the mask that represent this instance type, mask is a bit set with the components enabled

@@ -65,8 +65,8 @@ using TriangleEntityType = ecs::EntityType<PositionComponent, VelocityComponent,
 using CircleEntityType = ecs::EntityType<PositionComponent, VelocityComponent, CircleShapeComponent>;
 using SquareEntityType = ecs::EntityType<PositionComponent, VelocityComponent, SquareShapeComponent>;
 
-using GameComponents = core::TypeList<PositionComponent, VelocityComponent, TriangleShapeComponent, CircleShapeComponent, SquareShapeComponent>;
-using GameEntityTypes = core::TypeList<TriangleEntityType, CircleEntityType, SquareEntityType>;
+using GameComponents = ecs::ComponentList<PositionComponent, VelocityComponent, TriangleShapeComponent, CircleShapeComponent, SquareShapeComponent>;
+using GameEntityTypes = ecs::EntityTypeList<TriangleEntityType, CircleEntityType, SquareEntityType>;
 
 using GameDatabase = ecs::DatabaseDeclaration<GameComponents, GameEntityTypes>;
 using Instance = ecs::Instance<GameDatabase>;
