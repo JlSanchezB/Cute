@@ -20,9 +20,12 @@ namespace ecs
 	struct Database
 	{
 		//Fast access data
-		size_t m_num_components;
-		size_t m_num_entity_types;
-		size_t m_num_zones;
+		ComponentType m_num_components;
+		EntityTypeType m_num_entity_types;
+		ZoneType m_num_zones;
+
+		//Index of the component with the indirection index
+		uint8_t m_indirection_index_component_index;
 
 		//List of components
 		std::vector<Component> m_components;
@@ -42,21 +45,31 @@ namespace ecs
 		std::vector<InternalInstanceIndex> m_indirection_instance_table;
 
 		//Access of the component virtual buffer
-		core::VirtualBuffer& GetStorage(uint16_t zone_index, uint16_t entity_type_index, uint8_t component_index)
+		core::VirtualBuffer& GetStorage(ZoneType zone_index, EntityTypeType entity_type_index, ComponentType component_index)
 		{
 			const size_t index = component_index + m_num_components * entity_type_index + zone_index * (m_num_components * m_num_entity_types);
 
 			return m_component_containers[index];
 		}
 
-		InstanceIndexType GetNumInstances(uint16_t zone_index, uint16_t entity_type_index) const
+		//Access to component data
+		void* GetComponentData(const InternalInstanceIndex& internal_instance_index, ComponentType component_index)
+		{
+			uint8_t* data = reinterpret_cast<uint8_t*>(GetStorage(internal_instance_index.zone_index, internal_instance_index.entity_type_index, component_index).GetPtr());
+			assert(data);
+
+			//Offset to the correct instance component
+			return data + internal_instance_index.instance_index * m_components[component_index].size;
+		}
+
+		InstanceIndexType GetNumInstances(ZoneType zone_index, EntityTypeType entity_type_index) const
 		{
 			const size_t index = entity_type_index + zone_index * m_num_entity_types;
 
 			return static_cast<InstanceIndexType>(m_num_instances[index]);
 		}
 
-		InstanceIndexType AllocInstance(uint16_t zone_index, uint16_t entity_type_index)
+		InstanceIndexType AllocInstance(ZoneType zone_index, EntityTypeType entity_type_index)
 		{
 			const size_t index = entity_type_index + zone_index * m_num_entity_types;
 			const InstanceIndexType instance_index = static_cast<InstanceIndexType>(m_num_instances[index]++);
@@ -83,22 +96,35 @@ namespace ecs
 		Database* CreateDatabase(const DatabaseDesc & database_desc, const std::vector<Component>& components, const std::vector<EntityTypeMask> entity_types)
 		{
 			assert(database_desc.num_zones > 0);
-			assert(database_desc.num_zones < std::numeric_limits<uint16_t>::max());
-			assert(entity_types.size() < std::numeric_limits<uint16_t>::max());
-			assert(components.size() < 64);
+			assert(database_desc.num_zones < std::numeric_limits<ZoneType>::max());
+			assert(entity_types.size() < std::numeric_limits<EntityTypeType>::max());
+			assert(components.size() < 63);
 
 			Database* database = new Database();
 
 			//Init sizes
-			database->m_num_zones = database_desc.num_zones;
-			database->m_num_components = components.size();
-			database->m_num_entity_types = entity_types.size();
+			database->m_num_zones = static_cast<ZoneType>(database_desc.num_zones);
+			database->m_num_components = static_cast<ComponentType>(components.size());
+			database->m_num_entity_types = static_cast<EntityTypeType>(entity_types.size());
 
 			//Get all components information
 			database->m_components = components;
 
+			//Create extra component with the index of the instance in the indirection table
+			database->m_indirection_index_component_index = database->m_num_components;
+			database->m_num_components++;
+			Component indirection_index_component;
+			indirection_index_component.Capture<InstanceIndirectionIndexType>();
+			database->m_components.push_back(indirection_index_component);
+
 			//Get all entity types
 			database->m_entity_types = entity_types;
+
+			//Add the new indirection component to ALL the entity types
+			for (auto& entity_type : database->m_entity_types)
+			{
+				entity_type |= (1ULL << database->m_indirection_index_component_index);
+			}
 
 			//Create all the components
 			const size_t num_components = database->m_num_zones * database->m_num_entity_types * database->m_num_components;
@@ -144,30 +170,30 @@ namespace ecs
 		InstanceIndirectionIndexType AllocInstance(Database * database, ZoneType zone_index, EntityTypeType entity_type_index)
 		{
 			//Alloc component data for this instance and create internal_instance_index
-			InternalInstanceIndex internal_instance_index { zone_index, entity_type_index, database->AllocInstance(zone_index, entity_type_index)};
+			InternalInstanceIndex internal_index { zone_index, entity_type_index, database->AllocInstance(zone_index, entity_type_index)};
 
 			//Allocate indirection index
-			database->m_indirection_instance_table.emplace_back(internal_instance_index);
+			database->m_indirection_instance_table.emplace_back(internal_index);
 			assert(database->m_indirection_instance_table.size() < std::numeric_limits<InstanceIndirectionIndexType>::max());
 			
-			return static_cast<InstanceIndirectionIndexType>(database->m_indirection_instance_table.size() - 1);
+			InstanceIndirectionIndexType indirection_index = static_cast<InstanceIndirectionIndexType>(database->m_indirection_instance_table.size() - 1);
+
+			//Set the indirection index into the correct component
+			auto& indirection_index_component = *(reinterpret_cast<InstanceIndirectionIndexType*>(database->GetComponentData(internal_index, database->m_indirection_index_component_index)));
+			indirection_index_component = indirection_index;
+
+			return indirection_index;
 		}
 		void DeallocInstance(Database * database, InstanceIndirectionIndexType index)
 		{
 			//Add to the deallocate buffer
 		}
 
-		void * GetComponentData(Database * database, InstanceIndirectionIndexType index, ComponentType component_index)
+		void* GetComponentData(Database * database, InstanceIndirectionIndexType index, ComponentType component_index)
 		{
-			auto instance = database->m_indirection_instance_table[index];
+			auto internal_index = database->m_indirection_instance_table[index];
 
-			uint8_t* data = reinterpret_cast<uint8_t*>(database->GetStorage(instance.zone_index, instance.entity_type_index, static_cast<uint8_t>(component_index)).GetPtr());
-
-			//It needs to be a valid pointer, if not we are trying to access a component not register in the entity type
-			assert(data);
-
-			//Offset to the correct instance component
-			return data + database->m_components[component_index].size;
+			return database->GetComponentData(internal_index, component_index);
 		}
 
 		size_t GetInstanceType(Database * database, InstanceIndirectionIndexType index)
