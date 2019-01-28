@@ -44,6 +44,9 @@ namespace ecs
 		//List of indirection instance indexes
 		std::vector<InternalInstanceIndex> m_indirection_instance_table;
 
+		//List of deferred instance deletes
+		std::vector<InstanceIndexType> m_deferred_instace_deletes;
+
 		//Access of the component virtual buffer
 		core::VirtualBuffer& GetStorage(ZoneType zone_index, EntityTypeType entity_type_index, ComponentType component_index)
 		{
@@ -88,6 +91,30 @@ namespace ecs
 			}
 
 			return instance_index;
+		}
+
+		//Destroy instance
+		//Calls de destructor for the instance, moves the last instance to the position of the deleted instance
+		//Fix the indirection buffer
+		void DestroyInstance(ZoneType zone_index, EntityTypeType entity_type_index)
+		{
+			const size_t index = entity_type_index + zone_index * m_num_entity_types;
+			const InstanceIndexType instance_index = static_cast<InstanceIndexType>(--m_num_instances[index]);
+
+			//Reduce by one all components
+			const size_t component_begin_index = m_num_components * entity_type_index + zone_index * (m_num_components * m_num_entity_types);
+			for (size_t i = 0; i < m_num_components; ++i)
+			{
+				auto& component_container = m_component_containers[component_begin_index + i];
+
+				if (component_container.GetPtr())
+				{
+					//Call the destructor for this component
+
+					//Reduce the size of the component storage
+					component_container.SetCommitedSize(instance_index * m_components[i].size);
+				}
+			}
 		}
 	};
 
@@ -184,28 +211,36 @@ namespace ecs
 
 			return indirection_index;
 		}
-		void DeallocInstance(Database * database, InstanceIndirectionIndexType index)
+		void DeallocInstance(Database * database, InstanceIndirectionIndexType indirection_index)
 		{
-			//Add to the deallocate buffer
+			//Add to the deferred list
+			database->m_deferred_instace_deletes.push_back(indirection_index);
 		}
 
-		void* GetComponentData(Database * database, InstanceIndirectionIndexType index, ComponentType component_index)
+		void* GetComponentData(Database * database, InstanceIndirectionIndexType indirection_index, ComponentType component_index)
 		{
-			auto internal_index = database->m_indirection_instance_table[index];
+			auto internal_index = database->m_indirection_instance_table[indirection_index];
 
 			return database->GetComponentData(internal_index, component_index);
 		}
 
-		size_t GetInstanceType(Database * database, InstanceIndirectionIndexType index)
+		size_t GetInstanceType(Database * database, InstanceIndirectionIndexType indirection_index)
 		{
-			auto instance = database->m_indirection_instance_table[index];
+			auto instance = database->m_indirection_instance_table[indirection_index];
 			return instance.entity_type_index;
 		}
 
-		EntityTypeMask GetInstanceTypeMask(Database * database, InstanceIndirectionIndexType index)
+		EntityTypeMask GetInstanceTypeMask(Database * database, InstanceIndirectionIndexType indirection_index)
 		{
-			auto instance = database->m_indirection_instance_table[index];
+			auto instance = database->m_indirection_instance_table[indirection_index];
 			return database->m_entity_types[instance.entity_type_index];
+		}
+
+		void TickDatabase(Database* database)
+		{
+			//Process moves
+
+			//Process deletes
 		}
 	}
 }

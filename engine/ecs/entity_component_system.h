@@ -60,7 +60,7 @@ namespace ecs
 	};
 
 	template<typename COMPONENT>
-	struct ComponentMoveDeclaration
+	struct ComponentOperatorsDeclaration
 	{
 		static void Move(void* ptr_a, void* ptr_b)
 		{
@@ -68,6 +68,13 @@ namespace ecs
 			COMPONENT& b = *(reinterpret_cast<COMPONENT*>(ptr_b));
 
 			a = std::move(b);
+		}
+
+		static void Destructor(void* ptr)
+		{
+			COMPONENT& a = *(reinterpret_cast<COMPONENT*>(ptr));
+
+			a.~COMPONENT();
 		}
 	};
 
@@ -80,6 +87,9 @@ namespace ecs
 		//Move operator
 		void(*move_operator)(void*, void*);
 
+		//Destructor operator
+		void(*destructor_operator)(void*);
+
 		//Capture the properties of the component
 		template<typename COMPONENT>
 		void Capture()
@@ -87,7 +97,8 @@ namespace ecs
 			size = sizeof(COMPONENT);
 			align = alignof(COMPONENT);
 
-			move_operator = ComponentMoveDeclaration<COMPONENT>::Move;
+			move_operator = ComponentOperatorsDeclaration<COMPONENT>::Move;
+			destructor_operator = ComponentOperatorsDeclaration<COMPONENT>::Destructor;
 		}
 	};
 
@@ -120,6 +131,9 @@ namespace ecs
 
 		//Get instance type mask from a indirection index
 		EntityTypeMask GetInstanceTypeMask(Database* database, InstanceIndirectionIndexType index);
+
+		//Tick database
+		void TickDatabase(Database* database);
 	}
 
 	//Create database from a database description with the component lists
@@ -167,6 +181,23 @@ namespace ecs
 		instance.m_indirection_index = internal::AllocInstance(DATABASE_DECLARATION::s_database, zone_index, DATABASE_DECLARATION::template EntityTypeIndex<ENTITY_TYPE>());
 
 		return instance;
+	}
+
+	//Dealloc instance
+	template<typename DATABASE_DECLARATION>
+	void AllocInstance(Instance<DATABASE_DECLARATION>& instance)
+	{
+		internal::DeallocInstance(DATABASE_DECLARATION::s_database, instance.m_indirection_index);
+		instance.m_indirection_index = -1;
+	}
+
+	//Tick database
+	//Process all the database deferred tasks as
+	//Deallocs and Moves, destructors of the components are called here
+	template<typename DATABASE_DECLARATION>
+	void Tick()
+	{
+		internal::TickDatabase(DATABASE_DECLARATION::s_database);
 	}
 }
 
