@@ -100,25 +100,33 @@ namespace ecs
 		}
 
 		//Destroy instance
-		//Calls de destructor for the instance, moves the last instance to the position of the deleted instance
-		//Fix the indirection buffer
-		void DestroyInstance(ZoneType zone_index, EntityTypeType entity_type_index)
+		//Destroy components associated to this instance
+		//Move last instance to the gap left by the deleted instance
+		//Fix all the redirections
+		void DestroyInstance(const InternalInstanceIndex& internal_instance_index)
 		{
-			const size_t index = entity_type_index + zone_index * m_num_entity_types;
-			const InstanceIndexType instance_index = static_cast<InstanceIndexType>(--m_num_instances[index]);
+			const size_t index = internal_instance_index.entity_type_index + internal_instance_index.zone_index * m_num_entity_types;
+			const InstanceIndexType last_instance_index = static_cast<InstanceIndexType>(--m_num_instances[index]);
 
 			//Reduce by one all components
-			const size_t component_begin_index = m_num_components * entity_type_index + zone_index * (m_num_components * m_num_entity_types);
+			const size_t component_begin_index = m_num_components * internal_instance_index.entity_type_index + internal_instance_index.zone_index * (m_num_components * m_num_entity_types);
 			for (size_t i = 0; i < m_num_components; ++i)
 			{
 				auto& component_container = m_component_containers[component_begin_index + i];
 
 				if (component_container.GetPtr())
 				{
+					uint8_t* last_instance_data = reinterpret_cast<uint8_t*>(component_container.GetPtr()) + last_instance_index * m_components[i].size;
+					uint8_t* to_delete_instance_data = reinterpret_cast<uint8_t*>(component_container.GetPtr()) + last_instance_index * m_components[i].size;
+
 					//Call the destructor for this component
+					m_components[i].destructor_operator(to_delete_instance_data);
+
+					//Move components (the indirection will move as well, as the last component is the indirection index
+					m_components[i].move_operator(to_delete_instance_data, last_instance_data);
 
 					//Reduce the size of the component storage
-					component_container.SetCommitedSize(instance_index * m_components[i].size);
+					component_container.SetCommitedSize(last_instance_index * m_components[i].size);
 				}
 			}
 		}
@@ -276,6 +284,21 @@ namespace ecs
 			//Process moves
 
 			//Process deletes
+			for (auto& deferred_deleted_indirection_index : database->m_deferred_instace_deletes)
+			{
+				//Get internal instance index and check if it is already deleted
+				auto& internal_instance_index = database->m_indirection_instance_table[deferred_deleted_indirection_index];
+				if (internal_instance_index.zone_index != InternalInstanceIndex::kFreeSlot)
+				{
+					//Destroy components associated to this instance
+					database->DestroyInstance(internal_instance_index);
+
+					//Deallocate indirection index
+					database->DeallocIndirectionIndex(deferred_deleted_indirection_index);
+				}
+				
+			}
+			database->m_deferred_instace_deletes.clear();
 		}
 	}
 }
