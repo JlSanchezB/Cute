@@ -6,8 +6,11 @@ namespace ecs
 	using InstanceIndexType = uint32_t;
 
 	//Represent a instance (in one zone, one instance type and the index)
+	//It is used for handling the pool of instances index, so if zone_index is -1 means it is free
+	//and instance_index represent the next free slot
 	struct InternalInstanceIndex
 	{
+		constexpr static ZoneType kFreeSlot = 0xFFFF;
 		ZoneType zone_index;
 		EntityTypeType entity_type_index;
 		InstanceIndexType instance_index;
@@ -43,6 +46,9 @@ namespace ecs
 
 		//List of indirection instance indexes
 		std::vector<InternalInstanceIndex> m_indirection_instance_table;
+
+		//Index to the first free slot avaliable in the indirection instance table
+		InstanceIndexType m_first_free_slot_indirection_instance_table = -1;
 
 		//List of deferred instance deletes
 		std::vector<InstanceIndexType> m_deferred_instace_deletes;
@@ -115,6 +121,38 @@ namespace ecs
 					component_container.SetCommitedSize(instance_index * m_components[i].size);
 				}
 			}
+		}
+
+		InstanceIndirectionIndexType AllocIndirectionIndex(const InternalInstanceIndex& internal_instance_index)
+		{
+			if (m_first_free_slot_indirection_instance_table == -1)
+			{
+				//The pool is full, just push and index and return
+				m_indirection_instance_table.push_back(internal_instance_index);
+				assert(m_indirection_instance_table.size() < std::numeric_limits<InstanceIndirectionIndexType>::max());
+				return static_cast<InstanceIndirectionIndexType>(m_indirection_instance_table.size()-1);
+			}
+			else
+			{
+				//Use the free slot
+				assert(m_indirection_instance_table[m_first_free_slot_indirection_instance_table].zone_index == InternalInstanceIndex::kFreeSlot);
+				InstanceIndexType next_free_slot = m_indirection_instance_table[m_first_free_slot_indirection_instance_table].instance_index;
+				InstanceIndirectionIndexType allocated_indirection_index = m_first_free_slot_indirection_instance_table;
+				m_indirection_instance_table[m_first_free_slot_indirection_instance_table] = internal_instance_index;
+				m_first_free_slot_indirection_instance_table = next_free_slot;
+
+				return allocated_indirection_index;
+			}
+		}
+
+		void DeallocIndirectionIndex(const InstanceIndirectionIndexType& indirection_index)
+		{
+			//Mark as free and redirect the first free slot to it and update the chain
+			auto& internal_instance_index = m_indirection_instance_table[indirection_index];
+			assert(m_indirection_instance_table[m_first_free_slot_indirection_instance_table].zone_index != InternalInstanceIndex::kFreeSlot);
+			internal_instance_index.zone_index = InternalInstanceIndex::kFreeSlot;
+			m_first_free_slot_indirection_instance_table = internal_instance_index.instance_index;
+			internal_instance_index.instance_index = indirection_index;
 		}
 	};
 
@@ -200,10 +238,7 @@ namespace ecs
 			InternalInstanceIndex internal_index { zone_index, entity_type_index, database->AllocInstance(zone_index, entity_type_index)};
 
 			//Allocate indirection index
-			database->m_indirection_instance_table.emplace_back(internal_index);
-			assert(database->m_indirection_instance_table.size() < std::numeric_limits<InstanceIndirectionIndexType>::max());
-			
-			InstanceIndirectionIndexType indirection_index = static_cast<InstanceIndirectionIndexType>(database->m_indirection_instance_table.size() - 1);
+			InstanceIndirectionIndexType indirection_index = database->AllocIndirectionIndex(internal_index);
 
 			//Set the indirection index into the correct component
 			auto& indirection_index_component = *(reinterpret_cast<InstanceIndirectionIndexType*>(database->GetComponentData(internal_index, database->m_indirection_index_component_index)));
