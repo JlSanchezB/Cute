@@ -140,6 +140,25 @@ namespace ecs
 
 		//Tick database
 		void TickDatabase(Database* database);
+
+		//Get num zones
+		ZoneType GetNumZones(Database* database);
+
+		//Get storage component buffer
+		void* GetStorageComponent(Database* database, ZoneType zone_index, EntityTypeType entity_type, ComponentType component_index);
+
+		//Get storage component buffer helper
+		template<typename DATABASE_DECLARATION, typename COMPONENT>
+		COMPONENT* GetStorageComponentHelper(ZoneType zone_index, EntityTypeType entity_type)
+		{
+			return reinterpret_cast<COMPONENT*>(GetStorageComponent(DATABASE_DECLARATION::s_database,
+				zone_index,
+				entity_type,
+				DATABASE_DECLARATION::template ComponentIndex<COMPONENT>()));
+		}
+
+		//Get num instances
+		InstanceIndexType GetNumInstances(Database* database, ZoneType zone_index, EntityTypeType entity_type);
 	}
 
 	//Create database from a database description with the component lists
@@ -204,6 +223,46 @@ namespace ecs
 	void Tick()
 	{
 		internal::TickDatabase(DATABASE_DECLARATION::s_database);
+	}
+
+	//Process components
+	//Kernel function recives an instance and a list of components
+	template<typename DATABASE_DECLARATION, typename ...COMPONENTS, typename FUNCTION, typename BITSET>
+	void Process(FUNCTION&& kernel, BITSET&& zone_bitset)
+	{
+		//Calculate component mask
+		const EntityTypeMask component_mask = EntityType<COMPONENTS...>::EntityTypeMask();
+		
+		const ZoneType num_zones = internal::GetNumZones(DATABASE_DECLARATION::s_database);
+
+		//Loop for all entity type that match the component mask
+		core::visit<DATABASE_DECLARATION::EntityTypes::template Size()>([&](auto entity_type_index)
+		{
+			const EntityTypeType entity_type = static_cast<EntityTypeType>(entity_type_index.value);
+
+			using EntityTypeIt = typename DATABASE_DECLARATION::EntityTypes::template ElementType<entity_type_index.value>;
+			if constexpr ((component_mask & EntityTypeIt::template EntityTypeMask<DATABASE_DECLARATION>()) == component_mask)
+			{
+				//Loop all zones in the bitmask
+				for (ZoneType zone_index; zone_index < num_zones; ++zone_index)
+				{
+					if (zone_bitset.test(zone_index))
+					{
+						const InstanceIndexType num_instances = internal::GetNumInstances(DATABASE_DECLARATION::s_database, zone_index, entity_type);
+
+						auto argument_component_buffers = std::make_tuple(
+							internal::GetStorageComponentHelper<DATABASE_DECLARATION, COMPONENTS>(zone_index, entity_type)...);
+
+						//Go for all the instances and call the kernel function
+						for (InstanceIndexType instance_index = 0; instance_index < num_instances; ++instance_index)
+						{
+							std::apply(kernel, argument_component_buffers);
+						}
+					}
+				}
+
+			}
+		});
 	}
 }
 

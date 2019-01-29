@@ -12,4 +12,5 @@ namespace ecs
 	using ComponentType = uint8_t;
 	using ZoneType = uint16_t;
 	using EntityTypeType = uint16_t;
+	using InstanceIndexType = uint32_t;
 }

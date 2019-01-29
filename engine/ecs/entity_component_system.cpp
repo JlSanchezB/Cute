@@ -3,8 +3,6 @@
 
 namespace ecs
 {
-	using InstanceIndexType = uint32_t;
-
 	//Represent a instance (in one zone, one instance type and the index)
 	//It is used for handling the pool of instances index, so if zone_index is -1 means it is free
 	//and instance_index represent the next free slot
@@ -299,6 +297,20 @@ namespace ecs
 				
 			}
 			database->m_deferred_instace_deletes.clear();
+		}
+		ZoneType GetNumZones(Database * database)
+		{
+			return database->m_num_zones;
+		}
+
+		void* GetStorageComponent(Database * database, ZoneType zone_index, EntityTypeType entity_type, ComponentType component_index)
+		{
+			return database->GetStorage(zone_index, entity_type, component_index).GetPtr();
+		}
+
+		InstanceIndexType GetNumInstances(Database * database, ZoneType zone_index, EntityTypeType entity_type)
+		{
+			return database->GetNumInstances(zone_index, entity_type);
 		}
 	}
 }
