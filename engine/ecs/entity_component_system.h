@@ -15,8 +15,8 @@ namespace ecs
 	template<typename ...COMPONENTS>
 	using ComponentList = core::TypeList<COMPONENTS...>;
 
-	template<typename ...COMPONENTS>
-	using EntityTypeList = core::TypeList<COMPONENTS...>;
+	template<typename ...ENTITY_TYPE>
+	using EntityTypeList = core::TypeList<ENTITY_TYPE...>;
 
 	template<typename ...COMPONENTS>
 	struct EntityType
@@ -138,6 +138,9 @@ namespace ecs
 		//Get instance type mask from a indirection index
 		EntityTypeMask GetInstanceTypeMask(Database* database, InstanceIndirectionIndexType index);
 
+		//Get instance type mask from a entity type index
+		EntityTypeMask GetInstanceTypeMask(Database* database, EntityTypeType entity_type);
+
 		//Tick database
 		void TickDatabase(Database* database);
 
@@ -225,38 +228,79 @@ namespace ecs
 		internal::TickDatabase(DATABASE_DECLARATION::s_database);
 	}
 
+	//Iterator class, helper for access to data of the instance during the process calls
+	template<typename DATABASE_DECLARATION>
+	class InstanceIterator
+	{
+	public:
+		ZoneType m_zone_index;
+		EntityTypeType m_entity_type;
+		InstanceIndexType m_instance_index;
+
+		template<typename COMPONENT>
+		COMPONENT& get() const
+		{
+			return *(reinterpret_cast<COMPONENT*>(internal::GetStorageComponent(DATABASE_DECLARATION::s_database,
+				m_zone_index, m_entity_type, DATABASE_DECLARATION::template ComponentIndex<COMPONENT>())) + m_instance_index);
+		}
+
+		template<typename COMPONENT>
+		bool contains() const
+		{
+			return (DATABASE_DECLARATION::template ComponentMask<COMPONENT> & internal::GetInstanceTypeMask(DATABASE_DECLARATION::s_database, m_entity_type)) != 0;
+		}
+	};
+
+	namespace internal
+	{
+		//Caller helper
+		template<typename DATABASE_DECLARATION, size_t ...indices, typename ...Args, typename FUNCTION>
+		void caller_helper(FUNCTION&& function, const InstanceIterator<DATABASE_DECLARATION>& instance_it, InstanceIndexType instance_index, std::integer_sequence<size_t, indices...>, std::tuple<Args...> &arguments)
+		{
+			function(instance_it, std::get<indices>(arguments)[instance_index]...);
+		}
+	}
+
 	//Process components
 	//Kernel function recives an instance and a list of components
 	template<typename DATABASE_DECLARATION, typename ...COMPONENTS, typename FUNCTION, typename BITSET>
 	void Process(FUNCTION&& kernel, BITSET&& zone_bitset)
 	{
 		//Calculate component mask
-		const EntityTypeMask component_mask = EntityType<COMPONENTS...>::EntityTypeMask();
+		const EntityTypeMask component_mask = EntityType<COMPONENTS...>::template EntityTypeMask<DATABASE_DECLARATION>();
 		
 		const ZoneType num_zones = internal::GetNumZones(DATABASE_DECLARATION::s_database);
+
+		InstanceIterator<DATABASE_DECLARATION> instance_iterator;
 
 		//Loop for all entity type that match the component mask
 		core::visit<DATABASE_DECLARATION::EntityTypes::template Size()>([&](auto entity_type_index)
 		{
 			const EntityTypeType entity_type = static_cast<EntityTypeType>(entity_type_index.value);
 
+			instance_iterator.m_entity_type = entity_type;
+
 			using EntityTypeIt = typename DATABASE_DECLARATION::EntityTypes::template ElementType<entity_type_index.value>;
-			if constexpr ((component_mask & EntityTypeIt::template EntityTypeMask<DATABASE_DECLARATION>()) == component_mask)
+			if ((component_mask & EntityTypeIt::template EntityTypeMask<DATABASE_DECLARATION>()) == component_mask)
 			{
 				//Loop all zones in the bitmask
-				for (ZoneType zone_index; zone_index < num_zones; ++zone_index)
+				for (ZoneType zone_index = 0; zone_index < num_zones; ++zone_index)
 				{
 					if (zone_bitset.test(zone_index))
 					{
-						const InstanceIndexType num_instances = internal::GetNumInstances(DATABASE_DECLARATION::s_database, zone_index, entity_type);
+						instance_iterator.m_zone_index = zone_index;
 
+						const InstanceIndexType num_instances = internal::GetNumInstances(DATABASE_DECLARATION::s_database, zone_index, entity_type);
 						auto argument_component_buffers = std::make_tuple(
 							internal::GetStorageComponentHelper<DATABASE_DECLARATION, COMPONENTS>(zone_index, entity_type)...);
 
 						//Go for all the instances and call the kernel function
 						for (InstanceIndexType instance_index = 0; instance_index < num_instances; ++instance_index)
 						{
-							std::apply(kernel, argument_component_buffers);
+							instance_iterator.m_instance_index = instance_index;
+							
+							//Call kernel
+							internal::caller_helper<DATABASE_DECLARATION>(kernel, instance_iterator, instance_index, std::make_index_sequence<sizeof...(COMPONENTS)>(), argument_component_buffers);
 						}
 					}
 				}

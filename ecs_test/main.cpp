@@ -12,6 +12,7 @@
 #include <windows.h>
 #include <fstream>
 #include <random>
+#include <bitset>
 
 struct PositionComponent
 {
@@ -228,6 +229,15 @@ public:
 	{
 		//UPDATE GAME
 		{
+			std::bitset<1> zone_bitset(1);
+
+			//Move entities
+			ecs::Process<GameDatabase, PositionComponent, VelocityComponent>([&](const auto& instance_iterator, PositionComponent& position, VelocityComponent& velocity)
+			{
+				position.position += velocity.lineal_velocity * elapsed_time;
+				position.angle += velocity.angle_velocity * elapsed_time;
+			}, zone_bitset);
+
 			//Tick database
 			ecs::Tick<GameDatabase>();
 		}

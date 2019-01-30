@@ -277,6 +277,11 @@ namespace ecs
 			return database->m_entity_types[instance.entity_type_index];
 		}
 
+		EntityTypeMask GetInstanceTypeMask(Database * database, EntityTypeType entity_type)
+		{
+			return database->m_entity_types[entity_type];
+		}
+
 		void TickDatabase(Database* database)
 		{
 			//Process moves
