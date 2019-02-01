@@ -309,7 +309,7 @@ namespace render
 		return system;
 	}
 
-	void DestroyPassSystem(System *& system, display::Device* device)
+	void DestroyRenderSystem(System *& system, display::Device* device)
 	{
 		//Destroy resources and passes
 		DestroyResources(device, system->m_game_resources_map);

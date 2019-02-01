@@ -217,7 +217,7 @@ public:
 				render::DestroyRenderContext(m_render_pass_system, m_render_context);
 			}
 
-			render::DestroyPassSystem(m_render_pass_system, m_device);
+			render::DestroyRenderSystem(m_render_pass_system, m_device);
 		}
 
 		//Destroy handles

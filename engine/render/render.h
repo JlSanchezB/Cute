@@ -158,11 +158,11 @@ namespace render
 		void UpdatePassInfo(const PassInfo& pass_info);
 	};
 
-	//Create render pass system
+	//Create render system
 	System* CreateRenderSystem();
 
-	//Destroy render pass system
-	void DestroyPassSystem(System*& system, display::Device* device);
+	//Destroy render system
+	void DestroyRenderSystem(System*& system, display::Device* device);
 
 	//Load render pass descriptor file
 	bool LoadPassDescriptorFile(System* system, display::Device* device, const char* descriptor_file_buffer, size_t descriptor_file_buffer_size, std::vector<std::string>& errors);
