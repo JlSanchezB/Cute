@@ -1,9 +1,9 @@
 #include "render_pass.h"
 #include <ext/tinyxml2/tinyxml2.h>
-#include "render_helper.h"
+#include <render/render_helper.h>
 #include <display/display.h>
 #include "render_system.h"
-#include "render_resource.h"
+#include <render/render_resource.h>
 #include <string>
 
 namespace

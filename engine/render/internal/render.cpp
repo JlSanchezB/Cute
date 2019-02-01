@@ -1,9 +1,9 @@
-#include "render.h"
+#include <render/render.h>
 #include <ext/tinyxml2/tinyxml2.h>
 #include <core/log.h>
-#include "render_helper.h"
+#include <render/render_helper.h>
 #include "render_system.h"
-#include "render_resource.h"
+#include <render/render_resource.h>
 #include "render_pass.h"
 
 #include <stdarg.h>
@@ -282,7 +282,7 @@ namespace render
 	}
 
 
-	System * CreateRenderPassSystem()
+	System * CreateRenderSystem()
 	{
 		System* system = new System();
 
@@ -309,7 +309,7 @@ namespace render
 		return system;
 	}
 
-	void DestroyRenderPassSystem(System *& system, display::Device* device)
+	void DestroyPassSystem(System *& system, display::Device* device)
 	{
 		//Destroy resources and passes
 		DestroyResources(device, system->m_game_resources_map);

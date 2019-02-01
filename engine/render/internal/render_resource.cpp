@@ -1,6 +1,6 @@
-#include "render_resource.h"
+#include <render/render_resource.h>
 #include <ext/tinyxml2/tinyxml2.h>
-#include "render_helper.h"
+#include <render/render_helper.h>
 #include <display/display.h>
 
 #include <fstream>

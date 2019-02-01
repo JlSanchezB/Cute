@@ -30,6 +30,9 @@
     <Filter Include="ecs">
       <UniqueIdentifier>{5db7fbbf-26eb-4c9a-a45e-fd8a2748e404}</UniqueIdentifier>
     </Filter>
+    <Filter Include="render\internal">
+      <UniqueIdentifier>{03ea8d88-c9bd-4026-97a7-8803683af576}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="display\display.h">
@@ -104,15 +107,6 @@
     <ClInclude Include="render\render_resource.h">
       <Filter>render</Filter>
     </ClInclude>
-    <ClInclude Include="render\render_helper.h">
-      <Filter>render</Filter>
-    </ClInclude>
-    <ClInclude Include="render\render_pass.h">
-      <Filter>render</Filter>
-    </ClInclude>
-    <ClInclude Include="render\render_system.h">
-      <Filter>render</Filter>
-    </ClInclude>
     <ClInclude Include="core\string_hash.h">
       <Filter>core</Filter>
     </ClInclude>
@@ -133,6 +127,15 @@
     </ClInclude>
     <ClInclude Include="ecs\entity_component_common.h">
       <Filter>ecs</Filter>
+    </ClInclude>
+    <ClInclude Include="render\internal\render_pass.h">
+      <Filter>render\internal</Filter>
+    </ClInclude>
+    <ClInclude Include="render\internal\render_system.h">
+      <Filter>render\internal</Filter>
+    </ClInclude>
+    <ClInclude Include="render\render_helper.h">
+      <Filter>render</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -175,15 +178,6 @@
     <ClCompile Include="ext\tinyxml2\tinyxml2.cpp">
       <Filter>ext\tinyxml2</Filter>
     </ClCompile>
-    <ClCompile Include="render\render.cpp">
-      <Filter>render</Filter>
-    </ClCompile>
-    <ClCompile Include="render\render_resource.cpp">
-      <Filter>render</Filter>
-    </ClCompile>
-    <ClCompile Include="render\render_pass.cpp">
-      <Filter>render</Filter>
-    </ClCompile>
     <ClCompile Include="core\string_hash.cpp">
       <Filter>core</Filter>
     </ClCompile>
@@ -195,6 +189,15 @@
     </ClCompile>
     <ClCompile Include="core\virtual_buffer.cpp">
       <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="render\internal\render_pass.cpp">
+      <Filter>render\internal</Filter>
+    </ClCompile>
+    <ClCompile Include="render\internal\render_resource.cpp">
+      <Filter>render\internal</Filter>
+    </ClCompile>
+    <ClCompile Include="render\internal\render.cpp">
+      <Filter>render\internal</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

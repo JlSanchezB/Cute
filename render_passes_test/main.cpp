@@ -94,7 +94,7 @@ public:
 		m_game_constant_buffer = display::CreateConstantBuffer(m_device, constant_buffer_desc, "GameConstantBuffer");
 
 		//Create render pass system
-		m_render_pass_system = render::CreateRenderPassSystem();
+		m_render_pass_system = render::CreateRenderSystem();
 
 		//Read file
 		m_render_system_descriptor_buffer =  ReadFileToBuffer("render_pass_sample.xml");
@@ -116,7 +116,7 @@ public:
 				render::DestroyRenderContext(m_render_pass_system, m_render_context);
 			}
 
-			render::DestroyRenderPassSystem(m_render_pass_system, m_device);
+			render::DestroyPassSystem(m_render_pass_system, m_device);
 		}
 		
 		//Destroy handles

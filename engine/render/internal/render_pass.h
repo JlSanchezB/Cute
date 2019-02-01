@@ -4,8 +4,8 @@
 #ifndef RENDER_PASS_H_
 #define RENDER_PASS_H_
 
-#include "render.h"
-#include "render_resource.h"
+#include <render/render.h>
+#include <render/render_resource.h>
 #include <display/display.h>
 
 namespace render
