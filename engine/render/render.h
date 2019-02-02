@@ -1,13 +1,13 @@
 //////////////////////////////////////////////////////////////////////////
-// Cute engine - Manager of the render passes system
+// Cute engine - Manager of the render system
 //////////////////////////////////////////////////////////////////////////
 #ifndef RENDER_H_
 #define RENDER_H_
 
+#include <render/render_common.h>
 #include <vector>
 #include <memory>
 #include <unordered_map>
-#include <core/string_hash.h>
 
 namespace display
 {
@@ -34,10 +34,6 @@ namespace render
 	struct System;
 	class RenderContext;
 	class Resource;
-
-	using RenderClassType = StringHash32<"RenderClassType"_namespace>;
-	using ResourceName = StringHash32<"ResourceName"_namespace>;
-	using PassName = StringHash32<"PassName"_namespace>;
 
 	struct ErrorContext
 	{

@@ -155,6 +155,9 @@
     <ClInclude Include="render\internal\render_pass.h" />
     <ClInclude Include="render\internal\render_system.h" />
     <ClInclude Include="render\render.h" />
+    <ClInclude Include="render\render_command_buffer.h" />
+    <ClInclude Include="render\render_common.h" />
+    <ClInclude Include="render\render_frame.h" />
     <ClInclude Include="render\render_helper.h" />
     <ClInclude Include="render\render_resource.h" />
   </ItemGroup>

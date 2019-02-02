@@ -137,6 +137,15 @@
     <ClInclude Include="render\render_helper.h">
       <Filter>render</Filter>
     </ClInclude>
+    <ClInclude Include="render\render_frame.h">
+      <Filter>render</Filter>
+    </ClInclude>
+    <ClInclude Include="render\render_common.h">
+      <Filter>render</Filter>
+    </ClInclude>
+    <ClInclude Include="render\render_command_buffer.h">
+      <Filter>render</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="display\pc_dx12\display.cpp">
