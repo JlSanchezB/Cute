@@ -9,9 +9,10 @@
 
 namespace render
 {
-	class RenderCommandBuffer
+	class CommandBuffer
 	{
 	public:
+		using CommandOffset = uint32_t;
 
 	private:
 		using Command = uint8_t;
