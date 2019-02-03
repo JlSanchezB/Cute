@@ -37,9 +37,15 @@ namespace core
 		DATA* get_data_array(size_t& offset, size_t num);
 
 		//Get current offset of commands
-		size_t get_current_command_position()
+		size_t get_current_command_position() const
 		{
 			return m_commands.size();
+		}
+
+		//Get current offset of command data
+		size_t get_current_command_data_position() const
+		{
+			return m_command_data.size();
 		}
 
 	private:
@@ -50,7 +56,7 @@ namespace core
 		//List of commands in the command buffer
 		std::vector<Command> m_commands;
 		//Data associated to each command
-		std::vector<uint8_t> m_command_data;
+		std::vector<std::byte> m_command_data;
 	};
 
 	//Push command
@@ -80,7 +86,7 @@ namespace core
 	template<typename DATA>
 	inline void CommandBuffer<COMMAND_TYPE>::push_data(const DATA & data)
 	{
-		size_t alignment_offset = calculate_alignment(alignof(DATA), sizeof(DATA), m_command_data.size());
+		size_t alignment_offset = calculate_alignment(alignof(DATA), m_command_data.size());
 
 		//Reserve memory as needed
 		const size_t begin_offset = m_command_data.size() + alignment_offset;
@@ -95,7 +101,7 @@ namespace core
 	template<typename DATA>
 	inline void CommandBuffer<COMMAND_TYPE>::push_data_array(const DATA * data, size_t num)
 	{
-		size_t alignment_offset = calculate_alignment(alignof(DATA), sizeof(DATA), m_command_data.size());
+		size_t alignment_offset = calculate_alignment(alignof(DATA), m_command_data.size());
 
 		//Reserve memory as needed
 		const size_t begin_offset = m_command_data.size() + alignment_offset;
@@ -110,7 +116,7 @@ namespace core
 	template<typename DATA>
 	inline DATA & CommandBuffer<COMMAND_TYPE>::get_data(size_t & offset)
 	{
-		size_t alignment_offset = calculate_alignment(alignof(DATA), sizeof(DATA), m_command_data.size());
+		size_t alignment_offset = calculate_alignment(alignof(DATA), m_command_data.size());
 		const size_t begin_offset = m_command_data.size() + alignment_offset;
 
 		//Move offset
@@ -124,7 +130,7 @@ namespace core
 	template<typename DATA>
 	inline DATA * CommandBuffer<COMMAND_TYPE>::get_data_array(size_t & offset, size_t num)
 	{
-		size_t alignment_offset = calculate_alignment(alignof(DATA), sizeof(DATA), m_command_data.size());
+		size_t alignment_offset = calculate_alignment(alignof(DATA), m_command_data.size());
 		const size_t begin_offset = m_command_data.size() + alignment_offset;
 
 		//Move offset

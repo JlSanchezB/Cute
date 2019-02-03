@@ -15,18 +15,14 @@ namespace render
 		using CommandOffset = uint32_t;
 
 		//Starts a capture of a command buffer
-		CommandOffset Begin()
-		{
-			return static_cast<CommandOffset>(get_current_command_position());
-		}
+		CommandOffset Begin();
 
 		//Close capture
-		void Close()
-		{
-			//Zero is always to close commands
-			push_command(0);
-		}
-/*
+		void Close();
+
+		//Execute commands in this offset
+		void Execute(display::Context& context, CommandOffset command_offset);
+
 		//Set pipeline state
 		void SetPipelineState(const display::WeakPipelineStateHandle& pipeline_state);
 
@@ -35,9 +31,6 @@ namespace render
 
 		//Set Index Buffer
 		void SetIndexBuffer(const display::WeakIndexBufferHandle& index_buffer);
-
-		//Set constants
-		void SetConstants(const display::Pipe& pipe, uint8_t root_parameter, const void* data, size_t size);
 
 		//Set constant buffer
 		void SetConstantBuffer(const display::Pipe& pipe, uint8_t root_parameter, const display::WeakConstantBufferHandle& constant_buffer);
@@ -65,8 +58,6 @@ namespace render
 
 		//Execute compute
 		void ExecuteCompute(const display::ExecuteComputeDesc& execute_compute_desc);
-		*/
-
 	};
 }
 
