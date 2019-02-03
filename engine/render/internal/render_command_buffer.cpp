@@ -17,6 +17,7 @@ namespace render
 		DrawIndexed,
 		DrawIndexedInstanced,
 		ExecuteCompute,
+		UploadResourceBuffer,
 		Custom
 	};
 
@@ -60,9 +61,6 @@ namespace render
 		{
 			switch (command)
 			{
-			case Commands::Close:
-				//Done
-				return;
 			case Commands::SetPipelineState:
 				context.SetPipelineState(get_data<display::WeakPipelineStateHandle>(data_offset));
 				break;
@@ -103,6 +101,12 @@ namespace render
 			case Commands::ExecuteCompute:
 				context.ExecuteCompute(get_data<display::ExecuteComputeDesc>(data_offset));
 				break;
+			case Commands::UploadResourceBuffer:
+			{
+				size_t size = get_data<size_t>(data_offset);
+				uint8_t* data = get_data_array<uint8_t>(data_offset, size);
+				display::UpdateResourceBuffer(context.GetDevice(), get_data<display::UpdatableResourceHandle>(data_offset), data, size);
+			}
 			default:
 				//Command non know
 				throw std::runtime_error("Command in the command buffer is not known");
@@ -195,6 +199,14 @@ namespace render
 	{
 		push_command(static_cast<uint8_t>(Commands::ExecuteCompute));
 		push_data(execute_compute_desc);
+	}
+
+	void CommandBuffer::UploadResourceBuffer(const display::UpdatableResourceHandle & handle, const void * data, size_t size)
+	{
+		push_command(static_cast<uint8_t>(Commands::UploadResourceBuffer));
+		push_data(size);
+		push_data_array(reinterpret_cast<const uint8_t*>(data), size);
+		push_data(handle);
 	}
 
 }

@@ -58,6 +58,9 @@ namespace render
 
 		//Execute compute
 		void ExecuteCompute(const display::ExecuteComputeDesc& execute_compute_desc);
+
+		//Upload resource
+		void UploadResourceBuffer(const display::UpdatableResourceHandle& handle, const void* data, size_t size);
 	};
 }
 
