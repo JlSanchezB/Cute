@@ -208,6 +208,9 @@
     <ClCompile Include="render\internal\render.cpp">
       <Filter>render\internal</Filter>
     </ClCompile>
+    <ClCompile Include="render\internal\render_command_buffer.cpp">
+      <Filter>render\internal</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="tools\compile_shader.bat">

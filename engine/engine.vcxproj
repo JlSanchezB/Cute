@@ -180,6 +180,7 @@
     <ClCompile Include="ext\imgui\imgui_widgets.cpp" />
     <ClCompile Include="ext\tinyxml2\tinyxml2.cpp" />
     <ClCompile Include="render\internal\render.cpp" />
+    <ClCompile Include="render\internal\render_command_buffer.cpp" />
     <ClCompile Include="render\internal\render_pass.cpp" />
     <ClCompile Include="render\internal\render_resource.cpp" />
   </ItemGroup>
