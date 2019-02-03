@@ -107,6 +107,7 @@ namespace render
 				uint8_t* data = get_data_array<uint8_t>(data_offset, size);
 				display::UpdateResourceBuffer(context.GetDevice(), get_data<display::UpdatableResourceHandle>(data_offset), data, size);
 			}
+			break;
 			default:
 				//Command non know
 				throw std::runtime_error("Command in the command buffer is not known");
