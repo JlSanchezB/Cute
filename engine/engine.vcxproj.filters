@@ -146,6 +146,9 @@
     <ClInclude Include="render\render_command_buffer.h">
       <Filter>render</Filter>
     </ClInclude>
+    <ClInclude Include="core\command_buffer.h">
+      <Filter>core</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="display\pc_dx12\display.cpp">

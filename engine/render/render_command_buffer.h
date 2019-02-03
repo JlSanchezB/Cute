@@ -5,20 +5,19 @@
 #define RENDER_COMMAND_BUFFER_h
 
 #include <display/display.h>
-#include <vector>
+#include <core/command_buffer.h>
 
 namespace render
 {
-	class CommandBuffer
+	class CommandBuffer : public core::CommandBuffer<uint8_t>
 	{
 	public:
 		using CommandOffset = uint32_t;
-		using Command = uint8_t;
 
 		//Starts a capture of a command buffer
 		CommandOffset Begin()
 		{
-			return static_cast<CommandOffset>(m_commands.size());
+			return static_cast<CommandOffset>(get_current_command_position());
 		}
 
 		//Close capture
@@ -68,111 +67,7 @@ namespace render
 		void ExecuteCompute(const display::ExecuteComputeDesc& execute_compute_desc);
 		*/
 
-		//Push command
-		void push_command(const Command& command);
-
-		//Push command data
-		template<typename DATA>
-		void push_data(const DATA& data);
-
-		//Push command data
-		template<typename DATA>
-		void push_data_array(const DATA* data, size_t num);
-
-		//Get command
-		Command get_command(size_t& offset);
-
-		//Get command data
-		template<typename DATA>
-		DATA& get_data(size_t& offset);
-
-		//Get command data array
-		template<typename DATA>
-		DATA* get_data_array(size_t& offset, size_t num);
-
-	private:
-
-		//Returns the offset needed for alignment for ptr
-		inline size_t calculate_alignment(size_t alignment, size_t offset);
-
-		//List of commands in the command buffer
-		std::vector<Command> m_commands;
-		//Data associated to each command
-		std::vector<uint8_t> m_command_data;
 	};
-
-	//Push command
-	inline void CommandBuffer::push_command(const Command & command)
-	{
-		m_commands.push_back(command);
-	}
-
-	//Get command
-	inline CommandBuffer::Command CommandBuffer::get_command(size_t & offset)
-	{
-		return m_commands[offset++];
-	}
-
-	//Returns the offset needed for alignment for ptr
-	inline size_t CommandBuffer::calculate_alignment(size_t alignment, size_t offset)
-	{
-		size_t bias = offset % alignment;
-		return (bias == 0) ? 0 : (alignment - bias);
-	}
-
-	//Push command data
-	template<typename DATA>
-	inline void CommandBuffer::push_data(const DATA & data)
-	{
-		size_t alignment_offset = calculate_alignment(alignof(DATA), sizeof(DATA), m_command_data.size());
-
-		//Reserve memory as needed
-		const size_t begin_offset = m_command_data.size() + alignment_offset;
-		m_command_data.resize(alignment_offset + sizeof(DATA));
-
-		//Copy data
-		memcpy(&m_command_data[begin_offset], &data, sizeof(DATA));
-	}
-
-	//Push command data array
-	template<typename DATA>
-	inline void CommandBuffer::push_data_array(const DATA * data, size_t num)
-	{
-		size_t alignment_offset = calculate_alignment(alignof(DATA), sizeof(DATA), m_command_data.size());
-
-		//Reserve memory as needed
-		const size_t begin_offset = m_command_data.size() + alignment_offset;
-		m_command_data.resize(alignment_offset + sizeof(DATA) * num);
-
-		//Copy data
-		memcpy(&m_command_data[begin_offset], data, sizeof(DATA) * num);
-	}
-
-	//Get command data
-	template<typename DATA>
-	inline DATA & CommandBuffer::get_data(size_t & offset)
-	{
-		size_t alignment_offset = calculate_alignment(alignof(DATA), sizeof(DATA), m_command_data.size());
-		const size_t begin_offset = m_command_data.size() + alignment_offset;
-
-		//Move offset
-		offset += alignment_offset + sizeof(DATA);
-		//Return data
-		return *reinterpret_cast<DATA*>(&m_command_data[begin_offset]);
-	}
-
-	//Get command data array
-	template<typename DATA>
-	inline DATA * CommandBuffer::get_data_array(size_t & offset, size_t num)
-	{
-		size_t alignment_offset = calculate_alignment(alignof(DATA), sizeof(DATA), m_command_data.size());
-		const size_t begin_offset = m_command_data.size() + alignment_offset;
-
-		//Move offset
-		offset += alignment_offset + sizeof(DATA) * num;
-		//Return data
-		return reinterpret_cast<DATA*>(&m_command_data[begin_offset]);
-	}
 }
 
 #endif //RENDER_COMMAND_BUFFER_h
