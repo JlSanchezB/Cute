@@ -8,7 +8,11 @@
 #include <windows.h>
 #include <chrono>
 #include <core/imgui_render.h>
-#include "core/string_hash.h"
+#include <core/string_hash.h>
+
+#define MICROPROFILE_MAX_FRAME_HISTORY (2<<10)
+#define MICROPROFILE_IMPL
+#include <ext/microprofile/microprofile.h>
 
 namespace display
 {
@@ -341,6 +345,15 @@ namespace platform
 		QueryPerformanceCounter(&g_current_time);
 		QueryPerformanceCounter(&g_begin_time);
 
+		//Init microprofiler
+		MicroProfileOnThreadCreate("Main");
+		MicroProfileSetForceEnable(true);
+		MicroProfileSetEnableAllGroups(true);
+		MicroProfileSetForceMetaCounters(true);
+
+		MicroProfileWebServerStart();
+		
+
 		//Init callback
 		game->OnInit();
 
@@ -371,17 +384,31 @@ namespace platform
 			//New frame for imgui
 			imgui_render::NextFrame(g_current_hwnd, elapsed_time);
 
-			//Render
-			game->OnTick(total_time, elapsed_time);
+			{
+				MICROPROFILE_SCOPEI("Platform", "GameUpdate", 0xFFFF00FF);
+				//Render
+				game->OnTick(total_time, elapsed_time);
+			}
 
-			//Render platform imgui (menu, fps,...)
-			RenderImgui(game, elapsed_time);
+			{
+				MICROPROFILE_SCOPEI("Platform", "BuildImgui", 0xFFFF00FF);
+				//Render platform imgui (menu, fps,...)
+				RenderImgui(game, elapsed_time);
+			}
 
-			//Render IMGUI
-			ImGui::Render();
+			{
+				MICROPROFILE_SCOPEI("Platform", "RenderImgui", 0xFFFF00FF);
+				//Render IMGUI
+				ImGui::Render();
+			}
 
-			//Present
-			display::Present(g_device);
+			{
+				MICROPROFILE_SCOPEI("Platform", "Present", 0xFFFF00FF);
+				//Present
+				display::Present(g_device);
+			}
+
+			MicroProfileFlip();
 
 		} while (true);
 
@@ -398,6 +425,9 @@ namespace platform
 #ifdef _STRING_HASH_MAP_ENABLED_
 		core::DestroyStringHashMap();
 #endif
+
+		MicroProfileWebServerStop();
+		MicroProfileShutdown();
 
 		// Return this part of the WM_QUIT message to Windows.
 		return static_cast<char>(msg.wParam);
