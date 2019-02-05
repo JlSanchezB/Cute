@@ -27,23 +27,22 @@ namespace render
 	class PointOfView
 	{
 	public:
-		void PushRenderItem(uint8_t priority, uint32_t sort_key)
+		void PushRenderItem(uint8_t priority, uint32_t sort_key, const CommandBuffer::CommandOffset& command_offset)
 		{
-
+			m_render_items.emplace_back(Item{ priority , sort_key, command_offset });
 		}
 
-		void Reset()
-		{
-			m_render_items.clear();
-			m_command_buffer.Reset();
-			m_allocated = false;
-		}
+		//Reset memory for next frame
+		void Reset();
 
 	private:
+		PointOfView(PassName pass_name, uint16_t priority) : m_pass_name(pass_name), m_priority(priority), m_allocated(true)
+		{
+		}
 		//Render pass that needs to be use for this point of view
 		PassName m_pass_name;
 		//Render priority
-		uint16_t priority;
+		uint16_t m_priority;
 		//List of render items
 		std::vector<Item> m_render_items;
 		//Command buffer associated to this view
@@ -60,15 +59,43 @@ namespace render
 	public:
 
 		//Reset the frame, it will not deallocate the memory, just clear the frame
-		void Reset()
-		{
-			for (auto& point_of_view : m_point_of_views)
-			{
-				m_point_of_views.Reset();
-			}
-		}
+		void Reset();
+
+		//Alloc point of view
+		PointOfView& AllocPointOfView(PassName pass_name, uint16_t priority);
+
 	private:
 		std::vector<PointOfView> m_point_of_views;
 	};
+
+	inline void PointOfView::Reset()
+	{
+		m_render_items.clear();
+		m_command_buffer.Reset();
+		m_allocated = false;
+	}
+
+	inline PointOfView& Frame::AllocPointOfView(PassName pass_name, uint16_t priority)
+	{
+		//Check it is already one that match from other frame
+		for (auto& point_of_view : m_point_of_views)
+		{
+			if (!point_of_view.m_allocated && point_of_view.m_pass_name == pass_name && point_of_view.m_priority == priority)
+			{
+				point_of_view.m_allocated = true;
+				return point_of_view;
+			}
+		}
+		//Add to the vector
+		m_point_of_views.emplace_back(pass_name, priority);
+	}
+
+	inline void Frame::Reset()
+	{
+		for (auto& point_of_view : m_point_of_views)
+		{
+			m_point_of_views.Reset();
+		}
+	}
 }
 #endif //RENDER_FRAME_H
