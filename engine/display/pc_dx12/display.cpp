@@ -110,18 +110,18 @@ namespace display
 			ImGui::Separator();
 			ImGui::Text("Uploaded memory each frame (%zu)", device->uploaded_memory_frame);
 			ImGui::Separator();
-			ImGui::Text("Command list handles (%zu/%zu)", device->m_command_list_pool.size(), device->m_command_list_pool.max_size());
-			ImGui::Text("Render target handles (%zu/%zu)", device->m_render_target_pool.size(), device->m_render_target_pool.max_size());
-			ImGui::Text("Depth buffer handles (%zu/%zu)", device->m_depth_buffer_pool.size(), device->m_depth_buffer_pool.max_size());
-			ImGui::Text("Root signature handles (%zu/%zu)", device->m_root_signature_pool.size(), device->m_root_signature_pool.max_size());
-			ImGui::Text("Pipeline state handles (%zu/%zu)", device->m_pipeline_state_pool.size(), device->m_pipeline_state_pool.max_size());
-			ImGui::Text("Vertex buffer handles (%zu/%zu)", device->m_vertex_buffer_pool.size(), device->m_vertex_buffer_pool.max_size());
-			ImGui::Text("Index buffer handles (%zu/%zu)", device->m_index_buffer_pool.size(), device->m_index_buffer_pool.max_size());
-			ImGui::Text("Constant buffer handles (%zu/%zu)", device->m_constant_buffer_pool.size(), device->m_constant_buffer_pool.max_size());
-			ImGui::Text("Unordered access buffer handles (%zu/%zu)", device->m_unordered_access_buffer_pool.size(), device->m_unordered_access_buffer_pool.max_size());
-			ImGui::Text("Shader resource handles (%zu/%zu)", device->m_shader_resource_pool.size(), device->m_shader_resource_pool.max_size());
-			ImGui::Text("Descriptor table handles (%zu/%zu)", device->m_descriptor_table_pool.size(), device->m_descriptor_table_pool.max_size());
-			ImGui::Text("Sampler descriptor table handles (%zu/%zu)", device->m_sampler_descriptor_table_pool.size(), device->m_sampler_descriptor_table_pool.max_size());
+			ImGui::Text("Command list handles (%zu/%zu)", device->m_command_list_pool.Size(), device->m_command_list_pool.MaxSize());
+			ImGui::Text("Render target handles (%zu/%zu)", device->m_render_target_pool.Size(), device->m_render_target_pool.MaxSize());
+			ImGui::Text("Depth buffer handles (%zu/%zu)", device->m_depth_buffer_pool.Size(), device->m_depth_buffer_pool.MaxSize());
+			ImGui::Text("Root signature handles (%zu/%zu)", device->m_root_signature_pool.Size(), device->m_root_signature_pool.MaxSize());
+			ImGui::Text("Pipeline state handles (%zu/%zu)", device->m_pipeline_state_pool.Size(), device->m_pipeline_state_pool.MaxSize());
+			ImGui::Text("Vertex buffer handles (%zu/%zu)", device->m_vertex_buffer_pool.Size(), device->m_vertex_buffer_pool.MaxSize());
+			ImGui::Text("Index buffer handles (%zu/%zu)", device->m_index_buffer_pool.Size(), device->m_index_buffer_pool.MaxSize());
+			ImGui::Text("Constant buffer handles (%zu/%zu)", device->m_constant_buffer_pool.Size(), device->m_constant_buffer_pool.MaxSize());
+			ImGui::Text("Unordered access buffer handles (%zu/%zu)", device->m_unordered_access_buffer_pool.Size(), device->m_unordered_access_buffer_pool.MaxSize());
+			ImGui::Text("Shader resource handles (%zu/%zu)", device->m_shader_resource_pool.Size(), device->m_shader_resource_pool.MaxSize());
+			ImGui::Text("Descriptor table handles (%zu/%zu)", device->m_descriptor_table_pool.Size(), device->m_descriptor_table_pool.MaxSize());
+			ImGui::Text("Sampler descriptor table handles (%zu/%zu)", device->m_sampler_descriptor_table_pool.Size(), device->m_sampler_descriptor_table_pool.MaxSize());
 			ImGui::End();	
 		}
 	}

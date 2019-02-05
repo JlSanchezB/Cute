@@ -161,12 +161,12 @@ namespace core
 			return *reinterpret_cast<const DATA*>(&m_data[handle.m_index].data);
 		}
 
-		size_t size() const
+		size_t Size() const
 		{
 			return m_size;
 		}
 
-		size_t max_size() const
+		size_t MaxSize() const
 		{
 			return m_max_size;
 		}
@@ -208,7 +208,7 @@ namespace core
 	template<typename HANDLE, typename DATA>
 	inline HandlePool<HANDLE, DATA>::~HandlePool()
 	{
-		if (m_data.size() && size() > 0)
+		if (m_data.size() && Size() > 0)
 		{
 			//Report leaks
 			std::vector<bool> allocated;
