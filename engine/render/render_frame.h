@@ -32,6 +32,13 @@ namespace render
 
 		}
 
+		void Reset()
+		{
+			m_render_items.clear();
+			m_command_buffer.Reset();
+			m_allocated = false;
+		}
+
 	private:
 		//Render pass that needs to be use for this point of view
 		PassName m_pass_name;
@@ -39,6 +46,10 @@ namespace render
 		uint16_t priority;
 		//List of render items
 		std::vector<Item> m_render_items;
+		//Command buffer associated to this view
+		CommandBuffer m_command_buffer;
+		//Allocated
+		bool m_allocated;
 
 		friend class Frame;
 	};
@@ -48,6 +59,14 @@ namespace render
 	{
 	public:
 
+		//Reset the frame, it will not deallocate the memory, just clear the frame
+		void Reset()
+		{
+			for (auto& point_of_view : m_point_of_views)
+			{
+				m_point_of_views.Reset();
+			}
+		}
 	private:
 		std::vector<PointOfView> m_point_of_views;
 	};

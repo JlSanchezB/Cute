@@ -21,19 +21,18 @@ namespace render
 		Custom
 	};
 
-
 	//Starts a capture of a command buffer
 	CommandBuffer::CommandOffset CommandBuffer::Begin()
 	{
 		//We need to save the location of the data offset
 		//We are going to use the same command buffer, so we now that always the first 4 commands
 		//if the command buffer commads represent the offset to the command data offset
-		uint32_t command_data_offset = static_cast<uint32_t>(get_current_command_data_position());
-		uint32_t command_offset = static_cast<uint32_t>(get_current_command_position());
-		push_command(static_cast<uint8_t>(command_data_offset));
-		push_command(static_cast<uint8_t>(command_data_offset << 8));
-		push_command(static_cast<uint8_t>(command_data_offset << 16));
-		push_command(static_cast<uint8_t>(command_data_offset << 24));
+		uint32_t command_data_offset = static_cast<uint32_t>(GetCurrentCommandDataPosition());
+		uint32_t command_offset = static_cast<uint32_t>(GetCurrentCommandPosition());
+		PushCommand(static_cast<uint8_t>(command_data_offset));
+		PushCommand(static_cast<uint8_t>(command_data_offset << 8));
+		PushCommand(static_cast<uint8_t>(command_data_offset << 16));
+		PushCommand(static_cast<uint8_t>(command_data_offset << 24));
 		
 		return command_offset;
 	}
@@ -41,7 +40,7 @@ namespace render
 	//Close capture
 	void CommandBuffer::Close()
 	{
-		push_command(static_cast<uint8_t>(Commands::Close));
+		PushCommand(static_cast<uint8_t>(Commands::Close));
 	}
 
 	void CommandBuffer::Execute(display::Context & context, CommandOffset command_offset)
@@ -49,63 +48,63 @@ namespace render
 		size_t offset = command_offset;
 
 		//Data offset is coded in the first 4 commands
-		size_t data_offset = get_command(offset);
-		data_offset |= get_command(offset) << 8;
-		data_offset |= get_command(offset) << 16;
-		data_offset |= get_command(offset) << 24;
+		size_t data_offset = GetCommand(offset);
+		data_offset |= GetCommand(offset) << 8;
+		data_offset |= GetCommand(offset) << 16;
+		data_offset |= GetCommand(offset) << 24;
 
 		//Go for all commands until the close commands and execute the correct render context calls
-		Commands command = static_cast<Commands>(get_command(offset));
+		Commands command = static_cast<Commands>(GetCommand(offset));
 
 		while (command != Commands::Close)
 		{
 			switch (command)
 			{
 			case Commands::SetPipelineState:
-				context.SetPipelineState(get_data<display::WeakPipelineStateHandle>(data_offset));
+				context.SetPipelineState(GetData<display::WeakPipelineStateHandle>(data_offset));
 				break;
 			case Commands::SetVertexBuffers:
 			{
-				const uint8_t start_slot_index = get_data<uint8_t>(data_offset);
-				const uint8_t num_vertex_buffers = get_data<uint8_t>(data_offset);
-				context.SetVertexBuffers(start_slot_index, num_vertex_buffers, get_data_array<display::WeakVertexBufferHandle>(data_offset, num_vertex_buffers));
+				const uint8_t start_slot_index = GetData<uint8_t>(data_offset);
+				const uint8_t num_vertex_buffers = GetData<uint8_t>(data_offset);
+				context.SetVertexBuffers(start_slot_index, num_vertex_buffers, GetDataArray<display::WeakVertexBufferHandle>(data_offset, num_vertex_buffers));
 			}
 				break;
 			case Commands::SetIndexBuffer:
-				context.SetIndexBuffer(get_data<display::WeakIndexBufferHandle>(data_offset));
+				context.SetIndexBuffer(GetData<display::WeakIndexBufferHandle>(data_offset));
 				break;
 			case Commands::SetConstantBuffer:
-				context.SetConstantBuffer(get_data<display::Pipe>(data_offset), get_data<uint8_t>(data_offset), get_data<display::WeakConstantBufferHandle>(data_offset));
+				context.SetConstantBuffer(GetData<display::Pipe>(data_offset), GetData<uint8_t>(data_offset), GetData<display::WeakConstantBufferHandle>(data_offset));
 				break;
 			case Commands::SetUnorderedAccessBuffer:
-				context.SetUnorderedAccessBuffer(get_data<display::Pipe>(data_offset), get_data<uint8_t>(data_offset), get_data<display::WeakUnorderedAccessBufferHandle>(data_offset));
+				context.SetUnorderedAccessBuffer(GetData<display::Pipe>(data_offset), GetData<uint8_t>(data_offset), GetData<display::WeakUnorderedAccessBufferHandle>(data_offset));
 				break;
 			case Commands::SetShaderResource:
-				context.SetShaderResource(get_data<display::Pipe>(data_offset), get_data<uint8_t>(data_offset), get_data<display::Context::ShaderResourceSet>(data_offset));
+				context.SetShaderResource(GetData<display::Pipe>(data_offset), GetData<uint8_t>(data_offset), GetData<display::Context::ShaderResourceSet>(data_offset));
 				break;
 			case Commands::SetDescriptorTable:
-				context.SetDescriptorTable(get_data<display::Pipe>(data_offset), get_data<uint8_t>(data_offset), get_data<display::WeakDescriptorTableHandle>(data_offset));
+				context.SetDescriptorTable(GetData<display::Pipe>(data_offset), GetData<uint8_t>(data_offset), GetData<display::WeakDescriptorTableHandle>(data_offset));
 				break;
 			case Commands::SetSamplerDescriptorTable:
-				context.SetDescriptorTable(get_data<display::Pipe>(data_offset), get_data<uint8_t>(data_offset), get_data<display::WeakSamplerDescriptorTableHandle>(data_offset));
+				context.SetDescriptorTable(GetData<display::Pipe>(data_offset), GetData<uint8_t>(data_offset), GetData<display::WeakSamplerDescriptorTableHandle>(data_offset));
 				break;
 			case Commands::Draw:
-				context.Draw(get_data<display::DrawDesc>(data_offset));
+				context.Draw(GetData<display::DrawDesc>(data_offset));
 				break;
 			case Commands::DrawIndexed:
-				context.DrawIndexed(get_data<display::DrawIndexedDesc>(data_offset));
+				context.DrawIndexed(GetData<display::DrawIndexedDesc>(data_offset));
 				break;
 			case Commands::DrawIndexedInstanced:
-				context.DrawIndexedInstanced(get_data<display::DrawIndexedInstancedDesc>(data_offset));
+				context.DrawIndexedInstanced(GetData<display::DrawIndexedInstancedDesc>(data_offset));
 				break;
 			case Commands::ExecuteCompute:
-				context.ExecuteCompute(get_data<display::ExecuteComputeDesc>(data_offset));
+				context.ExecuteCompute(GetData<display::ExecuteComputeDesc>(data_offset));
 				break;
 			case Commands::UploadResourceBuffer:
 			{
-				size_t size = get_data<size_t>(data_offset);
-				uint8_t* data = get_data_array<uint8_t>(data_offset, size);
-				display::UpdateResourceBuffer(context.GetDevice(), get_data<display::UpdatableResourceHandle>(data_offset), data, size);
+				size_t size = GetData<size_t>(data_offset);
+				uint8_t* data = GetDataArray<uint8_t>(data_offset, size);
+				display::UpdateResourceBuffer(context.GetDevice(), GetData<display::UpdatableResourceHandle>(data_offset), data, size);
 			}
 			break;
 			default:
@@ -115,99 +114,99 @@ namespace render
 			}
 
 			//Next command
-			command = static_cast<Commands>(get_command(offset));
+			command = static_cast<Commands>(GetCommand(offset));
 		}
 	}
 
 	void CommandBuffer::SetPipelineState(const display::WeakPipelineStateHandle & pipeline_state)
 	{
-		push_command(static_cast<uint8_t>(Commands::SetPipelineState));
-		push_data(pipeline_state);
+		PushCommand(static_cast<uint8_t>(Commands::SetPipelineState));
+		PushData(pipeline_state);
 	}
 
 	void CommandBuffer::SetVertexBuffers(uint8_t start_slot_index, uint8_t num_vertex_buffers, display::WeakVertexBufferHandle * vertex_buffers)
 	{
-		push_command(static_cast<uint8_t>(Commands::SetVertexBuffers));
-		push_data(num_vertex_buffers);
-		push_data_array(vertex_buffers, num_vertex_buffers);
+		PushCommand(static_cast<uint8_t>(Commands::SetVertexBuffers));
+		PushData(num_vertex_buffers);
+		PushDataArray(vertex_buffers, num_vertex_buffers);
 	}
 
 	void CommandBuffer::SetIndexBuffer(const display::WeakIndexBufferHandle & index_buffer)
 	{
-		push_command(static_cast<uint8_t>(Commands::SetIndexBuffer));
-		push_data(index_buffer);
+		PushCommand(static_cast<uint8_t>(Commands::SetIndexBuffer));
+		PushData(index_buffer);
 	}
 
 	void CommandBuffer::SetConstantBuffer(const display::Pipe & pipe, uint8_t root_parameter, const display::WeakConstantBufferHandle & constant_buffer)
 	{
-		push_command(static_cast<uint8_t>(Commands::SetConstantBuffer));
-		push_data(pipe);
-		push_data(root_parameter);
-		push_data(constant_buffer);
+		PushCommand(static_cast<uint8_t>(Commands::SetConstantBuffer));
+		PushData(pipe);
+		PushData(root_parameter);
+		PushData(constant_buffer);
 	}
 
 	void CommandBuffer::SetUnorderedAccessBuffer(const display::Pipe & pipe, uint8_t root_parameter, const display::WeakUnorderedAccessBufferHandle & unordered_access_buffer)
 	{
-		push_command(static_cast<uint8_t>(Commands::SetUnorderedAccessBuffer));
-		push_data(pipe);
-		push_data(root_parameter);
-		push_data(unordered_access_buffer);
+		PushCommand(static_cast<uint8_t>(Commands::SetUnorderedAccessBuffer));
+		PushData(pipe);
+		PushData(root_parameter);
+		PushData(unordered_access_buffer);
 	}
 
 	void CommandBuffer::SetShaderResource(const display::Pipe & pipe, uint8_t root_parameter, const display::Context::ShaderResourceSet & shader_resource)
 	{
-		push_command(static_cast<uint8_t>(Commands::SetShaderResource));
-		push_data(pipe);
-		push_data(root_parameter);
-		push_data(shader_resource);
+		PushCommand(static_cast<uint8_t>(Commands::SetShaderResource));
+		PushData(pipe);
+		PushData(root_parameter);
+		PushData(shader_resource);
 	}
 
 	void CommandBuffer::SetDescriptorTable(const display::Pipe & pipe, uint8_t root_parameter, const display::WeakDescriptorTableHandle & descriptor_table)
 	{
-		push_command(static_cast<uint8_t>(Commands::SetDescriptorTable));
-		push_data(pipe);
-		push_data(root_parameter);
-		push_data(descriptor_table);
+		PushCommand(static_cast<uint8_t>(Commands::SetDescriptorTable));
+		PushData(pipe);
+		PushData(root_parameter);
+		PushData(descriptor_table);
 	}
 
 	void CommandBuffer::SetDescriptorTable(const display::Pipe & pipe, uint8_t root_parameter, const display::WeakSamplerDescriptorTableHandle & sampler_descriptor_table)
 	{
-		push_command(static_cast<uint8_t>(Commands::SetSamplerDescriptorTable));
-		push_data(pipe);
-		push_data(root_parameter);
-		push_data(sampler_descriptor_table);
+		PushCommand(static_cast<uint8_t>(Commands::SetSamplerDescriptorTable));
+		PushData(pipe);
+		PushData(root_parameter);
+		PushData(sampler_descriptor_table);
 	}
 
 	void CommandBuffer::Draw(const display::DrawDesc & draw_desc)
 	{
-		push_command(static_cast<uint8_t>(Commands::Draw));
-		push_data(draw_desc);
+		PushCommand(static_cast<uint8_t>(Commands::Draw));
+		PushData(draw_desc);
 	}
 
 	void CommandBuffer::DrawIndexed(const display::DrawIndexedDesc & draw_desc)
 	{
-		push_command(static_cast<uint8_t>(Commands::DrawIndexed));
-		push_data(draw_desc);
+		PushCommand(static_cast<uint8_t>(Commands::DrawIndexed));
+		PushData(draw_desc);
 	}
 
 	void CommandBuffer::DrawIndexedInstanced(const display::DrawIndexedInstancedDesc & draw_desc)
 	{
-		push_command(static_cast<uint8_t>(Commands::DrawIndexedInstanced));
-		push_data(draw_desc);
+		PushCommand(static_cast<uint8_t>(Commands::DrawIndexedInstanced));
+		PushData(draw_desc);
 	}
 
 	void CommandBuffer::ExecuteCompute(const display::ExecuteComputeDesc & execute_compute_desc)
 	{
-		push_command(static_cast<uint8_t>(Commands::ExecuteCompute));
-		push_data(execute_compute_desc);
+		PushCommand(static_cast<uint8_t>(Commands::ExecuteCompute));
+		PushData(execute_compute_desc);
 	}
 
 	void CommandBuffer::UploadResourceBuffer(const display::UpdatableResourceHandle & handle, const void * data, size_t size)
 	{
-		push_command(static_cast<uint8_t>(Commands::UploadResourceBuffer));
-		push_data(size);
-		push_data_array(reinterpret_cast<const uint8_t*>(data), size);
-		push_data(handle);
+		PushCommand(static_cast<uint8_t>(Commands::UploadResourceBuffer));
+		PushData(size);
+		PushDataArray(reinterpret_cast<const uint8_t*>(data), size);
+		PushData(handle);
 	}
 
 }
