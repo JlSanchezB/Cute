@@ -27,6 +27,10 @@ namespace render
 	class PointOfView
 	{
 	public:
+		PointOfView(PassName pass_name, uint16_t priority) : m_pass_name(pass_name), m_priority(priority), m_allocated(true)
+		{
+		}
+
 		void PushRenderItem(uint8_t priority, uint32_t sort_key, const CommandBuffer::CommandOffset& command_offset)
 		{
 			m_render_items.emplace_back(Item{ priority , sort_key, command_offset });
@@ -34,10 +38,6 @@ namespace render
 
 		//Reset memory for next frame
 		void Reset();
-
-		PointOfView(PassName pass_name, uint16_t priority) : m_pass_name(pass_name), m_priority(priority), m_allocated(true)
-		{
-		}
 
 	private:
 		
@@ -66,8 +66,16 @@ namespace render
 		//Alloc point of view
 		PointOfView& AllocPointOfView(PassName pass_name, uint16_t priority);
 
+		//Get begin frame command buffer
+		CommandBuffer& GetBeginFrameComamndbuffer()
+		{
+			return m_begin_frame_command_buffer;
+		}
 	private:
+		//List of all point of views in the frame
 		std::vector<PointOfView> m_point_of_views;
+		//Command buffer with commands that will run during the start of the frame
+		CommandBuffer m_begin_frame_command_buffer;
 	};
 
 	inline void PointOfView::Reset()
@@ -98,6 +106,7 @@ namespace render
 		{
 			point_of_view.Reset();
 		}
+		m_begin_frame_command_buffer.Reset();
 	}
 }
 #endif //RENDER_FRAME_H
