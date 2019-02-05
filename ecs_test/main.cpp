@@ -33,39 +33,39 @@ struct VelocityComponent
 };
 
 
-struct TriangleShapeComponent
+struct GrassComponent
 {
 	float size;
 
-	TriangleShapeComponent(float _size) : size(_size)
+	GrassComponent(float _size) : size(_size)
 	{
 	}
 };
 
-struct CircleShapeComponent
+struct GazelleComponent
 {
 	float size;
 
-	CircleShapeComponent(float _size) : size(_size)
+	GazelleComponent(float _size) : size(_size)
 	{
 	}
 };
 
-struct SquareShapeComponent
+struct TigerComponent
 {
 	float size;
 
-	SquareShapeComponent(float _size) : size(_size)
+	TigerComponent(float _size) : size(_size)
 	{
 	}
 };
 
-using TriangleEntityType = ecs::EntityType<PositionComponent, VelocityComponent, TriangleShapeComponent>;
-using CircleEntityType = ecs::EntityType<PositionComponent, VelocityComponent, CircleShapeComponent>;
-using SquareEntityType = ecs::EntityType<PositionComponent, VelocityComponent, SquareShapeComponent>;
+using GrassEntityType = ecs::EntityType<PositionComponent, VelocityComponent, GrassComponent>;
+using GazelleEntityType = ecs::EntityType<PositionComponent, VelocityComponent, GazelleComponent>;
+using TigerEntityType = ecs::EntityType<PositionComponent, VelocityComponent, TigerComponent>;
 
-using GameComponents = ecs::ComponentList<PositionComponent, VelocityComponent, TriangleShapeComponent, CircleShapeComponent, SquareShapeComponent>;
-using GameEntityTypes = ecs::EntityTypeList<TriangleEntityType, CircleEntityType, SquareEntityType>;
+using GameComponents = ecs::ComponentList<PositionComponent, VelocityComponent, GrassComponent, GazelleComponent, TigerComponent>;
+using GameEntityTypes = ecs::EntityTypeList<GrassEntityType, GazelleEntityType, TigerEntityType>;
 
 using GameDatabase = ecs::DatabaseDeclaration<GameComponents, GameEntityTypes>;
 using Instance = ecs::Instance<GameDatabase>;
@@ -183,26 +183,26 @@ public:
 
 		for (size_t i = 0; i < 1000; ++i)
 		{
-			ecs::AllocInstance<GameDatabase, CircleEntityType>()
+			ecs::AllocInstance<GameDatabase, GazelleEntityType>()
 				.Init<PositionComponent>(rand_position_x(gen), rand_position_y(gen), rand_position_angle(gen))
 				.Init<VelocityComponent>(rand_lineal_velocity(gen), rand_lineal_velocity(gen), rand_angle_velocity(gen))
-				.Init<CircleShapeComponent>(rand_size(gen));
+				.Init<GazelleComponent>(rand_size(gen));
 		}
 
 		for (size_t i = 0; i < 1000; ++i)
 		{
-			ecs::AllocInstance<GameDatabase, TriangleEntityType>()
+			ecs::AllocInstance<GameDatabase, GrassEntityType>()
 				.Init<PositionComponent>(rand_position_x(gen), rand_position_y(gen), rand_position_angle(gen))
 				.Init<VelocityComponent>(rand_lineal_velocity(gen), rand_lineal_velocity(gen), rand_angle_velocity(gen))
-				.Init<TriangleShapeComponent>(rand_size(gen));
+				.Init<GrassComponent>(rand_size(gen));
 		}
 
 		for (size_t i = 0; i < 1000; ++i)
 		{
-			ecs::AllocInstance<GameDatabase, SquareEntityType>()
+			ecs::AllocInstance<GameDatabase, TigerEntityType>()
 				.Init<PositionComponent>(rand_position_x(gen), rand_position_y(gen), rand_position_angle(gen))
 				.Init<VelocityComponent>(rand_lineal_velocity(gen), rand_lineal_velocity(gen), rand_angle_velocity(gen))
-				.Init<SquareShapeComponent>(rand_size(gen));
+				.Init<TigerComponent>(rand_size(gen));
 		}
 		
 	}
@@ -245,17 +245,17 @@ public:
 
 			//Culling and draw per type
 
-			ecs::Process<GameDatabase, PositionComponent, CircleShapeComponent>([&](const auto& instance_iterator, PositionComponent& position, CircleShapeComponent& circle)
+			ecs::Process<GameDatabase, PositionComponent, GazelleComponent>([&](const auto& instance_iterator, PositionComponent& position, GazelleComponent& gazelle)
 			{
 			
 			}, zone_bitset);
 
-			ecs::Process<GameDatabase, PositionComponent, TriangleShapeComponent>([&](const auto& instance_iterator, PositionComponent& position, TriangleShapeComponent& triangle)
+			ecs::Process<GameDatabase, PositionComponent, GrassComponent>([&](const auto& instance_iterator, PositionComponent& position, GrassComponent& grass)
 			{
 
 			}, zone_bitset);
 
-			ecs::Process<GameDatabase, PositionComponent, SquareShapeComponent>([&](const auto& instance_iterator, PositionComponent& position, SquareShapeComponent& square)
+			ecs::Process<GameDatabase, PositionComponent, TigerComponent>([&](const auto& instance_iterator, PositionComponent& position, TigerComponent& tiger)
 			{
 
 			}, zone_bitset);
