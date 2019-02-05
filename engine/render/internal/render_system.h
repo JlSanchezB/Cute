@@ -7,6 +7,7 @@
 #include <memory>
 #include <unordered_map>
 #include <core/simple_pool.h>
+#include <render/render_frame.h>
 
 namespace render
 {
@@ -75,6 +76,10 @@ namespace render
 
 		//Load Pass
 		Pass* LoadPass(LoadContext& load_context);
+
+		//Buffer of all the render frame data
+		//At the moment just one
+		Frame m_frame_data;
 	};
 }
 

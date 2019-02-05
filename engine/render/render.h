@@ -5,6 +5,7 @@
 #define RENDER_H_
 
 #include <render/render_common.h>
+#include <render/render_frame.h>
 #include <vector>
 #include <memory>
 #include <unordered_map>
@@ -217,6 +218,11 @@ namespace render
 
 	//Execute render context
 	void ExecuteRenderContext(System* system, RenderContext* render_context);
+
+	//Get render frame for this frame
+	//Only can be called from the game thread
+	Frame& GetRenderFrame(System* system);
+
 
 }
 

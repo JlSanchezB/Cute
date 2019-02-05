@@ -105,7 +105,7 @@ public:
 
 	display::Device* m_device;
 
-	render::System* m_render_pass_system = nullptr;
+	render::System* m_render_system = nullptr;
 
 	render::RenderContext* m_render_context = nullptr;
 
@@ -156,7 +156,7 @@ public:
 		m_game_constant_buffer = display::CreateConstantBuffer(m_device, constant_buffer_desc, "GameConstantBuffer");
 
 		//Create render pass system
-		m_render_pass_system = render::CreateRenderSystem();
+		m_render_system = render::CreateRenderSystem();
 
 		//Read file
 		m_render_passes_descriptor_buffer = ReadFileToBuffer("ecs_render_passes.xml");
@@ -210,14 +210,14 @@ public:
 	}
 	void OnDestroy() override
 	{
-		if (m_render_pass_system)
+		if (m_render_system)
 		{
 			if (m_render_context)
 			{
-				render::DestroyRenderContext(m_render_pass_system, m_render_context);
+				render::DestroyRenderContext(m_render_system, m_render_context);
 			}
 
-			render::DestroyRenderSystem(m_render_pass_system, m_device);
+			render::DestroyRenderSystem(m_render_system, m_device);
 		}
 
 		//Destroy handles
@@ -238,9 +238,34 @@ public:
 				position.angle += velocity.angle_velocity * elapsed_time;
 			}, zone_bitset);
 
-			//Tick database
-			ecs::Tick<GameDatabase>();
 		}
+
+		//PREPARE RENDERING
+		{
+			std::bitset<1> zone_bitset(1);
+
+			render::Frame& render_frame = render::GetRenderFrame(m_render_system);
+
+			//Culling and draw per type
+
+			ecs::Process<GameDatabase, PositionComponent, CircleShapeComponent>([&](const auto& instance_iterator, PositionComponent& position, CircleShapeComponent& circle)
+			{
+			
+			}, zone_bitset);
+
+			ecs::Process<GameDatabase, PositionComponent, TriangleShapeComponent>([&](const auto& instance_iterator, PositionComponent& position, TriangleShapeComponent& triangle)
+			{
+
+			}, zone_bitset);
+
+			ecs::Process<GameDatabase, PositionComponent, SquareShapeComponent>([&](const auto& instance_iterator, PositionComponent& position, SquareShapeComponent& square)
+			{
+
+			}, zone_bitset);
+		}
+
+		//Tick database
+		ecs::Tick<GameDatabase>();
 
 		//RENDER
 		{
@@ -252,7 +277,7 @@ public:
 				//Remove the render context
 				if (m_render_context)
 				{
-					render::DestroyRenderContext(m_render_pass_system, m_render_context);
+					render::DestroyRenderContext(m_render_system, m_render_context);
 				}
 
 				//Reset errors
@@ -261,7 +286,7 @@ public:
 				//Load render pass sample
 				size_t buffer_size = strlen(m_text_buffer.data()) + 1;
 
-				if (!render::LoadPassDescriptorFile(m_render_pass_system, m_device, m_text_buffer.data(), buffer_size, m_render_system_errors))
+				if (!render::LoadPassDescriptorFile(m_render_system, m_device, m_text_buffer.data(), buffer_size, m_render_system_errors))
 				{
 					core::LogError("Failed to load the new descriptor file, reverting changes");
 					m_show_errors = true;
@@ -278,7 +303,7 @@ public:
 				pass_info.height = m_height;
 
 				//Still load it if it fail, as it will use the last valid one
-				m_render_context = render::CreateRenderContext(m_render_pass_system, m_device, "Main"_sh32, pass_info, init_resource_map, m_render_system_context_errors);
+				m_render_context = render::CreateRenderContext(m_render_system, m_device, "Main"_sh32, pass_info, init_resource_map, m_render_system_context_errors);
 				if (m_render_context == nullptr)
 				{
 					m_show_errors = true;
@@ -300,9 +325,9 @@ public:
 			if (m_render_context)
 			{
 				//Capture pass
-				render::CaptureRenderContext(m_render_pass_system, m_render_context);
+				render::CaptureRenderContext(m_render_system, m_render_context);
 				//Execute pass
-				render::ExecuteRenderContext(m_render_pass_system, m_render_context);
+				render::ExecuteRenderContext(m_render_system, m_render_context);
 			}
 
 			display::EndFrame(m_device);

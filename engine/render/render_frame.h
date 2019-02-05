@@ -35,10 +35,12 @@ namespace render
 		//Reset memory for next frame
 		void Reset();
 
-	private:
 		PointOfView(PassName pass_name, uint16_t priority) : m_pass_name(pass_name), m_priority(priority), m_allocated(true)
 		{
 		}
+
+	private:
+		
 		//Render pass that needs to be use for this point of view
 		PassName m_pass_name;
 		//Render priority
@@ -94,7 +96,7 @@ namespace render
 	{
 		for (auto& point_of_view : m_point_of_views)
 		{
-			m_point_of_views.Reset();
+			point_of_view.Reset();
 		}
 	}
 }

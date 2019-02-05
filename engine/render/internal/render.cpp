@@ -444,6 +444,11 @@ namespace render
 		render_context_internal->m_root_pass->Execute(*render_context);
 	}
 
+	Frame & GetRenderFrame(System * system)
+	{
+		return system->m_frame_data;
+	}
+
 	bool AddGameResource(System * system, const ResourceName& name, std::unique_ptr<Resource>& resource)
 	{
 		if ((system->m_global_resources_map.find(name) != system->m_global_resources_map.end()) ||
