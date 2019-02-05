@@ -60,7 +60,8 @@ namespace render
 		void ExecuteCompute(const display::ExecuteComputeDesc& execute_compute_desc);
 
 		//Upload resource
-		void UploadResourceBuffer(const display::UpdatableResourceHandle& handle, const void* data, size_t size);
+		//If data is null, returns an internal buffer where the memory can get copied
+		void* UploadResourceBuffer(const display::UpdatableResourceHandle& handle, const void* data, size_t size);
 	};
 }
 

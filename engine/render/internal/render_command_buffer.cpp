@@ -201,12 +201,14 @@ namespace render
 		PushData(execute_compute_desc);
 	}
 
-	void CommandBuffer::UploadResourceBuffer(const display::UpdatableResourceHandle & handle, const void * data, size_t size)
+	void* CommandBuffer::UploadResourceBuffer(const display::UpdatableResourceHandle & handle, const void * data, size_t size)
 	{
 		PushCommand(static_cast<uint8_t>(Commands::UploadResourceBuffer));
 		PushData(size);
-		PushDataArray(reinterpret_cast<const uint8_t*>(data), size);
+		void* data_buffer_inside_command_buffer = PushDataArray(reinterpret_cast<const uint8_t*>(data), size);
 		PushData(handle);
+
+		return data_buffer_inside_command_buffer;
 	}
 
 }

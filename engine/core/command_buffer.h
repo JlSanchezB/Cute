@@ -26,7 +26,7 @@ namespace core
 
 		//Push command data
 		template<typename DATA>
-		void PushDataArray(const DATA* data, size_t num);
+		void* PushDataArray(const DATA* data, size_t num);
 
 		//Get command
 		Command GetCommand(size_t& offset);
@@ -109,7 +109,7 @@ namespace core
 	//Push command data array
 	template<typename COMMAND_TYPE>
 	template<typename DATA>
-	inline void CommandBuffer<COMMAND_TYPE>::PushDataArray(const DATA * data, size_t num)
+	inline void* CommandBuffer<COMMAND_TYPE>::PushDataArray(const DATA * data, size_t num)
 	{
 		size_t alignment_offset = CalculateAlignment(alignof(DATA), m_command_data.size());
 
@@ -117,8 +117,13 @@ namespace core
 		const size_t begin_offset = m_command_data.size() + alignment_offset;
 		m_command_data.resize(alignment_offset + sizeof(DATA) * num);
 
-		//Copy data
-		memcpy(&m_command_data[begin_offset], data, sizeof(DATA) * num);
+		if (data)
+		{
+			//Copy data
+			memcpy(&m_command_data[begin_offset], data, sizeof(DATA) * num);
+		}
+
+		return &m_command_data[begin_offset];
 	}
 
 	//Get command data
