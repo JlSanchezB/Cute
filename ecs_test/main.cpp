@@ -4,7 +4,7 @@
 #include <render/render_resource.h>
 #include <render/render_helper.h>
 #include <ecs/entity_component_system.h>
-#include <ext/glm/vec2.hpp>
+#include <ext/glm/vec4.hpp>
 
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN             // Exclude rarely-used stuff from Windows headers.
@@ -16,20 +16,18 @@
 
 struct PositionComponent
 {
-	glm::vec2 position;
-	float angle;
+	glm::vec4 position_angle;
 
-	PositionComponent(float x, float y, float _angle) : position(x, y), angle(_angle)
+	PositionComponent(float x, float y, float angle) : position_angle(x, y, angle, 0.f)
 	{
 	}
 };
 
 struct VelocityComponent
 {
-	glm::vec2 lineal_velocity;
-	float angle_velocity;
+	glm::vec4 lineal_angle_velocity;
 
-	VelocityComponent(float x, float y, float m) : lineal_velocity(x, y), angle_velocity(m)
+	VelocityComponent(float x, float y, float m) : lineal_angle_velocity(x, y, m, 0.f)
 	{
 	}
 };
@@ -234,8 +232,7 @@ public:
 			//Move entities
 			ecs::Process<GameDatabase, PositionComponent, VelocityComponent>([&](const auto& instance_iterator, PositionComponent& position, VelocityComponent& velocity)
 			{
-				position.position += velocity.lineal_velocity * elapsed_time;
-				position.angle += velocity.angle_velocity * elapsed_time;
+				position.position_angle += velocity.lineal_angle_velocity * elapsed_time;
 			}, zone_bitset);
 
 		}
