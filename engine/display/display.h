@@ -247,5 +247,11 @@ namespace display
 		DestroyVertexBuffer(device, handle);
 	}
 
+	template<>
+	inline void DestroyHandle(Device* device, IndexBufferHandle& handle)
+	{
+		DestroyIndexBuffer(device, handle);
+	}
+
 }
 #endif DISPLAY_H_

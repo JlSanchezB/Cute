@@ -5,6 +5,8 @@
 #include <render/render_helper.h>
 #include <ecs/entity_component_system.h>
 #include <ext/glm/vec4.hpp>
+#include <ext/glm/vec2.hpp>
+#include <ext/glm/gtc/constants.hpp>
 
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN             // Exclude rarely-used stuff from Windows headers.
@@ -110,6 +112,15 @@ public:
 	//Game constant buffer
 	display::ConstantBufferHandle m_game_constant_buffer;
 
+	//Instances instance buffer
+	display::VertexBufferHandle m_instances_vertex_buffer;
+
+	//circle vertex buffer
+	display::VertexBufferHandle m_circle_vertex_buffer;
+
+	//circle index buffer
+	display::IndexBufferHandle m_circle_index_buffer;
+
 	//Last valid descriptor file
 	std::vector<uint8_t> m_render_passes_descriptor_buffer;
 
@@ -126,6 +137,9 @@ public:
 	bool m_show_errors = false;
 	std::vector<std::string> m_render_system_errors;
 	std::vector<std::string> m_render_system_context_errors;
+
+	//Instance buffer
+	std::vector<glm::vec4> m_instance_buffer;
 
 	void OnInit() override
 	{
@@ -152,6 +166,43 @@ public:
 		constant_buffer_desc.access = display::Access::Dynamic;
 		constant_buffer_desc.size = 16;
 		m_game_constant_buffer = display::CreateConstantBuffer(m_device, constant_buffer_desc, "GameConstantBuffer");
+
+		//Create instances vertex buffer
+		display::VertexBufferDesc instance_vertex_buffer_desc;
+		instance_vertex_buffer_desc.access = display::Access::Dynamic;
+		instance_vertex_buffer_desc.stride = 16; //4 floats
+		m_instances_vertex_buffer = display::CreateVertexBuffer(m_device, instance_vertex_buffer_desc, "InstanceVertexBuffer");
+
+		//Create circle vertex buffer and index buffer
+		const size_t num_vertex = 16;
+		glm::vec2 vertex_data[num_vertex];
+		for (size_t i = 0; i < num_vertex; ++i)
+		{
+			const float angle = glm::two_pi<float>() * (float(i) / num_vertex);
+			vertex_data[i].x = cosf(angle);
+			vertex_data[i].y = cosf(angle);
+		}
+
+		display::VertexBufferDesc vertex_buffer_desc;
+		vertex_buffer_desc.init_data = vertex_data;
+		vertex_buffer_desc.size = sizeof(vertex_data);
+		vertex_buffer_desc.stride = sizeof(glm::vec2);
+
+		m_circle_vertex_buffer = display::CreateVertexBuffer(m_device, vertex_buffer_desc, "circle");
+
+		uint16_t index_buffer_data[3 * (num_vertex - 2)];
+		for (uint16_t i = 0; i < static_cast<uint16_t>(num_vertex - 2); ++i)
+		{
+			index_buffer_data[i * 3] = 0;
+			index_buffer_data[i * 3 + 1] = i + 1;
+			index_buffer_data[i * 3 + 2] = i + 2;
+		}
+
+		display::IndexBufferDesc index_buffer_desc;
+		index_buffer_desc.init_data = index_buffer_data;
+		index_buffer_desc.size = sizeof(index_buffer_data);
+
+		m_circle_index_buffer = display::CreateIndexBuffer(m_device, index_buffer_desc, "circle");
 
 		//Create render pass system
 		m_render_system = render::CreateRenderSystem();
@@ -220,7 +271,12 @@ public:
 
 		//Destroy handles
 		display::DestroyHandle(m_device, m_game_constant_buffer);
+		display::DestroyHandle(m_device, m_instances_vertex_buffer);
+		display::DestroyHandle(m_device, m_circle_vertex_buffer);
+		display::DestroyHandle(m_device, m_circle_index_buffer);
+		
 
+		//Destroy device
 		display::DestroyDevice(m_device);
 	}
 	void OnTick(double total_time, float elapsed_time) override
@@ -244,21 +300,31 @@ public:
 			render::Frame& render_frame = render::GetRenderFrame(m_render_system);
 
 			//Culling and draw per type
-
-			ecs::Process<GameDatabase, PositionComponent, GazelleComponent>([&](const auto& instance_iterator, PositionComponent& position, GazelleComponent& gazelle)
-			{
-			
-			}, zone_bitset);
+			m_instance_buffer.clear();
 
 			ecs::Process<GameDatabase, PositionComponent, GrassComponent>([&](const auto& instance_iterator, PositionComponent& position, GrassComponent& grass)
 			{
-
+				m_instance_buffer.emplace_back(position.position_angle.x, position.position_angle.y, position.position_angle.z, grass.size);
 			}, zone_bitset);
+			//Add a render item for rendering the grass
 
+			ecs::Process<GameDatabase, PositionComponent, GazelleComponent>([&](const auto& instance_iterator, PositionComponent& position, GazelleComponent& gazelle)
+			{
+				//Add to the instance buffer the instance
+				m_instance_buffer.emplace_back(position.position_angle.x, position.position_angle.y, position.position_angle.z, gazelle.size);
+			}, zone_bitset);
+			//Add a render item for rendering the gazelles
+
+		
 			ecs::Process<GameDatabase, PositionComponent, TigerComponent>([&](const auto& instance_iterator, PositionComponent& position, TigerComponent& tiger)
 			{
-
+				m_instance_buffer.emplace_back(position.position_angle.x, position.position_angle.y, position.position_angle.z, tiger.size);
 			}, zone_bitset);
+			//Add a render item for rendering the tigers
+
+
+			//Send the buffer for updating the vertex constant
+			render_frame.GetBeginFrameComamndbuffer().UploadResourceBuffer(m_instances_vertex_buffer, &m_instance_buffer[0], m_instance_buffer.size() * sizeof(glm::vec4));
 		}
 
 		//Tick database
@@ -328,6 +394,9 @@ public:
 			}
 
 			display::EndFrame(m_device);
+
+			render::Frame& render_frame = render::GetRenderFrame(m_render_system);
+			render_frame.Reset();
 		}
 	}
 

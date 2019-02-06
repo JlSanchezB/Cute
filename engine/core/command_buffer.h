@@ -100,7 +100,7 @@ namespace core
 
 		//Reserve memory as needed
 		const size_t begin_offset = m_command_data.size() + alignment_offset;
-		m_command_data.resize(alignment_offset + sizeof(DATA));
+		m_command_data.resize(m_command_data.size() + alignment_offset + sizeof(DATA));
 
 		//Copy data
 		memcpy(&m_command_data[begin_offset], &data, sizeof(DATA));
@@ -115,7 +115,7 @@ namespace core
 
 		//Reserve memory as needed
 		const size_t begin_offset = m_command_data.size() + alignment_offset;
-		m_command_data.resize(alignment_offset + sizeof(DATA) * num);
+		m_command_data.resize(m_command_data.size() + alignment_offset + sizeof(DATA) * num);
 
 		if (data)
 		{
