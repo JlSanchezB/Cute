@@ -253,5 +253,11 @@ namespace display
 		DestroyIndexBuffer(device, handle);
 	}
 
+	template<>
+	inline void DestroyHandle(Device* device, CommandListHandle& handle)
+	{
+		DestroyCommandList(device, handle);
+	}
+
 }
 #endif DISPLAY_H_

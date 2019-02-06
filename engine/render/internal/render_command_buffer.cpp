@@ -22,7 +22,7 @@ namespace render
 	};
 
 	//Starts a capture of a command buffer
-	CommandBuffer::CommandOffset CommandBuffer::Begin()
+	CommandBuffer::CommandOffset CommandBuffer::Open()
 	{
 		//We need to save the location of the data offset
 		//We are going to use the same command buffer, so we now that always the first 4 commands
@@ -43,8 +43,13 @@ namespace render
 		PushCommand(static_cast<uint8_t>(Commands::Close));
 	}
 
-	void CommandBuffer::Execute(display::Context & context, CommandOffset command_offset)
+	CommandBuffer::CommandOffset CommandBuffer::Execute(display::Context & context, CommandOffset command_offset)
 	{
+		if (command_offset >= GetCurrentCommandPosition())
+		{
+			return InvalidCommandOffset;
+		}
+
 		size_t offset = command_offset;
 
 		//Data offset is coded in the first 4 commands
@@ -115,6 +120,15 @@ namespace render
 
 			//Next command
 			command = static_cast<Commands>(GetCommand(offset));
+		}
+
+		if (offset == GetCurrentCommandPosition())
+		{
+			return InvalidCommandOffset;
+		}
+		else
+		{
+			return static_cast<CommandOffset>(offset);
 		}
 	}
 

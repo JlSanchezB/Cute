@@ -13,15 +13,17 @@ namespace render
 	{
 	public:
 		using CommandOffset = uint32_t;
+		const static CommandOffset InvalidCommandOffset = static_cast<uint32_t>(-1);
 
 		//Starts a capture of a command buffer
-		CommandOffset Begin();
+		CommandOffset Open();
 
 		//Close capture
 		void Close();
 
 		//Execute commands in this offset
-		void Execute(display::Context& context, CommandOffset command_offset);
+		//Returns the offset of the next command in the render command, InvalidCommandOffset if it is the last
+		CommandOffset Execute(display::Context& context, CommandOffset command_offset = 0);
 
 		//Set pipeline state
 		void SetPipelineState(const display::WeakPipelineStateHandle& pipeline_state);

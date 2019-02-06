@@ -131,8 +131,8 @@ namespace core
 	template<typename DATA>
 	inline DATA & CommandBuffer<COMMAND_TYPE>::GetData(size_t & offset)
 	{
-		size_t alignment_offset = CalculateAlignment(alignof(DATA), m_command_data.size());
-		const size_t begin_offset = m_command_data.size() + alignment_offset;
+		size_t alignment_offset = CalculateAlignment(alignof(DATA), offset);
+		const size_t begin_offset = offset + alignment_offset;
 
 		//Move offset
 		offset += alignment_offset + sizeof(DATA);
@@ -145,8 +145,8 @@ namespace core
 	template<typename DATA>
 	inline DATA * CommandBuffer<COMMAND_TYPE>::GetDataArray(size_t & offset, size_t num)
 	{
-		size_t alignment_offset = CalculateAlignment(alignof(DATA), m_command_data.size());
-		const size_t begin_offset = m_command_data.size() + alignment_offset;
+		size_t alignment_offset = CalculateAlignment(alignof(DATA), offset);
+		const size_t begin_offset = offset + alignment_offset;
 
 		//Move offset
 		offset += alignment_offset + sizeof(DATA) * num;

@@ -223,7 +223,6 @@ namespace render
 	//Only can be called from the game thread
 	Frame& GetRenderFrame(System* system);
 
-
 }
 
 #endif //RENDER_H_

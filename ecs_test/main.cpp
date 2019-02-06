@@ -121,6 +121,9 @@ public:
 	//circle index buffer
 	display::IndexBufferHandle m_circle_index_buffer;
 
+	//Command buffer
+	display::CommandListHandle m_render_command_list;
+
 	//Last valid descriptor file
 	std::vector<uint8_t> m_render_passes_descriptor_buffer;
 
@@ -171,6 +174,7 @@ public:
 		display::VertexBufferDesc instance_vertex_buffer_desc;
 		instance_vertex_buffer_desc.access = display::Access::Dynamic;
 		instance_vertex_buffer_desc.stride = 16; //4 floats
+		instance_vertex_buffer_desc.size = 1024 * 1024;
 		m_instances_vertex_buffer = display::CreateVertexBuffer(m_device, instance_vertex_buffer_desc, "InstanceVertexBuffer");
 
 		//Create circle vertex buffer and index buffer
@@ -203,6 +207,9 @@ public:
 		index_buffer_desc.size = sizeof(index_buffer_data);
 
 		m_circle_index_buffer = display::CreateIndexBuffer(m_device, index_buffer_desc, "circle");
+
+		//Create a command list for rendering the render frame
+		m_render_command_list = display::CreateCommandList(m_device, "BeginFrameCommandList");
 
 		//Create render pass system
 		m_render_system = render::CreateRenderSystem();
@@ -274,7 +281,7 @@ public:
 		display::DestroyHandle(m_device, m_instances_vertex_buffer);
 		display::DestroyHandle(m_device, m_circle_vertex_buffer);
 		display::DestroyHandle(m_device, m_circle_index_buffer);
-		
+		display::DestroyHandle(m_device, m_render_command_list);
 
 		//Destroy device
 		display::DestroyDevice(m_device);
@@ -324,7 +331,9 @@ public:
 
 
 			//Send the buffer for updating the vertex constant
+			auto command_offset = render_frame.GetBeginFrameComamndbuffer().Open();
 			render_frame.GetBeginFrameComamndbuffer().UploadResourceBuffer(m_instances_vertex_buffer, &m_instance_buffer[0], m_instance_buffer.size() * sizeof(glm::vec4));
+			render_frame.GetBeginFrameComamndbuffer().Close();
 		}
 
 		//Tick database
@@ -385,6 +394,20 @@ public:
 			//Update game constant buffer
 			display::UpdateResourceBuffer(m_device, m_game_constant_buffer, &game_constant_buffer, sizeof(game_constant_buffer));
 
+			render::Frame& render_frame = render::GetRenderFrame(m_render_system);
+
+			//Execute begin commands in the render_frame
+			auto render_context = display::OpenCommandList(m_device, m_render_command_list);
+
+			render::CommandBuffer::CommandOffset command_offset = 0;
+			while (command_offset != render::CommandBuffer::InvalidCommandOffset)
+			{
+				command_offset = render_frame.GetBeginFrameComamndbuffer().Execute(*render_context, command_offset);
+			}
+			
+			display::CloseCommandList(m_device, render_context);
+			display::ExecuteCommandList(m_device, m_render_command_list);
+
 			if (m_render_context)
 			{
 				//Capture pass
@@ -395,7 +418,6 @@ public:
 
 			display::EndFrame(m_device);
 
-			render::Frame& render_frame = render::GetRenderFrame(m_render_system);
 			render_frame.Reset();
 		}
 	}
