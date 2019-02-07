@@ -16,6 +16,121 @@
 #include <random>
 #include <bitset>
 
+struct DisplayResource
+{
+	display::VertexBufferHandle m_circle_vertex_buffer;
+	display::IndexBufferHandle m_circle_index_buffer;
+	display::RootSignatureHandle m_root_signature;
+	display::PipelineStateHandle m_pipeline_state;
+
+	void Load(display::Device* device)
+	{
+		//Create root signature
+		display::RootSignatureDesc root_signature_desc;
+		m_root_signature = display::CreateRootSignature(device, root_signature_desc, "Root Signature");
+
+		//Create pipeline state
+		const char* shader_code =
+			"	struct PSInput\
+				{\
+					float4 position : SV_POSITION;\
+				};\
+				\
+				PSInput main_vs(float2 position : POSITION, float4 instance_data : TEXCOORD)\
+				{\
+					PSInput result; \
+					result.position.xy = position.xy * instance_data.z + instance_data.xy; \
+					result.position.zw = float2(0.f, 1.f); \
+					return result;\
+				}\
+				float4 main_ps(PSInput input) : SV_TARGET\
+				{\
+					return float4(1.f, 0.f, 0.f, 1.f);\
+				}";
+
+		std::vector<char> vertex_shader;
+		std::vector<char> pixel_shader;
+
+		display::CompileShaderDesc compile_shader_desc;
+		compile_shader_desc.code = shader_code;
+		compile_shader_desc.entry_point = "main_vs";
+		compile_shader_desc.target = "vs_5_0";
+		display::CompileShader(device, compile_shader_desc, vertex_shader);
+
+		compile_shader_desc.code = shader_code;
+		compile_shader_desc.entry_point = "main_ps";
+		compile_shader_desc.target = "ps_5_0";
+		display::CompileShader(device, compile_shader_desc, pixel_shader);
+
+
+		//Create pipeline state
+		display::PipelineStateDesc pipeline_state_desc;
+		pipeline_state_desc.root_signature = m_root_signature;
+
+		//Add input layouts
+		pipeline_state_desc.input_layout.elements[0] = display::InputElementDesc("POSITION", 0, display::Format::R32G32_FLOAT, 0, 0);
+		pipeline_state_desc.input_layout.elements[1] = display::InputElementDesc("TEXCOORD", 0, display::Format::R32G32B32A32_FLOAT, 1, 0, display::InputType::Instance);
+		pipeline_state_desc.input_layout.num_elements = 2;
+
+
+		//Add shaders
+		pipeline_state_desc.pixel_shader.data = reinterpret_cast<void*>(pixel_shader.data());
+		pipeline_state_desc.pixel_shader.size = pixel_shader.size();
+
+		pipeline_state_desc.vertex_shader.data = reinterpret_cast<void*>(vertex_shader.data());
+		pipeline_state_desc.vertex_shader.size = vertex_shader.size();
+
+		//Add render targets
+		pipeline_state_desc.num_render_targets = 1;
+		pipeline_state_desc.render_target_format[0] = display::Format::R8G8B8A8_UNORM;
+
+		//Create
+		m_pipeline_state = display::CreatePipelineState(device, pipeline_state_desc, "Circle");
+
+
+
+		//Create circle vertex buffer and index buffer
+		const size_t num_vertex = 16;
+		glm::vec2 vertex_data[num_vertex];
+		for (size_t i = 0; i < num_vertex; ++i)
+		{
+			const float angle = glm::two_pi<float>() * (float(i) / num_vertex);
+			vertex_data[i].x = cosf(angle);
+			vertex_data[i].y = cosf(angle);
+		}
+
+		display::VertexBufferDesc vertex_buffer_desc;
+		vertex_buffer_desc.init_data = vertex_data;
+		vertex_buffer_desc.size = sizeof(vertex_data);
+		vertex_buffer_desc.stride = sizeof(glm::vec2);
+
+		m_circle_vertex_buffer = display::CreateVertexBuffer(device, vertex_buffer_desc, "Circle");
+
+		uint16_t index_buffer_data[3 * (num_vertex - 2)];
+		for (uint16_t i = 0; i < static_cast<uint16_t>(num_vertex - 2); ++i)
+		{
+			index_buffer_data[i * 3] = 0;
+			index_buffer_data[i * 3 + 1] = i + 1;
+			index_buffer_data[i * 3 + 2] = i + 2;
+		}
+
+		display::IndexBufferDesc index_buffer_desc;
+		index_buffer_desc.init_data = index_buffer_data;
+		index_buffer_desc.size = sizeof(index_buffer_data);
+
+		m_circle_index_buffer = display::CreateIndexBuffer(device, index_buffer_desc, "Circle");
+	}
+
+	void Unload(display::Device* device)
+	{
+		display::DestroyHandle(device, m_circle_vertex_buffer);
+		display::DestroyHandle(device, m_circle_index_buffer);
+		display::DestroyHandle(device, m_pipeline_state);
+		display::DestroyHandle(device, m_root_signature);
+	}
+};
+
+
 struct PositionComponent
 {
 	glm::vec4 position_angle;
@@ -115,14 +230,11 @@ public:
 	//Instances instance buffer
 	display::VertexBufferHandle m_instances_vertex_buffer;
 
-	//circle vertex buffer
-	display::VertexBufferHandle m_circle_vertex_buffer;
-
-	//circle index buffer
-	display::IndexBufferHandle m_circle_index_buffer;
-
 	//Command buffer
 	display::CommandListHandle m_render_command_list;
+
+	//Display resources
+	DisplayResource m_display_resources;
 
 	//Last valid descriptor file
 	std::vector<uint8_t> m_render_passes_descriptor_buffer;
@@ -177,36 +289,7 @@ public:
 		instance_vertex_buffer_desc.size = 1024 * 1024;
 		m_instances_vertex_buffer = display::CreateVertexBuffer(m_device, instance_vertex_buffer_desc, "InstanceVertexBuffer");
 
-		//Create circle vertex buffer and index buffer
-		const size_t num_vertex = 16;
-		glm::vec2 vertex_data[num_vertex];
-		for (size_t i = 0; i < num_vertex; ++i)
-		{
-			const float angle = glm::two_pi<float>() * (float(i) / num_vertex);
-			vertex_data[i].x = cosf(angle);
-			vertex_data[i].y = cosf(angle);
-		}
-
-		display::VertexBufferDesc vertex_buffer_desc;
-		vertex_buffer_desc.init_data = vertex_data;
-		vertex_buffer_desc.size = sizeof(vertex_data);
-		vertex_buffer_desc.stride = sizeof(glm::vec2);
-
-		m_circle_vertex_buffer = display::CreateVertexBuffer(m_device, vertex_buffer_desc, "circle");
-
-		uint16_t index_buffer_data[3 * (num_vertex - 2)];
-		for (uint16_t i = 0; i < static_cast<uint16_t>(num_vertex - 2); ++i)
-		{
-			index_buffer_data[i * 3] = 0;
-			index_buffer_data[i * 3 + 1] = i + 1;
-			index_buffer_data[i * 3 + 2] = i + 2;
-		}
-
-		display::IndexBufferDesc index_buffer_desc;
-		index_buffer_desc.init_data = index_buffer_data;
-		index_buffer_desc.size = sizeof(index_buffer_data);
-
-		m_circle_index_buffer = display::CreateIndexBuffer(m_device, index_buffer_desc, "circle");
+		m_display_resources.Load(m_device);
 
 		//Create a command list for rendering the render frame
 		m_render_command_list = display::CreateCommandList(m_device, "BeginFrameCommandList");
@@ -279,9 +362,8 @@ public:
 		//Destroy handles
 		display::DestroyHandle(m_device, m_game_constant_buffer);
 		display::DestroyHandle(m_device, m_instances_vertex_buffer);
-		display::DestroyHandle(m_device, m_circle_vertex_buffer);
-		display::DestroyHandle(m_device, m_circle_index_buffer);
 		display::DestroyHandle(m_device, m_render_command_list);
+		m_display_resources.Unload(m_device);
 
 		//Destroy device
 		display::DestroyDevice(m_device);

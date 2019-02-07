@@ -298,24 +298,27 @@ namespace core
 	template<typename HANDLE, typename DATA>
 	inline void HandlePool<HANDLE, DATA>::Free(HANDLE & handle)
 	{
-		//Destroy DATA
-		(reinterpret_cast<DATA*>(&m_data[handle.m_index]))->~DATA();
-
-		//Add it in the free list
-		if (m_first_free_allocated == HANDLE::kInvalid)
+		if (handle.IsValid())
 		{
-			m_first_free_allocated = handle.m_index;
-		}
-		else
-		{
-			GetNextFreeSlot(handle.m_index) = m_first_free_allocated;
-			m_first_free_allocated = handle.m_index;
-		}
+			//Destroy DATA
+			(reinterpret_cast<DATA*>(&m_data[handle.m_index]))->~DATA();
 
-		m_size--;
+			//Add it in the free list
+			if (m_first_free_allocated == HANDLE::kInvalid)
+			{
+				m_first_free_allocated = handle.m_index;
+			}
+			else
+			{
+				GetNextFreeSlot(handle.m_index) = m_first_free_allocated;
+				m_first_free_allocated = handle.m_index;
+			}
 
-		//Reset handle to an invalid, it will avoid it keep the index
-		handle.m_index = HANDLE::kInvalid;
+			m_size--;
+
+			//Reset handle to an invalid, it will avoid it keep the index
+			handle.m_index = HANDLE::kInvalid;
+		}
 	}
 
 	template<typename HANDLE, typename DATA>

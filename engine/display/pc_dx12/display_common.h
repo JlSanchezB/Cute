@@ -43,31 +43,34 @@ namespace display
 		void Init(size_t max_size, size_t init_size, size_t num_frames)
 		{
 			core::HandlePool<HANDLE, DATA>::Init(max_size, init_size);
-			m_defered_delete_handles.resize(num_frames);
+			m_deferred_delete_handles.resize(num_frames);
 		}
 
 		//Free unused handle
 		//It will get added into a ring buffer
 		void Free(HANDLE& handle)
 		{
-			//Add to the current frame
-			m_defered_delete_handles[m_current_frame].push_back(std::move(handle));
+			if (handle.IsValid())
+			{
+				//Add to the current frame
+				m_deferred_delete_handles[m_current_frame].push_back(std::move(handle));
 
-			//It will invalidate the handle, from outside will look like deleted
+				//It will invalidate the handle, from outside will look like deleted
+			}
 		}
 
 		//Call each frame for cleaning
 		void NextFrame()
 		{
 			//Deallocate all handles
-			size_t last_frame = (m_current_frame + 1) % m_defered_delete_handles.size();
+			size_t last_frame = (m_current_frame + 1) % m_deferred_delete_handles.size();
 			//Destroy all handles
-			for (auto& handle : m_defered_delete_handles[last_frame])
+			for (auto& handle : m_deferred_delete_handles[last_frame])
 			{
 				DeferredFree(handle);
 				core::HandlePool<HANDLE, DATA>::Free(handle);
 			}
-			m_defered_delete_handles[last_frame].clear();
+			m_deferred_delete_handles[last_frame].clear();
 			//New frame is the last frame
 			m_current_frame = last_frame;
 		}
@@ -75,7 +78,7 @@ namespace display
 		//Clear all handles
 		void Destroy()
 		{
-			size_t num_frames = m_defered_delete_handles.size();
+			size_t num_frames = m_deferred_delete_handles.size();
 			for (size_t i = 0; i < num_frames; ++i)
 			{
 				NextFrame();
@@ -88,7 +91,7 @@ namespace display
 	private:
 
 		size_t m_current_frame = 0;
-		std::vector<std::vector<HANDLE>> m_defered_delete_handles;
+		std::vector<std::vector<HANDLE>> m_deferred_delete_handles;
 	};
 
 	//GraphicsHandlePool with descriptor heap pool support
