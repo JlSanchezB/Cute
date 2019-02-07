@@ -36,6 +36,11 @@ namespace render
 			m_render_items.emplace_back(Item{ priority , sort_key, command_offset });
 		}
 
+		CommandBuffer& GetCommandBuffer()
+		{
+			return m_command_buffer;
+		}
+
 		//Reset memory for next frame
 		void Reset();
 
@@ -98,6 +103,8 @@ namespace render
 		}
 		//Add to the vector
 		m_point_of_views.emplace_back(pass_name, priority);
+
+		return m_point_of_views[m_point_of_views.size() - 1];
 	}
 
 	inline void Frame::Reset()

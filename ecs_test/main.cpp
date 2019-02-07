@@ -18,6 +18,9 @@
 
 struct DisplayResource
 {
+	static constexpr uint32_t kNumCircleVertex = 16;
+	static constexpr uint32_t kNumCircleIndex = 3 * (kNumCircleVertex - 2);
+
 	display::VertexBufferHandle m_circle_vertex_buffer;
 	display::IndexBufferHandle m_circle_index_buffer;
 	display::RootSignatureHandle m_root_signature;
@@ -90,11 +93,10 @@ struct DisplayResource
 
 
 		//Create circle vertex buffer and index buffer
-		const size_t num_vertex = 16;
-		glm::vec2 vertex_data[num_vertex];
-		for (size_t i = 0; i < num_vertex; ++i)
+		glm::vec2 vertex_data[kNumCircleVertex];
+		for (size_t i = 0; i < kNumCircleVertex; ++i)
 		{
-			const float angle = glm::two_pi<float>() * (float(i) / num_vertex);
+			const float angle = glm::two_pi<float>() * (float(i) / kNumCircleVertex);
 			vertex_data[i].x = cosf(angle);
 			vertex_data[i].y = cosf(angle);
 		}
@@ -106,8 +108,8 @@ struct DisplayResource
 
 		m_circle_vertex_buffer = display::CreateVertexBuffer(device, vertex_buffer_desc, "Circle");
 
-		uint16_t index_buffer_data[3 * (num_vertex - 2)];
-		for (uint16_t i = 0; i < static_cast<uint16_t>(num_vertex - 2); ++i)
+		uint16_t index_buffer_data[kNumCircleIndex];
+		for (uint16_t i = 0; i < static_cast<uint16_t>(kNumCircleVertex - 2); ++i)
 		{
 			index_buffer_data[i * 3] = 0;
 			index_buffer_data[i * 3 + 1] = i + 1;
@@ -388,6 +390,9 @@ public:
 
 			render::Frame& render_frame = render::GetRenderFrame(m_render_system);
 
+			auto& point_of_view = render_frame.AllocPointOfView("Main"_sh32, 0);
+			auto& command_buffer = point_of_view.GetCommandBuffer();
+
 			//Culling and draw per type
 			m_instance_buffer.clear();
 
@@ -395,7 +400,19 @@ public:
 			{
 				m_instance_buffer.emplace_back(position.position_angle.x, position.position_angle.y, position.position_angle.z, grass.size);
 			}, zone_bitset);
+
 			//Add a render item for rendering the grass
+			auto commands_offset = command_buffer.Open();
+			command_buffer.SetVertexBuffers(0, 1, &m_display_resources.m_circle_vertex_buffer);
+			command_buffer.SetVertexBuffers(1, 1, &m_instances_vertex_buffer);
+			command_buffer.SetIndexBuffer(m_display_resources.m_circle_index_buffer);
+			display::DrawIndexedInstancedDesc draw_desc;
+			draw_desc.index_count = DisplayResource::kNumCircleIndex;
+			draw_desc.instance_count = static_cast<uint32_t>(m_instance_buffer.size());
+			command_buffer.DrawIndexedInstanced(draw_desc);
+			command_buffer.Close();
+
+			point_of_view.PushRenderItem(0, 0, commands_offset);
 
 			ecs::Process<GameDatabase, PositionComponent, GazelleComponent>([&](const auto& instance_iterator, PositionComponent& position, GazelleComponent& gazelle)
 			{
