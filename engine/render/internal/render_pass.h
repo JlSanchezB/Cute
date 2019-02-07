@@ -102,6 +102,17 @@ namespace render
 		void Load(LoadContext& load_context) override;
 		void Render(RenderContext& render_context) const override;
 	};
+
+	class DrawRenderItemsPass : public Pass
+	{
+		uint8_t m_begin_priority;
+		uint8_t m_end_priority;
+	public:
+		DECLARE_RENDER_CLASS("DrawRenderItems");
+
+		void Load(LoadContext& load_context) override;
+		void Render(RenderContext& render_context) const override;
+	};
 }
 
 #endif //RENDER_PASS_H_

@@ -130,6 +130,9 @@ namespace render
 			return nullptr;
 		}
 
+		//Get Render frame
+		Frame& GetRenderFrame();
+
 		//Get root pass been rendering
 		Pass* GetRootPass() const;
 

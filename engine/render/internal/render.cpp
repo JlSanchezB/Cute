@@ -55,6 +55,12 @@ namespace render
 		return render::GetResource(render_context->m_render_pass_system, name);
 	}
 
+	Frame & RenderContext::GetRenderFrame()
+	{
+		auto render_context = reinterpret_cast<const RenderContextInternal*>(this);
+		return render_context->m_render_pass_system->m_frame_data;
+	}
+
 	Pass * RenderContext::GetRootPass() const
 	{
 		auto render_context = reinterpret_cast<const RenderContextInternal*>(this);
@@ -305,6 +311,7 @@ namespace render
 		RegisterPassFactory<SetPipelineStatePass>(system);
 		RegisterPassFactory<SetDescriptorTablePass>(system);
 		RegisterPassFactory<DrawFullScreenQuadPass>(system);
+		RegisterPassFactory<DrawRenderItemsPass>(system);
 
 		return system;
 	}

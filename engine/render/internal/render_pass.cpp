@@ -306,4 +306,21 @@ namespace render
 			render_context.GetContext()->Draw(draw_desc);
 		}
 	}
+	void DrawRenderItemsPass::Load(LoadContext & load_context)
+	{
+		if (QueryAttribute(load_context, load_context.current_xml_element, "priority", m_begin_priority, AttributeType::Optional))
+		{
+			m_end_priority = m_begin_priority;
+		}
+		else
+		{
+			QueryAttribute(load_context, load_context.current_xml_element, "begin_priority", m_begin_priority, AttributeType::NonOptional);
+			QueryAttribute(load_context, load_context.current_xml_element, "end_priority", m_end_priority, AttributeType::NonOptional);
+		}
+	}
+	void DrawRenderItemsPass::Render(RenderContext & render_context) const
+	{
+		auto& render_frame = render_context.GetRenderFrame();
+
+	}
 }
