@@ -6,6 +6,7 @@
 
 #include <render/render_common.h>
 #include <render/render_command_buffer.h>
+#include <list>
 
 namespace render
 {
@@ -78,7 +79,7 @@ namespace render
 		}
 	private:
 		//List of all point of views in the frame
-		std::vector<PointOfView> m_point_of_views;
+		std::list<PointOfView> m_point_of_views;
 		//Command buffer with commands that will run during the start of the frame
 		CommandBuffer m_begin_frame_command_buffer;
 	};
@@ -104,7 +105,7 @@ namespace render
 		//Add to the vector
 		m_point_of_views.emplace_back(pass_name, priority);
 
-		return m_point_of_views[m_point_of_views.size() - 1];
+		return m_point_of_views.back();
 	}
 
 	inline void Frame::Reset()
