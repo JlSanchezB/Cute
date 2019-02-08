@@ -32,7 +32,7 @@ namespace render
 		{
 		}
 
-		void PushRenderItem(uint8_t priority, uint32_t sort_key, const CommandBuffer::CommandOffset& command_offset)
+		void PushRenderItem(Priority priority, SortKey sort_key, const CommandBuffer::CommandOffset& command_offset)
 		{
 			m_render_items.emplace_back(Item{ priority , sort_key, command_offset });
 		}

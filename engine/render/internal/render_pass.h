@@ -105,8 +105,7 @@ namespace render
 
 	class DrawRenderItemsPass : public Pass
 	{
-		uint8_t m_begin_priority;
-		uint8_t m_end_priority;
+		uint8_t m_priority;
 	public:
 		DECLARE_RENDER_CLASS("DrawRenderItems");
 

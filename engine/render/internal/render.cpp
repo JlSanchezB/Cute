@@ -456,6 +456,20 @@ namespace render
 		return system->m_frame_data;
 	}
 
+	Priority GetItemPriority(System * system, PriorityName priority_name)
+	{
+		const size_t priorities_size = system->m_render_priorities.size();
+		for (size_t i = 0; i < priorities_size; ++i)
+		{
+			if (system->m_render_priorities[i] == priority_name)
+				return static_cast<Priority>(i);
+		}
+		assert(priorities_size < 255);
+
+		system->m_render_priorities.push_back(priority_name);
+		return static_cast<Priority>(priorities_size);
+	}
+
 	bool AddGameResource(System * system, const ResourceName& name, std::unique_ptr<Resource>& resource)
 	{
 		if ((system->m_global_resources_map.find(name) != system->m_global_resources_map.end()) ||

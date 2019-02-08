@@ -80,6 +80,9 @@ namespace render
 		//Buffer of all the render frame data
 		//At the moment just one
 		Frame m_frame_data;
+
+		//Vector of render priorities
+		std::vector<PriorityName> m_render_priorities;
 	};
 }
 

@@ -226,6 +226,9 @@ namespace render
 	//Only can be called from the game thread
 	Frame& GetRenderFrame(System* system);
 
+	//Get the index of the priority for a priority name
+	Priority GetItemPriority(System* system, PriorityName priority_name);
+
 }
 
 #endif //RENDER_H_

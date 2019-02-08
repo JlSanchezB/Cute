@@ -11,6 +11,9 @@ namespace render
 	using RenderClassType = StringHash32<"RenderClassType"_namespace>;
 	using ResourceName = StringHash32<"ResourceName"_namespace>;
 	using PassName = StringHash32<"PassName"_namespace>;
+	using PriorityName = StringHash32<"PriorityName"_namespace>;
+	using Priority = uint8_t;
+	using SortKey = uint32_t;
 }
 
 

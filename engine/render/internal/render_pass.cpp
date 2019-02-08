@@ -308,14 +308,14 @@ namespace render
 	}
 	void DrawRenderItemsPass::Load(LoadContext & load_context)
 	{
-		if (QueryAttribute(load_context, load_context.current_xml_element, "priority", m_begin_priority, AttributeType::Optional))
+		const char* value;
+		if (load_context.current_xml_element->QueryStringAttribute("priority", &value))
 		{
-			m_end_priority = m_begin_priority;
+			m_priority = GetItemPriority(load_context.render_system, PriorityName(value));
 		}
 		else
 		{
-			QueryAttribute(load_context, load_context.current_xml_element, "begin_priority", m_begin_priority, AttributeType::NonOptional);
-			QueryAttribute(load_context, load_context.current_xml_element, "end_priority", m_end_priority, AttributeType::NonOptional);
+			AddError(load_context, "Attribute priority expected inside DrawRenderItems pass");
 		}
 	}
 	void DrawRenderItemsPass::Render(RenderContext & render_context) const
