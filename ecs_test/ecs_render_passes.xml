@@ -7,6 +7,8 @@
 		  <RenderTarget>BackBuffer</RenderTarget>
 	  </SetRenderTarget>
 	  <ClearRenderTarget colour="0,0,0,0">BackBuffer</ClearRenderTarget>
+    <SetRootSignature>GameRootSignature</SetRootSignature>
+    <DrawRenderItems priority="0"/>
   </Pass>
 </Passes>
 </Root>

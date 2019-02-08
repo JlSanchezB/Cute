@@ -406,6 +406,7 @@ public:
 			command_buffer.SetVertexBuffers(0, 1, &m_display_resources.m_circle_vertex_buffer);
 			command_buffer.SetVertexBuffers(1, 1, &m_instances_vertex_buffer);
 			command_buffer.SetIndexBuffer(m_display_resources.m_circle_index_buffer);
+			command_buffer.SetPipelineState(m_display_resources.m_pipeline_state);
 			display::DrawIndexedInstancedDesc draw_desc;
 			draw_desc.index_count = DisplayResource::kNumCircleIndex;
 			draw_desc.instance_count = static_cast<uint32_t>(m_instance_buffer.size());
@@ -468,6 +469,7 @@ public:
 				render::ResourceMap init_resource_map;
 				init_resource_map["GameGlobal"_sh32] = CreateResourceFromHandle<render::ConstantBufferResource>(display::WeakConstantBufferHandle(m_game_constant_buffer));
 				init_resource_map["BackBuffer"_sh32] = CreateResourceFromHandle<render::RenderTargetResource>(display::GetBackBuffer(m_device));
+				init_resource_map["GameRootSignature"_sh32] = CreateResourceFromHandle<render::RootSignatureResource>(display::WeakRootSignatureHandle(m_display_resources.m_root_signature));
 
 				render::RenderContext::PassInfo pass_info;
 				pass_info.width = m_width;
