@@ -456,7 +456,7 @@ namespace render
 		return system->m_frame_data;
 	}
 
-	Priority GetItemPriority(System * system, PriorityName priority_name)
+	Priority GetRenderItemPriority(System * system, PriorityName priority_name)
 	{
 		const size_t priorities_size = system->m_render_priorities.size();
 		for (size_t i = 0; i < priorities_size; ++i)

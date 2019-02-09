@@ -250,6 +250,9 @@ public:
 	//Reload render passes file from the text editor
 	bool m_render_system_descriptor_load_requested = false;
 
+	//Solid render priority
+	render::Priority m_solid_render_priority;
+
 	//Show errors in imguid modal window
 	bool m_show_errors = false;
 	std::vector<std::string> m_render_system_errors;
@@ -298,6 +301,9 @@ public:
 
 		//Create render pass system
 		m_render_system = render::CreateRenderSystem();
+
+		//Get render priorities
+		m_solid_render_priority = render::GetRenderItemPriority(m_render_system, "Solid"_sh32);
 
 		//Read file
 		m_render_passes_descriptor_buffer = ReadFileToBuffer("ecs_render_passes.xml");
@@ -413,7 +419,7 @@ public:
 			command_buffer.DrawIndexedInstanced(draw_desc);
 			command_buffer.Close();
 
-			point_of_view.PushRenderItem(0, 0, commands_offset);
+			point_of_view.PushRenderItem(m_solid_render_priority, 0, commands_offset);
 
 			ecs::Process<GameDatabase, PositionComponent, GazelleComponent>([&](const auto& instance_iterator, PositionComponent& position, GazelleComponent& gazelle)
 			{

@@ -227,7 +227,7 @@ namespace render
 	Frame& GetRenderFrame(System* system);
 
 	//Get the index of the priority for a priority name
-	Priority GetItemPriority(System* system, PriorityName priority_name);
+	Priority GetRenderItemPriority(System* system, PriorityName priority_name);
 
 }
 

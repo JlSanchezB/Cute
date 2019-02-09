@@ -309,9 +309,9 @@ namespace render
 	void DrawRenderItemsPass::Load(LoadContext & load_context)
 	{
 		const char* value;
-		if (load_context.current_xml_element->QueryStringAttribute("priority", &value))
+		if (load_context.current_xml_element->QueryStringAttribute("priority", &value) == tinyxml2::XML_SUCCESS)
 		{
-			m_priority = GetItemPriority(load_context.render_system, PriorityName(value));
+			m_priority = GetRenderItemPriority(load_context.render_system, PriorityName(value));
 		}
 		else
 		{
