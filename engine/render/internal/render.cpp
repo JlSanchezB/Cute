@@ -519,6 +519,7 @@ namespace render
 		}
 		else
 		{
+			resource.release();
 			core::LogWarning("Game Resource <%s> has been already added, discarting the new resource", name.GetValue());
 			return false;
 		}
