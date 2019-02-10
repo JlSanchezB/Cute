@@ -168,7 +168,7 @@ namespace render
 	bool LoadPassDescriptorFile(System* system, display::Device* device, const char* descriptor_file_buffer, size_t descriptor_file_buffer_size, std::vector<std::string>& errors);
 
 	//Add game resource, allows the game to add global resources that the pass system can access them
-	bool AddGameResource(System* system, const ResourceName& name, std::unique_ptr<Resource>& resource);
+	bool AddGameResource(System* system, const ResourceName& name, std::unique_ptr<Resource> resource);
 
 	//Register resource factory
 	bool RegisterResourceFactory(System* system, const RenderClassType& resource_type, std::unique_ptr<FactoryInterface<Resource>>& resource_factory);
@@ -222,9 +222,17 @@ namespace render
 	//Execute render context
 	void ExecuteRenderContext(System* system, RenderContext* render_context);
 
+	//Begin prepare render, the game thread can start to summit all the point of views and render items
+	//Thread can be locked if there is not sufficient frame buffers
+	void BeginPrepareRender(System* system);
+
+	//End prepare, so game thread can jump to the next frame
+	//The render is going to be submit to the GPU (on other thread)
+	void EndPrepareRenderAndSubmit(System* system);
+
 	//Get render frame for this frame
-	//Only can be called from the game thread
-	Frame& GetRenderFrame(System* system);
+	//Only can be called from the game thread, between begin and end prepare frame
+	Frame& GetGameRenderFrame(System* system);
 
 	//Get the index of the priority for a priority name
 	Priority GetRenderItemPriority(System* system, PriorityName priority_name);

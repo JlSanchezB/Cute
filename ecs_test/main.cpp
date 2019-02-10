@@ -302,6 +302,12 @@ public:
 		//Create render pass system
 		m_render_system = render::CreateRenderSystem();
 
+		//Add game resources
+		render::AddGameResource(m_render_system, "GameGlobal"_sh32, CreateResourceFromHandle<render::ConstantBufferResource>(display::WeakConstantBufferHandle(m_game_constant_buffer)));
+		render::AddGameResource(m_render_system, "BackBuffer"_sh32, CreateResourceFromHandle<render::RenderTargetResource>(display::GetBackBuffer(m_device)));
+		render::AddGameResource(m_render_system, "GameRootSignature"_sh32, CreateResourceFromHandle<render::RootSignatureResource>(display::WeakRootSignatureHandle(m_display_resources.m_root_signature)));
+
+
 		//Get render priorities
 		m_solid_render_priority = render::GetRenderItemPriority(m_render_system, "Solid"_sh32);
 
@@ -394,7 +400,9 @@ public:
 		{
 			std::bitset<1> zone_bitset(1);
 
-			render::Frame& render_frame = render::GetRenderFrame(m_render_system);
+			render::BeginPrepareRender(m_render_system);
+
+			render::Frame& render_frame = render::GetGameRenderFrame(m_render_system);
 
 			auto& point_of_view = render_frame.AllocPointOfView("Main"_sh32, 0);
 			auto& command_buffer = point_of_view.GetCommandBuffer();
@@ -440,6 +448,8 @@ public:
 			auto command_offset = render_frame.GetBeginFrameComamndbuffer().Open();
 			render_frame.GetBeginFrameComamndbuffer().UploadResourceBuffer(m_instances_vertex_buffer, &m_instance_buffer[0], m_instance_buffer.size() * sizeof(glm::vec4));
 			render_frame.GetBeginFrameComamndbuffer().Close();
+
+			render::EndPrepareRenderAndSubmit(m_render_system);
 		}
 
 		//Tick database
@@ -472,14 +482,11 @@ public:
 
 
 				//Create pass
-				render::ResourceMap init_resource_map;
-				init_resource_map["GameGlobal"_sh32] = CreateResourceFromHandle<render::ConstantBufferResource>(display::WeakConstantBufferHandle(m_game_constant_buffer));
-				init_resource_map["BackBuffer"_sh32] = CreateResourceFromHandle<render::RenderTargetResource>(display::GetBackBuffer(m_device));
-				init_resource_map["GameRootSignature"_sh32] = CreateResourceFromHandle<render::RootSignatureResource>(display::WeakRootSignatureHandle(m_display_resources.m_root_signature));
-
 				render::RenderContext::PassInfo pass_info;
 				pass_info.width = m_width;
 				pass_info.height = m_height;
+
+				render::ResourceMap init_resource_map;
 
 				//Still load it if it fail, as it will use the last valid one
 				m_render_context = render::CreateRenderContext(m_render_system, m_device, "Main"_sh32, pass_info, init_resource_map, m_render_system_context_errors);
@@ -501,7 +508,7 @@ public:
 			//Update game constant buffer
 			display::UpdateResourceBuffer(m_device, m_game_constant_buffer, &game_constant_buffer, sizeof(game_constant_buffer));
 
-			render::Frame& render_frame = render::GetRenderFrame(m_render_system);
+			render::Frame& render_frame = render::GetGameRenderFrame(m_render_system);
 
 			//Execute begin commands in the render_frame
 			auto render_context = display::OpenCommandList(m_device, m_render_command_list);

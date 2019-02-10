@@ -451,7 +451,46 @@ namespace render
 		render_context_internal->m_root_pass->Execute(*render_context);
 	}
 
-	Frame & GetRenderFrame(System * system)
+	void BeginPrepareRender(System * system)
+	{
+		//Check if there is sufficient space in the render frame buffers
+
+		//Allocate a frame in the render frame buffer
+
+		//Increase render index
+		system->m_game_thread_frame++;
+	}
+
+	static void SubmitRender(System * system)
+	{
+		//Render thread
+
+		//Get render frame
+		Frame& render_frame = system->m_frame_data;
+
+		//Sort point of view by priority
+
+		//For each point of view
+
+		//Find the render_context associated to it
+
+		//Sort render items
+
+		//Execute render pass
+	}
+
+	void EndPrepareRenderAndSubmit(System * system)
+	{
+		//Render frame has all the information
+
+		//Submit render
+		system->m_render_thread_frame++;
+
+		//Submit (current implementation is single thread
+		SubmitRender(system);
+	}
+
+	Frame & GetGameRenderFrame(System * system)
 	{
 		return system->m_frame_data;
 	}
@@ -470,10 +509,10 @@ namespace render
 		return static_cast<Priority>(priorities_size);
 	}
 
-	bool AddGameResource(System * system, const ResourceName& name, std::unique_ptr<Resource>& resource)
+	bool AddGameResource(System * system, const ResourceName& name, std::unique_ptr<Resource> resource)
 	{
-		if ((system->m_global_resources_map.find(name) != system->m_global_resources_map.end()) ||
-			(system->m_game_resources_map.find(name) != system->m_game_resources_map.end()))
+		if ((system->m_global_resources_map.find(name) == system->m_global_resources_map.end()) &&
+			(system->m_game_resources_map.find(name) == system->m_game_resources_map.end()))
 		{
 			system->m_game_resources_map[name] = std::move(resource);
 			return true;

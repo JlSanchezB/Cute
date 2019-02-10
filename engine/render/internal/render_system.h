@@ -81,6 +81,15 @@ namespace render
 		//At the moment just one
 		Frame m_frame_data;
 
+		//Game thread frame
+		size_t m_game_thread_frame = 0;
+
+		//Render thread frame
+		size_t m_render_thread_frame = 0;
+
+		//List of activated render contexts
+		std::vector<RenderContext*> m_activated_render_context;
+
 		//Vector of render priorities
 		std::vector<PriorityName> m_render_priorities;
 	};
