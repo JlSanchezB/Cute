@@ -15,12 +15,26 @@ namespace render
 	//The meaning of priority is defined outside of rendering (a classic sample will be solid, lighting, alpha, ui, ...)
 	struct Item
 	{
-		//Priority of the item (used for sorting them before rendering)
-		uint32_t priority : 8;
-		//Sort key inside the same priority
-		uint32_t sort_key : 24;
+		union
+		{
+			struct
+			{
+				//Priority of the item (used for sorting them before rendering)
+				uint32_t priority : 8;
+				//Sort key inside the same priority
+				uint32_t sort_key : 24;
+			};
+			
+			//Fast access to the 32bits sort key used for sorting items
+			uint32_t full_32bit_sort_key;
+		};
 		//Command buffer for rendering this item
 		CommandBuffer::CommandOffset command_offset;
+
+		Item(Priority _priority, SortKey _sort_key, const CommandBuffer::CommandOffset& _command_offset) :
+			priority(_priority), sort_key(_sort_key), command_offset(_command_offset)
+		{
+		}
 	};
 
 	//Point of view, represent a list of render items
@@ -28,13 +42,13 @@ namespace render
 	class PointOfView
 	{
 	public:
-		PointOfView(PassName pass_name, uint16_t priority) : m_pass_name(pass_name), m_priority(priority), m_allocated(true)
+		PointOfView(PassName pass_name, uint16_t id, uint16_t priority) : m_pass_name(pass_name), m_id(id), m_priority(priority), m_allocated(true)
 		{
 		}
 
 		void PushRenderItem(Priority priority, SortKey sort_key, const CommandBuffer::CommandOffset& command_offset)
 		{
-			m_render_items.emplace_back(Item{ priority , sort_key, command_offset });
+			m_render_items.emplace_back(priority , sort_key, command_offset);
 		}
 
 		CommandBuffer& GetCommandBuffer()
@@ -49,7 +63,9 @@ namespace render
 		
 		//Render pass that needs to be use for this point of view
 		PassName m_pass_name;
-		//Render priority
+		//ID, use for handling between frames data of the point of view
+		uint16_t m_id;
+		//Priority, used to sort the render between different point of views
 		uint16_t m_priority;
 		//List of render items
 		std::vector<Item> m_render_items;
@@ -59,6 +75,7 @@ namespace render
 		bool m_allocated;
 
 		friend class Frame;
+		friend struct System;
 	};
 
 	//Render frame will keep memory between frames to avoid reallocations
@@ -70,7 +87,7 @@ namespace render
 		void Reset();
 
 		//Alloc point of view
-		PointOfView& AllocPointOfView(PassName pass_name, uint16_t priority);
+		PointOfView& AllocPointOfView(PassName pass_name, uint16_t id, uint16_t priority);
 
 		//Get begin frame command buffer
 		CommandBuffer& GetBeginFrameComamndbuffer()
@@ -82,6 +99,8 @@ namespace render
 		std::list<PointOfView> m_point_of_views;
 		//Command buffer with commands that will run during the start of the frame
 		CommandBuffer m_begin_frame_command_buffer;
+
+		friend struct System;
 	};
 
 	inline void PointOfView::Reset()
@@ -91,19 +110,22 @@ namespace render
 		m_allocated = false;
 	}
 
-	inline PointOfView& Frame::AllocPointOfView(PassName pass_name, uint16_t priority)
+	inline PointOfView& Frame::AllocPointOfView(PassName pass_name, uint16_t id, uint16_t priority)
 	{
 		//Check it is already one that match from other frame
 		for (auto& point_of_view : m_point_of_views)
 		{
-			if (!point_of_view.m_allocated && point_of_view.m_pass_name == pass_name && point_of_view.m_priority == priority)
+			if (!point_of_view.m_allocated &&
+				point_of_view.m_pass_name == pass_name
+				&& point_of_view.m_id == id)
 			{
+				point_of_view.m_priority = priority;
 				point_of_view.m_allocated = true;
 				return point_of_view;
 			}
 		}
 		//Add to the vector
-		m_point_of_views.emplace_back(pass_name, priority);
+		m_point_of_views.emplace_back(pass_name, id, priority);
 
 		return m_point_of_views.back();
 	}

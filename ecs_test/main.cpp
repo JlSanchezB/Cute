@@ -404,7 +404,7 @@ public:
 
 			render::Frame& render_frame = render::GetGameRenderFrame(m_render_system);
 
-			auto& point_of_view = render_frame.AllocPointOfView("Main"_sh32, 0);
+			auto& point_of_view = render_frame.AllocPointOfView("Main"_sh32, 0, 0);
 			auto& command_buffer = point_of_view.GetCommandBuffer();
 
 			//Culling and draw per type

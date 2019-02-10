@@ -451,6 +451,62 @@ namespace render
 		render_context_internal->m_root_pass->Execute(*render_context);
 	}
 
+	RenderContextInternal * System::GetRenderContext(const PassName & pass_name, uint32_t id)
+	{
+		for (auto& render_context : m_activated_render_context)
+		{
+			if (render_context.id == id && render_context.pass_name == pass_name)
+			{
+				return render_context.render_context;
+			}
+		}
+
+		//Create one and add it in the activated list
+		
+
+		return nullptr;
+	}
+
+	void System::SubmitRender()
+	{
+		//Render thread
+
+		//Get render frame
+		Frame& render_frame = m_frame_data;
+
+		//Sort point of view by priority
+		render_frame.m_point_of_views.sort([](const PointOfView& a, const PointOfView& b)
+		{
+			return a.m_priority < b.m_priority;
+		});
+
+		//For each point of view, we could run it in parallel
+		for (auto& point_of_view : render_frame.m_point_of_views)
+		{
+			//Find the render_context associated to it
+			RenderContextInternal* render_context = GetRenderContext(point_of_view.m_pass_name, point_of_view.m_id);
+			
+			//Copy render items from the point of view to the render context
+			render_context->m_render_items.m_sorted_render_items = point_of_view.m_render_items;
+			//Sort render items
+			std::sort(render_context->m_render_items.m_sorted_render_items.begin(), render_context->m_render_items.m_sorted_render_items.end(),
+				[](const Item& a, const Item& b)
+			{
+				return a.full_32bit_sort_key < b.full_32bit_sort_key;
+			});
+
+			//Calculate begin/end for each render priority
+
+
+			//Capture pass
+			render::CaptureRenderContext(this, render_context);
+			//Execute pass
+			render::ExecuteRenderContext(this, render_context);
+		}
+
+		
+	}
+
 	void BeginPrepareRender(System * system)
 	{
 		//Check if there is sufficient space in the render frame buffers
@@ -461,24 +517,6 @@ namespace render
 		system->m_game_thread_frame++;
 	}
 
-	static void SubmitRender(System * system)
-	{
-		//Render thread
-
-		//Get render frame
-		Frame& render_frame = system->m_frame_data;
-
-		//Sort point of view by priority
-
-		//For each point of view
-
-		//Find the render_context associated to it
-
-		//Sort render items
-
-		//Execute render pass
-	}
-
 	void EndPrepareRenderAndSubmit(System * system)
 	{
 		//Render frame has all the information
@@ -487,7 +525,7 @@ namespace render
 		system->m_render_thread_frame++;
 
 		//Submit (current implementation is single thread
-		SubmitRender(system);
+		system->SubmitRender();
 	}
 
 	Frame & GetGameRenderFrame(System * system)

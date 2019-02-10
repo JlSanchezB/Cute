@@ -13,6 +13,15 @@ namespace render
 {
 	struct System;
 
+	//Sorted render items
+	struct SortedRenderItems
+	{
+		//Sorted render items list
+		std::vector<Item> m_sorted_render_items;
+		//Index access to the sorted render items by priority (begin item and end item)
+		std::vector<std::pair<size_t, size_t>> m_render_item_priority;
+	};
+
 	class RenderContextInternal : public RenderContext
 	{
 	public:
@@ -39,6 +48,17 @@ namespace render
 
 		//Windows size
 		PassInfo m_pass_info;
+
+		//Sorted render items associated to this context
+		SortedRenderItems m_render_items;
+	};
+
+	//Activated render contexts
+	struct ActivatedRenderContext
+	{
+		uint16_t id;
+		PassName pass_name;
+		RenderContextInternal* render_context;
 	};
 
 	//Internal render pass system implementation
@@ -87,11 +107,17 @@ namespace render
 		//Render thread frame
 		size_t m_render_thread_frame = 0;
 
-		//List of activated render contexts
-		std::vector<RenderContext*> m_activated_render_context;
+		//List of activated render contexts, they get resused between frames using the pass name and id
+		std::vector<ActivatedRenderContext> m_activated_render_context;
 
 		//Vector of render priorities
 		std::vector<PriorityName> m_render_priorities;
+
+		//Get Render Context
+		RenderContextInternal* GetRenderContext(const PassName& pass_name, uint32_t id);
+
+		//Submit render
+		void SubmitRender();
 	};
 }
 
