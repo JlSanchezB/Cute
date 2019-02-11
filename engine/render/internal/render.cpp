@@ -550,7 +550,7 @@ namespace render
 		return static_cast<Priority>(priorities_size);
 	}
 
-	bool AddGameResource(System * system, const ResourceName& name, std::unique_ptr<Resource> resource)
+	bool AddGameResource(System * system, const ResourceName& name, std::unique_ptr<Resource>&& resource)
 	{
 		if ((system->m_global_resources_map.find(name) == system->m_global_resources_map.end()) &&
 			(system->m_game_resources_map.find(name) == system->m_game_resources_map.end()))
