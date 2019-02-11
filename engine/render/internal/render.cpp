@@ -79,7 +79,7 @@ namespace render
 		return render_context->m_display_context;
 	}
 
-	const RenderContext::PassInfo& RenderContext::GetPassInfo() const
+	const PassInfo& RenderContext::GetPassInfo() const
 	{
 		auto render_context = reinterpret_cast<const RenderContextInternal*>(this);
 		return render_context->m_pass_info;
@@ -380,7 +380,7 @@ namespace render
 		return success;
 	}
 
-	RenderContext * CreateRenderContext(System * system, display::Device * device, const PassName& pass, const RenderContext::PassInfo& pass_info, ResourceMap& init_resources, std::vector<std::string>& errors)
+	RenderContext * CreateRenderContext(System * system, display::Device * device, const PassName& pass, const PassInfo& pass_info, ResourceMap& init_resources, std::vector<std::string>& errors)
 	{
 		//Get pass
 		auto render_pass = GetPass(system, pass);
@@ -451,9 +451,9 @@ namespace render
 		render_context_internal->m_root_pass->Execute(*render_context);
 	}
 
-	RenderContextInternal * System::GetRenderContext(const PassName & pass_name, uint32_t id)
+	RenderContextInternal * System::GetCachedRenderContext(const PassName & pass_name, uint32_t id, const PassInfo& pass_info)
 	{
-		for (auto& render_context : m_activated_render_context)
+		for (auto& render_context : m_cached_render_context)
 		{
 			if (render_context.id == id && render_context.pass_name == pass_name)
 			{
@@ -484,24 +484,27 @@ namespace render
 		for (auto& point_of_view : render_frame.m_point_of_views)
 		{
 			//Find the render_context associated to it
-			RenderContextInternal* render_context = GetRenderContext(point_of_view.m_pass_name, point_of_view.m_id);
+			RenderContextInternal* render_context = GetCachedRenderContext(point_of_view.m_pass_name, point_of_view.m_id, point_of_view.m_pass_info);
 			
-			//Copy render items from the point of view to the render context
-			render_context->m_render_items.m_sorted_render_items = point_of_view.m_render_items;
-			//Sort render items
-			std::sort(render_context->m_render_items.m_sorted_render_items.begin(), render_context->m_render_items.m_sorted_render_items.end(),
-				[](const Item& a, const Item& b)
+			if (render_context)
 			{
-				return a.full_32bit_sort_key < b.full_32bit_sort_key;
-			});
+				//Copy render items from the point of view to the render context
+				render_context->m_render_items.m_sorted_render_items = point_of_view.m_render_items;
+				//Sort render items
+				std::sort(render_context->m_render_items.m_sorted_render_items.begin(), render_context->m_render_items.m_sorted_render_items.end(),
+					[](const Item& a, const Item& b)
+				{
+					return a.full_32bit_sort_key < b.full_32bit_sort_key;
+				});
 
-			//Calculate begin/end for each render priority
+				//Calculate begin/end for each render priority
 
 
-			//Capture pass
-			render::CaptureRenderContext(this, render_context);
-			//Execute pass
-			render::ExecuteRenderContext(this, render_context);
+				//Capture pass
+				render::CaptureRenderContext(this, render_context);
+				//Execute pass
+				render::ExecuteRenderContext(this, render_context);
+			}
 		}
 
 		

@@ -54,7 +54,7 @@ namespace render
 	};
 
 	//Activated render contexts
-	struct ActivatedRenderContext
+	struct CachedRenderContext
 	{
 		uint16_t id;
 		PassName pass_name;
@@ -108,13 +108,13 @@ namespace render
 		size_t m_render_thread_frame = 0;
 
 		//List of activated render contexts, they get resused between frames using the pass name and id
-		std::vector<ActivatedRenderContext> m_activated_render_context;
+		std::vector<CachedRenderContext> m_cached_render_context;
 
 		//Vector of render priorities
 		std::vector<PriorityName> m_render_priorities;
 
-		//Get Render Context
-		RenderContextInternal* GetRenderContext(const PassName& pass_name, uint32_t id);
+		//Get Between frames cached render context
+		RenderContextInternal* GetCachedRenderContext(const PassName& pass_name, uint32_t id, const PassInfo& pass_info);
 
 		//Submit render
 		void SubmitRender();

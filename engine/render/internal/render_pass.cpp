@@ -115,7 +115,7 @@ namespace render
 				render_targets[i] = render_target->GetHandle();
 			}
 		}
-		RenderContext::PassInfo pass_info = render_context.GetPassInfo();
+		PassInfo pass_info = render_context.GetPassInfo();
 
 		render_context.GetContext()->SetRenderTargets(m_num_render_targets, render_targets.data(), display::WeakDepthBufferHandle());
 

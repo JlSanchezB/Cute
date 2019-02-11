@@ -14,6 +14,13 @@ namespace render
 	using PriorityName = StringHash32<"PriorityName"_namespace>;
 	using Priority = uint8_t;
 	using SortKey = uint32_t;
+
+	//Information needed for each render pass
+	struct PassInfo
+	{
+		uint32_t width;
+		uint32_t height;
+	};
 }
 
 

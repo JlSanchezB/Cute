@@ -42,7 +42,8 @@ namespace render
 	class PointOfView
 	{
 	public:
-		PointOfView(PassName pass_name, uint16_t id, uint16_t priority) : m_pass_name(pass_name), m_id(id), m_priority(priority), m_allocated(true)
+		PointOfView(PassName pass_name, uint16_t id, uint16_t priority, const PassInfo& pass_info) :
+			m_pass_name(pass_name), m_id(id), m_priority(priority), m_allocated(true), m_pass_info(pass_info)
 		{
 		}
 
@@ -67,6 +68,9 @@ namespace render
 		uint16_t m_id;
 		//Priority, used to sort the render between different point of views
 		uint16_t m_priority;
+		//Pass info
+		PassInfo m_pass_info;
+
 		//List of render items
 		std::vector<Item> m_render_items;
 		//Command buffer associated to this view
@@ -87,7 +91,7 @@ namespace render
 		void Reset();
 
 		//Alloc point of view
-		PointOfView& AllocPointOfView(PassName pass_name, uint16_t id, uint16_t priority);
+		PointOfView& AllocPointOfView(PassName pass_name, uint16_t id, uint16_t priority, const PassInfo& pass_info);
 
 		//Get begin frame command buffer
 		CommandBuffer& GetBeginFrameComamndbuffer()
@@ -110,7 +114,7 @@ namespace render
 		m_allocated = false;
 	}
 
-	inline PointOfView& Frame::AllocPointOfView(PassName pass_name, uint16_t id, uint16_t priority)
+	inline PointOfView& Frame::AllocPointOfView(PassName pass_name, uint16_t id, uint16_t priority, const PassInfo& pass_info)
 	{
 		//Check it is already one that match from other frame
 		for (auto& point_of_view : m_point_of_views)
@@ -120,12 +124,13 @@ namespace render
 				&& point_of_view.m_id == id)
 			{
 				point_of_view.m_priority = priority;
+				point_of_view.m_pass_info = pass_info;
 				point_of_view.m_allocated = true;
 				return point_of_view;
 			}
 		}
 		//Add to the vector
-		m_point_of_views.emplace_back(pass_name, id, priority);
+		m_point_of_views.emplace_back(pass_name, id, priority, pass_info);
 
 		return m_point_of_views.back();
 	}

@@ -155,7 +155,7 @@ public:
 			init_resource_map["GameGlobal"_sh32] = CreateResourceFromHandle<render::ConstantBufferResource>(display::WeakConstantBufferHandle(m_game_constant_buffer));
 			init_resource_map["BackBuffer"_sh32] = CreateResourceFromHandle<render::RenderTargetResource>(display::GetBackBuffer(m_device));
 
-			render::RenderContext::PassInfo pass_info;
+			render::PassInfo pass_info;
 			pass_info.width = m_width;
 			pass_info.height = m_height;
 
@@ -197,7 +197,7 @@ public:
 
 		if (m_render_context)
 		{
-			render::RenderContext::PassInfo pass_info = m_render_context->GetPassInfo();
+			render::PassInfo pass_info = m_render_context->GetPassInfo();
 			pass_info.width = m_width;
 			pass_info.height = m_height;
 			m_render_context->UpdatePassInfo(pass_info);

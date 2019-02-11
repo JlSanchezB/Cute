@@ -142,12 +142,6 @@ namespace render
 		//Get display Context
 		display::Context* GetContext() const;
 
-		struct PassInfo
-		{
-			uint32_t width;
-			uint32_t height;
-		};
-
 		//Get pass info
 		const PassInfo& GetPassInfo() const;
 
@@ -211,7 +205,7 @@ namespace render
 
 	//Create a render context for rendering a pass
 	using ResourceMap = std::unordered_map<ResourceName, std::unique_ptr<Resource>>;
-	RenderContext* CreateRenderContext(System* system, display::Device* device, const PassName& pass, const RenderContext::PassInfo& pass_info, ResourceMap& init_resources, std::vector<std::string>& errors);
+	RenderContext* CreateRenderContext(System* system, display::Device* device, const PassName& pass, const PassInfo& pass_info, ResourceMap& init_resources, std::vector<std::string>& errors);
 
 	//Destroy render context for rendering a pass
 	void DestroyRenderContext(System* system, RenderContext*& render_context);

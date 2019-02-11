@@ -404,7 +404,11 @@ public:
 
 			render::Frame& render_frame = render::GetGameRenderFrame(m_render_system);
 
-			auto& point_of_view = render_frame.AllocPointOfView("Main"_sh32, 0, 0);
+			render::PassInfo pass_info;
+			pass_info.width = m_width;
+			pass_info.height = m_height;
+
+			auto& point_of_view = render_frame.AllocPointOfView("Main"_sh32, 0, 0, pass_info);
 			auto& command_buffer = point_of_view.GetCommandBuffer();
 
 			//Culling and draw per type
@@ -482,7 +486,7 @@ public:
 
 
 				//Create pass
-				render::RenderContext::PassInfo pass_info;
+				render::PassInfo pass_info;
 				pass_info.width = m_width;
 				pass_info.height = m_height;
 
@@ -543,7 +547,7 @@ public:
 
 		if (m_render_context)
 		{
-			render::RenderContext::PassInfo pass_info = m_render_context->GetPassInfo();
+			render::PassInfo pass_info = m_render_context->GetPassInfo();
 			pass_info.width = m_width;
 			pass_info.height = m_height;
 			m_render_context->UpdatePassInfo(pass_info);
