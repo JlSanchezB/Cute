@@ -64,8 +64,8 @@ namespace render
 	//Internal render pass system implementation
 	struct System
 	{
-		//Load from passes declaration file
-		bool Load(LoadContext& load_context, const char* descriptor_file_buffer, size_t descriptor_file_buffer_size);
+		//Display device
+		display::Device* m_device;
 
 		using ResourceFactoryMap = std::unordered_map<RenderClassType, std::unique_ptr<FactoryInterface<Resource>>>;
 		using PassFactoryMap = std::unordered_map<RenderClassType, std::unique_ptr<FactoryInterface<Pass>>>;
@@ -88,15 +88,6 @@ namespace render
 		//Passes defined in the passes declaration
 		PassMap m_passes_map;
 
-		//Render context created
-		core::SimplePool<RenderContextInternal, 256> m_render_context_pool;
-
-		//Load resource
-		ResourceName LoadResource(LoadContext& load_context, const char* prefix = nullptr);
-
-		//Load Pass
-		Pass* LoadPass(LoadContext& load_context);
-
 		//Buffer of all the render frame data
 		//At the moment just one
 		Frame m_frame_data;
@@ -113,8 +104,26 @@ namespace render
 		//Vector of render priorities
 		std::vector<PriorityName> m_render_priorities;
 
+		//Render context created
+		core::SimplePool<RenderContextInternal, 256> m_render_context_pool;
+
+		//Create render context
+		RenderContextInternal * CreateRenderContext(display::Device * device, const PassName& pass, const PassInfo& pass_info, ResourceMap& init_resources, std::vector<std::string>& errors);
+
+		//Destroy render context
+		void DestroyRenderContext(RenderContextInternal*& render_context);
+
+		//Load from passes declaration file
+		bool Load(LoadContext& load_context, const char* descriptor_file_buffer, size_t descriptor_file_buffer_size);
+
+		//Load resource
+		ResourceName LoadResource(LoadContext& load_context, const char* prefix = nullptr);
+
+		//Load Pass
+		Pass* LoadPass(LoadContext& load_context);
+
 		//Get Between frames cached render context
-		RenderContextInternal* GetCachedRenderContext(const PassName& pass_name, uint32_t id, const PassInfo& pass_info);
+		RenderContextInternal* GetCachedRenderContext(const PassName& pass_name, uint16_t id, const PassInfo& pass_info, ResourceMap& init_resource_map);
 
 		//Submit render
 		void SubmitRender();

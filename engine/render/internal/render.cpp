@@ -192,6 +192,59 @@ namespace render
 		}
 	}
 
+	RenderContextInternal * System::CreateRenderContext(display::Device * device, const PassName & pass, const PassInfo & pass_info, ResourceMap & init_resources, std::vector<std::string>& errors)
+	{
+		//Get pass
+		auto render_pass = GetPass(this, pass);
+		if (render_pass)
+		{
+			//Create Render Context
+			RenderContextInternal* render_context = m_render_context_pool.Alloc(this, device, pass_info, init_resources, render_pass);
+
+			ErrorContext errors_context;
+
+			//Allow the passes to init the render context 
+			render_pass->InitPass(*render_context, device, errors_context);
+
+			errors = std::move(errors_context.errors);
+
+			if (errors.empty())
+			{
+				core::LogInfo("Created a render pass <%s> from definition pass", pass.GetValue());
+				return render_context;
+			}
+			else
+			{
+				core::LogError("Errors creating a render pass <%s> from definition pass", pass.GetValue());
+				for (auto& error : errors)
+				{
+					core::LogError(error.c_str());
+				}
+
+				DestroyRenderContext(render_context);
+				return nullptr;
+			}
+
+		}
+		else
+		{
+			errors.push_back(std::string("Pass not found"));
+			core::LogError("Errors creating a render pass <%s>, definition pass doesn't exist", pass.GetValue());
+			return nullptr;
+		}
+	}
+
+	void System::DestroyRenderContext(RenderContextInternal *& render_context)
+	{
+		//Destroy context resources
+		DestroyResources(render_context->m_display_device, render_context->m_game_resources_map);
+		DestroyResources(render_context->m_display_device, render_context->m_pass_resources_map);
+
+		m_render_context_pool.Free(render_context);
+
+		render_context = nullptr;
+	}
+
 	bool System::Load(LoadContext& load_context, const char* descriptor_file_buffer, size_t descriptor_file_buffer_size)
 	{
 		tinyxml2::XMLDocument xml_doc;
@@ -288,7 +341,7 @@ namespace render
 	}
 
 
-	System * CreateRenderSystem()
+	System * CreateRenderSystem(display::Device* device)
 	{
 		System* system = new System();
 
@@ -312,6 +365,8 @@ namespace render
 		RegisterPassFactory<SetDescriptorTablePass>(system);
 		RegisterPassFactory<DrawFullScreenQuadPass>(system);
 		RegisterPassFactory<DrawRenderItemsPass>(system);
+
+		system->m_device = device;
 
 		return system;
 	}
@@ -382,55 +437,14 @@ namespace render
 
 	RenderContext * CreateRenderContext(System * system, display::Device * device, const PassName& pass, const PassInfo& pass_info, ResourceMap& init_resources, std::vector<std::string>& errors)
 	{
-		//Get pass
-		auto render_pass = GetPass(system, pass);
-		if (render_pass)
-		{
-			//Create Render Context
-			RenderContextInternal* render_context = system->m_render_context_pool.Alloc(system, device, pass_info, init_resources, render_pass);
-
-			ErrorContext errors_context;
-
-			//Allow the passes to init the render context 
-			render_pass->InitPass(*render_context, device, errors_context);
-
-			errors = std::move(errors_context.errors);
-
-			if (errors.empty())
-			{
-				core::LogInfo("Created a render pass <%s> from definition pass", pass.GetValue());
-				return render_context;
-			}
-			else
-			{
-				core::LogError("Errors creating a render pass <%s> from definition pass", pass.GetValue());
-				for (auto& error : errors)
-				{
-					core::LogError(error.c_str());
-				}
-
-				RenderContext * render_context_ref = reinterpret_cast<RenderContext*>(render_context);
-				DestroyRenderContext(system, render_context_ref);
-				return nullptr;
-			}
-			
-		}
-		else
-		{
-			errors.push_back(std::string("Pass not found"));
-			core::LogError("Errors creating a render pass <%s>, definition pass doesn't exist", pass.GetValue());
-			return nullptr;
-		}
+		return system->CreateRenderContext(device, pass, pass_info, init_resources, errors);
 	}
 
 	void DestroyRenderContext(System * system, RenderContext*& render_context)
 	{
 		auto render_context_internal = reinterpret_cast<RenderContextInternal*>(render_context);
-		//Destroy context resources
-		DestroyResources(render_context_internal->m_display_device, render_context_internal->m_game_resources_map);
-		DestroyResources(render_context_internal->m_display_device, render_context_internal->m_pass_resources_map);
-
-		system->m_render_context_pool.Free(render_context_internal);
+		
+		system->DestroyRenderContext(render_context_internal);
 		
 		render_context = nullptr;
 	}
@@ -451,7 +465,7 @@ namespace render
 		render_context_internal->m_root_pass->Execute(*render_context);
 	}
 
-	RenderContextInternal * System::GetCachedRenderContext(const PassName & pass_name, uint32_t id, const PassInfo& pass_info)
+	RenderContextInternal * System::GetCachedRenderContext(const PassName & pass_name, uint16_t id, const PassInfo& pass_info, ResourceMap& init_resource_map)
 	{
 		for (auto& render_context : m_cached_render_context)
 		{
@@ -462,9 +476,17 @@ namespace render
 		}
 
 		//Create one and add it in the activated list
-		
+		//Init resource map gets moved only here
 
-		return nullptr;
+		std::vector<std::string> errors;
+		auto render_context = CreateRenderContext(m_device, pass_name, pass_info, init_resource_map, errors);
+
+		if (render_context)
+		{
+			m_cached_render_context.emplace_back(CachedRenderContext{id, pass_name, render_context});
+		}
+
+		return render_context;
 	}
 
 	void System::SubmitRender()
@@ -484,7 +506,7 @@ namespace render
 		for (auto& point_of_view : render_frame.m_point_of_views)
 		{
 			//Find the render_context associated to it
-			RenderContextInternal* render_context = GetCachedRenderContext(point_of_view.m_pass_name, point_of_view.m_id, point_of_view.m_pass_info);
+			RenderContextInternal* render_context = GetCachedRenderContext(point_of_view.m_pass_name, point_of_view.m_id, point_of_view.m_pass_info, point_of_view.m_init_resources);
 			
 			if (render_context)
 			{

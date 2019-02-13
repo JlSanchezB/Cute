@@ -238,6 +238,9 @@ public:
 	//Display resources
 	DisplayResource m_display_resources;
 
+	//Main point of view resources
+	render::ResourceMap m_init_map_resource_map;
+
 	//Last valid descriptor file
 	std::vector<uint8_t> m_render_passes_descriptor_buffer;
 
@@ -300,7 +303,7 @@ public:
 		m_render_command_list = display::CreateCommandList(m_device, "BeginFrameCommandList");
 
 		//Create render pass system
-		m_render_system = render::CreateRenderSystem();
+		m_render_system = render::CreateRenderSystem(m_device);
 
 		//Add game resources
 		render::AddGameResource(m_render_system, "GameGlobal"_sh32, CreateResourceFromHandle<render::ConstantBufferResource>(display::WeakConstantBufferHandle(m_game_constant_buffer)));
@@ -408,7 +411,7 @@ public:
 			pass_info.width = m_width;
 			pass_info.height = m_height;
 
-			auto& point_of_view = render_frame.AllocPointOfView("Main"_sh32, 0, 0, pass_info);
+			auto& point_of_view = render_frame.AllocPointOfView("Main"_sh32, 0, 0, pass_info, m_init_map_resource_map);
 			auto& command_buffer = point_of_view.GetCommandBuffer();
 
 			//Culling and draw per type

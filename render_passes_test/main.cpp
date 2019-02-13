@@ -94,7 +94,7 @@ public:
 		m_game_constant_buffer = display::CreateConstantBuffer(m_device, constant_buffer_desc, "GameConstantBuffer");
 
 		//Create render pass system
-		m_render_pass_system = render::CreateRenderSystem();
+		m_render_pass_system = render::CreateRenderSystem(m_device);
 
 		//Read file
 		m_render_system_descriptor_buffer =  ReadFileToBuffer("render_pass_sample.xml");
