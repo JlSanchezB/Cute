@@ -19,7 +19,7 @@ namespace render
 		//Sorted render items list
 		std::vector<Item> m_sorted_render_items;
 		//Index access to the sorted render items by priority (begin item and end item)
-		std::vector<std::pair<size_t, size_t>> m_render_item_priority;
+		std::vector<std::pair<size_t, size_t>> m_priority_table;
 	};
 
 	class RenderContextInternal : public RenderContext

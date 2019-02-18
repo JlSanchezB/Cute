@@ -510,17 +510,42 @@ namespace render
 			
 			if (render_context)
 			{
+				auto& render_items = render_context->m_render_items;
 				//Copy render items from the point of view to the render context
-				render_context->m_render_items.m_sorted_render_items = point_of_view.m_render_items;
+				render_items.m_sorted_render_items = point_of_view.m_render_items;
 				//Sort render items
-				std::sort(render_context->m_render_items.m_sorted_render_items.begin(), render_context->m_render_items.m_sorted_render_items.end(),
+				std::sort(render_items.m_sorted_render_items.begin(), render_items.m_sorted_render_items.end(),
 					[](const Item& a, const Item& b)
 				{
 					return a.full_32bit_sort_key < b.full_32bit_sort_key;
 				});
 
-				//Calculate begin/end for each render priority
+				//Calculate begin/end for each render priority	
+				render_items.m_priority_table.resize(m_render_priorities.size());
+				size_t render_item_index = 0;
+				size_t num_sorted_render_items = render_items.m_sorted_render_items.size();
+				for (size_t priority = 0; priority < m_render_priorities.size(); ++priority)
+				{
+					if (render_items.m_sorted_render_items[render_item_index].priority == priority)
+					{
+						//First item found
+						render_items.m_priority_table[priority].first = render_item_index;
 
+						//Look for the last one or the last 
+						while (render_item_index < num_sorted_render_items && render_items.m_sorted_render_items[render_item_index].priority == priority)
+						{
+							render_item_index++;
+						}
+
+						//Last item found
+						render_items.m_priority_table[priority].second = render_item_index;
+					}
+					else
+					{
+						//We don't have any item of priority in the sort items
+						render_items.m_priority_table[priority].first = render_items.m_priority_table[priority].second = -1;
+					}
+				}
 
 				//Capture pass
 				render::CaptureRenderContext(this, render_context);
