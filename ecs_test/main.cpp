@@ -422,33 +422,70 @@ public:
 				m_instance_buffer.emplace_back(position.position_angle.x, position.position_angle.y, position.position_angle.z, grass.size);
 			}, zone_bitset);
 
-			//Add a render item for rendering the grass
-			auto commands_offset = command_buffer.Open();
-			command_buffer.SetVertexBuffers(0, 1, &m_display_resources.m_circle_vertex_buffer);
-			command_buffer.SetVertexBuffers(1, 1, &m_instances_vertex_buffer);
-			command_buffer.SetIndexBuffer(m_display_resources.m_circle_index_buffer);
-			command_buffer.SetPipelineState(m_display_resources.m_pipeline_state);
-			display::DrawIndexedInstancedDesc draw_desc;
-			draw_desc.index_count = DisplayResource::kNumCircleIndex;
-			draw_desc.instance_count = static_cast<uint32_t>(m_instance_buffer.size());
-			command_buffer.DrawIndexedInstanced(draw_desc);
-			command_buffer.Close();
+			{
+				//Add a render item for rendering the grass
+				auto commands_offset = command_buffer.Open();
+				command_buffer.SetVertexBuffers(0, 1, &m_display_resources.m_circle_vertex_buffer);
+				command_buffer.SetVertexBuffers(1, 1, &m_instances_vertex_buffer);
+				command_buffer.SetIndexBuffer(m_display_resources.m_circle_index_buffer);
+				command_buffer.SetPipelineState(m_display_resources.m_pipeline_state);
+				display::DrawIndexedInstancedDesc draw_desc;
+				draw_desc.index_count = DisplayResource::kNumCircleIndex;
+				draw_desc.instance_count = static_cast<uint32_t>(m_instance_buffer.size());
+				command_buffer.DrawIndexedInstanced(draw_desc);
+				command_buffer.Close();
 
-			point_of_view.PushRenderItem(m_solid_render_priority, 0, commands_offset);
+				point_of_view.PushRenderItem(m_solid_render_priority, 0, commands_offset);
+			}
+
+			size_t instance_offset = m_instance_buffer.size();
 
 			ecs::Process<GameDatabase, PositionComponent, GazelleComponent>([&](const auto& instance_iterator, PositionComponent& position, GazelleComponent& gazelle)
 			{
 				//Add to the instance buffer the instance
 				m_instance_buffer.emplace_back(position.position_angle.x, position.position_angle.y, position.position_angle.z, gazelle.size);
 			}, zone_bitset);
-			//Add a render item for rendering the gazelles
 
+			{
+				//Add a render item for rendering the grass
+				auto commands_offset = command_buffer.Open();
+				command_buffer.SetVertexBuffers(0, 1, &m_display_resources.m_circle_vertex_buffer);
+				command_buffer.SetVertexBuffers(1, 1, &m_instances_vertex_buffer);
+				command_buffer.SetIndexBuffer(m_display_resources.m_circle_index_buffer);
+				command_buffer.SetPipelineState(m_display_resources.m_pipeline_state);
+				display::DrawIndexedInstancedDesc draw_desc;
+				draw_desc.index_count = DisplayResource::kNumCircleIndex;
+				draw_desc.instance_count = static_cast<uint32_t>(m_instance_buffer.size() - instance_offset);
+				draw_desc.start_instance = static_cast<uint32_t>(instance_offset);
+				command_buffer.DrawIndexedInstanced(draw_desc);
+				command_buffer.Close();
+
+				point_of_view.PushRenderItem(m_solid_render_priority, 0, commands_offset);
+			}
+
+			instance_offset = m_instance_buffer.size();
 		
 			ecs::Process<GameDatabase, PositionComponent, TigerComponent>([&](const auto& instance_iterator, PositionComponent& position, TigerComponent& tiger)
 			{
 				m_instance_buffer.emplace_back(position.position_angle.x, position.position_angle.y, position.position_angle.z, tiger.size);
 			}, zone_bitset);
-			//Add a render item for rendering the tigers
+
+			{
+				//Add a render item for rendering the grass
+				auto commands_offset = command_buffer.Open();
+				command_buffer.SetVertexBuffers(0, 1, &m_display_resources.m_circle_vertex_buffer);
+				command_buffer.SetVertexBuffers(1, 1, &m_instances_vertex_buffer);
+				command_buffer.SetIndexBuffer(m_display_resources.m_circle_index_buffer);
+				command_buffer.SetPipelineState(m_display_resources.m_pipeline_state);
+				display::DrawIndexedInstancedDesc draw_desc;
+				draw_desc.index_count = DisplayResource::kNumCircleIndex;
+				draw_desc.instance_count = static_cast<uint32_t>(m_instance_buffer.size() - instance_offset);
+				draw_desc.start_instance = static_cast<uint32_t>(instance_offset);
+				command_buffer.DrawIndexedInstanced(draw_desc);
+				command_buffer.Close();
+
+				point_of_view.PushRenderItem(m_solid_render_priority, 0, commands_offset);
+			}
 
 
 			//Send the buffer for updating the vertex constant
