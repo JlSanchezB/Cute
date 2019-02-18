@@ -58,6 +58,11 @@ namespace render
 			return m_command_buffer;
 		}
 
+		CommandBuffer& GetBeginRenderCommandBuffer()
+		{
+			return m_begin_render_command_buffer;
+		}
+
 		//Reset memory for next frame
 		void Reset();
 
@@ -73,6 +78,9 @@ namespace render
 		PassInfo m_pass_info;
 		//Init resources (they are going to get move the first time that are used)
 		ResourceMap m_init_resources;
+
+		//Command buffer with commands that will run during the start of the point of view
+		CommandBuffer m_begin_render_command_buffer;
 
 		//List of render items
 		std::vector<Item> m_render_items;
@@ -114,6 +122,7 @@ namespace render
 	{
 		m_render_items.clear();
 		m_command_buffer.Reset();
+		m_begin_render_command_buffer.Reset();
 		m_allocated = false;
 	}
 
