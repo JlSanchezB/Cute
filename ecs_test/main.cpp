@@ -264,6 +264,12 @@ public:
 	//Instance buffer
 	std::vector<glm::vec4> m_instance_buffer;
 
+	//World size
+	constexpr static float m_world_top = 1.f;
+	constexpr static float m_world_bottom = -1.f;
+	constexpr static float m_world_left = -1.f;
+	constexpr static float m_world_right = 1.f;
+
 	void OnInit() override
 	{
 		display::DeviceInitParams device_init_params;
@@ -327,19 +333,20 @@ public:
 
 		//Create ecs database
 		ecs::DatabaseDesc database_desc;
+		database_desc.num_max_entities_zone = 1024 * 128;
 		ecs::CreateDatabase<GameDatabase>(database_desc);
 
 		//Allocate random instances
 		std::random_device rd;  //Will be used to obtain a seed for the random number engine
 		std::mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()
-		std::uniform_real_distribution<float> rand_position_x(-1.f, 1.0f);
-		std::uniform_real_distribution<float> rand_position_y(-1.f, 1.0f);
+		std::uniform_real_distribution<float> rand_position_x(m_world_left, m_world_right);
+		std::uniform_real_distribution<float> rand_position_y(m_world_bottom, m_world_top);
 		std::uniform_real_distribution<float> rand_position_angle(0.f, 2.f * 3.1415926f);
-		std::uniform_real_distribution<float> rand_lineal_velocity(-0.01f, 0.01f);
+		std::uniform_real_distribution<float> rand_lineal_velocity(-0.05f, 0.05f);
 		std::uniform_real_distribution<float> rand_angle_velocity(-0.01f, 0.01f);
-		std::uniform_real_distribution<float> rand_size(0.01f, 0.02f);
+		std::uniform_real_distribution<float> rand_size(0.005f, 0.01f);
 
-		for (size_t i = 0; i < 1000; ++i)
+		for (size_t i = 0; i < 2000; ++i)
 		{
 			ecs::AllocInstance<GameDatabase, GazelleEntityType>()
 				.Init<PositionComponent>(rand_position_x(gen), rand_position_y(gen), rand_position_angle(gen))
@@ -347,7 +354,7 @@ public:
 				.Init<GazelleComponent>(rand_size(gen));
 		}
 
-		for (size_t i = 0; i < 1000; ++i)
+		for (size_t i = 0; i < 2000; ++i)
 		{
 			ecs::AllocInstance<GameDatabase, GrassEntityType>()
 				.Init<PositionComponent>(rand_position_x(gen), rand_position_y(gen), rand_position_angle(gen))
@@ -355,7 +362,7 @@ public:
 				.Init<GrassComponent>(rand_size(gen));
 		}
 
-		for (size_t i = 0; i < 1000; ++i)
+		for (size_t i = 0; i < 2000; ++i)
 		{
 			ecs::AllocInstance<GameDatabase, TigerEntityType>()
 				.Init<PositionComponent>(rand_position_x(gen), rand_position_y(gen), rand_position_angle(gen))
@@ -395,6 +402,26 @@ public:
 			ecs::Process<GameDatabase, PositionComponent, VelocityComponent>([&](const auto& instance_iterator, PositionComponent& position, VelocityComponent& velocity)
 			{
 				position.position_angle += velocity.lineal_angle_velocity * elapsed_time;
+				if (position.position_angle.x > m_world_right)
+				{
+					position.position_angle.x = m_world_right;
+					velocity.lineal_angle_velocity.x = -velocity.lineal_angle_velocity.x;
+				}
+				if (position.position_angle.x < m_world_left)
+				{
+					position.position_angle.x = m_world_left;
+					velocity.lineal_angle_velocity.x = -velocity.lineal_angle_velocity.x;
+				}
+				if (position.position_angle.y > m_world_top)
+				{
+					position.position_angle.y = m_world_top;
+					velocity.lineal_angle_velocity.y = -velocity.lineal_angle_velocity.y;
+				}
+				if (position.position_angle.y < m_world_bottom)
+				{
+					position.position_angle.y = m_world_bottom;
+					velocity.lineal_angle_velocity.y = -velocity.lineal_angle_velocity.y;
+				}
 			}, zone_bitset);
 
 		}
@@ -499,7 +526,7 @@ public:
 				command_buffer.DrawIndexedInstanced(draw_desc);
 				command_buffer.Close();
 
-				point_of_view.PushRenderItem(m_solid_render_priority, 0, commands_offset);
+				point_of_view.PushRenderItem(m_solid_render_priority, 1, commands_offset);
 			}
 
 			instance_offset = m_instance_buffer.size();
@@ -523,7 +550,7 @@ public:
 				command_buffer.DrawIndexedInstanced(draw_desc);
 				command_buffer.Close();
 
-				point_of_view.PushRenderItem(m_solid_render_priority, 0, commands_offset);
+				point_of_view.PushRenderItem(m_solid_render_priority, 2, commands_offset);
 			}
 
 
