@@ -18,11 +18,8 @@
 
 struct DisplayResource
 {
-	static constexpr uint32_t kNumCircleVertex = 16;
-	static constexpr uint32_t kNumCircleIndex = 3 * (kNumCircleVertex - 2);
-
-	display::VertexBufferHandle m_circle_vertex_buffer;
-	display::IndexBufferHandle m_circle_index_buffer;
+	display::VertexBufferHandle m_quad_vertex_buffer;
+	display::IndexBufferHandle m_quad_index_buffer;
 	display::RootSignatureHandle m_root_signature;
 	display::PipelineStateHandle m_pipeline_state;
 
@@ -42,7 +39,7 @@ struct DisplayResource
 				PSInput main_vs(float2 position : POSITION, float4 instance_data : TEXCOORD)\
 				{\
 					PSInput result; \
-					result.position.xy = position.xy * instance_data.z + instance_data.xy; \
+					result.position.xy = position.xy * instance_data.w + instance_data.xy; \
 					result.position.zw = float2(0.f, 1.f); \
 					return result;\
 				}\
@@ -91,42 +88,45 @@ struct DisplayResource
 		m_pipeline_state = display::CreatePipelineState(device, pipeline_state_desc, "Circle");
 
 
-
-		//Create circle vertex buffer and index buffer
-		glm::vec2 vertex_data[kNumCircleVertex];
-		for (size_t i = 0; i < kNumCircleVertex; ++i)
+		//Quad Vertex buffer
 		{
-			const float angle = glm::two_pi<float>() * (float(i) / kNumCircleVertex);
-			vertex_data[i].x = cosf(angle);
-			vertex_data[i].y = cosf(angle);
+			struct VertexData
+			{
+				float position[4];
+			};
+
+			VertexData vertex_data[4] =
+			{
+				{1.f, 1.f, 1.f, 1.f},
+				{-1.f, 1.f, 1.f, 1.f},
+				{1.f, -1.f, 1.f, 1.f},
+				{-1.f, -1.f, 1.f, 1.f}
+			};
+
+			display::VertexBufferDesc vertex_buffer_desc;
+			vertex_buffer_desc.init_data = vertex_data;
+			vertex_buffer_desc.size = sizeof(vertex_data);
+			vertex_buffer_desc.stride = sizeof(VertexData);
+
+			m_quad_vertex_buffer = display::CreateVertexBuffer(device, vertex_buffer_desc, "quad_vertex_buffer");
 		}
 
-		display::VertexBufferDesc vertex_buffer_desc;
-		vertex_buffer_desc.init_data = vertex_data;
-		vertex_buffer_desc.size = sizeof(vertex_data);
-		vertex_buffer_desc.stride = sizeof(glm::vec2);
-
-		m_circle_vertex_buffer = display::CreateVertexBuffer(device, vertex_buffer_desc, "Circle");
-
-		uint16_t index_buffer_data[kNumCircleIndex];
-		for (uint16_t i = 0; i < static_cast<uint16_t>(kNumCircleVertex - 2); ++i)
+		//Quad Index buffer
 		{
-			index_buffer_data[i * 3] = 0;
-			index_buffer_data[i * 3 + 1] = i + 1;
-			index_buffer_data[i * 3 + 2] = i + 2;
+			uint16_t index_buffer_data[6] = { 0, 2, 1, 1, 2, 3 };
+			display::IndexBufferDesc index_buffer_desc;
+			index_buffer_desc.init_data = index_buffer_data;
+			index_buffer_desc.size = sizeof(index_buffer_data);
+
+			m_quad_index_buffer = display::CreateIndexBuffer(device, index_buffer_desc, "quad_index_buffer");
 		}
 
-		display::IndexBufferDesc index_buffer_desc;
-		index_buffer_desc.init_data = index_buffer_data;
-		index_buffer_desc.size = sizeof(index_buffer_data);
-
-		m_circle_index_buffer = display::CreateIndexBuffer(device, index_buffer_desc, "Circle");
 	}
 
 	void Unload(display::Device* device)
 	{
-		display::DestroyHandle(device, m_circle_vertex_buffer);
-		display::DestroyHandle(device, m_circle_index_buffer);
+		display::DestroyHandle(device, m_quad_vertex_buffer);
+		display::DestroyHandle(device, m_quad_index_buffer);
 		display::DestroyHandle(device, m_pipeline_state);
 		display::DestroyHandle(device, m_root_signature);
 	}
@@ -464,12 +464,12 @@ public:
 			{
 				//Add a render item for rendering the grass
 				auto commands_offset = command_buffer.Open();
-				command_buffer.SetVertexBuffers(0, 1, &m_display_resources.m_circle_vertex_buffer);
+				command_buffer.SetVertexBuffers(0, 1, &m_display_resources.m_quad_vertex_buffer);
 				command_buffer.SetVertexBuffers(1, 1, &m_instances_vertex_buffer);
-				command_buffer.SetIndexBuffer(m_display_resources.m_circle_index_buffer);
+				command_buffer.SetIndexBuffer(m_display_resources.m_quad_index_buffer);
 				command_buffer.SetPipelineState(m_display_resources.m_pipeline_state);
 				display::DrawIndexedInstancedDesc draw_desc;
-				draw_desc.index_count = DisplayResource::kNumCircleIndex;
+				draw_desc.index_count = 6;
 				draw_desc.instance_count = static_cast<uint32_t>(m_instance_buffer.size());
 				command_buffer.DrawIndexedInstanced(draw_desc);
 				command_buffer.Close();
@@ -488,12 +488,12 @@ public:
 			{
 				//Add a render item for rendering the grass
 				auto commands_offset = command_buffer.Open();
-				command_buffer.SetVertexBuffers(0, 1, &m_display_resources.m_circle_vertex_buffer);
+				command_buffer.SetVertexBuffers(0, 1, &m_display_resources.m_quad_vertex_buffer);
 				command_buffer.SetVertexBuffers(1, 1, &m_instances_vertex_buffer);
-				command_buffer.SetIndexBuffer(m_display_resources.m_circle_index_buffer);
+				command_buffer.SetIndexBuffer(m_display_resources.m_quad_index_buffer);
 				command_buffer.SetPipelineState(m_display_resources.m_pipeline_state);
 				display::DrawIndexedInstancedDesc draw_desc;
-				draw_desc.index_count = DisplayResource::kNumCircleIndex;
+				draw_desc.index_count = 6;
 				draw_desc.instance_count = static_cast<uint32_t>(m_instance_buffer.size() - instance_offset);
 				draw_desc.start_instance = static_cast<uint32_t>(instance_offset);
 				command_buffer.DrawIndexedInstanced(draw_desc);
@@ -512,12 +512,12 @@ public:
 			{
 				//Add a render item for rendering the grass
 				auto commands_offset = command_buffer.Open();
-				command_buffer.SetVertexBuffers(0, 1, &m_display_resources.m_circle_vertex_buffer);
+				command_buffer.SetVertexBuffers(0, 1, &m_display_resources.m_quad_vertex_buffer);
 				command_buffer.SetVertexBuffers(1, 1, &m_instances_vertex_buffer);
-				command_buffer.SetIndexBuffer(m_display_resources.m_circle_index_buffer);
+				command_buffer.SetIndexBuffer(m_display_resources.m_quad_index_buffer);
 				command_buffer.SetPipelineState(m_display_resources.m_pipeline_state);
 				display::DrawIndexedInstancedDesc draw_desc;
-				draw_desc.index_count = DisplayResource::kNumCircleIndex;
+				draw_desc.index_count = 6;
 				draw_desc.instance_count = static_cast<uint32_t>(m_instance_buffer.size() - instance_offset);
 				draw_desc.start_instance = static_cast<uint32_t>(instance_offset);
 				command_buffer.DrawIndexedInstanced(draw_desc);
