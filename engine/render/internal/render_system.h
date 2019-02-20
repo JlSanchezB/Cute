@@ -51,6 +51,9 @@ namespace render
 
 		//Sorted render items associated to this context
 		SortedRenderItems m_render_items;
+
+		//Point of view associated to this context
+		PointOfView* m_point_of_view;
 	};
 
 	//Activated render contexts
@@ -106,6 +109,9 @@ namespace render
 
 		//Render context created
 		core::SimplePool<RenderContextInternal, 256> m_render_context_pool;
+
+		//Render command list, used for render commands from the render system
+		display::CommandListHandle m_render_command_list;
 
 		//Create render context
 		RenderContextInternal * CreateRenderContext(display::Device * device, const PassName& pass, const PassInfo& pass_info, ResourceMap& init_resources, std::vector<std::string>& errors);

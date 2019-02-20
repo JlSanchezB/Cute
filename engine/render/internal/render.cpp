@@ -368,6 +368,9 @@ namespace render
 
 		system->m_device = device;
 
+		//Create render command list
+		system->m_render_command_list = display::CreateCommandList(device, "RenderSystem");
+
 		return system;
 	}
 
@@ -377,6 +380,9 @@ namespace render
 		DestroyResources(device, system->m_game_resources_map);
 		DestroyResources(device, system->m_global_resources_map);
 		DestroyResources(device, system->m_passes_map);
+
+		//Destroy command list
+		display::DestroyHandle(device, system->m_render_command_list);
 
 		delete system;
 
@@ -492,9 +498,24 @@ namespace render
 	void System::SubmitRender()
 	{
 		//Render thread
+		display::BeginFrame(m_device);
 
 		//Get render frame
 		Frame& render_frame = m_frame_data;
+
+		//Execute begin commands in the render_frame
+		{
+			auto render_context = display::OpenCommandList(m_device, m_render_command_list);
+
+			render::CommandBuffer::CommandOffset command_offset = 0;
+			while (command_offset != render::CommandBuffer::InvalidCommandOffset)
+			{
+				command_offset = render_frame.GetBeginFrameComamndbuffer().Execute(*render_context, command_offset);
+			}
+
+			display::CloseCommandList(m_device, render_context);
+			display::ExecuteCommandList(m_device, m_render_command_list);
+		}
 
 		//Sort point of view by priority
 		render_frame.m_point_of_views.sort([](const PointOfView& a, const PointOfView& b)
@@ -510,6 +531,23 @@ namespace render
 			
 			if (render_context)
 			{
+				//Execute begin point of view command buffer
+				{
+					auto render_context = display::OpenCommandList(m_device, m_render_command_list);
+
+					render::CommandBuffer::CommandOffset command_offset = 0;
+					while (command_offset != render::CommandBuffer::InvalidCommandOffset)
+					{
+						command_offset = point_of_view.GetBeginRenderCommandBuffer().Execute(*render_context, command_offset);
+					}
+
+					display::CloseCommandList(m_device, render_context);
+					display::ExecuteCommandList(m_device, m_render_command_list);
+				}
+
+				//Set point to view to the context
+				render_context->m_point_of_view = &point_of_view;
+
 				auto& render_items = render_context->m_render_items;
 				//Copy render items from the point of view to the render context
 				render_items.m_sorted_render_items = point_of_view.m_render_items;
@@ -526,7 +564,7 @@ namespace render
 				size_t num_sorted_render_items = render_items.m_sorted_render_items.size();
 				for (size_t priority = 0; priority < m_render_priorities.size(); ++priority)
 				{
-					if (render_items.m_sorted_render_items[render_item_index].priority == priority)
+					if (render_items.m_sorted_render_items[render_item_index].priority == priority || num_sorted_render_items == 0)
 					{
 						//First item found
 						render_items.m_priority_table[priority].first = render_item_index;
@@ -538,7 +576,7 @@ namespace render
 						}
 
 						//Last item found
-						render_items.m_priority_table[priority].second = render_item_index;
+						render_items.m_priority_table[priority].second = std::min(render_item_index, num_sorted_render_items - 1);
 					}
 					else
 					{
@@ -554,7 +592,9 @@ namespace render
 			}
 		}
 
-		
+		display::EndFrame(m_device);
+
+		render_frame.Reset();
 	}
 
 	void BeginPrepareRender(System * system)

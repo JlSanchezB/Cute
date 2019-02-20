@@ -399,6 +399,45 @@ public:
 
 		}
 
+		//Recreate the descriptor file and context if requested
+		if (m_render_system_descriptor_load_requested)
+		{
+			//Remove the render context
+			if (m_render_context)
+			{
+				render::DestroyRenderContext(m_render_system, m_render_context);
+			}
+
+			//Reset errors
+			m_render_system_errors.clear();
+
+			//Load render pass sample
+			size_t buffer_size = strlen(m_text_buffer.data()) + 1;
+
+			if (!render::LoadPassDescriptorFile(m_render_system, m_device, m_text_buffer.data(), buffer_size, m_render_system_errors))
+			{
+				core::LogError("Failed to load the new descriptor file, reverting changes");
+				m_show_errors = true;
+			}
+
+
+			//Create pass
+			render::PassInfo pass_info;
+			pass_info.width = m_width;
+			pass_info.height = m_height;
+
+			render::ResourceMap init_resource_map;
+
+			//Still load it if it fail, as it will use the last valid one
+			m_render_context = render::CreateRenderContext(m_render_system, m_device, "Main"_sh32, pass_info, init_resource_map, m_render_system_context_errors);
+			if (m_render_context == nullptr)
+			{
+				m_show_errors = true;
+			}
+
+			m_render_system_descriptor_load_requested = false;
+		}
+
 		//PREPARE RENDERING
 		{
 			std::bitset<1> zone_bitset(1);
@@ -493,91 +532,12 @@ public:
 			render_frame.GetBeginFrameComamndbuffer().UploadResourceBuffer(m_instances_vertex_buffer, &m_instance_buffer[0], m_instance_buffer.size() * sizeof(glm::vec4));
 			render_frame.GetBeginFrameComamndbuffer().Close();
 
+			//Render
 			render::EndPrepareRenderAndSubmit(m_render_system);
 		}
 
 		//Tick database
 		ecs::Tick<GameDatabase>();
-
-		//RENDER
-		{
-			display::BeginFrame(m_device);
-
-			//Recreate the descriptor file and context if requested
-			if (m_render_system_descriptor_load_requested)
-			{
-				//Remove the render context
-				if (m_render_context)
-				{
-					render::DestroyRenderContext(m_render_system, m_render_context);
-				}
-
-				//Reset errors
-				m_render_system_errors.clear();
-
-				//Load render pass sample
-				size_t buffer_size = strlen(m_text_buffer.data()) + 1;
-
-				if (!render::LoadPassDescriptorFile(m_render_system, m_device, m_text_buffer.data(), buffer_size, m_render_system_errors))
-				{
-					core::LogError("Failed to load the new descriptor file, reverting changes");
-					m_show_errors = true;
-				}
-
-
-				//Create pass
-				render::PassInfo pass_info;
-				pass_info.width = m_width;
-				pass_info.height = m_height;
-
-				render::ResourceMap init_resource_map;
-
-				//Still load it if it fail, as it will use the last valid one
-				m_render_context = render::CreateRenderContext(m_render_system, m_device, "Main"_sh32, pass_info, init_resource_map, m_render_system_context_errors);
-				if (m_render_context == nullptr)
-				{
-					m_show_errors = true;
-				}
-
-				m_render_system_descriptor_load_requested = false;
-			}
-
-			//Update time
-			struct GameConstantBuffer
-			{
-				float time[4];
-			};
-			GameConstantBuffer game_constant_buffer = { { static_cast<float>(total_time), elapsed_time, 0.f, 0.f } };
-
-			//Update game constant buffer
-			display::UpdateResourceBuffer(m_device, m_game_constant_buffer, &game_constant_buffer, sizeof(game_constant_buffer));
-
-			render::Frame& render_frame = render::GetGameRenderFrame(m_render_system);
-
-			//Execute begin commands in the render_frame
-			auto render_context = display::OpenCommandList(m_device, m_render_command_list);
-
-			render::CommandBuffer::CommandOffset command_offset = 0;
-			while (command_offset != render::CommandBuffer::InvalidCommandOffset)
-			{
-				command_offset = render_frame.GetBeginFrameComamndbuffer().Execute(*render_context, command_offset);
-			}
-			
-			display::CloseCommandList(m_device, render_context);
-			display::ExecuteCommandList(m_device, m_render_command_list);
-
-			if (m_render_context)
-			{
-				//Capture pass
-				render::CaptureRenderContext(m_render_system, m_render_context);
-				//Execute pass
-				render::ExecuteRenderContext(m_render_system, m_render_context);
-			}
-
-			display::EndFrame(m_device);
-
-			render_frame.Reset();
-		}
 	}
 
 	void OnSizeChange(uint32_t width, uint32_t height, bool minimized) override

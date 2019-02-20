@@ -141,6 +141,7 @@ namespace render
 	void CommandBuffer::SetVertexBuffers(uint8_t start_slot_index, uint8_t num_vertex_buffers, display::WeakVertexBufferHandle * vertex_buffers)
 	{
 		PushCommand(static_cast<uint8_t>(Commands::SetVertexBuffers));
+		PushData(start_slot_index);
 		PushData(num_vertex_buffers);
 		PushDataArray(vertex_buffers, num_vertex_buffers);
 	}
