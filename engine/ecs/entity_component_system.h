@@ -255,7 +255,7 @@ namespace ecs
 	{
 		//Caller helper
 		template<typename DATABASE_DECLARATION, size_t ...indices, typename ...Args, typename FUNCTION>
-		void caller_helper(FUNCTION&& function, const InstanceIterator<DATABASE_DECLARATION>& instance_it, InstanceIndexType instance_index, std::integer_sequence<size_t, indices...>, std::tuple<Args...> &arguments)
+		constexpr inline void caller_helper(FUNCTION&& function, const InstanceIterator<DATABASE_DECLARATION>& instance_it, InstanceIndexType instance_index, std::integer_sequence<size_t, indices...>, std::tuple<Args...> &arguments)
 		{
 			function(instance_it, std::get<indices>(arguments)[instance_index]...);
 		}
