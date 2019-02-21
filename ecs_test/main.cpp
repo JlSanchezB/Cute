@@ -254,8 +254,10 @@ struct VelocityComponent
 struct GrassComponent
 {
 	float size;
+	float grow_speed;
+	float dead_size;
 
-	GrassComponent(float _size) : size(_size)
+	GrassComponent(float _size, float _grow_speed, float _dead_size) : size(_size), grow_speed(_grow_speed), dead_size(_dead_size)
 	{
 	}
 };
@@ -441,6 +443,8 @@ public:
 		std::uniform_real_distribution<float> rand_lineal_velocity(-0.05f, 0.05f);
 		std::uniform_real_distribution<float> rand_angle_velocity(-0.01f, 0.01f);
 		std::uniform_real_distribution<float> rand_size(0.005f, 0.01f);
+		std::uniform_real_distribution<float> rand_grass_grow_speed(0.0001f, 0.001f);
+		std::uniform_real_distribution<float> rand_grass_dead_size(0.005f, 0.05f);
 
 		for (size_t i = 0; i < 2000; ++i)
 		{
@@ -453,9 +457,9 @@ public:
 		for (size_t i = 0; i < 2000; ++i)
 		{
 			ecs::AllocInstance<GameDatabase, GrassEntityType>()
-				.Init<PositionComponent>(rand_position_x(gen), rand_position_y(gen), rand_position_angle(gen))
-				.Init<VelocityComponent>(rand_lineal_velocity(gen), rand_lineal_velocity(gen), rand_angle_velocity(gen))
-				.Init<GrassComponent>(rand_size(gen));
+				.Init<PositionComponent>(rand_position_x(gen), rand_position_y(gen), 0.f)
+				.Init<VelocityComponent>(0.f, 0.f, 0.f)
+				.Init<GrassComponent>(0.f, rand_grass_grow_speed(gen), rand_grass_dead_size(gen));
 		}
 
 		for (size_t i = 0; i < 2000; ++i)
@@ -488,6 +492,17 @@ public:
 		//UPDATE GAME
 		{
 			std::bitset<1> zone_bitset(1);
+
+			//Grow grass
+			ecs::Process<GameDatabase, GrassComponent>([&](const auto& instance_iterator, GrassComponent& grass)
+			{
+				grass.size += grass.grow_speed * elapsed_time;
+				if (grass.size > grass.dead_size)
+				{
+					//Kill it
+					instance_iterator.Dealloc();
+				}
+			}, zone_bitset);
 
 			//Move entities
 			ecs::Process<GameDatabase, PositionComponent, VelocityComponent>([&](const auto& instance_iterator, PositionComponent& position, VelocityComponent& velocity)

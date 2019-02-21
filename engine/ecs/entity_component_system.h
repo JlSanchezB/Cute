@@ -25,7 +25,7 @@ namespace ecs
 		template<typename DATABASE_DECLARATION>
 		constexpr static EntityTypeMask EntityTypeMask()
 		{
-			return ((1ul << DATABASE_DECLARATION::Components::template ElementIndex<COMPONENTS>()) | ...);
+			return ((1ULL << DATABASE_DECLARATION::Components::template ElementIndex<COMPONENTS>()) | ...);
 		}
 	};
 
@@ -129,6 +129,9 @@ namespace ecs
 		//Dealloc instance
 		void DeallocInstance(Database* database, InstanceIndirectionIndexType index);
 
+		//Dealloc instance
+		void DeallocInstance(Database* database, ZoneType zone_index, EntityTypeType entity_type, InstanceIndexType instance_index);
+
 		//Get component data
 		void* GetComponentData(Database* database, InstanceIndirectionIndexType index, ComponentType component_index);
 
@@ -213,7 +216,7 @@ namespace ecs
 
 	//Dealloc instance
 	template<typename DATABASE_DECLARATION>
-	void AllocInstance(Instance<DATABASE_DECLARATION>& instance)
+	void DeallocInstance(Instance<DATABASE_DECLARATION>& instance)
 	{
 		internal::DeallocInstance(DATABASE_DECLARATION::s_database, instance.m_indirection_index);
 		instance.m_indirection_index = -1;
@@ -238,16 +241,21 @@ namespace ecs
 		InstanceIndexType m_instance_index;
 
 		template<typename COMPONENT>
-		COMPONENT& get() const
+		COMPONENT& Get() const
 		{
 			return *(reinterpret_cast<COMPONENT*>(internal::GetStorageComponent(DATABASE_DECLARATION::s_database,
 				m_zone_index, m_entity_type, DATABASE_DECLARATION::template ComponentIndex<COMPONENT>())) + m_instance_index);
 		}
 
 		template<typename COMPONENT>
-		bool contains() const
+		bool Constains() const
 		{
 			return (DATABASE_DECLARATION::template ComponentMask<COMPONENT> & internal::GetInstanceTypeMask(DATABASE_DECLARATION::s_database, m_entity_type)) != 0;
+		}
+
+		void Dealloc() const
+		{
+			internal::DeallocInstance(DATABASE_DECLARATION::s_database, m_zone_index, m_entity_type, m_instance_index);
 		}
 	};
 

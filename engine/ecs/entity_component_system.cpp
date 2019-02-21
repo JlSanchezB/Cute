@@ -155,7 +155,6 @@ namespace ecs
 		{
 			//Mark as free and redirect the first free slot to it and update the chain
 			auto& internal_instance_index = m_indirection_instance_table[indirection_index];
-			assert(m_indirection_instance_table[m_first_free_slot_indirection_instance_table].zone_index != InternalInstanceIndex::kFreeSlot);
 			internal_instance_index.zone_index = InternalInstanceIndex::kFreeSlot;
 			m_first_free_slot_indirection_instance_table = internal_instance_index.instance_index;
 			internal_instance_index.instance_index = indirection_index;
@@ -256,6 +255,20 @@ namespace ecs
 		{
 			//Add to the deferred list
 			database->m_deferred_instace_deletes.push_back(indirection_index);
+		}
+
+		void DeallocInstance(Database * database, ZoneType zone_index, EntityTypeType entity_type, InstanceIndexType instance_index)
+		{
+			InternalInstanceIndex internal_index;
+			internal_index.zone_index = zone_index;
+			internal_index.entity_type_index = entity_type;
+			internal_index.instance_index = instance_index;
+
+			//Get indirection index
+			const auto& indirection_index = *reinterpret_cast<InstanceIndirectionIndexType*>(database->GetComponentData(internal_index, database->m_indirection_index_component_index));
+
+			//Dealloc it
+			DeallocInstance(database, indirection_index);
 		}
 
 		void* GetComponentData(Database * database, InstanceIndirectionIndexType indirection_index, ComponentType component_index)
