@@ -642,13 +642,7 @@ public:
 		m_width = width;
 		m_height = height;
 
-		/*if (m_render_context)
-		{
-			render::PassInfo pass_info = m_render_context->GetPassInfo();
-			pass_info.width = m_width;
-			pass_info.height = m_height;
-			m_render_context->UpdatePassInfo(pass_info);
-		}*/
+
 	}
 
 	void OnAddImguiMenu() override

@@ -548,6 +548,9 @@ namespace render
 				//Set point to view to the context
 				render_context->m_point_of_view = &point_of_view;
 
+				//Set pass info
+				render_context->m_pass_info = point_of_view.m_pass_info;
+
 				auto& render_items = render_context->m_render_items;
 				//Copy render items from the point of view to the render context
 				render_items.m_sorted_render_items = point_of_view.m_render_items;
