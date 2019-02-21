@@ -22,6 +22,8 @@ struct DisplayResource
 	display::IndexBufferHandle m_quad_index_buffer;
 	display::RootSignatureHandle m_root_signature;
 	display::PipelineStateHandle m_grass_pipeline_state;
+	display::PipelineStateHandle m_gazelle_pipeline_state;
+	display::PipelineStateHandle m_lion_pipeline_state;
 
 	void Load(display::Device* device)
 	{
@@ -87,9 +89,101 @@ struct DisplayResource
 		pipeline_state_desc.num_render_targets = 1;
 		pipeline_state_desc.render_target_format[0] = display::Format::R8G8B8A8_UNORM;
 
+		//Blend
+		pipeline_state_desc.blend_desc.render_target_blend[0].blend_enable = true;
+		pipeline_state_desc.blend_desc.render_target_blend[0].src_blend = display::Blend::SrcAlpha;
+		pipeline_state_desc.blend_desc.render_target_blend[0].dest_blend = display::Blend::InvSrcAlpha;
+
 		//Create
 		m_grass_pipeline_state = display::CreatePipelineState(device, pipeline_state_desc, "Grass");
 
+		//Cow
+		//Create pipeline state
+		const char* gazelle_shader_code =
+			"	struct PSInput\
+				{\
+					float4 position : SV_POSITION;\
+					float2 coords : TEXCOORD0; \
+				};\
+				\
+				PSInput main_vs(float2 position : POSITION, float4 instance_data : TEXCOORD)\
+				{\
+					PSInput result; \
+					result.position.xy = position.xy * instance_data.w + instance_data.xy; \
+					result.position.zw = float2(0.f, 1.f); \
+					result.coords.xy = position.xy; \
+					return result;\
+				}\
+				float4 main_ps(PSInput input) : SV_TARGET\
+				{\
+					float alpha = smoothstep(1.f, 0.95f, length(input.coords.xy));\
+					return float4(alpha, alpha, alpha, alpha);\
+				}";
+
+
+		compile_shader_desc.code = gazelle_shader_code;
+		compile_shader_desc.entry_point = "main_vs";
+		compile_shader_desc.target = "vs_5_0";
+		display::CompileShader(device, compile_shader_desc, vertex_shader);
+
+		compile_shader_desc.code = gazelle_shader_code;
+		compile_shader_desc.entry_point = "main_ps";
+		compile_shader_desc.target = "ps_5_0";
+		display::CompileShader(device, compile_shader_desc, pixel_shader);
+
+		//Add shaders
+		pipeline_state_desc.pixel_shader.data = reinterpret_cast<void*>(pixel_shader.data());
+		pipeline_state_desc.pixel_shader.size = pixel_shader.size();
+
+		pipeline_state_desc.vertex_shader.data = reinterpret_cast<void*>(vertex_shader.data());
+		pipeline_state_desc.vertex_shader.size = vertex_shader.size();
+
+		//Create
+		m_gazelle_pipeline_state = display::CreatePipelineState(device, pipeline_state_desc, "Gazelle");
+
+		//Lion
+		//Create pipeline state
+		const char* lion_shader_code =
+			"	struct PSInput\
+				{\
+					float4 position : SV_POSITION;\
+					float2 coords : TEXCOORD0; \
+				};\
+				\
+				PSInput main_vs(float2 position : POSITION, float4 instance_data : TEXCOORD)\
+				{\
+					PSInput result; \
+					result.position.xy = position.xy * instance_data.w + instance_data.xy; \
+					result.position.zw = float2(0.f, 1.f); \
+					result.coords.xy = position.xy; \
+					return result;\
+				}\
+				float4 main_ps(PSInput input) : SV_TARGET\
+				{\
+					float alpha = smoothstep(1.f, 0.95f, length(input.coords.xy));\
+					return float4(alpha, alpha, 0.f, alpha);\
+				}";
+
+
+		compile_shader_desc.code = lion_shader_code;
+		compile_shader_desc.entry_point = "main_vs";
+		compile_shader_desc.target = "vs_5_0";
+		display::CompileShader(device, compile_shader_desc, vertex_shader);
+
+		compile_shader_desc.code = lion_shader_code;
+		compile_shader_desc.entry_point = "main_ps";
+		compile_shader_desc.target = "ps_5_0";
+		display::CompileShader(device, compile_shader_desc, pixel_shader);
+
+		//Add shaders
+		pipeline_state_desc.pixel_shader.data = reinterpret_cast<void*>(pixel_shader.data());
+		pipeline_state_desc.pixel_shader.size = pixel_shader.size();
+
+		pipeline_state_desc.vertex_shader.data = reinterpret_cast<void*>(vertex_shader.data());
+		pipeline_state_desc.vertex_shader.size = vertex_shader.size();
+
+		//Create
+		m_lion_pipeline_state = display::CreatePipelineState(device, pipeline_state_desc, "Lion");
 
 		//Quad Vertex buffer
 		{
@@ -131,6 +225,8 @@ struct DisplayResource
 		display::DestroyHandle(device, m_quad_vertex_buffer);
 		display::DestroyHandle(device, m_quad_index_buffer);
 		display::DestroyHandle(device, m_grass_pipeline_state);
+		display::DestroyHandle(device, m_gazelle_pipeline_state);
+		display::DestroyHandle(device, m_lion_pipeline_state);
 		display::DestroyHandle(device, m_root_signature);
 	}
 };
@@ -227,8 +323,6 @@ public:
 
 	render::System* m_render_system = nullptr;
 
-	render::RenderContext* m_render_context = nullptr;
-
 	//Game constant buffer
 	display::ConstantBufferHandle m_game_constant_buffer;
 
@@ -319,7 +413,6 @@ public:
 		render::AddGameResource(m_render_system, "BackBuffer"_sh32, CreateResourceFromHandle<render::RenderTargetResource>(display::GetBackBuffer(m_device)));
 		render::AddGameResource(m_render_system, "GameRootSignature"_sh32, CreateResourceFromHandle<render::RootSignatureResource>(display::WeakRootSignatureHandle(m_display_resources.m_root_signature)));
 
-
 		//Get render priorities
 		m_solid_render_priority = render::GetRenderItemPriority(m_render_system, "Solid"_sh32);
 
@@ -378,11 +471,6 @@ public:
 	{
 		if (m_render_system)
 		{
-			if (m_render_context)
-			{
-				render::DestroyRenderContext(m_render_system, m_render_context);
-			}
-
 			render::DestroyRenderSystem(m_render_system, m_device);
 		}
 
@@ -432,12 +520,6 @@ public:
 		//Recreate the descriptor file and context if requested
 		if (m_render_system_descriptor_load_requested)
 		{
-			//Remove the render context
-			if (m_render_context)
-			{
-				render::DestroyRenderContext(m_render_system, m_render_context);
-			}
-
 			//Reset errors
 			m_render_system_errors.clear();
 
@@ -447,21 +529,6 @@ public:
 			if (!render::LoadPassDescriptorFile(m_render_system, m_device, m_text_buffer.data(), buffer_size, m_render_system_errors))
 			{
 				core::LogError("Failed to load the new descriptor file, reverting changes");
-				m_show_errors = true;
-			}
-
-
-			//Create pass
-			render::PassInfo pass_info;
-			pass_info.width = m_width;
-			pass_info.height = m_height;
-
-			render::ResourceMap init_resource_map;
-
-			//Still load it if it fail, as it will use the last valid one
-			m_render_context = render::CreateRenderContext(m_render_system, m_device, "Main"_sh32, pass_info, init_resource_map, m_render_system_context_errors);
-			if (m_render_context == nullptr)
-			{
 				m_show_errors = true;
 			}
 
@@ -516,12 +583,12 @@ public:
 			}, zone_bitset);
 
 			{
-				//Add a render item for rendering the grass
+				//Add a render item for rendering the gazelle
 				auto commands_offset = command_buffer.Open();
 				command_buffer.SetVertexBuffers(0, 1, &m_display_resources.m_quad_vertex_buffer);
 				command_buffer.SetVertexBuffers(1, 1, &m_instances_vertex_buffer);
 				command_buffer.SetIndexBuffer(m_display_resources.m_quad_index_buffer);
-				command_buffer.SetPipelineState(m_display_resources.m_grass_pipeline_state);
+				command_buffer.SetPipelineState(m_display_resources.m_gazelle_pipeline_state);
 				display::DrawIndexedInstancedDesc draw_desc;
 				draw_desc.index_count = 6;
 				draw_desc.instance_count = static_cast<uint32_t>(m_instance_buffer.size() - instance_offset);
@@ -540,12 +607,12 @@ public:
 			}, zone_bitset);
 
 			{
-				//Add a render item for rendering the grass
+				//Add a render item for rendering the lion
 				auto commands_offset = command_buffer.Open();
 				command_buffer.SetVertexBuffers(0, 1, &m_display_resources.m_quad_vertex_buffer);
 				command_buffer.SetVertexBuffers(1, 1, &m_instances_vertex_buffer);
 				command_buffer.SetIndexBuffer(m_display_resources.m_quad_index_buffer);
-				command_buffer.SetPipelineState(m_display_resources.m_grass_pipeline_state);
+				command_buffer.SetPipelineState(m_display_resources.m_lion_pipeline_state);
 				display::DrawIndexedInstancedDesc draw_desc;
 				draw_desc.index_count = 6;
 				draw_desc.instance_count = static_cast<uint32_t>(m_instance_buffer.size() - instance_offset);
@@ -575,13 +642,13 @@ public:
 		m_width = width;
 		m_height = height;
 
-		if (m_render_context)
+		/*if (m_render_context)
 		{
 			render::PassInfo pass_info = m_render_context->GetPassInfo();
 			pass_info.width = m_width;
 			pass_info.height = m_height;
 			m_render_context->UpdatePassInfo(pass_info);
-		}
+		}*/
 	}
 
 	void OnAddImguiMenu() override
