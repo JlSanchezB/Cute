@@ -16,6 +16,37 @@
 #include <random>
 #include <bitset>
 
+class RandomEventsGenerator
+{
+	std::normal_distribution<float> m_distribution;
+	float m_num_events_per_second;
+	float m_event_timer;
+public:
+	RandomEventsGenerator(float num_events_per_second, float desviation)
+		: m_distribution(1.f, desviation), m_num_events_per_second(num_events_per_second), m_event_timer(0.f)
+	{
+	}
+
+	//Calculate number of events for this elapsed time
+	template<typename RANDON_GENERATOR>
+	size_t Events(RANDON_GENERATOR& generator, float elapsed_time)
+	{
+		m_event_timer += m_num_events_per_second * m_distribution(generator);
+
+		if (m_event_timer >= 1.f)
+		{
+			const float floor_event_timer = floor(m_event_timer);
+			const size_t num_events = static_cast<size_t>(floor_event_timer);
+			m_event_timer = m_event_timer - floor_event_timer;
+		}
+		else
+		{
+			return 0;
+		}
+	}
+};
+
+
 struct DisplayResource
 {
 	display::VertexBufferHandle m_quad_vertex_buffer;
