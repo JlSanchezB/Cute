@@ -564,10 +564,11 @@ namespace render
 				//Calculate begin/end for each render priority	
 				render_items.m_priority_table.resize(m_render_priorities.size());
 				size_t render_item_index = 0;
-				size_t num_sorted_render_items = render_items.m_sorted_render_items.size();
+				const size_t num_sorted_render_items = render_items.m_sorted_render_items.size();
+
 				for (size_t priority = 0; priority < m_render_priorities.size(); ++priority)
 				{
-					if (render_items.m_sorted_render_items[render_item_index].priority == priority || num_sorted_render_items == 0)
+					if (num_sorted_render_items > 0 && render_items.m_sorted_render_items[render_item_index].priority == priority)
 					{
 						//First item found
 						render_items.m_priority_table[priority].first = render_item_index;

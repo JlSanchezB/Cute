@@ -8,6 +8,9 @@
 #include <ext/glm/vec2.hpp>
 #include <ext/glm/gtc/constants.hpp>
 
+#define GLM_ENABLE_EXPERIMENTAL
+#include <ext/glm/gtx/rotate_vector.hpp>
+
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN             // Exclude rarely-used stuff from Windows headers.
 #endif
@@ -38,6 +41,7 @@ public:
 			const float floor_event_timer = floor(m_event_timer);
 			const size_t num_events = static_cast<size_t>(floor_event_timer);
 			m_event_timer = m_event_timer - floor_event_timer;
+			return num_events;
 		}
 		else
 		{
@@ -311,7 +315,7 @@ struct TigerComponent
 	}
 };
 
-using GrassEntityType = ecs::EntityType<PositionComponent, VelocityComponent, GrassComponent>;
+using GrassEntityType = ecs::EntityType<PositionComponent, GrassComponent>;
 using GazelleEntityType = ecs::EntityType<PositionComponent, VelocityComponent, GazelleComponent>;
 using TigerEntityType = ecs::EntityType<PositionComponent, VelocityComponent, TigerComponent>;
 
@@ -399,6 +403,41 @@ public:
 	constexpr static float m_world_bottom = -1.f;
 	constexpr static float m_world_left = -1.f;
 	constexpr static float m_world_right = 1.f;
+	constexpr static float m_world_max_size = 0.025f;
+
+	//Random generators
+	std::random_device m_random_device;
+	std::mt19937 m_random_generator;
+
+	//Random distributions
+	std::uniform_real_distribution<float> m_random_position_x;
+	std::uniform_real_distribution<float> m_random_position_y;
+	std::uniform_real_distribution<float> m_random_position_angle;
+	std::uniform_real_distribution<float> m_random_lineal_velocity;
+	std::uniform_real_distribution<float> m_random_angle_velocity;
+	std::uniform_real_distribution<float> m_random_size;
+	std::uniform_real_distribution<float> m_random_grass_grow_speed;
+	std::uniform_real_distribution<float> m_random_grass_dead_size;
+	std::uniform_real_distribution<float> m_random_growing_grass_distance;
+	std::uniform_real_distribution<float> m_random_0_2pi;
+
+	//Random events
+	RandomEventsGenerator m_grass_creation_events;
+
+	ECSGame() : m_random_generator(m_random_device()),
+		m_random_position_x(m_world_left, m_world_right),
+		m_random_position_y(m_world_bottom, m_world_top),
+		m_random_position_angle(0.f, glm::two_pi<float>()),
+		m_random_lineal_velocity(-0.05f, 0.05f),
+		m_random_angle_velocity(-0.01f, 0.01f),
+		m_random_size(0.005f, 0.01f),
+		m_random_grass_grow_speed(0.0001f, 0.001f),
+		m_random_grass_dead_size(0.01f, 0.01f),
+		m_grass_creation_events(1.f, 0.4f),
+		m_random_growing_grass_distance(0.f, 0.1f),
+		m_random_0_2pi(0.f, glm::two_pi<float>())
+	{
+	}
 
 	void OnInit() override
 	{
@@ -465,19 +504,7 @@ public:
 		database_desc.num_max_entities_zone = 1024 * 128;
 		ecs::CreateDatabase<GameDatabase>(database_desc);
 
-		//Allocate random instances
-		std::random_device rd;  //Will be used to obtain a seed for the random number engine
-		std::mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()
-		std::uniform_real_distribution<float> rand_position_x(m_world_left, m_world_right);
-		std::uniform_real_distribution<float> rand_position_y(m_world_bottom, m_world_top);
-		std::uniform_real_distribution<float> rand_position_angle(0.f, 2.f * 3.1415926f);
-		std::uniform_real_distribution<float> rand_lineal_velocity(-0.05f, 0.05f);
-		std::uniform_real_distribution<float> rand_angle_velocity(-0.01f, 0.01f);
-		std::uniform_real_distribution<float> rand_size(0.005f, 0.01f);
-		std::uniform_real_distribution<float> rand_grass_grow_speed(0.0001f, 0.001f);
-		std::uniform_real_distribution<float> rand_grass_dead_size(0.005f, 0.05f);
-
-		for (size_t i = 0; i < 2000; ++i)
+		/*for (size_t i = 0; i < 2000; ++i)
 		{
 			ecs::AllocInstance<GameDatabase, GazelleEntityType>()
 				.Init<PositionComponent>(rand_position_x(gen), rand_position_y(gen), rand_position_angle(gen))
@@ -499,7 +526,7 @@ public:
 				.Init<PositionComponent>(rand_position_x(gen), rand_position_y(gen), rand_position_angle(gen))
 				.Init<VelocityComponent>(rand_lineal_velocity(gen), rand_lineal_velocity(gen), rand_angle_velocity(gen))
 				.Init<TigerComponent>(rand_size(gen));
-		}
+		}*/
 		
 	}
 	void OnDestroy() override
@@ -518,6 +545,7 @@ public:
 		//Destroy device
 		display::DestroyDevice(m_device);
 	}
+
 	void OnTick(double total_time, float elapsed_time) override
 	{
 		//UPDATE GAME
@@ -530,6 +558,22 @@ public:
 				grass.size += grass.grow_speed * elapsed_time;
 				if (grass.size > grass.dead_size)
 				{
+					//Get position
+					auto& position_component = instance_iterator.Get<PositionComponent>();
+					const auto& dying_position = glm::vec2(position_component.position_angle.x, position_component.position_angle.y);
+
+					//Alloc new ones around dead grass
+					for (size_t i = 0; i < 10; ++i)
+					{
+						float distance = m_random_growing_grass_distance(m_random_generator);
+						float angle = m_random_0_2pi(m_random_generator);
+						glm::vec2 new_position = glm::rotate(glm::vec2(0.f, distance), angle) + dying_position;
+
+						ecs::AllocInstance<GameDatabase, GrassEntityType>()
+							.Init<PositionComponent>(new_position.x, new_position.y, 0.f)
+							.Init<GrassComponent>(0.f, 0.001f, 0.01f);
+					}
+
 					//Kill it
 					instance_iterator.Dealloc();
 				}
@@ -561,6 +605,15 @@ public:
 				}
 			}, zone_bitset);
 
+			//Calculate new grass
+			const size_t grass_count_to_create = m_grass_creation_events.Events(m_random_generator, elapsed_time);
+
+			for (size_t i = 0; i < grass_count_to_create; ++i)
+			{
+				ecs::AllocInstance<GameDatabase, GrassEntityType>()
+					.Init<PositionComponent>(m_random_position_x(m_random_generator), m_random_position_y(m_random_generator), 0.f)
+					.Init<GrassComponent>(0.f, m_random_grass_grow_speed(m_random_generator), m_random_grass_dead_size(m_random_generator));
+			}
 		}
 
 		//Recreate the descriptor file and context if requested
@@ -604,6 +657,7 @@ public:
 				m_instance_buffer.emplace_back(position.position_angle.x, position.position_angle.y, position.position_angle.z, grass.size);
 			}, zone_bitset);
 
+			if (m_instance_buffer.size() > 0)
 			{
 				//Add a render item for rendering the grass
 				auto commands_offset = command_buffer.Open();
@@ -628,6 +682,7 @@ public:
 				m_instance_buffer.emplace_back(position.position_angle.x, position.position_angle.y, position.position_angle.z, gazelle.size);
 			}, zone_bitset);
 
+			if ((m_instance_buffer.size() - instance_offset) > 0)
 			{
 				//Add a render item for rendering the gazelle
 				auto commands_offset = command_buffer.Open();
@@ -652,6 +707,7 @@ public:
 				m_instance_buffer.emplace_back(position.position_angle.x, position.position_angle.y, position.position_angle.z, tiger.size);
 			}, zone_bitset);
 
+			if ((m_instance_buffer.size() - instance_offset) > 0)
 			{
 				//Add a render item for rendering the lion
 				auto commands_offset = command_buffer.Open();
@@ -669,11 +725,13 @@ public:
 				point_of_view.PushRenderItem(m_solid_render_priority, 2, commands_offset);
 			}
 
-
-			//Send the buffer for updating the vertex constant
-			auto command_offset = render_frame.GetBeginFrameComamndbuffer().Open();
-			render_frame.GetBeginFrameComamndbuffer().UploadResourceBuffer(m_instances_vertex_buffer, &m_instance_buffer[0], m_instance_buffer.size() * sizeof(glm::vec4));
-			render_frame.GetBeginFrameComamndbuffer().Close();
+			if (m_instance_buffer.size() > 0)
+			{
+				//Send the buffer for updating the vertex constant
+				auto command_offset = render_frame.GetBeginFrameComamndbuffer().Open();
+				render_frame.GetBeginFrameComamndbuffer().UploadResourceBuffer(m_instances_vertex_buffer, &m_instance_buffer[0], m_instance_buffer.size() * sizeof(glm::vec4));
+				render_frame.GetBeginFrameComamndbuffer().Close();
+			}
 
 			//Render
 			render::EndPrepareRenderAndSubmit(m_render_system);

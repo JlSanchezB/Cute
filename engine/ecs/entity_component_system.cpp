@@ -51,10 +51,22 @@ namespace ecs
 		//List of deferred instance deletes
 		std::vector<InstanceIndexType> m_deferred_instace_deletes;
 
+		//Get container index
+		size_t GetContainerIndex(ZoneType zone_index, EntityTypeType entity_type_index, ComponentType component_index) const
+		{
+			return component_index + m_num_components * entity_type_index + zone_index * (m_num_components * m_num_entity_types);
+		}
+
+		//Get begin container index for all components
+		size_t GetBeginContainerIndex(ZoneType zone_index, EntityTypeType entity_type_index) const
+		{
+			return m_num_components * entity_type_index + zone_index * (m_num_components * m_num_entity_types);
+		}
+
 		//Access of the component virtual buffer
 		core::VirtualBuffer& GetStorage(ZoneType zone_index, EntityTypeType entity_type_index, ComponentType component_index)
 		{
-			const size_t index = component_index + m_num_components * entity_type_index + zone_index * (m_num_components * m_num_entity_types);
+			const size_t index = GetContainerIndex(zone_index, entity_type_index, component_index);
 
 			return m_component_containers[index];
 		}
@@ -76,13 +88,24 @@ namespace ecs
 			return static_cast<InstanceIndexType>(m_num_instances[index]);
 		}
 
-		InstanceIndexType AllocInstance(ZoneType zone_index, EntityTypeType entity_type_index)
+		InstanceIndexType AddInstance(ZoneType zone_index, EntityTypeType entity_type_index)
 		{
 			const size_t index = entity_type_index + zone_index * m_num_entity_types;
-			const InstanceIndexType instance_index = static_cast<InstanceIndexType>(m_num_instances[index]++);
+			return static_cast<InstanceIndexType>(m_num_instances[index]++);
+		}
+
+		InstanceIndexType RemoveInstance(ZoneType zone_index, EntityTypeType entity_type_index)
+		{
+			const size_t index = entity_type_index + zone_index * m_num_entity_types;
+			return static_cast<InstanceIndexType>(--m_num_instances[index]);
+		}
+
+		InstanceIndexType AllocInstance(ZoneType zone_index, EntityTypeType entity_type_index)
+		{
+			const InstanceIndexType instance_index = AddInstance(zone_index, entity_type_index);
 
 			//Grow all components
-			const size_t component_begin_index = m_num_components * entity_type_index + zone_index * (m_num_components * m_num_entity_types);
+			const size_t component_begin_index = GetBeginContainerIndex(zone_index, entity_type_index);
 			for (size_t i = 0; i < m_num_components; ++i)
 			{
 				auto& component_container = m_component_containers[component_begin_index + i];
@@ -90,7 +113,7 @@ namespace ecs
 				if (component_container.GetPtr())
 				{
 					//Grow the size
-					component_container.SetCommitedSize((instance_index + 1) * m_components[i].size);
+					component_container.SetCommitedSize(GetNumInstances(zone_index, entity_type_index) * m_components[i].size);
 				}
 			}
 
@@ -103,28 +126,33 @@ namespace ecs
 		//Fix all the redirections
 		void DestroyInstance(const InternalInstanceIndex& internal_instance_index)
 		{
-			const size_t index = internal_instance_index.entity_type_index + internal_instance_index.zone_index * m_num_entity_types;
-			const InstanceIndexType last_instance_index = static_cast<InstanceIndexType>(--m_num_instances[index]);
+			const InstanceIndexType last_instance_index = RemoveInstance(internal_instance_index.zone_index, internal_instance_index.entity_type_index);
+
+			//Check if the instance to delete is the last instance, then is nothing to do
+			const bool needs_to_move = last_instance_index != internal_instance_index.instance_index;
 
 			//Reduce by one all components
-			const size_t component_begin_index = m_num_components * internal_instance_index.entity_type_index + internal_instance_index.zone_index * (m_num_components * m_num_entity_types);
+			const size_t component_begin_index = GetBeginContainerIndex(internal_instance_index.zone_index, internal_instance_index.entity_type_index);
 			for (size_t i = 0; i < m_num_components; ++i)
 			{
 				auto& component_container = m_component_containers[component_begin_index + i];
-
+				const size_t component_size = m_components[i].size;
 				if (component_container.GetPtr())
 				{
-					uint8_t* last_instance_data = reinterpret_cast<uint8_t*>(component_container.GetPtr()) + last_instance_index * m_components[i].size;
-					uint8_t* to_delete_instance_data = reinterpret_cast<uint8_t*>(component_container.GetPtr()) + last_instance_index * m_components[i].size;
+					uint8_t* last_instance_data = reinterpret_cast<uint8_t*>(component_container.GetPtr()) + last_instance_index * component_size;
+					uint8_t* to_delete_instance_data = reinterpret_cast<uint8_t*>(component_container.GetPtr()) + internal_instance_index.instance_index * component_size;
 
 					//Call the destructor for this component
 					m_components[i].destructor_operator(to_delete_instance_data);
 
-					//Move components (the indirection will move as well, as the last component is the indirection index
-					m_components[i].move_operator(to_delete_instance_data, last_instance_data);
+					if (needs_to_move)
+					{
+						//Move components (the indirection will move as well, as the last component is the indirection index
+						m_components[i].move_operator(to_delete_instance_data, last_instance_data);
+					}
 
 					//Reduce the size of the component storage
-					component_container.SetCommitedSize(last_instance_index * m_components[i].size);
+					component_container.SetCommitedSize(last_instance_index * component_size);
 				}
 			}
 		}
@@ -156,8 +184,8 @@ namespace ecs
 			//Mark as free and redirect the first free slot to it and update the chain
 			auto& internal_instance_index = m_indirection_instance_table[indirection_index];
 			internal_instance_index.zone_index = InternalInstanceIndex::kFreeSlot;
-			m_first_free_slot_indirection_instance_table = internal_instance_index.instance_index;
-			internal_instance_index.instance_index = indirection_index;
+			internal_instance_index.instance_index = m_first_free_slot_indirection_instance_table;
+			m_first_free_slot_indirection_instance_table = indirection_index;
 		}
 	};
 
@@ -266,6 +294,10 @@ namespace ecs
 
 			//Get indirection index
 			const auto& indirection_index = *reinterpret_cast<InstanceIndirectionIndexType*>(database->GetComponentData(internal_index, database->m_indirection_index_component_index));
+
+			assert(database->m_indirection_instance_table[indirection_index].zone_index == internal_index.zone_index);
+			assert(database->m_indirection_instance_table[indirection_index].entity_type_index == internal_index.entity_type_index);
+			assert(database->m_indirection_instance_table[indirection_index].instance_index == internal_index.instance_index);
 
 			//Dealloc it
 			DeallocInstance(database, indirection_index);
