@@ -153,6 +153,14 @@ namespace ecs
 
 					//Reduce the size of the component storage
 					component_container.SetCommitedSize(last_instance_index * component_size);
+
+					if (i == m_indirection_index_component_index)
+					{
+						//The internal index of the indirection index table needs to be fixup
+						//In this moment the to_delete_instance_data has the correct index moved
+						auto& indirection_index_component = *(reinterpret_cast<InstanceIndirectionIndexType*>(to_delete_instance_data));
+						m_indirection_instance_table[indirection_index_component] = internal_instance_index;
+					}
 				}
 			}
 		}
