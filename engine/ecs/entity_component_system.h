@@ -257,6 +257,16 @@ namespace ecs
 		{
 			internal::DeallocInstance(DATABASE_DECLARATION::s_database, m_zone_index, m_entity_type, m_instance_index);
 		}
+
+		bool operator==(const InstanceIterator<DATABASE_DECLARATION>& b) const
+		{
+			return (m_zone_index == b.m_zone_index && m_entity_type == b.m_entity_type && m_instance_index == b.m_instance_index);
+		}
+
+		bool operator!=(const InstanceIterator<DATABASE_DECLARATION>& b) const
+		{
+			return (m_zone_index != b.m_zone_index || m_entity_type != b.m_entity_type || m_instance_index != b.m_instance_index);
+		}
 	};
 
 	namespace internal

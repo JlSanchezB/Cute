@@ -18,6 +18,7 @@
 #include <fstream>
 #include <random>
 #include <bitset>
+#include <algorithm>
 
 class RandomEventsGenerator
 {
@@ -34,7 +35,7 @@ public:
 	template<typename RANDON_GENERATOR>
 	size_t Events(RANDON_GENERATOR& generator, float elapsed_time)
 	{
-		m_event_timer += m_num_events_per_second * m_distribution(generator);
+		m_event_timer += m_num_events_per_second * m_distribution(generator) * elapsed_time;
 
 		if (m_event_timer >= 1.f)
 		{
@@ -431,9 +432,9 @@ public:
 		m_random_lineal_velocity(-0.05f, 0.05f),
 		m_random_angle_velocity(-0.01f, 0.01f),
 		m_random_size(0.005f, 0.01f),
-		m_random_grass_grow_speed(0.0001f, 0.001f),
-		m_random_grass_dead_size(0.01f, 0.01f),
-		m_grass_creation_events(1.f, 0.4f),
+		m_random_grass_grow_speed(0.001f, 0.002f),
+		m_random_grass_dead_size(0.01f, 0.03f),
+		m_grass_creation_events(20.f, 0.4f),
 		m_random_growing_grass_distance(0.f, 0.1f),
 		m_random_0_2pi(0.f, glm::two_pi<float>())
 	{
@@ -546,6 +547,26 @@ public:
 		display::DestroyDevice(m_device);
 	}
 
+	//Check if there is a grass in the current position
+	bool FreeGrassPosition(const glm::vec2& position)
+	{
+		std::bitset<1> zone_bitset(1);
+
+		bool inside = false;
+		ecs::Process<GameDatabase, GrassComponent, PositionComponent>([&](const auto& instance_iterator, GrassComponent& grass, const PositionComponent& position_grass)
+		{
+			float distance = glm::length(position - glm::vec2(position_grass.position_angle.x, position_grass.position_angle.y));
+
+			if (distance <= grass.size)
+			{
+				//Inside
+				inside = true;
+			}
+		}, zone_bitset);
+
+		return inside;
+	}
+
 	void OnTick(double total_time, float elapsed_time) override
 	{
 		//UPDATE GAME
@@ -553,30 +574,39 @@ public:
 			std::bitset<1> zone_bitset(1);
 
 			//Grow grass
-			ecs::Process<GameDatabase, GrassComponent>([&](const auto& instance_iterator, GrassComponent& grass)
+			ecs::Process<GameDatabase, GrassComponent, PositionComponent>([&](const auto& instance_iterator, GrassComponent& grass, const PositionComponent& position)
 			{
-				grass.size += grass.grow_speed * elapsed_time;
-				if (grass.size > grass.dead_size)
+				if (grass.size < grass.dead_size)
 				{
-					//Get position
-					auto& position_component = instance_iterator.Get<PositionComponent>();
-					const auto& dying_position = glm::vec2(position_component.position_angle.x, position_component.position_angle.y);
+					float new_size = grass.size + grass.grow_speed * elapsed_time;
+					glm::vec2 grass_position(position.position_angle.x, position.position_angle.y);
 
-					//Alloc new ones around dead grass
-					for (size_t i = 0; i < 10; ++i)
+					//Check if it collides with another grass O(N*N)
+					bool collides = false;
+					ecs::Process<GameDatabase, GrassComponent, PositionComponent>([&](const auto& instance_iterator_b, GrassComponent& grass_b, const PositionComponent& position_b)
 					{
-						float distance = m_random_growing_grass_distance(m_random_generator);
-						float angle = m_random_0_2pi(m_random_generator);
-						glm::vec2 new_position = glm::rotate(glm::vec2(0.f, distance), angle) + dying_position;
+						if (instance_iterator_b != instance_iterator)
+						{
+							float distance = glm::length(grass_position - glm::vec2(position_b.position_angle.x, position_b.position_angle.y));
+							if (distance <= (new_size + grass_b.size))
+							{
+								collides = true;
+							}
+						}
+					}, zone_bitset);
 
-						ecs::AllocInstance<GameDatabase, GrassEntityType>()
-							.Init<PositionComponent>(new_position.x, new_position.y, 0.f)
-							.Init<GrassComponent>(0.f, 0.001f, 0.01f);
+					if (collides)
+					{
+						//It is dead, it is not going to grow more, just set the dead space to the current size
+						grass.dead_size = grass.size;
 					}
-
-					//Kill it
-					instance_iterator.Dealloc();
+					else
+					{
+						//Grow
+						grass.size = std::fmin(new_size, grass.dead_size);
+					}
 				}
+				
 			}, zone_bitset);
 
 			//Move entities
@@ -610,9 +640,14 @@ public:
 
 			for (size_t i = 0; i < grass_count_to_create; ++i)
 			{
-				ecs::AllocInstance<GameDatabase, GrassEntityType>()
-					.Init<PositionComponent>(m_random_position_x(m_random_generator), m_random_position_y(m_random_generator), 0.f)
-					.Init<GrassComponent>(0.f, m_random_grass_grow_speed(m_random_generator), m_random_grass_dead_size(m_random_generator));
+				glm::vec2 position (m_random_position_x(m_random_generator), m_random_position_y(m_random_generator));
+
+				if (!FreeGrassPosition(position))
+				{
+					ecs::AllocInstance<GameDatabase, GrassEntityType>()
+						.Init<PositionComponent>(position.x, position.y, 0.f)
+						.Init<GrassComponent>(0.f, m_random_grass_grow_speed(m_random_generator), m_random_grass_dead_size(m_random_generator));
+				}
 			}
 		}
 
