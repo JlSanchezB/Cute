@@ -171,6 +171,9 @@ namespace ecs
 						//The internal index of the indirection index table needs to be fixup
 						//In this moment the to_delete_instance_data has the correct index moved
 						auto& indirection_index_component = *(reinterpret_cast<InstanceIndirectionIndexType*>(to_delete_instance_data));
+
+						assert(m_indirection_instance_table[indirection_index_component].instance_index == last_instance_index);
+
 						m_indirection_instance_table[indirection_index_component] = internal_instance_index;
 					}
 				}
@@ -209,6 +212,11 @@ namespace ecs
 					{
 						//The internal index of the indirection index table needs to be fixup
 						auto& indirection_index_component = *(reinterpret_cast<InstanceIndirectionIndexType*>(old_zone_component_instance_data));
+						
+						assert(m_indirection_instance_table[indirection_index_component].zone_index == internal_instance_index.zone_index);
+						assert(m_indirection_instance_table[indirection_index_component].entity_type_index == internal_instance_index.entity_type_index);
+						assert(m_indirection_instance_table[indirection_index_component].instance_index == internal_instance_index.instance_index);
+
 						m_indirection_instance_table[indirection_index_component] = new_zone_internal_instance_index;
 					}
 				}
