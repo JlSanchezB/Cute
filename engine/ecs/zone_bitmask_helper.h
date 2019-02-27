@@ -26,14 +26,21 @@ namespace ecs
 		static std::pair<uint16_t, uint16_t> GetIndex(float x, float y)
 		{
 			float range_x = (x - world_left) / (world_right - world_left);
-			float range_y = (x - world_bottom) / (world_top - world_bottom);
+			float range_y = (y - world_bottom) / (world_top - world_bottom);
 
 			//Convert to grid index
-			uint16_t index_x = std::min(static_cast<uint16_t>(range_x * side_count), side_count);
-			uint16_t index_y = std::min(static_cast<uint16_t>(range_x * side_count), side_count);
+			constexpr uint16_t max_index = side_count - 1;
+			uint16_t index_x = std::min(static_cast<uint16_t>(range_x * side_count), max_index);
+			uint16_t index_y = std::min(static_cast<uint16_t>(range_y * side_count), max_index);
 
 			//Return index
-			return std::make_pair<uint16_t, uint16_t>(index_x, index_y);
+			return std::pair<uint16_t, uint16_t>(index_x, index_y);
+		}
+
+		//Get zone index
+		static uint16_t GetZoneLinealIndex(uint16_t index_x, uint16_t index_y)
+		{
+			return 1 + index_x + index_y * side_count;
 		}
 
 		//Get zone
@@ -41,8 +48,8 @@ namespace ecs
 		{
 			if (radius < object_zero_zone_max_size)
 			{
-				auto& index = GetIndex(x, y);
-				return 1 + index.first + index.second * side_count;
+				const auto& index = GetIndex(x, y);
+				return GetZoneLinealIndex(index.first, index.second);
 			}
 			else
 			{
@@ -58,15 +65,15 @@ namespace ecs
 			bit_set.set(0, true);
 
 			//Calculate incluence
-			auto& begin = GetIndex(x - radius - object_zero_zone_max_size, y - radius - object_zero_zone_max_size);
-			auto& end = GetIndex(x + radius + object_zero_zone_max_size, y + radius + object_zero_zone_max_size);
+			const auto& begin = GetIndex(x - radius - object_zero_zone_max_size, y - radius - object_zero_zone_max_size);
+			const auto& end = GetIndex(x + radius + object_zero_zone_max_size, y + radius + object_zero_zone_max_size);
 
 			//Set the range
 			for (uint16_t i = begin.first; i <= end.first; ++i)
 			{
 				for (uint16_t j = begin.second; j <= end.second; ++j)
 				{
-					bit_set.set(1 + i + j, true);
+					bit_set.set(GetZoneLinealIndex(i, j), true);
 				}
 			}
 

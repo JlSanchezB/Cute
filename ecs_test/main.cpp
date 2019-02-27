@@ -54,12 +54,12 @@ public:
 
 struct ZoneDescriptor
 {
-	static constexpr uint16_t side_count = 8;
+	static constexpr uint16_t side_count = 16;
 	static constexpr float world_top = 1.f;
 	static constexpr float world_bottom = -1.f;
 	static constexpr float world_left = -1.f;
 	static constexpr float world_right = 1.f;
-	static constexpr float object_zero_zone_max_size = 0.005f;
+	static constexpr float object_zero_zone_max_size = 0.035f;
 };
 
 using GridZone = ecs::GridOneLevel<ZoneDescriptor>;
@@ -594,6 +594,9 @@ public:
 					float new_size = grass.size + grass.grow_speed * elapsed_time;
 					glm::vec2 grass_position(position.position_angle.x, position.position_angle.y);
 
+					//Calculate zone bitset based of the range
+					const auto& influence_zone_bitset = GridZone::CalculateInfluence(position.position_angle.x, position.position_angle.y, new_size);
+
 					//Check if it collides with another grass O(N*N)
 					bool collides = false;
 					ecs::Process<GameDatabase, GrassComponent, PositionComponent>([&](const auto& instance_iterator_b, GrassComponent& grass_b, const PositionComponent& position_b)
@@ -606,7 +609,7 @@ public:
 								collides = true;
 							}
 						}
-					}, zone_bitset);
+					}, influence_zone_bitset);
 
 					if (collides)
 					{
@@ -657,9 +660,12 @@ public:
 
 				if (!FreeGrassPosition(position))
 				{
-					ecs::AllocInstance<GameDatabase, GrassEntityType>()
+					//Calculate zone, already based to the bigger size
+					float dead_size = m_random_grass_dead_size(m_random_generator);
+					auto zone = GridZone::GetZone(position.x, position.y, dead_size);
+					ecs::AllocInstance<GameDatabase, GrassEntityType>(zone)
 						.Init<PositionComponent>(position.x, position.y, 0.f)
-						.Init<GrassComponent>(0.f, m_random_grass_grow_speed(m_random_generator), m_random_grass_dead_size(m_random_generator));
+						.Init<GrassComponent>(0.f, m_random_grass_grow_speed(m_random_generator), dead_size);
 				}
 			}
 		}
