@@ -97,13 +97,13 @@ namespace ecs
 			return static_cast<InstanceIndexType>(m_num_instances[index]);
 		}
 
-		InstanceIndexType AddInstance(ZoneType zone_index, EntityTypeType entity_type_index)
+		InstanceIndexType AddInstanceCount(ZoneType zone_index, EntityTypeType entity_type_index)
 		{
 			const size_t index = entity_type_index + zone_index * m_num_entity_types;
 			return static_cast<InstanceIndexType>(m_num_instances[index]++);
 		}
 
-		InstanceIndexType RemoveInstance(ZoneType zone_index, EntityTypeType entity_type_index)
+		InstanceIndexType RemoveInstanceCount(ZoneType zone_index, EntityTypeType entity_type_index)
 		{
 			const size_t index = entity_type_index + zone_index * m_num_entity_types;
 			return static_cast<InstanceIndexType>(--m_num_instances[index]);
@@ -111,7 +111,7 @@ namespace ecs
 
 		InstanceIndexType AllocInstance(ZoneType zone_index, EntityTypeType entity_type_index)
 		{
-			const InstanceIndexType instance_index = AddInstance(zone_index, entity_type_index);
+			const InstanceIndexType instance_index = AddInstanceCount(zone_index, entity_type_index);
 
 			//Grow all components
 			const size_t component_begin_index = GetBeginContainerIndex(zone_index, entity_type_index);
@@ -133,9 +133,9 @@ namespace ecs
 		//Destroy components associated to this instance
 		//Move last instance to the gap left by the deleted instance
 		//Fix all the redirections
-		void DestroyInstance(const InternalInstanceIndex& internal_instance_index)
+		void DestroyInstance(const InternalInstanceIndex& internal_instance_index, bool needs_destructor_call = true)
 		{
-			const InstanceIndexType last_instance_index = RemoveInstance(internal_instance_index.zone_index, internal_instance_index.entity_type_index);
+			const InstanceIndexType last_instance_index = RemoveInstanceCount(internal_instance_index.zone_index, internal_instance_index.entity_type_index);
 
 			//Check if the instance to delete is the last instance, then is nothing to do
 			const bool needs_to_move = last_instance_index != internal_instance_index.instance_index;
@@ -151,8 +151,11 @@ namespace ecs
 					uint8_t* last_instance_data = reinterpret_cast<uint8_t*>(component_container.GetPtr()) + last_instance_index * component_size;
 					uint8_t* to_delete_instance_data = reinterpret_cast<uint8_t*>(component_container.GetPtr()) + internal_instance_index.instance_index * component_size;
 
-					//Call the destructor for this component
-					m_components[i].destructor_operator(to_delete_instance_data);
+					if (needs_destructor_call)
+					{
+						//Call the destructor for this component
+						m_components[i].destructor_operator(to_delete_instance_data);
+					}
 
 					if (needs_to_move)
 					{
@@ -172,6 +175,47 @@ namespace ecs
 					}
 				}
 			}
+		}
+
+		//Move Instance
+		//Allocate a new instance in the new zone
+		//Move the components from the old zone to the new one
+		//Fix indirection index
+		//Move last instance from the old zone to the new gap
+		//Reduce old zone size
+		//Fix indirection index
+		void MoveInstance(const InternalInstanceIndex& internal_instance_index, ZoneType new_zone_index)
+		{
+			//Allocate new instance in the new zone
+			const InternalInstanceIndex new_zone_internal_instance_index{ new_zone_index, internal_instance_index.entity_type_index, AllocInstance(new_zone_index, internal_instance_index.entity_type_index) };
+
+			//Move components to the new zone
+			const size_t component_begin_index_old_zone = GetBeginContainerIndex(internal_instance_index.zone_index, internal_instance_index.entity_type_index);
+			const size_t component_begin_index_new_zone = GetBeginContainerIndex(new_zone_internal_instance_index.zone_index, new_zone_internal_instance_index.entity_type_index);
+			for (size_t i = 0; i < m_num_components; ++i)
+			{
+				auto& old_zonecomponent_container = m_component_containers[component_begin_index_old_zone + i];
+				const size_t component_size = m_components[i].size;
+				if (old_zonecomponent_container.GetPtr())
+				{
+					uint8_t* old_zone_component_instance_data = reinterpret_cast<uint8_t*>(old_zonecomponent_container.GetPtr()) + internal_instance_index.instance_index * component_size;
+					uint8_t* new_zone_component_instance_data = reinterpret_cast<uint8_t*>(old_zonecomponent_container.GetPtr()) + new_zone_internal_instance_index.instance_index * component_size;
+
+					
+					//Move components (the indirection will move as well, as the last component is the indirection index
+					m_components[i].move_operator(new_zone_component_instance_data, old_zone_component_instance_data);
+					
+					if (i == m_indirection_index_component_index)
+					{
+						//The internal index of the indirection index table needs to be fixup
+						auto& indirection_index_component = *(reinterpret_cast<InstanceIndirectionIndexType*>(old_zone_component_instance_data));
+						m_indirection_instance_table[indirection_index_component] = new_zone_internal_instance_index;
+					}
+				}
+			}
+
+			//Call Destroy old instance but without destructor
+			DestroyInstance(internal_instance_index, false);
 		}
 
 		InstanceIndirectionIndexType AllocIndirectionIndex(const InternalInstanceIndex& internal_instance_index)
@@ -362,8 +406,6 @@ namespace ecs
 
 		void TickDatabase(Database* database)
 		{
-			//Process moves
-
 			//Process deletes
 			for (auto& deferred_deleted_indirection_index : database->m_deferred_instance_deletes)
 			{
@@ -380,6 +422,21 @@ namespace ecs
 				
 			}
 			database->m_deferred_instance_deletes.clear();
+
+			//Process moves
+			for (auto& deferred_move_instance : database->m_deferred_instance_moves)
+			{
+				//Get internal instance index and check if it is already deleted
+				auto& internal_instance_index = database->m_indirection_instance_table[deferred_move_instance.indirection_index];
+				if (internal_instance_index.zone_index != InternalInstanceIndex::kFreeSlot)
+				{
+					//Move components associated to the instance
+					if (internal_instance_index.zone_index != deferred_move_instance.new_zone)
+					{
+						database->MoveInstance(internal_instance_index, deferred_move_instance.new_zone);
+					}
+				}
+			}
 		}
 		ZoneType GetNumZones(Database * database)
 		{
