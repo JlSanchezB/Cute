@@ -147,6 +147,7 @@
     <ClInclude Include="ecs\entity_component_common.h" />
     <ClInclude Include="ecs\entity_component_instance.h" />
     <ClInclude Include="ecs\entity_component_system.h" />
+    <ClInclude Include="ecs\zone_bitmask_helper.h" />
     <ClInclude Include="ext\glm\common.hpp" />
     <ClInclude Include="ext\glm\detail\compute_common.hpp" />
     <ClInclude Include="ext\glm\detail\compute_vector_relational.hpp" />

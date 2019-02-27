@@ -4,6 +4,7 @@
 #include <render/render_resource.h>
 #include <render/render_helper.h>
 #include <ecs/entity_component_system.h>
+#include <ecs/zone_bitmask_helper.h>
 #include <ext/glm/vec4.hpp>
 #include <ext/glm/vec2.hpp>
 #include <ext/glm/gtc/constants.hpp>
@@ -51,6 +52,17 @@ public:
 	}
 };
 
+struct ZoneDescriptor
+{
+	static constexpr uint16_t side_count = 8;
+	static constexpr float world_top = 1.f;
+	static constexpr float world_bottom = -1.f;
+	static constexpr float world_left = -1.f;
+	static constexpr float world_right = 1.f;
+	static constexpr float object_zero_zone_max_size = 0.005f;
+};
+
+using GridZone = ecs::GridOneLevel<ZoneDescriptor>;
 
 struct DisplayResource
 {
@@ -503,6 +515,7 @@ public:
 		//Create ecs database
 		ecs::DatabaseDesc database_desc;
 		database_desc.num_max_entities_zone = 1024 * 128;
+		database_desc.num_zones = GridZone::zone_count;
 		ecs::CreateDatabase<GameDatabase>(database_desc);
 
 		/*for (size_t i = 0; i < 2000; ++i)
@@ -550,7 +563,7 @@ public:
 	//Check if there is a grass in the current position
 	bool FreeGrassPosition(const glm::vec2& position)
 	{
-		std::bitset<1> zone_bitset(1);
+		const auto& zone_bitset = GridZone::All();
 
 		bool inside = false;
 		ecs::Process<GameDatabase, GrassComponent, PositionComponent>([&](const auto& instance_iterator, GrassComponent& grass, const PositionComponent& position_grass)
@@ -571,7 +584,7 @@ public:
 	{
 		//UPDATE GAME
 		{
-			std::bitset<1> zone_bitset(1);
+			const auto& zone_bitset = GridZone::All();
 
 			//Grow grass
 			ecs::Process<GameDatabase, GrassComponent, PositionComponent>([&](const auto& instance_iterator, GrassComponent& grass, const PositionComponent& position)
@@ -671,7 +684,7 @@ public:
 
 		//PREPARE RENDERING
 		{
-			std::bitset<1> zone_bitset(1);
+			const auto& zone_bitset = GridZone::All();
 
 			render::BeginPrepareRender(m_render_system);
 

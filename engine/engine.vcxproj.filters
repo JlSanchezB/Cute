@@ -887,6 +887,9 @@
     <ClInclude Include="ext\microprofile\microprofileui.h">
       <Filter>ext\microprofile</Filter>
     </ClInclude>
+    <ClInclude Include="ecs\zone_bitmask_helper.h">
+      <Filter>ecs</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="display\pc_dx12\display.cpp">
