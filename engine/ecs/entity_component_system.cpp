@@ -14,6 +14,12 @@ namespace ecs
 		InstanceIndexType instance_index;
 	};
 
+	struct InstanceMove
+	{
+		InstanceIndirectionIndexType indirection_index;
+		ZoneType new_zone;
+	};
+
 	//Database
 	//Our Database will have a list of instance types
 	//Instance types depends of the combination of components added to a instance
@@ -49,7 +55,10 @@ namespace ecs
 		InstanceIndexType m_first_free_slot_indirection_instance_table = -1;
 
 		//List of deferred instance deletes
-		std::vector<InstanceIndexType> m_deferred_instace_deletes;
+		std::vector<InstanceIndexType> m_deferred_instance_deletes;
+
+		//List of deferred instance moves
+		std::vector< InstanceMove> m_deferred_instance_moves;
 
 		//Get container index
 		size_t GetContainerIndex(ZoneType zone_index, EntityTypeType entity_type_index, ComponentType component_index) const
@@ -195,6 +204,23 @@ namespace ecs
 			internal_instance_index.instance_index = m_first_free_slot_indirection_instance_table;
 			m_first_free_slot_indirection_instance_table = indirection_index;
 		}
+
+		InstanceIndirectionIndexType& GetIndirectionIndex(ZoneType zone_index, EntityTypeType entity_type_index, InstanceIndexType instance_index)
+		{
+			InternalInstanceIndex internal_index;
+			internal_index.zone_index = zone_index;
+			internal_index.entity_type_index = entity_type_index;
+			internal_index.instance_index = instance_index;
+
+			//Get indirection index
+			auto& indirection_index = *reinterpret_cast<InstanceIndirectionIndexType*>(GetComponentData(internal_index, m_indirection_index_component_index));
+
+			assert(m_indirection_instance_table[indirection_index].zone_index == internal_index.zone_index);
+			assert(m_indirection_instance_table[indirection_index].entity_type_index == internal_index.entity_type_index);
+			assert(m_indirection_instance_table[indirection_index].instance_index == internal_index.instance_index);
+
+			return indirection_index;
+		}
 	};
 
 	namespace internal
@@ -290,25 +316,24 @@ namespace ecs
 		void DeallocInstance(Database * database, InstanceIndirectionIndexType indirection_index)
 		{
 			//Add to the deferred list
-			database->m_deferred_instace_deletes.push_back(indirection_index);
+			database->m_deferred_instance_deletes.push_back(indirection_index);
 		}
 
 		void DeallocInstance(Database * database, ZoneType zone_index, EntityTypeType entity_type, InstanceIndexType instance_index)
 		{
-			InternalInstanceIndex internal_index;
-			internal_index.zone_index = zone_index;
-			internal_index.entity_type_index = entity_type;
-			internal_index.instance_index = instance_index;
-
-			//Get indirection index
-			const auto& indirection_index = *reinterpret_cast<InstanceIndirectionIndexType*>(database->GetComponentData(internal_index, database->m_indirection_index_component_index));
-
-			assert(database->m_indirection_instance_table[indirection_index].zone_index == internal_index.zone_index);
-			assert(database->m_indirection_instance_table[indirection_index].entity_type_index == internal_index.entity_type_index);
-			assert(database->m_indirection_instance_table[indirection_index].instance_index == internal_index.instance_index);
-
 			//Dealloc it
-			DeallocInstance(database, indirection_index);
+			DeallocInstance(database, database->GetIndirectionIndex(zone_index, entity_type, instance_index));
+		}
+
+		void MoveZoneInstance(Database * database, InstanceIndirectionIndexType index, ZoneType new_zone_index)
+		{
+			//Add to the deferred moves
+			database->m_deferred_instance_moves.emplace_back(InstanceMove{ index , new_zone_index });
+		}
+
+		void MoveZoneInstance(Database * database, ZoneType zone_index, EntityTypeType entity_type, InstanceIndexType instance_index, ZoneType new_zone_index)
+		{
+			MoveZoneInstance(database, database->GetIndirectionIndex(zone_index, entity_type, instance_index), new_zone_index);
 		}
 
 		void* GetComponentData(Database * database, InstanceIndirectionIndexType indirection_index, ComponentType component_index)
@@ -340,7 +365,7 @@ namespace ecs
 			//Process moves
 
 			//Process deletes
-			for (auto& deferred_deleted_indirection_index : database->m_deferred_instace_deletes)
+			for (auto& deferred_deleted_indirection_index : database->m_deferred_instance_deletes)
 			{
 				//Get internal instance index and check if it is already deleted
 				auto& internal_instance_index = database->m_indirection_instance_table[deferred_deleted_indirection_index];
@@ -354,7 +379,7 @@ namespace ecs
 				}
 				
 			}
-			database->m_deferred_instace_deletes.clear();
+			database->m_deferred_instance_deletes.clear();
 		}
 		ZoneType GetNumZones(Database * database)
 		{

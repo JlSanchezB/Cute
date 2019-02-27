@@ -132,6 +132,12 @@ namespace ecs
 		//Dealloc instance
 		void DeallocInstance(Database* database, ZoneType zone_index, EntityTypeType entity_type, InstanceIndexType instance_index);
 
+		//Move zone
+		void MoveZoneInstance(Database* database, InstanceIndirectionIndexType index, ZoneType new_zone_index);
+
+		//Move zone
+		void MoveZoneInstance(Database* database, ZoneType zone_index, EntityTypeType entity_type, InstanceIndexType instance_index, ZoneType new_zone_index);
+
 		//Get component data
 		void* GetComponentData(Database* database, InstanceIndirectionIndexType index, ComponentType component_index);
 
@@ -222,6 +228,13 @@ namespace ecs
 		instance.m_indirection_index = -1;
 	}
 
+	//Move instance
+	template<typename DATABASE_DECLARATION>
+	void MoveInstance(Instance<DATABASE_DECLARATION>& instance, ZoneType new_zone_index)
+	{
+		internal::MoveZoneInstance(DATABASE_DECLARATION::s_database, instance.m_indirection_index, new_zone_index);
+	}
+
 	//Tick database
 	//Process all the database deferred tasks as
 	//Deallocs and Moves, destructors of the components are called here
@@ -256,6 +269,11 @@ namespace ecs
 		void Dealloc() const
 		{
 			internal::DeallocInstance(DATABASE_DECLARATION::s_database, m_zone_index, m_entity_type, m_instance_index);
+		}
+
+		void Move(ZoneType new_zone_index) const
+		{
+			internal::MoveZoneInstance(DATABASE_DECLARATION::s_database, m_zone_index, m_entity_type, m_instance_index, new_zone_index);
 		}
 
 		bool operator==(const InstanceIterator<DATABASE_DECLARATION>& b) const
