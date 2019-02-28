@@ -340,13 +340,7 @@ namespace platform
 			hInstance,
 			game);
 
-
 		ShowWindow(g_current_hwnd, true);
-
-		//Calculate frecuency for timer
-		QueryPerformanceFrequency(&g_frequency);
-		QueryPerformanceCounter(&g_current_time);
-		QueryPerformanceCounter(&g_begin_time);
 
 		//Init microprofiler
 		MicroProfileOnThreadCreate("Main");
@@ -356,9 +350,13 @@ namespace platform
 
 		MicroProfileWebServerStart();
 		
-
 		//Init callback
 		game->OnInit();
+
+		//Calculate frecuency for timer
+		QueryPerformanceFrequency(&g_frequency);
+		QueryPerformanceCounter(&g_current_time);
+		QueryPerformanceCounter(&g_begin_time);
 
 		// Main sample loop.
 		MSG msg = {};
