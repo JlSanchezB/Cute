@@ -8,6 +8,7 @@
 #include <ext/glm/vec4.hpp>
 #include <ext/glm/vec2.hpp>
 #include <ext/glm/gtc/constants.hpp>
+#include <core/profile.h>
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include <ext/glm/gtx/rotate_vector.hpp>
@@ -584,88 +585,98 @@ public:
 	{
 		//UPDATE GAME
 		{
+			MICROPROFILE_SCOPEI("ECSTest", "Update", 0xFFFF77FF);
 			const auto& zone_bitset = GridZone::All();
 
-			//Grow grass
-			ecs::Process<GameDatabase, GrassComponent, PositionComponent>([&](const auto& instance_iterator, GrassComponent& grass, const PositionComponent& position)
 			{
-				if (grass.size < grass.dead_size)
+				MICROPROFILE_SCOPEI("ECSTest", "GrassGrow", 0xFFFF77FF);
+				//Grow grass
+				ecs::Process<GameDatabase, GrassComponent, PositionComponent>([&](const auto& instance_iterator, GrassComponent& grass, const PositionComponent& position)
 				{
-					float new_size = grass.size + grass.grow_speed * elapsed_time;
-					glm::vec2 grass_position(position.position_angle.x, position.position_angle.y);
-
-					//Calculate zone bitset based of the range
-					const auto& influence_zone_bitset = GridZone::CalculateInfluence(position.position_angle.x, position.position_angle.y, new_size);
-
-					//Check if it collides with another grass O(N*N)
-					bool collides = false;
-					ecs::Process<GameDatabase, GrassComponent, PositionComponent>([&](const auto& instance_iterator_b, GrassComponent& grass_b, const PositionComponent& position_b)
+					if (grass.size < grass.dead_size)
 					{
-						if (instance_iterator_b != instance_iterator)
+						float new_size = grass.size + grass.grow_speed * elapsed_time;
+						glm::vec2 grass_position(position.position_angle.x, position.position_angle.y);
+
+						//Calculate zone bitset based of the range
+						const auto& influence_zone_bitset = GridZone::CalculateInfluence(position.position_angle.x, position.position_angle.y, new_size);
+
+						//Check if it collides with another grass O(N*N)
+						bool collides = false;
+						ecs::Process<GameDatabase, GrassComponent, PositionComponent>([&](const auto& instance_iterator_b, GrassComponent& grass_b, const PositionComponent& position_b)
 						{
-							float distance = glm::length(grass_position - glm::vec2(position_b.position_angle.x, position_b.position_angle.y));
-							if (distance <= (new_size + grass_b.size))
+							if (instance_iterator_b != instance_iterator)
 							{
-								collides = true;
+								float distance = glm::length(grass_position - glm::vec2(position_b.position_angle.x, position_b.position_angle.y));
+								if (distance <= (new_size + grass_b.size))
+								{
+									collides = true;
+								}
 							}
+						}, influence_zone_bitset);
+
+						if (collides)
+						{
+							//It is dead, it is not going to grow more, just set the dead space to the current size
+							grass.dead_size = grass.size;
 						}
-					}, influence_zone_bitset);
-
-					if (collides)
-					{
-						//It is dead, it is not going to grow more, just set the dead space to the current size
-						grass.dead_size = grass.size;
+						else
+						{
+							//Grow
+							grass.size = std::fmin(new_size, grass.dead_size);
+						}
 					}
-					else
+
+				}, zone_bitset);
+			}
+
+			{
+				MICROPROFILE_SCOPEI("ECSTest", "EntitiesMove", 0xFFFF77FF);
+				//Move entities
+				ecs::Process<GameDatabase, PositionComponent, VelocityComponent>([&](const auto& instance_iterator, PositionComponent& position, VelocityComponent& velocity)
+				{
+					position.position_angle += velocity.lineal_angle_velocity * elapsed_time;
+					if (position.position_angle.x > m_world_right)
 					{
-						//Grow
-						grass.size = std::fmin(new_size, grass.dead_size);
+						position.position_angle.x = m_world_right;
+						velocity.lineal_angle_velocity.x = -velocity.lineal_angle_velocity.x;
 					}
-				}
-				
-			}, zone_bitset);
+					if (position.position_angle.x < m_world_left)
+					{
+						position.position_angle.x = m_world_left;
+						velocity.lineal_angle_velocity.x = -velocity.lineal_angle_velocity.x;
+					}
+					if (position.position_angle.y > m_world_top)
+					{
+						position.position_angle.y = m_world_top;
+						velocity.lineal_angle_velocity.y = -velocity.lineal_angle_velocity.y;
+					}
+					if (position.position_angle.y < m_world_bottom)
+					{
+						position.position_angle.y = m_world_bottom;
+						velocity.lineal_angle_velocity.y = -velocity.lineal_angle_velocity.y;
+					}
+				}, zone_bitset);
+			}
 
-			//Move entities
-			ecs::Process<GameDatabase, PositionComponent, VelocityComponent>([&](const auto& instance_iterator, PositionComponent& position, VelocityComponent& velocity)
 			{
-				position.position_angle += velocity.lineal_angle_velocity * elapsed_time;
-				if (position.position_angle.x > m_world_right)
-				{
-					position.position_angle.x = m_world_right;
-					velocity.lineal_angle_velocity.x = -velocity.lineal_angle_velocity.x;
-				}
-				if (position.position_angle.x < m_world_left)
-				{
-					position.position_angle.x = m_world_left;
-					velocity.lineal_angle_velocity.x = -velocity.lineal_angle_velocity.x;
-				}
-				if (position.position_angle.y > m_world_top)
-				{
-					position.position_angle.y = m_world_top;
-					velocity.lineal_angle_velocity.y = -velocity.lineal_angle_velocity.y;
-				}
-				if (position.position_angle.y < m_world_bottom)
-				{
-					position.position_angle.y = m_world_bottom;
-					velocity.lineal_angle_velocity.y = -velocity.lineal_angle_velocity.y;
-				}
-			}, zone_bitset);
+				MICROPROFILE_SCOPEI("ECSTest", "NewGrass", 0xFFFF77FF);
+				//Calculate new grass
+				const size_t grass_count_to_create = m_grass_creation_events.Events(m_random_generator, elapsed_time);
 
-			//Calculate new grass
-			const size_t grass_count_to_create = m_grass_creation_events.Events(m_random_generator, elapsed_time);
-
-			for (size_t i = 0; i < grass_count_to_create; ++i)
-			{
-				glm::vec2 position (m_random_position_x(m_random_generator), m_random_position_y(m_random_generator));
-
-				if (!FreeGrassPosition(position))
+				for (size_t i = 0; i < grass_count_to_create; ++i)
 				{
-					//Calculate zone, already based to the bigger size
-					float dead_size = m_random_grass_dead_size(m_random_generator);
-					auto zone = GridZone::GetZone(position.x, position.y, dead_size);
-					ecs::AllocInstance<GameDatabase, GrassEntityType>(zone)
-						.Init<PositionComponent>(position.x, position.y, 0.f)
-						.Init<GrassComponent>(0.f, m_random_grass_grow_speed(m_random_generator), dead_size);
+					glm::vec2 position(m_random_position_x(m_random_generator), m_random_position_y(m_random_generator));
+
+					if (!FreeGrassPosition(position))
+					{
+						//Calculate zone, already based to the bigger size
+						float dead_size = m_random_grass_dead_size(m_random_generator);
+						auto zone = GridZone::GetZone(position.x, position.y, dead_size);
+						ecs::AllocInstance<GameDatabase, GrassEntityType>(zone)
+							.Init<PositionComponent>(position.x, position.y, 0.f)
+							.Init<GrassComponent>(0.f, m_random_grass_grow_speed(m_random_generator), dead_size);
+					}
 				}
 			}
 		}
@@ -690,6 +701,7 @@ public:
 
 		//PREPARE RENDERING
 		{
+			MICROPROFILE_SCOPEI("ECSTest", "PrepareRendering", 0xFFFF77FF);
 			const auto& zone_bitset = GridZone::All();
 
 			render::BeginPrepareRender(m_render_system);
@@ -791,8 +803,11 @@ public:
 			render::EndPrepareRenderAndSubmit(m_render_system);
 		}
 
-		//Tick database
-		ecs::Tick<GameDatabase>();
+		{
+			MICROPROFILE_SCOPEI("ECSTest", "DatabaseTick", 0xFFFF77FF);
+			//Tick database
+			ecs::Tick<GameDatabase>();
+		}
 	}
 
 	void OnSizeChange(uint32_t width, uint32_t height, bool minimized) override

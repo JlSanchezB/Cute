@@ -55,6 +55,9 @@ namespace
 	//Begin time
 	LARGE_INTEGER g_begin_time;
 
+	//Total accumulated time
+	double m_total_time = 0.f;
+
 	//Imgui menu enabled
 	bool g_imgui_menu_enable = false;
 
@@ -379,15 +382,20 @@ namespace platform
 			LARGE_INTEGER last_time = g_current_time;
 			QueryPerformanceCounter(&g_current_time);
 			float elapsed_time = static_cast<float>(g_current_time.QuadPart - last_time.QuadPart) / g_frequency.QuadPart;
-			double total_time = static_cast<double>(g_current_time.QuadPart - g_begin_time.QuadPart) / g_frequency.QuadPart;
+			if (elapsed_time > 0.5f)
+			{
+				core::LogInfo("Timestep was really high (Debugging?), limited to 30fps");
+				elapsed_time = 1.f / 30.f;
+			}
+			m_total_time += elapsed_time;
 			
 			//New frame for imgui
 			imgui_render::NextFrame(g_current_hwnd, elapsed_time);
 
 			{
-				MICROPROFILE_SCOPEI("Platform", "GameUpdate", 0xFFFF00FF);
+				MICROPROFILE_SCOPEI("Platform", "GameTick", 0xFFFF00FF);
 				//Render
-				game->OnTick(total_time, elapsed_time);
+				game->OnTick(m_total_time, elapsed_time);
 			}
 
 			{
