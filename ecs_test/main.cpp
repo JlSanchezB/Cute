@@ -1,3 +1,4 @@
+#define NOMINMAX
 #include <core/platform.h>
 #include <display/display.h>
 #include <render/render.h>
@@ -21,6 +22,8 @@
 #include <random>
 #include <bitset>
 #include <algorithm>
+
+#include "resources.h"
 
 class RandomEventsGenerator
 {
@@ -65,222 +68,6 @@ struct ZoneDescriptor
 
 using GridZone = ecs::GridOneLevel<ZoneDescriptor>;
 
-struct DisplayResource
-{
-	display::VertexBufferHandle m_quad_vertex_buffer;
-	display::IndexBufferHandle m_quad_index_buffer;
-	display::RootSignatureHandle m_root_signature;
-	display::PipelineStateHandle m_grass_pipeline_state;
-	display::PipelineStateHandle m_gazelle_pipeline_state;
-	display::PipelineStateHandle m_lion_pipeline_state;
-
-	void Load(display::Device* device)
-	{
-		//Create root signature
-		display::RootSignatureDesc root_signature_desc;
-		m_root_signature = display::CreateRootSignature(device, root_signature_desc, "Root Signature");
-
-		//Create pipeline state
-		const char* shader_code =
-			"	struct PSInput\
-				{\
-					float4 position : SV_POSITION;\
-					float2 coords : TEXCOORD0; \
-				};\
-				\
-				PSInput main_vs(float2 position : POSITION, float4 instance_data : TEXCOORD)\
-				{\
-					PSInput result; \
-					result.position.xy = position.xy * instance_data.w + instance_data.xy; \
-					result.position.zw = float2(0.f, 1.f); \
-					result.coords.xy = position.xy; \
-					return result;\
-				}\
-				float4 main_ps(PSInput input) : SV_TARGET\
-				{\
-					float alpha = smoothstep(1.f, 0.95f, length(input.coords.xy));\
-					return float4(0.f, alpha, 0.f, alpha);\
-				}";
-
-		std::vector<char> vertex_shader;
-		std::vector<char> pixel_shader;
-
-		display::CompileShaderDesc compile_shader_desc;
-		compile_shader_desc.code = shader_code;
-		compile_shader_desc.entry_point = "main_vs";
-		compile_shader_desc.target = "vs_5_0";
-		display::CompileShader(device, compile_shader_desc, vertex_shader);
-
-		compile_shader_desc.code = shader_code;
-		compile_shader_desc.entry_point = "main_ps";
-		compile_shader_desc.target = "ps_5_0";
-		display::CompileShader(device, compile_shader_desc, pixel_shader);
-
-
-		//Create pipeline state
-		display::PipelineStateDesc pipeline_state_desc;
-		pipeline_state_desc.root_signature = m_root_signature;
-
-		//Add input layouts
-		pipeline_state_desc.input_layout.elements[0] = display::InputElementDesc("POSITION", 0, display::Format::R32G32_FLOAT, 0, 0);
-		pipeline_state_desc.input_layout.elements[1] = display::InputElementDesc("TEXCOORD", 0, display::Format::R32G32B32A32_FLOAT, 1, 0, display::InputType::Instance);
-		pipeline_state_desc.input_layout.num_elements = 2;
-
-
-		//Add shaders
-		pipeline_state_desc.pixel_shader.data = reinterpret_cast<void*>(pixel_shader.data());
-		pipeline_state_desc.pixel_shader.size = pixel_shader.size();
-
-		pipeline_state_desc.vertex_shader.data = reinterpret_cast<void*>(vertex_shader.data());
-		pipeline_state_desc.vertex_shader.size = vertex_shader.size();
-
-		//Add render targets
-		pipeline_state_desc.num_render_targets = 1;
-		pipeline_state_desc.render_target_format[0] = display::Format::R8G8B8A8_UNORM;
-
-		//Blend
-		pipeline_state_desc.blend_desc.render_target_blend[0].blend_enable = true;
-		pipeline_state_desc.blend_desc.render_target_blend[0].src_blend = display::Blend::SrcAlpha;
-		pipeline_state_desc.blend_desc.render_target_blend[0].dest_blend = display::Blend::InvSrcAlpha;
-
-		//Create
-		m_grass_pipeline_state = display::CreatePipelineState(device, pipeline_state_desc, "Grass");
-
-		//Cow
-		//Create pipeline state
-		const char* gazelle_shader_code =
-			"	struct PSInput\
-				{\
-					float4 position : SV_POSITION;\
-					float2 coords : TEXCOORD0; \
-				};\
-				\
-				PSInput main_vs(float2 position : POSITION, float4 instance_data : TEXCOORD)\
-				{\
-					PSInput result; \
-					result.position.xy = position.xy * instance_data.w + instance_data.xy; \
-					result.position.zw = float2(0.f, 1.f); \
-					result.coords.xy = position.xy; \
-					return result;\
-				}\
-				float4 main_ps(PSInput input) : SV_TARGET\
-				{\
-					float alpha = smoothstep(1.f, 0.95f, length(input.coords.xy));\
-					return float4(alpha, alpha, alpha, alpha);\
-				}";
-
-
-		compile_shader_desc.code = gazelle_shader_code;
-		compile_shader_desc.entry_point = "main_vs";
-		compile_shader_desc.target = "vs_5_0";
-		display::CompileShader(device, compile_shader_desc, vertex_shader);
-
-		compile_shader_desc.code = gazelle_shader_code;
-		compile_shader_desc.entry_point = "main_ps";
-		compile_shader_desc.target = "ps_5_0";
-		display::CompileShader(device, compile_shader_desc, pixel_shader);
-
-		//Add shaders
-		pipeline_state_desc.pixel_shader.data = reinterpret_cast<void*>(pixel_shader.data());
-		pipeline_state_desc.pixel_shader.size = pixel_shader.size();
-
-		pipeline_state_desc.vertex_shader.data = reinterpret_cast<void*>(vertex_shader.data());
-		pipeline_state_desc.vertex_shader.size = vertex_shader.size();
-
-		//Create
-		m_gazelle_pipeline_state = display::CreatePipelineState(device, pipeline_state_desc, "Gazelle");
-
-		//Lion
-		//Create pipeline state
-		const char* lion_shader_code =
-			"	struct PSInput\
-				{\
-					float4 position : SV_POSITION;\
-					float2 coords : TEXCOORD0; \
-				};\
-				\
-				PSInput main_vs(float2 position : POSITION, float4 instance_data : TEXCOORD)\
-				{\
-					PSInput result; \
-					result.position.xy = position.xy * instance_data.w + instance_data.xy; \
-					result.position.zw = float2(0.f, 1.f); \
-					result.coords.xy = position.xy; \
-					return result;\
-				}\
-				float4 main_ps(PSInput input) : SV_TARGET\
-				{\
-					float alpha = smoothstep(1.f, 0.95f, length(input.coords.xy));\
-					return float4(alpha, alpha, 0.f, alpha);\
-				}";
-
-
-		compile_shader_desc.code = lion_shader_code;
-		compile_shader_desc.entry_point = "main_vs";
-		compile_shader_desc.target = "vs_5_0";
-		display::CompileShader(device, compile_shader_desc, vertex_shader);
-
-		compile_shader_desc.code = lion_shader_code;
-		compile_shader_desc.entry_point = "main_ps";
-		compile_shader_desc.target = "ps_5_0";
-		display::CompileShader(device, compile_shader_desc, pixel_shader);
-
-		//Add shaders
-		pipeline_state_desc.pixel_shader.data = reinterpret_cast<void*>(pixel_shader.data());
-		pipeline_state_desc.pixel_shader.size = pixel_shader.size();
-
-		pipeline_state_desc.vertex_shader.data = reinterpret_cast<void*>(vertex_shader.data());
-		pipeline_state_desc.vertex_shader.size = vertex_shader.size();
-
-		//Create
-		m_lion_pipeline_state = display::CreatePipelineState(device, pipeline_state_desc, "Lion");
-
-		//Quad Vertex buffer
-		{
-			struct VertexData
-			{
-				float position[2];
-			};
-
-			VertexData vertex_data[4] =
-			{
-				{1.f, 1.f},
-				{-1.f, 1.f},
-				{1.f, -1.f},
-				{-1.f, -1.f}
-			};
-
-			display::VertexBufferDesc vertex_buffer_desc;
-			vertex_buffer_desc.init_data = vertex_data;
-			vertex_buffer_desc.size = sizeof(vertex_data);
-			vertex_buffer_desc.stride = sizeof(VertexData);
-
-			m_quad_vertex_buffer = display::CreateVertexBuffer(device, vertex_buffer_desc, "quad_vertex_buffer");
-		}
-
-		//Quad Index buffer
-		{
-			uint16_t index_buffer_data[6] = { 0, 2, 1, 1, 2, 3 };
-			display::IndexBufferDesc index_buffer_desc;
-			index_buffer_desc.init_data = index_buffer_data;
-			index_buffer_desc.size = sizeof(index_buffer_data);
-
-			m_quad_index_buffer = display::CreateIndexBuffer(device, index_buffer_desc, "quad_index_buffer");
-		}
-
-	}
-
-	void Unload(display::Device* device)
-	{
-		display::DestroyHandle(device, m_quad_vertex_buffer);
-		display::DestroyHandle(device, m_quad_index_buffer);
-		display::DestroyHandle(device, m_grass_pipeline_state);
-		display::DestroyHandle(device, m_gazelle_pipeline_state);
-		display::DestroyHandle(device, m_lion_pipeline_state);
-		display::DestroyHandle(device, m_root_signature);
-	}
-};
-
-
 struct PositionComponent
 {
 	glm::vec4 position_angle;
@@ -304,19 +91,31 @@ struct GrassComponent
 {
 	float size;
 	float grow_speed;
-	float dead_size;
+	float top_size;
 
-	GrassComponent(float _size, float _grow_speed, float _dead_size) : size(_size), grow_speed(_grow_speed), dead_size(_dead_size)
+	GrassComponent(float _size, float _grow_speed, float _top_size) : size(_size), grow_speed(_grow_speed), top_size(_top_size)
 	{
 	}
+};
+
+enum class GazelleState
+{
+	LookingForGrass,
+	TargetingGrass,
+	EatingGrass,
+	RunningFromLion
 };
 
 struct GazelleComponent
 {
 	float size;
+	float repro_size;
+	float grow_speed;
+	GazelleState state;
 
 	GazelleComponent(float _size) : size(_size)
 	{
+		state = GazelleState::LookingForGrass;
 	}
 };
 
@@ -423,33 +222,33 @@ public:
 	std::random_device m_random_device;
 	std::mt19937 m_random_generator;
 
+	//Default parameters
+	float m_min_grass_grow_speed = 0.001f;
+	float m_max_grass_grow_speed = 0.01f;
+	float m_min_grass_top_size = 0.01f;
+	float m_max_grass_top_size = 0.03f;
+	float m_grass_creation_rate = 20.f;
+	float m_grass_creation_desviation = 1.f;
+
 	//Random distributions
 	std::uniform_real_distribution<float> m_random_position_x;
 	std::uniform_real_distribution<float> m_random_position_y;
 	std::uniform_real_distribution<float> m_random_position_angle;
-	std::uniform_real_distribution<float> m_random_lineal_velocity;
-	std::uniform_real_distribution<float> m_random_angle_velocity;
-	std::uniform_real_distribution<float> m_random_size;
-	std::uniform_real_distribution<float> m_random_grass_grow_speed;
-	std::uniform_real_distribution<float> m_random_grass_dead_size;
-	std::uniform_real_distribution<float> m_random_growing_grass_distance;
-	std::uniform_real_distribution<float> m_random_0_2pi;
 
 	//Random events
 	RandomEventsGenerator m_grass_creation_events;
+
+	float Random(float min, float max)
+	{
+		float random_01 = static_cast<float>(m_random_generator() - m_random_generator.min()) / static_cast<float>(m_random_generator.max() - m_random_generator.min());
+		return min + random_01 * (max - min);
+	}
 
 	ECSGame() : m_random_generator(m_random_device()),
 		m_random_position_x(m_world_left, m_world_right),
 		m_random_position_y(m_world_bottom, m_world_top),
 		m_random_position_angle(0.f, glm::two_pi<float>()),
-		m_random_lineal_velocity(-0.05f, 0.05f),
-		m_random_angle_velocity(-0.01f, 0.01f),
-		m_random_size(0.005f, 0.01f),
-		m_random_grass_grow_speed(0.001f, 0.002f),
-		m_random_grass_dead_size(0.01f, 0.03f),
-		m_grass_creation_events(20.f, 0.4f),
-		m_random_growing_grass_distance(0.f, 0.1f),
-		m_random_0_2pi(0.f, glm::two_pi<float>())
+		m_grass_creation_events(m_grass_creation_rate, m_grass_creation_desviation)
 	{
 	}
 
@@ -518,30 +317,6 @@ public:
 		database_desc.num_max_entities_zone = 1024 * 128;
 		database_desc.num_zones = GridZone::zone_count;
 		ecs::CreateDatabase<GameDatabase>(database_desc);
-
-		/*for (size_t i = 0; i < 2000; ++i)
-		{
-			ecs::AllocInstance<GameDatabase, GazelleEntityType>()
-				.Init<PositionComponent>(rand_position_x(gen), rand_position_y(gen), rand_position_angle(gen))
-				.Init<VelocityComponent>(rand_lineal_velocity(gen), rand_lineal_velocity(gen), rand_angle_velocity(gen))
-				.Init<GazelleComponent>(rand_size(gen));
-		}
-
-		for (size_t i = 0; i < 2000; ++i)
-		{
-			ecs::AllocInstance<GameDatabase, GrassEntityType>()
-				.Init<PositionComponent>(rand_position_x(gen), rand_position_y(gen), 0.f)
-				.Init<VelocityComponent>(0.f, 0.f, 0.f)
-				.Init<GrassComponent>(0.f, rand_grass_grow_speed(gen), rand_grass_dead_size(gen));
-		}
-
-		for (size_t i = 0; i < 2000; ++i)
-		{
-			ecs::AllocInstance<GameDatabase, TigerEntityType>()
-				.Init<PositionComponent>(rand_position_x(gen), rand_position_y(gen), rand_position_angle(gen))
-				.Init<VelocityComponent>(rand_lineal_velocity(gen), rand_lineal_velocity(gen), rand_angle_velocity(gen))
-				.Init<TigerComponent>(rand_size(gen));
-		}*/
 		
 	}
 	void OnDestroy() override
@@ -593,7 +368,7 @@ public:
 				//Grow grass
 				ecs::Process<GameDatabase, GrassComponent, PositionComponent>([&](const auto& instance_iterator, GrassComponent& grass, const PositionComponent& position)
 				{
-					if (grass.size < grass.dead_size)
+					if (grass.size < grass.top_size)
 					{
 						float new_size = grass.size + grass.grow_speed * elapsed_time;
 						glm::vec2 grass_position(position.position_angle.x, position.position_angle.y);
@@ -618,12 +393,12 @@ public:
 						if (collides)
 						{
 							//It is dead, it is not going to grow more, just set the dead space to the current size
-							grass.dead_size = grass.size;
+							grass.top_size = grass.size;
 						}
 						else
 						{
 							//Grow
-							grass.size = std::fmin(new_size, grass.dead_size);
+							grass.size = std::fmin(new_size, grass.top_size);
 						}
 					}
 
@@ -671,11 +446,12 @@ public:
 					if (!FreeGrassPosition(position))
 					{
 						//Calculate zone, already based to the bigger size
-						float dead_size = m_random_grass_dead_size(m_random_generator);
-						auto zone = GridZone::GetZone(position.x, position.y, dead_size);
+						float top_size = Random(m_min_grass_top_size, m_max_grass_top_size);
+						float grow_seed = Random(m_min_grass_grow_speed, m_max_grass_grow_speed);
+						auto zone = GridZone::GetZone(position.x, position.y, top_size);
 						ecs::AllocInstance<GameDatabase, GrassEntityType>(zone)
 							.Init<PositionComponent>(position.x, position.y, 0.f)
-							.Init<GrassComponent>(0.f, m_random_grass_grow_speed(m_random_generator), dead_size);
+							.Init<GrassComponent>(0.f, grow_seed, top_size);
 					}
 				}
 			}

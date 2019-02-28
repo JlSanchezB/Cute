@@ -136,6 +136,9 @@
   <ItemGroup>
     <Xml Include="ecs_render_passes.xml" />
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="resources.h" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

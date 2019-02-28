@@ -27,4 +27,9 @@
       <Filter>Assets</Filter>
     </Xml>
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="resources.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
 </Project>
