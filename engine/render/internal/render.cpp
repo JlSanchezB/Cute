@@ -4,6 +4,7 @@
 #include <render/render_helper.h>
 #include "render_system.h"
 #include <render/render_resource.h>
+#include <core/profile.h>
 #include "render_pass.h"
 
 #include <stdarg.h>
@@ -19,6 +20,8 @@ namespace
 		}
 		container.clear();
 	}
+
+	constexpr uint32_t kRenderProfileColour = 0xFF3333FF;
 }
 
 namespace render
@@ -497,6 +500,8 @@ namespace render
 
 	void System::SubmitRender()
 	{
+		MICROPROFILE_SCOPEI("Render", "Submit", kRenderProfileColour);
+
 		//Render thread
 		display::BeginFrame(m_device);
 
@@ -505,6 +510,8 @@ namespace render
 
 		//Execute begin commands in the render_frame
 		{
+			MICROPROFILE_SCOPEI("Render", "ExecuteBeginCommands", kRenderProfileColour);
+
 			auto render_context = display::OpenCommandList(m_device, m_render_command_list);
 
 			render::CommandBuffer::CommandOffset command_offset = 0;
@@ -526,6 +533,8 @@ namespace render
 		//For each point of view, we could run it in parallel
 		for (auto& point_of_view : render_frame.m_point_of_views)
 		{
+			MICROPROFILE_SCOPEI("Render", "SubmitPointOfView", kRenderProfileColour);
+
 			//Find the render_context associated to it
 			RenderContextInternal* render_context = GetCachedRenderContext(point_of_view.m_pass_name, point_of_view.m_id, point_of_view.m_pass_info, point_of_view.m_init_resources);
 			
@@ -533,6 +542,8 @@ namespace render
 			{
 				//Execute begin point of view command buffer
 				{
+					MICROPROFILE_SCOPEI("Render", "ExecuteBeginPointOfViewCommands", kRenderProfileColour);
+
 					auto render_context = display::OpenCommandList(m_device, m_render_command_list);
 
 					render::CommandBuffer::CommandOffset command_offset = 0;
@@ -551,48 +562,58 @@ namespace render
 				//Set pass info
 				render_context->m_pass_info = point_of_view.m_pass_info;
 
-				auto& render_items = render_context->m_render_items;
-				//Copy render items from the point of view to the render context
-				render_items.m_sorted_render_items = point_of_view.m_render_items;
-				//Sort render items
-				std::sort(render_items.m_sorted_render_items.begin(), render_items.m_sorted_render_items.end(),
-					[](const Item& a, const Item& b)
 				{
-					return a.full_32bit_sort_key < b.full_32bit_sort_key;
-				});
+					MICROPROFILE_SCOPEI("Render", "SortRenderItems", kRenderProfileColour);
 
-				//Calculate begin/end for each render priority	
-				render_items.m_priority_table.resize(m_render_priorities.size());
-				size_t render_item_index = 0;
-				const size_t num_sorted_render_items = render_items.m_sorted_render_items.size();
-
-				for (size_t priority = 0; priority < m_render_priorities.size(); ++priority)
-				{
-					if (num_sorted_render_items > 0 && render_items.m_sorted_render_items[render_item_index].priority == priority)
+					auto& render_items = render_context->m_render_items;
+					//Copy render items from the point of view to the render context
+					render_items.m_sorted_render_items = point_of_view.m_render_items;
+					//Sort render items
+					std::sort(render_items.m_sorted_render_items.begin(), render_items.m_sorted_render_items.end(),
+						[](const Item& a, const Item& b)
 					{
-						//First item found
-						render_items.m_priority_table[priority].first = render_item_index;
+						return a.full_32bit_sort_key < b.full_32bit_sort_key;
+					});
 
-						//Look for the last one or the last 
-						while (render_item_index < num_sorted_render_items && render_items.m_sorted_render_items[render_item_index].priority == priority)
+					//Calculate begin/end for each render priority	
+					render_items.m_priority_table.resize(m_render_priorities.size());
+					size_t render_item_index = 0;
+					const size_t num_sorted_render_items = render_items.m_sorted_render_items.size();
+
+					for (size_t priority = 0; priority < m_render_priorities.size(); ++priority)
+					{
+						if (num_sorted_render_items > 0 && render_items.m_sorted_render_items[render_item_index].priority == priority)
 						{
-							render_item_index++;
-						}
+							//First item found
+							render_items.m_priority_table[priority].first = render_item_index;
 
-						//Last item found
-						render_items.m_priority_table[priority].second = std::min(render_item_index, num_sorted_render_items - 1);
-					}
-					else
-					{
-						//We don't have any item of priority in the sort items
-						render_items.m_priority_table[priority].first = render_items.m_priority_table[priority].second = -1;
+							//Look for the last one or the last 
+							while (render_item_index < num_sorted_render_items && render_items.m_sorted_render_items[render_item_index].priority == priority)
+							{
+								render_item_index++;
+							}
+
+							//Last item found
+							render_items.m_priority_table[priority].second = std::min(render_item_index, num_sorted_render_items - 1);
+						}
+						else
+						{
+							//We don't have any item of priority in the sort items
+							render_items.m_priority_table[priority].first = render_items.m_priority_table[priority].second = -1;
+						}
 					}
 				}
 
-				//Capture pass
-				render::CaptureRenderContext(this, render_context);
-				//Execute pass
-				render::ExecuteRenderContext(this, render_context);
+				{
+					MICROPROFILE_SCOPEI("Render", "CapturePass", kRenderProfileColour);
+					//Capture pass
+					render::CaptureRenderContext(this, render_context);
+				}
+				{
+					MICROPROFILE_SCOPEI("Render", "RenderPass", kRenderProfileColour);
+					//Execute pass
+					render::ExecuteRenderContext(this, render_context);
+				}
 			}
 		}
 
