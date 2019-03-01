@@ -60,6 +60,9 @@ namespace ecs
 		//List of deferred instance moves
 		std::vector< InstanceMove> m_deferred_instance_moves;
 
+		//Stats from last frames
+		DatabaseStats m_stats;
+
 		//Get container index
 		size_t GetContainerIndex(ZoneType zone_index, EntityTypeType entity_type_index, ComponentType component_index) const
 		{
@@ -427,8 +430,8 @@ namespace ecs
 					//Deallocate indirection index
 					database->DeallocIndirectionIndex(deferred_deleted_indirection_index);
 				}
-				
 			}
+			database->m_stats.num_deferred_deletions = database->m_deferred_instance_deletes.size();
 			database->m_deferred_instance_deletes.clear();
 
 			//Process moves
@@ -445,6 +448,9 @@ namespace ecs
 					}
 				}
 			}
+
+			database->m_stats.num_deferred_moves = database->m_deferred_instance_moves.size();
+			database->m_deferred_instance_moves.clear();
 		}
 		ZoneType GetNumZones(Database * database)
 		{
@@ -459,6 +465,11 @@ namespace ecs
 		InstanceIndexType GetNumInstances(Database * database, ZoneType zone_index, EntityTypeType entity_type)
 		{
 			return database->GetNumInstances(zone_index, entity_type);
+		}
+
+		void GetDatabaseStats(Database * database, DatabaseStats & stats)
+		{
+			stats = database->m_stats;
 		}
 	}
 }

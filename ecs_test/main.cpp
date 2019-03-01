@@ -211,6 +211,9 @@ public:
 	//Instance buffer
 	std::vector<glm::vec4> m_instance_buffer;
 
+	//Show ecs debug info
+	bool m_show_ecs_stats = false;
+
 	//World size
 	constexpr static float m_world_top = 1.f;
 	constexpr static float m_world_bottom = -1.f;
@@ -597,9 +600,10 @@ public:
 	void OnAddImguiMenu() override
 	{
 		//Add menu for modifying the render system descriptor file
-		if (ImGui::BeginMenu("RenderSystem"))
+		if (ImGui::BeginMenu("ECS"))
 		{
 			m_show_edit_descriptor_file = ImGui::MenuItem("Edit descriptor file");
+			m_show_ecs_stats = ImGui::MenuItem("Show ECS stats");
 			ImGui::EndMenu();
 		}
 	}
@@ -651,6 +655,27 @@ public:
 				}
 				ImGui::EndPopup();
 			}
+		}
+
+		if (m_show_ecs_stats)
+		{
+			if (!ImGui::Begin("Show ECS stats", &m_show_ecs_stats))
+			{
+				ImGui::End();
+				return;
+			}
+			ImGui::Text("Num grass entities (%zu)", ecs::GetNumInstances<GameDatabase, GrassEntityType>());
+			ImGui::Text("Num gazelle entities (%zu)", ecs::GetNumInstances<GameDatabase, GazelleEntityType>());
+			ImGui::Text("Num tiger entities (%zu)", ecs::GetNumInstances<GameDatabase, TigerEntityType>());
+
+			ecs::DatabaseStats database_stats;
+			ecs::GetDatabaseStats<GameDatabase>(database_stats);
+
+			ImGui::Separator();
+			ImGui::Text("Num deferred deletions (%zu)", database_stats.num_deferred_deletions);
+			ImGui::Text("Num deferred moves (%zu)", database_stats.num_deferred_moves);
+
+			ImGui::End();
 		}
 	}
 };

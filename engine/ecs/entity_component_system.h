@@ -171,6 +171,9 @@ namespace ecs
 
 		//Get num instances
 		InstanceIndexType GetNumInstances(Database* database, ZoneType zone_index, EntityTypeType entity_type);
+
+		//Get database stats
+		void GetDatabaseStats(Database* database, DatabaseStats& stats);
 	}
 
 	//Create database from a database description with the component lists
@@ -233,6 +236,24 @@ namespace ecs
 	void MoveInstance(Instance<DATABASE_DECLARATION>& instance, ZoneType new_zone_index)
 	{
 		internal::MoveZoneInstance(DATABASE_DECLARATION::s_database, instance.m_indirection_index, new_zone_index);
+	}
+
+	template<typename DATABASE_DECLARATION, typename ENTITY_TYPE>
+	size_t GetNumInstances()
+	{
+		size_t size_count = 0;
+		const ZoneType num_zones = internal::GetNumZones(DATABASE_DECLARATION::s_database);
+		for (ZoneType zone_index = 0; zone_index < num_zones; ++zone_index)
+		{
+			size_count += internal::GetNumInstances(DATABASE_DECLARATION::s_database, zone_index, DATABASE_DECLARATION::template EntityTypeIndex<ENTITY_TYPE>());
+		}
+		return size_count;
+	}
+
+	template<typename DATABASE_DECLARATION>
+	void GetDatabaseStats(DatabaseStats& stats)
+	{
+		return internal::GetDatabaseStats(DATABASE_DECLARATION::s_database, stats);
 	}
 
 	//Tick database
