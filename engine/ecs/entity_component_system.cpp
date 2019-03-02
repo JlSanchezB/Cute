@@ -169,7 +169,7 @@ namespace ecs
 					//Reduce the size of the component storage
 					component_container.SetCommitedSize(last_instance_index * component_size);
 
-					if (i == m_indirection_index_component_index)
+					if (needs_to_move && (i == m_indirection_index_component_index))
 					{
 						//The internal index of the indirection index table needs to be fixup
 						//In this moment the to_delete_instance_data has the correct index moved
@@ -382,8 +382,12 @@ namespace ecs
 
 		void MoveZoneInstance(Database * database, InstanceIndirectionIndexType index, ZoneType new_zone_index)
 		{
-			//Add to the deferred moves
-			database->m_deferred_instance_moves.emplace_back(InstanceMove{ index , new_zone_index });
+			auto internal_index = database->m_indirection_instance_table[index];
+			if (internal_index.zone_index != new_zone_index)
+			{
+				//Add to the deferred moves
+				database->m_deferred_instance_moves.emplace_back(InstanceMove{ index , new_zone_index });
+			}
 		}
 
 		void MoveZoneInstance(Database * database, ZoneType zone_index, EntityTypeType entity_type, InstanceIndexType instance_index, ZoneType new_zone_index)

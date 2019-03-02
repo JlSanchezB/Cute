@@ -282,9 +282,9 @@ namespace ecs
 		}
 
 		template<typename COMPONENT>
-		bool Constains() const
+		bool Contain() const
 		{
-			return (DATABASE_DECLARATION::template ComponentMask<COMPONENT> & internal::GetInstanceTypeMask(DATABASE_DECLARATION::s_database, m_entity_type)) != 0;
+			return (DATABASE_DECLARATION::template ComponentMask<COMPONENT>() & internal::GetInstanceTypeMask(DATABASE_DECLARATION::s_database, m_entity_type)) != 0;
 		}
 
 		void Dealloc() const
@@ -294,7 +294,10 @@ namespace ecs
 
 		void Move(ZoneType new_zone_index) const
 		{
-			internal::MoveZoneInstance(DATABASE_DECLARATION::s_database, m_zone_index, m_entity_type, m_instance_index, new_zone_index);
+			if (new_zone_index != m_zone_index)
+			{
+				internal::MoveZoneInstance(DATABASE_DECLARATION::s_database, m_zone_index, m_entity_type, m_instance_index, new_zone_index);
+			}
 		}
 
 		bool operator==(const InstanceIterator<DATABASE_DECLARATION>& b) const
