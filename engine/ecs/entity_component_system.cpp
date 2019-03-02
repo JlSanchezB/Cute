@@ -192,6 +192,9 @@ namespace ecs
 		//Fix indirection index
 		void MoveInstance(const InternalInstanceIndex& internal_instance_index, ZoneType new_zone_index)
 		{
+			//Get a copy, as it is going to be change after the move
+			InternalInstanceIndex old_internal_instance_index = internal_instance_index;
+
 			//Allocate new instance in the new zone
 			const InternalInstanceIndex new_zone_internal_instance_index{ new_zone_index, internal_instance_index.entity_type_index, AllocInstance(new_zone_index, internal_instance_index.entity_type_index) };
 
@@ -204,8 +207,9 @@ namespace ecs
 				const size_t component_size = m_components[i].size;
 				if (old_zonecomponent_container.GetPtr())
 				{
+					auto& new_zonecomponent_container = m_component_containers[component_begin_index_new_zone + i];
 					uint8_t* old_zone_component_instance_data = reinterpret_cast<uint8_t*>(old_zonecomponent_container.GetPtr()) + internal_instance_index.instance_index * component_size;
-					uint8_t* new_zone_component_instance_data = reinterpret_cast<uint8_t*>(old_zonecomponent_container.GetPtr()) + new_zone_internal_instance_index.instance_index * component_size;
+					uint8_t* new_zone_component_instance_data = reinterpret_cast<uint8_t*>(new_zonecomponent_container.GetPtr()) + new_zone_internal_instance_index.instance_index * component_size;
 
 					
 					//Move components (the indirection will move as well, as the last component is the indirection index
@@ -226,7 +230,7 @@ namespace ecs
 			}
 
 			//Call Destroy old instance but without destructor
-			DestroyInstance(internal_instance_index, false);
+			DestroyInstance(old_internal_instance_index, false);
 		}
 
 		InstanceIndirectionIndexType AllocIndirectionIndex(const InternalInstanceIndex& internal_instance_index)

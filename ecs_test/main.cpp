@@ -224,12 +224,15 @@ public:
 	float m_grass_creation_rate = 20.f;
 	float m_grass_creation_desviation = 1.f;
 	float m_gazelle_init_size = 0.005f;
-	float m_gazelle_creation_rate = 20.f;
+	float m_gazelle_creation_rate = 5.f;
 	float m_gazelle_creation_desviation = 1.f;
-	float m_min_gazelle_grow_speed = 0.001f;
-	float m_max_gazelle_grow_speed = 0.002f;
-	float m_min_gazelle_top_size = 0.02f;
-	float m_max_gazelle_top_size = 0.03f;
+	float m_min_gazelle_grow_speed = 0.002f;
+	float m_max_gazelle_grow_speed = 0.006f;
+	float m_min_gazelle_top_size = 0.008f;
+	float m_max_gazelle_top_size = 0.01f;
+	float m_gazelle_speed = 0.2f;
+	float m_gazelle_food_grow_ratio = 20.f;
+	float m_gazelle_food_moving = 0.1f;
 
 	//Random distributions
 	std::uniform_real_distribution<float> m_random_position_x;
@@ -414,18 +417,19 @@ public:
 				
 				ecs::Process<GameDatabase, GazelleComponent, PositionComponent, VelocityComponent>([&](const auto& instance_iterator, GazelleComponent& gazelle, const PositionComponent& position, VelocityComponent& velocity)
 				{
-					if (gazelle.size < gazelle.repro_size)
+					glm::vec2 gazelle_position(position.position_angle.x, position.position_angle.y);
+
+					//if (gazelle.size < gazelle.repro_size)
+					gazelle.size = glm::min(gazelle.size, gazelle.repro_size);
 					{
 						//Calculate zone bitset based of the range
-						const auto& influence_zone_bitset = GridZone::CalculateInfluence(position.position_angle.x, position.position_angle.y, 0.2f);
+						const auto& grass_influence_zone_bitset = GridZone::CalculateInfluence(position.position_angle.x, position.position_angle.y, 0.1f);
 
 						//Eaten speed
 						float eaten = gazelle.grow_speed * elapsed_time;
 						//Random value in case nothing is found
 						glm::vec2 target(m_random_position_x(m_random_generator), m_random_position_y(m_random_generator));
 						float max_target_size = 0.f;
-
-						glm::vec2 gazelle_position(position.position_angle.x, position.position_angle.y);
 
 						//Check if it eats grass or find grass
 						ecs::Process<GameDatabase, GrassComponent, PositionComponent>([&](const auto& instance_iterator_b, GrassComponent& grass, const PositionComponent& position_b)
@@ -437,11 +441,11 @@ public:
 							if (distance < (gazelle.size + grass.size))
 							{
 								//Eats
-								grass.size -= eaten;
+								grass.size -= eaten * m_gazelle_food_grow_ratio;
 								if (grass.size <= 0.f)
 								{
 									//Kill grass
-									//instance_iterator_b.Dealloc();
+									instance_iterator_b.Dealloc();
 								}
 								gazelle.size += eaten;
 							}
@@ -452,31 +456,64 @@ public:
 								target = grass_position;
 								max_target_size = grass.size / (distance + 0.0001f);
 							}
-						}, influence_zone_bitset);
+						}, grass_influence_zone_bitset);
 
-						glm::vec2 target_velocity = (target - gazelle_position) * 0.1f;
+						glm::vec2 target_velocity = (target - gazelle_position) * m_gazelle_speed;
 						velocity.lineal_angle_velocity.x += target_velocity.x;
 						velocity.lineal_angle_velocity.y += target_velocity.y;
-					}
-					else
-					{
-						/*
-						//Repro
-						instance_iterator.Dealloc();
 
-						for (size_t i = 0; i < 3; ++i)
+						//Check collision
+						const auto& collision_influence_zone_bitset = GridZone::CalculateInfluence(position.position_angle.x, position.position_angle.y, gazelle.size + 0.002f);
+
+						ecs::Process<GameDatabase, GazelleComponent, PositionComponent>([&](const auto& instance_iterator_b, GazelleComponent& gazelle_b, const PositionComponent& position_b)
 						{
+							if (instance_iterator != instance_iterator_b)
+							{
+								glm::vec2 gazelle_position_b(position_b.position_angle.x, position_b.position_angle.y);
+
+								glm::vec2 difference = (gazelle_position_b - gazelle_position);
+								float distance = glm::length(difference);
+
+								float inside = distance - (gazelle.size + gazelle_b.size + 0.002f);
+								if (inside < 0.f)
+								{
+									glm::vec2 response;
+									if (distance < 0.0001f)
+									{
+										response = glm::rotate(glm::vec2(1.f, 0.f), Random(0.f, glm::two_pi<float>()));
+									}
+									else
+									{
+										response = glm::normalize(difference);
+									}
+
+									//Collision
+									velocity.lineal_angle_velocity.x += response.x * inside * 10.f;
+									velocity.lineal_angle_velocity.y += response.y * inside * 10.f;
+								}
+							}
+						}, collision_influence_zone_bitset);
+					}
+					//else
+					//{
+						//Repro
+						//instance_iterator.Dealloc();
+
+						//for (size_t i = 0; i < 2; ++i)
+						/*{
+							glm::vec2 offset = glm::rotate(glm::vec2(0.005f, 0.f), Random(0.f, glm::two_pi<float>()));
+							glm::vec2 new_position = gazelle_position + offset;
+
 							//Calculate zone, already based to the bigger size
 							float top_size = Random(m_min_gazelle_top_size, m_max_gazelle_top_size);
 							float grow_seed = Random(m_min_gazelle_grow_speed, m_max_gazelle_grow_speed);
-							auto zone = GridZone::GetZone(position.position_angle.x, position.position_angle.y, top_size);
+							auto zone = GridZone::GetZone(new_position.x, new_position.y, top_size);
 							ecs::AllocInstance<GameDatabase, GazelleEntityType>(zone)
-								.Init<PositionComponent>(position.position_angle.x, position.position_angle.y, 0.f)
+								.Init<PositionComponent>(new_position.x, new_position.y, 0.f)
 								.Init<GazelleComponent>(m_gazelle_init_size, grow_seed, top_size)
 								.Init<VelocityComponent>(0.f, 0.f, 0.f);
-						}
-						*/
-					}
+						}*/
+					//}
 
 				}, zone_bitset);
 			}
@@ -490,33 +527,45 @@ public:
 					if (position.position_angle.x > m_world_right)
 					{
 						position.position_angle.x = m_world_right;
-						velocity.lineal_angle_velocity.x = -velocity.lineal_angle_velocity.x;
+						velocity.lineal_angle_velocity.x = 0.f;
 					}
 					if (position.position_angle.x < m_world_left)
 					{
 						position.position_angle.x = m_world_left;
-						velocity.lineal_angle_velocity.x = -velocity.lineal_angle_velocity.x;
+						velocity.lineal_angle_velocity.x = 0.f;
 					}
 					if (position.position_angle.y > m_world_top)
 					{
 						position.position_angle.y = m_world_top;
-						velocity.lineal_angle_velocity.y = -velocity.lineal_angle_velocity.y;
+						velocity.lineal_angle_velocity.y = 0.f;
 					}
 					if (position.position_angle.y < m_world_bottom)
 					{
 						position.position_angle.y = m_world_bottom;
-						velocity.lineal_angle_velocity.y = -velocity.lineal_angle_velocity.y;
+						velocity.lineal_angle_velocity.y = 0.f;
 					}
 
 					if (instance_iterator.Contain<GazelleComponent>())
 					{
-						//auto zone = GridZone::GetZone(position.position_angle.x, position.position_angle.y, instance_iterator.Get<GazelleComponent>().size);
-						//instance_iterator.Move(zone);
+						auto& gazelle = instance_iterator.Get<GazelleComponent>();
+						//Consume size by lengh moved
+						gazelle.size -= m_gazelle_food_moving * glm::length(glm::vec2(velocity.lineal_angle_velocity.x * elapsed_time, velocity.lineal_angle_velocity.y * elapsed_time)) * elapsed_time;
+
+						if (gazelle.size < 0.f)
+						{
+							//Dead, moved a lot and didn't eat
+							instance_iterator.Dealloc();
+						}
+						else
+						{
+							auto zone = GridZone::GetZone(position.position_angle.x, position.position_angle.y, gazelle.size);
+							instance_iterator.Move(zone);
+						}
 					}
 
 					//Friction
-					velocity.lineal_angle_velocity.x *= 0.5f;
-					velocity.lineal_angle_velocity.y *= 0.5f;
+					velocity.lineal_angle_velocity.x *= 0.8f;
+					velocity.lineal_angle_velocity.y *= 0.8f;
 					
 				}, zone_bitset);
 
