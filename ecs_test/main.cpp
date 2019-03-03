@@ -220,20 +220,20 @@ public:
 	std::mt19937 m_random_generator;
 
 	//Default parameters
-	float m_min_grass_grow_speed = 0.001f;
-	float m_max_grass_grow_speed = 0.01f;
-	float m_min_grass_top_size = 0.01f;
-	float m_max_grass_top_size = 0.03f;
+	float m_min_grass_grow_speed = 0.01f;
+	float m_max_grass_grow_speed = 0.015f;
+	float m_min_grass_top_size = 0.02f;
+	float m_max_grass_top_size = 0.0346f;
 	float m_grass_creation_rate = 20.f;
 	float m_grass_creation_desviation = 1.f;
 	float m_gazelle_init_size = 0.005f;
-	float m_gazelle_creation_rate = 5.f;
+	float m_gazelle_creation_rate = 3.f;
 	float m_gazelle_creation_desviation = 1.f;
 	float m_min_gazelle_grow_speed = 0.002f;
 	float m_max_gazelle_grow_speed = 0.006f;
-	float m_min_gazelle_top_size = 0.008f;
-	float m_max_gazelle_top_size = 0.01f;
-	float m_gazelle_food_grow_ratio = 20.f;
+	float m_min_gazelle_top_size = 0.015f;
+	float m_max_gazelle_top_size = 0.02f;
+	float m_gazelle_food_grow_ratio = 15.f;
 	float m_gazelle_food_moving = 0.001f;
 	float m_min_gazelle_size_distance_rate = 0.6f;
 	float m_max_gazelle_size_distance_rate = 1.5f;
@@ -241,7 +241,8 @@ public:
 	float m_gazelle_speed_variation = 5.0f;
 	float m_gazelle_looking_for_target_speed = 1.f;
 	float m_gazelle_collision_speed = 200.f;
-	float m_friction = 5.0f;
+	size_t m_gazelle_num_repro = 3;
+	float m_friction = 4.0f;
 
 	//Random distributions
 	std::uniform_real_distribution<float> m_random_position_x;
@@ -372,6 +373,20 @@ public:
 		return inside;
 	}
 
+	void CreateGazelle(const glm::vec2& position, float size = -1.f)
+	{
+		//Calculate zone, already based to the bigger size
+		float top_size = Random(m_min_gazelle_top_size, m_max_gazelle_top_size);
+		float grow_seed = Random(m_min_gazelle_grow_speed, m_max_gazelle_grow_speed);
+		float size_distance_rate = Random(m_min_gazelle_size_distance_rate, m_max_gazelle_size_distance_rate);
+		float time_offset = Random(0.f, 1.f);
+		auto zone = GridZone::GetZone(position.x, position.y, top_size);
+		ecs::AllocInstance<GameDatabase, GazelleEntityType>(zone)
+			.Init<PositionComponent>(position.x, position.y, 0.f)
+			.Init<GazelleComponent>((size < 0.f) ? m_gazelle_init_size : size, top_size, grow_seed, time_offset, size_distance_rate)
+			.Init<VelocityComponent>(0.f, 0.f, 0.f);
+	}
+
 	void OnTick(double total_time, float elapsed_time) override
 	{
 		//UPDATE GAME
@@ -428,8 +443,8 @@ public:
 				{
 					glm::vec2 gazelle_position(position.position_angle.x, position.position_angle.y);
 
-					//if (gazelle.size < gazelle.repro_size)
-					gazelle.size = glm::min(gazelle.size, gazelle.repro_size);
+					if (gazelle.size < gazelle.repro_size)
+					//gazelle.size = glm::min(gazelle.size, gazelle.repro_size);
 					{
 						//Calculate zone bitset based of the range
 						const auto& grass_influence_zone_bitset = GridZone::CalculateInfluence(position.position_angle.x, position.position_angle.y, 0.1f);
@@ -518,26 +533,19 @@ public:
 							}
 						}, collision_influence_zone_bitset);
 					}
-					//else
-					//{
+					else
+					{
 						//Repro
-						//instance_iterator.Dealloc();
+						instance_iterator.Dealloc();
 
-						//for (size_t i = 0; i < 2; ++i)
-						/*{
+						for (size_t i = 0; i < m_gazelle_num_repro; ++i)
+						{
 							glm::vec2 offset = glm::rotate(glm::vec2(0.005f, 0.f), Random(0.f, glm::two_pi<float>()));
 							glm::vec2 new_position = gazelle_position + offset;
 
-							//Calculate zone, already based to the bigger size
-							float top_size = Random(m_min_gazelle_top_size, m_max_gazelle_top_size);
-							float grow_seed = Random(m_min_gazelle_grow_speed, m_max_gazelle_grow_speed);
-							auto zone = GridZone::GetZone(new_position.x, new_position.y, top_size);
-							ecs::AllocInstance<GameDatabase, GazelleEntityType>(zone)
-								.Init<PositionComponent>(new_position.x, new_position.y, 0.f)
-								.Init<GazelleComponent>(m_gazelle_init_size, grow_seed, top_size)
-								.Init<VelocityComponent>(0.f, 0.f, 0.f);
-						}*/
-					//}
+							CreateGazelle(new_position, gazelle.size / static_cast<float>(m_gazelle_num_repro));
+						}
+					}
 
 				}, zone_bitset);
 			}
@@ -626,16 +634,7 @@ public:
 				{
 					glm::vec2 position(m_random_position_x(m_random_generator), m_random_position_y(m_random_generator));
 
-					//Calculate zone, already based to the bigger size
-					float top_size = Random(m_min_gazelle_top_size, m_max_gazelle_top_size);
-					float grow_seed = Random(m_min_gazelle_grow_speed, m_max_gazelle_grow_speed);
-					float size_distance_rate = Random(m_min_gazelle_size_distance_rate, m_max_gazelle_size_distance_rate);
-					float time_offset = Random(0.f, 1.f);
-					auto zone = GridZone::GetZone(position.x, position.y, top_size);
-					ecs::AllocInstance<GameDatabase, GazelleEntityType>(zone)
-						.Init<PositionComponent>(position.x, position.y, 0.f)
-						.Init<GazelleComponent>(m_gazelle_init_size, top_size, grow_seed, time_offset, size_distance_rate)
-						.Init<VelocityComponent>(0.f, 0.f, 0.f);
+					CreateGazelle(position);
 				}
 			}
 		}
