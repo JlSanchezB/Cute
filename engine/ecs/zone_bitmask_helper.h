@@ -4,6 +4,7 @@
 
 #include <bitset>
 #include <ecs/entity_component_common.h>
+#include <algorithm>
 
 namespace ecs
 {
@@ -25,13 +26,13 @@ namespace ecs
 		//Get index in the grid for this position
 		static std::pair<uint16_t, uint16_t> GetIndex(float x, float y)
 		{
-			float range_x = (x - world_left) / (world_right - world_left);
-			float range_y = (y - world_bottom) / (world_top - world_bottom);
+			float range_x = std::clamp((x - world_left) / (world_right - world_left), 0.f, 1.f);
+			float range_y = std::clamp((y - world_bottom) / (world_top - world_bottom), 0.f, 1.f);
 
 			//Convert to grid index
 			constexpr uint16_t max_index = side_count - 1;
-			uint16_t index_x = std::min(static_cast<uint16_t>(range_x * side_count), max_index);
-			uint16_t index_y = std::min(static_cast<uint16_t>(range_y * side_count), max_index);
+			uint16_t index_x = std::clamp(static_cast<uint16_t>(floorf(range_x * side_count)), static_cast<uint16_t>(0), max_index);
+			uint16_t index_y = std::clamp(static_cast<uint16_t>(floorf(range_y * side_count)), static_cast<uint16_t>(0), max_index);
 
 			//Return index
 			return std::pair<uint16_t, uint16_t>(index_x, index_y);

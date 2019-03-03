@@ -210,11 +210,10 @@ public:
 	bool m_show_ecs_stats = false;
 
 	//World size
-	constexpr static float m_world_top = 1.f;
-	constexpr static float m_world_bottom = -1.f;
-	constexpr static float m_world_left = -1.f;
-	constexpr static float m_world_right = 1.f;
-	constexpr static float m_world_max_size = 0.025f;
+	constexpr static float m_world_top = ZoneDescriptor::world_top;
+	constexpr static float m_world_bottom = ZoneDescriptor::world_bottom;
+	constexpr static float m_world_left = ZoneDescriptor::world_left;
+	constexpr static float m_world_right = ZoneDescriptor::world_right;
 
 	//Random generators
 	std::random_device m_random_device;
