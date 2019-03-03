@@ -239,7 +239,7 @@ public:
 	float m_min_gazelle_size_distance_rate = 0.6f;
 	float m_max_gazelle_size_distance_rate = 1.5f;
 	float m_gazelle_speed = 0.2f;
-	float m_gazelle_speed_variation = 0.08f;
+	float m_gazelle_speed_variation = 0.12f;
 	float m_friction = 5.0f;
 
 	//Random distributions
@@ -436,7 +436,7 @@ public:
 						//Eaten speed
 						float eaten = gazelle.grow_speed * elapsed_time;
 						//Random value in case nothing is found
-						glm::vec2 target(m_random_position_x(m_random_generator), m_random_position_y(m_random_generator));
+						glm::vec2 target;
 						float max_target_size = 0.f;
 
 						//Check if it eats grass or find grass
@@ -468,8 +468,18 @@ public:
 							}
 						}, grass_influence_zone_bitset);
 
+						glm::vec2 target_velocity;
 						float gazelle_speed = m_gazelle_speed + m_gazelle_speed_variation * static_cast<float>(cos(total_time));
-						glm::vec2 target_velocity = (target - gazelle_position) * gazelle_speed;
+						if (max_target_size == 0.f)
+						{
+							//Didn't find any, just go in the predeterminated direction
+							target_velocity = glm::rotate(glm::vec2(elapsed_time * 10.f, 0.f), glm::two_pi<float>() * (static_cast<float>(total_time) + gazelle.offset_time)) * gazelle_speed;
+ 						}
+						else
+						{
+							target_velocity = (target - gazelle_position) * gazelle_speed;
+						}
+
 						velocity.lineal_angle_velocity.x += target_velocity.x;
 						velocity.lineal_angle_velocity.y += target_velocity.y;
 
