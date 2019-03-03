@@ -235,11 +235,13 @@ public:
 	float m_min_gazelle_top_size = 0.008f;
 	float m_max_gazelle_top_size = 0.01f;
 	float m_gazelle_food_grow_ratio = 20.f;
-	float m_gazelle_food_moving = 0.1f;
+	float m_gazelle_food_moving = 0.001f;
 	float m_min_gazelle_size_distance_rate = 0.6f;
 	float m_max_gazelle_size_distance_rate = 1.5f;
-	float m_gazelle_speed = 0.2f;
-	float m_gazelle_speed_variation = 0.12f;
+	float m_gazelle_speed = 10.0f;
+	float m_gazelle_speed_variation = 5.0f;
+	float m_gazelle_looking_for_target_speed = 1.f;
+	float m_gazelle_collision_speed = 200.f;
 	float m_friction = 5.0f;
 
 	//Random distributions
@@ -452,6 +454,8 @@ public:
 								grass.size -= eaten * m_gazelle_food_grow_ratio;
 								if (grass.size <= 0.f)
 								{
+									grass.size = 0.f;
+
 									//Kill grass
 									instance_iterator_b.Dealloc();
 								}
@@ -469,15 +473,15 @@ public:
 						}, grass_influence_zone_bitset);
 
 						glm::vec2 target_velocity;
-						float gazelle_speed = m_gazelle_speed + m_gazelle_speed_variation * static_cast<float>(cos(total_time));
+						float gazelle_speed = m_gazelle_speed + m_gazelle_speed_variation * static_cast<float>(cos(total_time + gazelle.offset_time));
 						if (max_target_size == 0.f)
 						{
 							//Didn't find any, just go in the predeterminated direction
-							target_velocity = glm::rotate(glm::vec2(elapsed_time * 10.f, 0.f), glm::two_pi<float>() * (static_cast<float>(total_time) + gazelle.offset_time)) * gazelle_speed;
+							target_velocity = glm::rotate(glm::vec2(elapsed_time * m_gazelle_looking_for_target_speed, 0.f), glm::two_pi<float>() * (static_cast<float>(total_time * 0.05) + gazelle.offset_time));
  						}
 						else
 						{
-							target_velocity = (target - gazelle_position) * gazelle_speed;
+							target_velocity = (target - gazelle_position) * gazelle_speed * elapsed_time;
 						}
 
 						velocity.lineal_angle_velocity.x += target_velocity.x;
@@ -509,8 +513,8 @@ public:
 									}
 
 									//Collision
-									velocity.lineal_angle_velocity.x += response.x * inside * 10.f;
-									velocity.lineal_angle_velocity.y += response.y * inside * 10.f;
+									velocity.lineal_angle_velocity.x += response.x * inside * m_gazelle_collision_speed * elapsed_time;
+									velocity.lineal_angle_velocity.y += response.y * inside * m_gazelle_collision_speed * elapsed_time;
 								}
 							}
 						}, collision_influence_zone_bitset);
@@ -570,7 +574,7 @@ public:
 					{
 						auto& gazelle = instance_iterator.Get<GazelleComponent>();
 						//Consume size by lengh moved
-						gazelle.size -= m_gazelle_food_moving * glm::length(glm::vec2(velocity.lineal_angle_velocity.x * elapsed_time, velocity.lineal_angle_velocity.y * elapsed_time)) * elapsed_time;
+						gazelle.size -= m_gazelle_food_moving * glm::length(glm::vec2(velocity.lineal_angle_velocity.x * elapsed_time, velocity.lineal_angle_velocity.y * elapsed_time));
 
 						if (gazelle.size < 0.f)
 						{
