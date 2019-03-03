@@ -104,8 +104,12 @@ struct GazelleComponent
 	float size;
 	float repro_size;
 	float grow_speed;
+	float offset_time;
+	float size_distance_rate;
 
-	GazelleComponent(float _size, float _repro_size, float _grow_speed) : size(_size), repro_size(_repro_size), grow_speed(_grow_speed)
+	GazelleComponent(float _size, float _repro_size, float _grow_speed, float _offset_time, float _size_distance_rate) :
+		size(_size), repro_size(_repro_size), grow_speed(_grow_speed),
+		offset_time(_offset_time), size_distance_rate(_size_distance_rate)
 	{
 	}
 };
@@ -230,9 +234,13 @@ public:
 	float m_max_gazelle_grow_speed = 0.006f;
 	float m_min_gazelle_top_size = 0.008f;
 	float m_max_gazelle_top_size = 0.01f;
-	float m_gazelle_speed = 0.2f;
 	float m_gazelle_food_grow_ratio = 20.f;
 	float m_gazelle_food_moving = 0.1f;
+	float m_min_gazelle_size_distance_rate = 0.6f;
+	float m_max_gazelle_size_distance_rate = 1.5f;
+	float m_gazelle_speed = 0.2f;
+	float m_gazelle_speed_variation = 0.08f;
+	float m_friction = 5.0f;
 
 	//Random distributions
 	std::uniform_real_distribution<float> m_random_position_x;
@@ -450,15 +458,18 @@ public:
 								gazelle.size += eaten;
 							}
 
-							if (grass.size / (distance + 0.0001f) > max_target_size)
+							float target_rate = powf(grass.size, gazelle.size_distance_rate) / (distance + 0.0001f);
+
+							if (target_rate > max_target_size)
 							{
 								//New target
 								target = grass_position;
-								max_target_size = grass.size / (distance + 0.0001f);
+								max_target_size = target_rate;
 							}
 						}, grass_influence_zone_bitset);
 
-						glm::vec2 target_velocity = (target - gazelle_position) * m_gazelle_speed;
+						float gazelle_speed = m_gazelle_speed + m_gazelle_speed_variation * static_cast<float>(cos(total_time));
+						glm::vec2 target_velocity = (target - gazelle_position) * gazelle_speed;
 						velocity.lineal_angle_velocity.x += target_velocity.x;
 						velocity.lineal_angle_velocity.y += target_velocity.y;
 
@@ -564,8 +575,8 @@ public:
 					}
 
 					//Friction
-					velocity.lineal_angle_velocity.x *= 0.8f;
-					velocity.lineal_angle_velocity.y *= 0.8f;
+					velocity.lineal_angle_velocity.x -= velocity.lineal_angle_velocity.x * glm::clamp(m_friction * elapsed_time, 0.f, 1.f);
+					velocity.lineal_angle_velocity.y -= velocity.lineal_angle_velocity.y * glm::clamp(m_friction * elapsed_time, 0.f, 1.f);
 					
 				}, zone_bitset);
 
@@ -605,10 +616,12 @@ public:
 					//Calculate zone, already based to the bigger size
 					float top_size = Random(m_min_gazelle_top_size, m_max_gazelle_top_size);
 					float grow_seed = Random(m_min_gazelle_grow_speed, m_max_gazelle_grow_speed);
+					float size_distance_rate = Random(m_min_gazelle_size_distance_rate, m_max_gazelle_size_distance_rate);
+					float time_offset = Random(0.f, 1.f);
 					auto zone = GridZone::GetZone(position.x, position.y, top_size);
 					ecs::AllocInstance<GameDatabase, GazelleEntityType>(zone)
 						.Init<PositionComponent>(position.x, position.y, 0.f)
-						.Init<GazelleComponent>(m_gazelle_init_size, top_size, grow_seed)
+						.Init<GazelleComponent>(m_gazelle_init_size, top_size, grow_seed, time_offset, size_distance_rate)
 						.Init<VelocityComponent>(0.f, 0.f, 0.f);
 				}
 			}
