@@ -36,6 +36,11 @@ public:
 	{
 	}
 
+	float& GetNumEventsPerSecond()
+	{
+		return m_num_events_per_second;
+	}
+
 	//Calculate number of events for this elapsed time
 	template<typename RANDON_GENERATOR>
 	size_t Events(RANDON_GENERATOR& generator, float elapsed_time)
@@ -209,6 +214,9 @@ public:
 	//Show ecs debug info
 	bool m_show_ecs_stats = false;
 
+	//Config world settings
+	bool m_show_word_settings = false;
+
 	//World size
 	constexpr static float m_world_top = ZoneDescriptor::world_top;
 	constexpr static float m_world_bottom = ZoneDescriptor::world_bottom;
@@ -225,10 +233,10 @@ public:
 	float m_min_grass_top_size = 0.02f;
 	float m_max_grass_top_size = 0.0346f;
 	float m_grass_creation_rate = 20.f;
-	float m_grass_creation_desviation = 1.f;
+	float m_grass_creation_desviation = 0.3f;
 	float m_gazelle_init_size = 0.005f;
 	float m_gazelle_creation_rate = 3.f;
-	float m_gazelle_creation_desviation = 1.f;
+	float m_gazelle_creation_desviation = 0.3f;
 	float m_min_gazelle_grow_speed = 0.002f;
 	float m_max_gazelle_grow_speed = 0.006f;
 	float m_min_gazelle_top_size = 0.015f;
@@ -242,6 +250,8 @@ public:
 	float m_gazelle_looking_for_target_speed = 1.f;
 	float m_gazelle_collision_speed = 200.f;
 	size_t m_gazelle_num_repro = 3;
+	float m_gazelle_looking_max_distance = 0.2f;
+
 	float m_friction = 4.0f;
 
 	//Random distributions
@@ -447,7 +457,7 @@ public:
 					//gazelle.size = glm::min(gazelle.size, gazelle.repro_size);
 					{
 						//Calculate zone bitset based of the range
-						const auto& grass_influence_zone_bitset = GridZone::CalculateInfluence(position.position_angle.x, position.position_angle.y, 0.1f);
+						const auto& grass_influence_zone_bitset = GridZone::CalculateInfluence(position.position_angle.x, position.position_angle.y, m_gazelle_looking_max_distance);
 
 						//Eaten speed
 						float eaten = gazelle.grow_speed * elapsed_time;
@@ -475,14 +485,16 @@ public:
 								}
 								gazelle.size += eaten;
 							}
-
-							float target_rate = powf(grass.size, gazelle.size_distance_rate) / (distance + 0.0001f);
-
-							if (target_rate > max_target_size)
+							if (distance < m_gazelle_looking_max_distance)
 							{
-								//New target
-								target = grass_position;
-								max_target_size = target_rate;
+								float target_rate = powf(grass.size, gazelle.size_distance_rate) / (distance + 0.0001f);
+
+								if (target_rate > max_target_size)
+								{
+									//New target
+									target = grass_position;
+									max_target_size = target_rate;
+								}
 							}
 						}, grass_influence_zone_bitset);
 
@@ -772,8 +784,6 @@ public:
 	{
 		m_width = width;
 		m_height = height;
-
-
 	}
 
 	void OnAddImguiMenu() override
@@ -783,6 +793,7 @@ public:
 		{
 			m_show_edit_descriptor_file = ImGui::MenuItem("Edit descriptor file");
 			m_show_ecs_stats = ImGui::MenuItem("Show ECS stats");
+			m_show_word_settings = ImGui::MenuItem("Show world settings");
 			ImGui::EndMenu();
 		}
 	}
@@ -853,6 +864,38 @@ public:
 			ImGui::Separator();
 			ImGui::Text("Num deferred deletions (%zu)", database_stats.num_deferred_deletions);
 			ImGui::Text("Num deferred moves (%zu)", database_stats.num_deferred_moves);
+
+			ImGui::End();
+		}
+
+		if (m_show_word_settings)
+		{
+			if (!ImGui::Begin("World settings", &m_show_word_settings))
+			{
+				ImGui::End();
+				return;
+			}
+			ImGui::SliderFloat("Friction", &m_friction, 0.f, 20.f);
+			ImGui::Separator();
+			ImGui::SliderFloat("Grass creation rate", &m_grass_creation_events.GetNumEventsPerSecond(), 0.f, 100.f);
+			ImGui::SliderFloat("Gazelle creation rate", &m_gazelle_creation_events.GetNumEventsPerSecond(), 0.f, 100.f);
+			ImGui::Separator();
+			ImGui::SliderFloat2("Grass grow speed", &m_min_grass_grow_speed, 0.f, 0.2f);
+			ImGui::SliderFloat2("Grass top size", &m_min_grass_top_size, 0.f, 0.35f);
+			ImGui::Separator();
+			ImGui::SliderFloat("Gazelle init size", &m_gazelle_init_size, 0.f, 0.35f);
+			ImGui::SliderFloat2("Gazelle grow speed", &m_min_gazelle_grow_speed, 0.f, 0.01f);
+			ImGui::SliderFloat2("Gazelle top size", &m_min_gazelle_top_size, 0.f, 0.35f);
+			ImGui::SliderFloat("Gazelle grow food ratio", &m_gazelle_food_grow_ratio, 0.f, 100.f);
+			ImGui::SliderFloat("Gazelle movement waste", &m_gazelle_food_moving, 0.f, 0.01f);
+			ImGui::SliderFloat2("Gazelle search size/distance ratio", &m_min_gazelle_size_distance_rate, 0.f, 4.f);
+			
+			ImGui::SliderFloat("Gazelle speed", &m_gazelle_speed, 0.f, 100.f);
+			ImGui::SliderFloat("Gazelle speed variation", &m_gazelle_speed_variation, 0.f, 50.f);
+			ImGui::SliderFloat("Gazelle no target speed", &m_gazelle_looking_for_target_speed, 0.f, 5.f);
+			ImGui::SliderFloat("Gazelle colision speed", &m_gazelle_collision_speed, 0.f, 1000.f);
+			ImGui::SliderInt("Gazelle number repro", reinterpret_cast<int*>(&m_gazelle_num_repro), 1, 10);
+			ImGui::SliderFloat("Gazelle looking max distance", &m_gazelle_looking_max_distance, 0.f, 1.f);
 
 			ImGui::End();
 		}
