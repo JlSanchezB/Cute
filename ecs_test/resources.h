@@ -12,16 +12,23 @@ struct DisplayResource
 	display::PipelineStateHandle m_grass_pipeline_state;
 	display::PipelineStateHandle m_gazelle_pipeline_state;
 	display::PipelineStateHandle m_lion_pipeline_state;
+	display::ConstantBufferHandle m_zoom_position;
 
 	void Load(display::Device* device)
 	{
 		//Create root signature
 		display::RootSignatureDesc root_signature_desc;
+		root_signature_desc.root_parameters[0].type = display::RootSignatureParameterType::ConstantBuffer;
+		root_signature_desc.root_parameters[0].visibility = display::ShaderVisibility::Vertex;
+		root_signature_desc.root_parameters[0].root_param.shader_register = 0;
+		root_signature_desc.num_root_parameters = 1;
+
 		m_root_signature = display::CreateRootSignature(device, root_signature_desc, "Root Signature");
 
 		//Create pipeline state
 		const char* shader_code =
-			"	struct PSInput\
+			"	float4 zoom_position : c0;\
+				struct PSInput\
 				{\
 					float4 position : SV_POSITION;\
 					float2 coords : TEXCOORD0; \
@@ -31,6 +38,7 @@ struct DisplayResource
 				{\
 					PSInput result; \
 					result.position.xy = position.xy * instance_data.w + instance_data.xy; \
+					result.position.xy = result.position.xy * zoom_position.xy + zoom_position.zw; \
 					result.position.zw = float2(0.f, 1.f); \
 					result.coords.xy = position.xy; \
 					return result;\
@@ -88,7 +96,8 @@ struct DisplayResource
 		//Cow
 		//Create pipeline state
 		const char* gazelle_shader_code =
-			"	struct PSInput\
+			"	float4 zoom_position : c0;\
+				struct PSInput\
 				{\
 					float4 position : SV_POSITION;\
 					float2 coords : TEXCOORD0; \
@@ -98,6 +107,7 @@ struct DisplayResource
 				{\
 					PSInput result; \
 					result.position.xy = position.xy * instance_data.w + instance_data.xy; \
+					result.position.xy = result.position.xy * zoom_position.xy + zoom_position.zw; \
 					result.position.zw = float2(0.f, 1.f); \
 					result.coords.xy = position.xy; \
 					return result;\
@@ -132,7 +142,8 @@ struct DisplayResource
 		//Lion
 		//Create pipeline state
 		const char* lion_shader_code =
-			"	struct PSInput\
+			"	float4 zoom_position : c0;\
+				struct PSInput\
 				{\
 					float4 position : SV_POSITION;\
 					float2 coords : TEXCOORD0; \
@@ -142,6 +153,7 @@ struct DisplayResource
 				{\
 					PSInput result; \
 					result.position.xy = position.xy * instance_data.w + instance_data.xy; \
+					result.position.xy = result.position.xy * zoom_position.xy + zoom_position.zw; \
 					result.position.zw = float2(0.f, 1.f); \
 					result.coords.xy = position.xy; \
 					return result;\
@@ -206,6 +218,17 @@ struct DisplayResource
 			m_quad_index_buffer = display::CreateIndexBuffer(device, index_buffer_desc, "quad_index_buffer");
 		}
 
+		//Create constant buffer zoom position
+		{
+			float zoom_position_buffer[] = {1.f, 1.f, 0.f, 0.f};
+			display::ConstantBufferDesc constant_buffer_desc;
+			constant_buffer_desc.access = display::Access::Dynamic;
+			constant_buffer_desc.init_data = &zoom_position_buffer;
+			constant_buffer_desc.size = sizeof(zoom_position_buffer);
+
+			m_zoom_position = display::CreateConstantBuffer(device, constant_buffer_desc);
+		}
+
 	}
 
 	void Unload(display::Device* device)
@@ -216,6 +239,7 @@ struct DisplayResource
 		display::DestroyHandle(device, m_gazelle_pipeline_state);
 		display::DestroyHandle(device, m_lion_pipeline_state);
 		display::DestroyHandle(device, m_root_signature);
+		display::DestroyHandle(device, m_zoom_position);
 	}
 };
 

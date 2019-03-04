@@ -62,6 +62,22 @@ namespace render
 		void Render(RenderContext& render_context) const override;
 	};
 
+	class SetRootConstantBufferPass : public Pass
+	{
+		//Pipe
+		display::Pipe m_pipe = display::Pipe::Graphics;
+		//Root parameter
+		uint8_t m_root_parameter = 0;
+		//Root signature name
+		ResourceReference<ConstantBufferResource> m_constant_buffer;
+
+	public:
+		DECLARE_RENDER_CLASS("SetRootConstantBuffer");
+
+		void Load(LoadContext& load_context) override;
+		void Render(RenderContext& render_context) const override;
+	};
+
 	class SetPipelineStatePass : public Pass
 	{
 		ResourceReference<GraphicsPipelineStateResource> m_pipeline_state;

@@ -364,6 +364,7 @@ namespace render
 		RegisterPassFactory<SetRenderTargetPass>(system);
 		RegisterPassFactory<ClearRenderTargetPass>(system);
 		RegisterPassFactory<SetRootSignaturePass>(system);
+		RegisterPassFactory<SetRootConstantBufferPass>(system);
 		RegisterPassFactory<SetPipelineStatePass>(system);
 		RegisterPassFactory<SetDescriptorTablePass>(system);
 		RegisterPassFactory<DrawFullScreenQuadPass>(system);

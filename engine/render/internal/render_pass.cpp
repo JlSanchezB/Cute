@@ -165,6 +165,20 @@ namespace render
 			render_context.GetContext()->SetRootSignature(m_pipe, root_signature->GetHandle());
 		}
 	}
+	void SetRootConstantBufferPass::Load(LoadContext & load_context)
+	{
+		QueryTableAttribute(load_context, load_context.current_xml_element, "pipe", m_pipe, AttributeType::Optional);
+		QueryAttribute(load_context, load_context.current_xml_element, "root_param", m_root_parameter, AttributeType::NonOptional);
+		m_constant_buffer.Set(load_context.GetResourceReference(load_context));
+	}
+	void SetRootConstantBufferPass::Render(RenderContext & render_context) const
+	{
+		ConstantBufferResource* constant_buffer = m_constant_buffer.Get(render_context);
+		if (constant_buffer)
+		{
+			render_context.GetContext()->SetConstantBuffer(m_pipe, m_root_parameter, constant_buffer->GetHandle());
+		}
+	}
 	void SetPipelineStatePass::Load(LoadContext & load_context)
 	{
 		m_pipeline_state.Set(load_context.GetResourceReference(load_context));
