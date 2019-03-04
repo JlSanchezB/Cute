@@ -38,14 +38,14 @@ struct DisplayResource
 				{\
 					PSInput result; \
 					result.position.xy = position.xy * instance_data.w + instance_data.xy; \
-					result.position.xy = result.position.xy * zoom_position.xy + zoom_position.zw; \
+					result.position.xy = (result.position.xy - zoom_position.zw) * zoom_position.xy; \
 					result.position.zw = float2(0.f, 1.f); \
 					result.coords.xy = position.xy; \
 					return result;\
 				}\
 				float4 main_ps(PSInput input) : SV_TARGET\
 				{\
-					float alpha = smoothstep(1.f, 0.95f, length(input.coords.xy));\
+					float alpha = smoothstep(1.f, 0.85f, length(input.coords.xy));\
 					return float4(0.f, alpha, 0.f, alpha);\
 				}";
 
@@ -107,7 +107,7 @@ struct DisplayResource
 				{\
 					PSInput result; \
 					result.position.xy = position.xy * instance_data.w + instance_data.xy; \
-					result.position.xy = result.position.xy * zoom_position.xy + zoom_position.zw; \
+					result.position.xy = (result.position.xy - zoom_position.zw) * zoom_position.xy; \
 					result.position.zw = float2(0.f, 1.f); \
 					result.coords.xy = position.xy; \
 					return result;\
@@ -153,7 +153,7 @@ struct DisplayResource
 				{\
 					PSInput result; \
 					result.position.xy = position.xy * instance_data.w + instance_data.xy; \
-					result.position.xy = result.position.xy * zoom_position.xy + zoom_position.zw; \
+					result.position.xy = (result.position.xy - zoom_position.zw) * zoom_position.xy; \
 					result.position.zw = float2(0.f, 1.f); \
 					result.coords.xy = position.xy; \
 					return result;\
