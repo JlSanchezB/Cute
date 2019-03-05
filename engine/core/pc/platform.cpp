@@ -102,6 +102,9 @@ namespace
 	//Input state
 	std::array<bool, static_cast<size_t>(platform::InputSlot::Count)> g_input_slot_state = { false };
 
+	//Input events
+	std::vector<platform::InputEvent> g_input_events;
+
 	//Windows message handle
 	LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	{
@@ -154,6 +157,7 @@ namespace
 				if (g_keyboard_conversion[wParam] != platform::InputSlot::Invalid)
 				{
 					g_input_slot_state[static_cast<size_t>(g_keyboard_conversion[wParam])] = true;
+					g_input_events.push_back({ platform::EventType::KeyDown, g_keyboard_conversion[wParam] });
 				}
 			}
 			break;
@@ -163,6 +167,7 @@ namespace
 			if (g_keyboard_conversion[wParam] != platform::InputSlot::Invalid)
 			{
 				g_input_slot_state[static_cast<size_t>(g_keyboard_conversion[wParam])] = false;
+				g_input_events.push_back({ platform::EventType::KeyUp, g_keyboard_conversion[wParam] });
 			}
 			break;
 		}
@@ -349,9 +354,14 @@ namespace platform
 		imgui_render::CreateResources(device);
 	}
 
-	bool Game::GetInputSlotState(InputSlot input_slot)
+	bool Game::GetInputSlotState(InputSlot input_slot) const
 	{
 		return g_input_slot_state[static_cast<size_t>(input_slot)];
+	}
+
+	const std::vector<InputEvent> Game::GetInputEvents() const
+	{
+		return g_input_events;
 	}
 
 	char Run(const char* name, void* param, uint32_t width, uint32_t height, Game* game)
@@ -461,6 +471,11 @@ namespace platform
 				MICROPROFILE_SCOPEI("Platform", "Present", 0xFFFF00FF);
 				//Present
 				display::Present(g_device);
+			}
+
+			{
+				//Clear input events
+				g_input_events.clear();
 			}
 
 			MicroProfileFlip();

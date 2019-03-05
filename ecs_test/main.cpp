@@ -687,7 +687,17 @@ public:
 
 			//UPDATE CAMERA
 			{
-				//New camera
+				//Reset camera
+				for (auto& input_event : GetInputEvents())
+				{
+					if (input_event.type == platform::EventType::KeyDown && input_event.slot == platform::InputSlot::Escape)
+					{
+						m_camera_zoom = 1.f;
+						m_camera_position[0] = m_camera_position[1] = 0.f;
+					}
+				}
+
+				//New camera parameters
 				if (GetInputSlotState(platform::InputSlot::PageDown))
 				{
 					m_camera_zoom += m_camera_zoom_speed * elapsed_time;

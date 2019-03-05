@@ -7,6 +7,7 @@
 
 #include <ext/imgui/imgui.h>
 #include <stdint.h>
+#include <vector>
 
 namespace display
 {
@@ -37,13 +38,27 @@ namespace platform
 		Invalid = 255
 	};
 
+	enum class EventType : uint8_t
+	{
+		KeyUp,
+		KeyDown
+	};
+
+	struct InputEvent
+	{
+		EventType type;
+		InputSlot slot;
+	};
+
 	//Virtual interface that implements a game
 	class Game
 	{
 	protected:
 		void SetDevice(display::Device* device);
 
-		bool GetInputSlotState(InputSlot input_slot);
+		//Input
+		bool GetInputSlotState(InputSlot input_slot) const;
+		const std::vector<InputEvent> GetInputEvents() const;
 	public:
 		//Interface
 		virtual void OnInit() = 0;
