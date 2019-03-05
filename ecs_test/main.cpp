@@ -119,21 +119,25 @@ struct GazelleComponent
 	}
 };
 
-struct TigerComponent
+struct LionComponent
 {
 	float size;
+	float repro_size;
+	float grow_speed;
+	float next_attack;
 
-	TigerComponent(float _size) : size(_size)
+	LionComponent(float _size, float _repro_size, float _grow_speed, float _next_attack) : 
+		size(_size), repro_size(_repro_size), grow_speed(_grow_speed), next_attack(_next_attack)
 	{
 	}
 };
 
 using GrassEntityType = ecs::EntityType<PositionComponent, GrassComponent>;
 using GazelleEntityType = ecs::EntityType<PositionComponent, VelocityComponent, GazelleComponent>;
-using TigerEntityType = ecs::EntityType<PositionComponent, VelocityComponent, TigerComponent>;
+using LionEntityType = ecs::EntityType<PositionComponent, VelocityComponent, LionComponent>;
 
-using GameComponents = ecs::ComponentList<PositionComponent, VelocityComponent, GrassComponent, GazelleComponent, TigerComponent>;
-using GameEntityTypes = ecs::EntityTypeList<GrassEntityType, GazelleEntityType, TigerEntityType>;
+using GameComponents = ecs::ComponentList<PositionComponent, VelocityComponent, GrassComponent, GazelleComponent, LionComponent>;
+using GameEntityTypes = ecs::EntityTypeList<GrassEntityType, GazelleEntityType, LionEntityType>;
 
 using GameDatabase = ecs::DatabaseDeclaration<GameComponents, GameEntityTypes>;
 using Instance = ecs::Instance<GameDatabase>;
@@ -243,6 +247,7 @@ public:
 	float m_max_grass_top_size = 0.0346f;
 	float m_grass_creation_rate = 20.f;
 	float m_grass_creation_desviation = 0.3f;
+
 	float m_gazelle_init_size = 0.005f;
 	float m_gazelle_creation_rate = 3.f;
 	float m_gazelle_creation_desviation = 0.3f;
@@ -261,6 +266,29 @@ public:
 	size_t m_gazelle_num_repro = 3;
 	float m_gazelle_looking_max_distance = 0.2f;
 
+	float m_lion_init_size = 0.01f;
+	float m_lion_creation_rate = 0.2f;
+	float m_lion_creation_desviation = 0.8f;
+	float m_min_lion_grow_speed = 0.002f;
+	float m_max_lion_grow_speed = 0.006f;
+	float m_min_lion_top_size = 0.025f;
+	float m_max_lion_top_size = 0.03f;
+	float m_lion_food_grow_ratio = 5.f;
+	float m_lion_food_moving = 0.001f;
+	float m_min_lion_size_distance_rate = 0.6f;
+	float m_max_lion_size_distance_rate = 1.5f;
+	float m_lion_speed = 10.0f;
+	float m_lion_attack_speed = 100.f;
+	float m_min_lion_looking_between_attacks = 5.f;
+	float m_max_lion_looking_between_attacks = 20.f;
+	float m_min_lion_attack_time = 1.f;
+	float m_max_lion_attack_time = 3.f;
+	float m_lion_collision_speed = 200.f;
+	float m_lion_avoid_speed = 2.f;
+	size_t m_lion_num_repro = 3;
+	float m_lion_attack_max_distance = 0.1f;
+	float m_lion_target_attack_max_distance = 0.3f;
+
 	float m_friction = 4.0f;
 
 	//Random distributions
@@ -271,7 +299,7 @@ public:
 	//Random events
 	RandomEventsGenerator m_grass_creation_events;
 	RandomEventsGenerator m_gazelle_creation_events;
-
+	RandomEventsGenerator m_lion_creation_events;
 
 	float Random(float min, float max)
 	{
@@ -284,7 +312,8 @@ public:
 		m_random_position_y(m_world_bottom, m_world_top),
 		m_random_position_angle(0.f, glm::two_pi<float>()),
 		m_grass_creation_events(m_grass_creation_rate, m_grass_creation_desviation),
-		m_gazelle_creation_events(m_gazelle_creation_rate, m_gazelle_creation_desviation)
+		m_gazelle_creation_events(m_gazelle_creation_rate, m_gazelle_creation_desviation),
+		m_lion_creation_events(m_lion_creation_rate, m_lion_creation_desviation)
 	{
 	}
 
@@ -404,6 +433,20 @@ public:
 		ecs::AllocInstance<GameDatabase, GazelleEntityType>(zone)
 			.Init<PositionComponent>(position.x, position.y, 0.f)
 			.Init<GazelleComponent>((size < 0.f) ? m_gazelle_init_size : size, top_size, grow_seed, time_offset, size_distance_rate)
+			.Init<VelocityComponent>(0.f, 0.f, 0.f);
+	}
+
+	void CreateLion(const glm::vec2& position, float size = -1.f)
+	{
+		//Calculate zone, already based to the bigger size
+		float top_size = Random(m_min_lion_top_size, m_max_lion_top_size);
+		float grow_seed = Random(m_min_lion_grow_speed, m_max_lion_grow_speed);
+		float size_distance_rate = Random(m_min_lion_size_distance_rate, m_max_lion_size_distance_rate);
+		float next_attack = Random(m_min_lion_looking_between_attacks, m_max_lion_looking_between_attacks);
+		auto zone = GridZone::GetZone(position.x, position.y, top_size);
+		ecs::AllocInstance<GameDatabase, LionEntityType>(zone)
+			.Init<PositionComponent>(position.x, position.y, Random(0.f, glm::two_pi<float>()))
+			.Init<LionComponent>((size < 0.f) ? m_lion_init_size : size, top_size, grow_seed, next_attack)
 			.Init<VelocityComponent>(0.f, 0.f, 0.f);
 	}
 
@@ -667,7 +710,7 @@ public:
 
 			{
 				MICROPROFILE_SCOPEI("ECSTest", "NewGazelles", 0xFFFF77FF);
-				//Calculate new grass
+				//Calculate new lions
 				const size_t gazelle_count_to_create = m_gazelle_creation_events.Events(m_random_generator, elapsed_time);
 
 				for (size_t i = 0; i < gazelle_count_to_create; ++i)
@@ -675,6 +718,19 @@ public:
 					glm::vec2 position(m_random_position_x(m_random_generator), m_random_position_y(m_random_generator));
 
 					CreateGazelle(position);
+				}
+			}
+
+			{
+				MICROPROFILE_SCOPEI("ECSTest", "NewLions", 0xFFFF77FF);
+				//Calculate new lions
+				const size_t lions_count_to_create = m_lion_creation_events.Events(m_random_generator, elapsed_time);
+
+				for (size_t i = 0; i < lions_count_to_create; ++i)
+				{
+					glm::vec2 position(m_random_position_x(m_random_generator), m_random_position_y(m_random_generator));
+
+					CreateLion(position);
 				}
 			}
 		}
@@ -855,11 +911,11 @@ public:
 
 			instance_offset = m_instance_buffer.size();
 		
-			ecs::Process<GameDatabase, PositionComponent, TigerComponent>([&](const auto& instance_iterator, PositionComponent& position, TigerComponent& tiger)
+			ecs::Process<GameDatabase, PositionComponent, LionComponent>([&](const auto& instance_iterator, PositionComponent& position, LionComponent& lion)
 			{
-				if (IsInside(borders, position.position_angle.x, position.position_angle.y, tiger.size))
+				if (IsInside(borders, position.position_angle.x, position.position_angle.y, lion.size))
 				{
-					m_instance_buffer.emplace_back(position.position_angle.x, position.position_angle.y, position.position_angle.z, tiger.size);
+					m_instance_buffer.emplace_back(position.position_angle.x, position.position_angle.y, position.position_angle.z, lion.size);
 				}
 			}, zone_bitset);
 
@@ -976,7 +1032,7 @@ public:
 			}
 			ImGui::Text("Num grass entities (%zu)", ecs::GetNumInstances<GameDatabase, GrassEntityType>());
 			ImGui::Text("Num gazelle entities (%zu)", ecs::GetNumInstances<GameDatabase, GazelleEntityType>());
-			ImGui::Text("Num tiger entities (%zu)", ecs::GetNumInstances<GameDatabase, TigerEntityType>());
+			ImGui::Text("Num lion entities (%zu)", ecs::GetNumInstances<GameDatabase, LionEntityType>());
 
 			ecs::DatabaseStats database_stats;
 			ecs::GetDatabaseStats<GameDatabase>(database_stats);
@@ -999,6 +1055,7 @@ public:
 			ImGui::Separator();
 			ImGui::SliderFloat("Grass creation rate", &m_grass_creation_events.GetNumEventsPerSecond(), 0.f, 100.f);
 			ImGui::SliderFloat("Gazelle creation rate", &m_gazelle_creation_events.GetNumEventsPerSecond(), 0.f, 100.f);
+			ImGui::SliderFloat("Lion creation rate", &m_lion_creation_events.GetNumEventsPerSecond(), 0.f, 20.f);
 			ImGui::Separator();
 			ImGui::SliderFloat2("Grass grow speed", &m_min_grass_grow_speed, 0.f, 0.2f);
 			ImGui::SliderFloat2("Grass top size", &m_min_grass_top_size, 0.f, 0.35f);
@@ -1009,14 +1066,28 @@ public:
 			ImGui::SliderFloat("Gazelle grow food ratio", &m_gazelle_food_grow_ratio, 0.f, 100.f);
 			ImGui::SliderFloat("Gazelle movement waste", &m_gazelle_food_moving, 0.f, 0.01f);
 			ImGui::SliderFloat2("Gazelle search size/distance ratio", &m_min_gazelle_size_distance_rate, 0.f, 4.f);
-			
 			ImGui::SliderFloat("Gazelle speed", &m_gazelle_speed, 0.f, 100.f);
 			ImGui::SliderFloat("Gazelle speed variation", &m_gazelle_speed_variation, 0.f, 50.f);
 			ImGui::SliderFloat("Gazelle no target speed", &m_gazelle_looking_for_target_speed, 0.f, 5.f);
 			ImGui::SliderFloat("Gazelle colision speed", &m_gazelle_collision_speed, 0.f, 1000.f);
 			ImGui::SliderInt("Gazelle number repro", reinterpret_cast<int*>(&m_gazelle_num_repro), 1, 10);
 			ImGui::SliderFloat("Gazelle looking max distance", &m_gazelle_looking_max_distance, 0.f, 1.f);
-
+			ImGui::Separator();
+			ImGui::SliderFloat("Lion init size", &m_lion_init_size, 0.f, 0.35f);
+			ImGui::SliderFloat2("Lion grow speed", &m_min_lion_grow_speed, 0.f, 0.01f);
+			ImGui::SliderFloat2("Lion top size", &m_min_lion_top_size, 0.f, 0.35f);
+			ImGui::SliderFloat("Lion grow food ratio", &m_lion_food_grow_ratio, 0.f, 100.f);
+			ImGui::SliderFloat("Lion movement waste", &m_lion_food_moving, 0.f, 0.01f);
+			ImGui::SliderFloat2("Lion search size/distance ratio", &m_min_lion_size_distance_rate, 0.f, 4.f);
+			ImGui::SliderFloat("Lion speed", &m_lion_speed, 0.f, 10.f);
+			ImGui::SliderFloat("Lion attack speed", &m_lion_attack_speed, 0.f, 200.f);
+			ImGui::SliderFloat2("Lion looking between attacks", &m_lion_attack_speed, 0.f, 50.f);
+			ImGui::SliderFloat2("Lion attack time", &m_lion_attack_speed, 0.f, 10.f);
+			ImGui::SliderFloat("Lion colision speed", &m_lion_collision_speed, 0.f, 1000.f);
+			ImGui::SliderFloat("Lion avoid speed", &m_lion_collision_speed, 0.f, 10.f);
+			ImGui::SliderInt("Lion number repro", reinterpret_cast<int*>(&m_lion_num_repro), 1, 10);
+			ImGui::SliderFloat("Lion looking max distance", &m_lion_attack_max_distance, 0.f, 1.f);
+			ImGui::SliderFloat("Lion target max distance", &m_lion_target_attack_max_distance, 0.f, 1.f);
 			ImGui::End();
 		}
 	}
