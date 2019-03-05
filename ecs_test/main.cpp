@@ -506,7 +506,7 @@ public:
 						}, grass_influence_zone_bitset);
 
 						glm::vec2 target_velocity;
-						float gazelle_speed = m_gazelle_speed + m_gazelle_speed_variation * static_cast<float>(cos(total_time + gazelle.offset_time));
+						float gazelle_speed = m_gazelle_speed + m_gazelle_speed_variation * static_cast<float>(cos(total_time + gazelle.offset_time * glm::two_pi<float>()));
 						if (max_target_size == 0.f)
 						{
 							//Didn't find any, just go in the predeterminated direction
