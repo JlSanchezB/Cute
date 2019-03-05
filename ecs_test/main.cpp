@@ -407,6 +407,24 @@ public:
 			.Init<VelocityComponent>(0.f, 0.f, 0.f);
 	}
 
+	struct Border
+	{
+		float left;
+		float right;
+		float top;
+		float bottom;
+	};
+
+	bool IsInside(const Border& borders, float x, float y, float size)
+	{
+		if (x + size < borders.left) return false;
+		if (x - size > borders.right) return false;
+		if (y + size < borders.top) return false;
+		if (y - size > borders.bottom) return false;
+
+		return true;
+	}
+
 	void OnTick(double total_time, float elapsed_time) override
 	{
 		//UPDATE GAME
@@ -682,7 +700,6 @@ public:
 		//PREPARE RENDERING
 		{
 			MICROPROFILE_SCOPEI("ECSTest", "PrepareRendering", 0xFFFF77FF);
-			const auto& zone_bitset = GridZone::All();
 
 			render::BeginPrepareRender(m_render_system);
 
@@ -767,12 +784,27 @@ public:
 			auto& point_of_view = render_frame.AllocPointOfView("Main"_sh32, 0, 0, pass_info, m_init_map_resource_map);
 			auto& command_buffer = point_of_view.GetCommandBuffer();
 
+			//Calculate culling
+			Border borders;
+			float world_size = 1.f / m_camera_zoom;
+			borders.left = m_camera_position[0] - world_size;
+			borders.right = m_camera_position[0] + world_size;
+			borders.top = m_camera_position[1] - world_size;
+			borders.bottom = m_camera_position[1] + world_size;
+			
+			//Coarse culling
+			const auto& zone_bitset = GridZone::CalculateInfluence(borders.left, borders.top, borders.right, borders.bottom);
+
+
 			//Culling and draw per type
 			m_instance_buffer.clear();
 
 			ecs::Process<GameDatabase, PositionComponent, GrassComponent>([&](const auto& instance_iterator, PositionComponent& position, GrassComponent& grass)
 			{
-				m_instance_buffer.emplace_back(position.position_angle.x, position.position_angle.y, position.position_angle.z, grass.size);
+				if (IsInside(borders, position.position_angle.x, position.position_angle.y, grass.size))
+				{
+					m_instance_buffer.emplace_back(position.position_angle.x, position.position_angle.y, position.position_angle.z, grass.size);
+				}
 			}, zone_bitset);
 
 			if (m_instance_buffer.size() > 0)
@@ -797,7 +829,10 @@ public:
 			ecs::Process<GameDatabase, PositionComponent, GazelleComponent>([&](const auto& instance_iterator, PositionComponent& position, GazelleComponent& gazelle)
 			{
 				//Add to the instance buffer the instance
-				m_instance_buffer.emplace_back(position.position_angle.x, position.position_angle.y, position.position_angle.z, gazelle.size);
+				if (IsInside(borders, position.position_angle.x, position.position_angle.y, gazelle.size))
+				{
+					m_instance_buffer.emplace_back(position.position_angle.x, position.position_angle.y, position.position_angle.z, gazelle.size);
+				}
 			}, zone_bitset);
 
 			if ((m_instance_buffer.size() - instance_offset) > 0)
@@ -822,7 +857,10 @@ public:
 		
 			ecs::Process<GameDatabase, PositionComponent, TigerComponent>([&](const auto& instance_iterator, PositionComponent& position, TigerComponent& tiger)
 			{
-				m_instance_buffer.emplace_back(position.position_angle.x, position.position_angle.y, position.position_angle.z, tiger.size);
+				if (IsInside(borders, position.position_angle.x, position.position_angle.y, tiger.size))
+				{
+					m_instance_buffer.emplace_back(position.position_angle.x, position.position_angle.y, position.position_angle.z, tiger.size);
+				}
 			}, zone_bitset);
 
 			if ((m_instance_buffer.size() - instance_offset) > 0)

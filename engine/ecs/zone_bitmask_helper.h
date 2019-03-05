@@ -60,14 +60,24 @@ namespace ecs
 		}
 
 		//Calculate BitSet influence
-		static BitSet CalculateInfluence(float x, float y, float radius)
+		static BitSet CalculateInfluence(float min_x, float min_y, float max_x, float max_y)
 		{
 			BitSet bit_set;
 			bit_set.set(0, true);
 
+			if (min_x > max_x)
+			{
+				std::swap(min_x, max_x);
+			}
+
+			if (min_y > max_y)
+			{
+				std::swap(min_y, max_y);
+			}
+
 			//Calculate incluence
-			const auto& begin = GetIndex(x - radius - object_zero_zone_max_size, y - radius - object_zero_zone_max_size);
-			const auto& end = GetIndex(x + radius + object_zero_zone_max_size, y + radius + object_zero_zone_max_size);
+			const auto& begin = GetIndex(min_x - object_zero_zone_max_size, min_y - object_zero_zone_max_size);
+			const auto& end = GetIndex(max_x + object_zero_zone_max_size, max_y + object_zero_zone_max_size);
 
 			//Set the range
 			for (uint16_t i = begin.first; i <= end.first; ++i)
@@ -79,6 +89,12 @@ namespace ecs
 			}
 
 			return bit_set;
+		}
+
+		//Calculate BitSet influence
+		static BitSet CalculateInfluence(float x, float y, float radius)
+		{
+			return CalculateInfluence(x - radius, y - radius, x + radius, y + radius);
 		}
 
 		static BitSet All()
