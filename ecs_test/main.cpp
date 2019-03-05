@@ -204,7 +204,7 @@ public:
 	float m_camera_position[2] = { 0.f };
 	float m_camera_zoom = 1.f;
 	float m_camera_move_speed = 1.5f;
-	float m_camera_zoom_speed = 1.5f;
+	float m_camera_zoom_speed = 2.5f;
 	float m_camera_zoom_velocity = 0.f;
 	float m_camera_position_velocity[2] = { 0.f };
 	float m_camera_friction = 4.f;
@@ -705,6 +705,8 @@ public:
 
 			render::Frame& render_frame = render::GetGameRenderFrame(m_render_system);
 
+			Border borders;
+
 			//UPDATE CAMERA
 			{
 				//Reset camera
@@ -775,7 +777,16 @@ public:
 				auto command_offset = render_frame.GetBeginFrameComamndbuffer().Open();
 				render_frame.GetBeginFrameComamndbuffer().UploadResourceBuffer(m_display_resources.m_zoom_position, position_zoom_buffer, sizeof(position_zoom_buffer));
 				render_frame.GetBeginFrameComamndbuffer().Close();
+
+				//Calculate culling
+				borders.left = m_camera_position[0] - 1.f / (aspect_ratio_x * m_camera_zoom);
+				borders.right = m_camera_position[0] + 1.f / (aspect_ratio_x * m_camera_zoom);
+				borders.top = m_camera_position[1] - 1.f / (aspect_ratio_y * m_camera_zoom);
+				borders.bottom = m_camera_position[1] + 1.f / (aspect_ratio_y * m_camera_zoom);
 			}
+			
+			//Coarse culling
+			const auto& zone_bitset = GridZone::CalculateInfluence(borders.left, borders.top, borders.right, borders.bottom);
 
 			render::PassInfo pass_info;
 			pass_info.width = m_width;
@@ -783,17 +794,6 @@ public:
 
 			auto& point_of_view = render_frame.AllocPointOfView("Main"_sh32, 0, 0, pass_info, m_init_map_resource_map);
 			auto& command_buffer = point_of_view.GetCommandBuffer();
-
-			//Calculate culling
-			Border borders;
-			float world_size = 1.f / m_camera_zoom;
-			borders.left = m_camera_position[0] - world_size;
-			borders.right = m_camera_position[0] + world_size;
-			borders.top = m_camera_position[1] - world_size;
-			borders.bottom = m_camera_position[1] + world_size;
-			
-			//Coarse culling
-			const auto& zone_bitset = GridZone::CalculateInfluence(borders.left, borders.top, borders.right, borders.bottom);
 
 
 			//Culling and draw per type
