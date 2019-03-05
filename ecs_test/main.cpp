@@ -200,6 +200,12 @@ public:
 	//Reload render passes file from the text editor
 	bool m_render_system_descriptor_load_requested = false;
 
+	//Camera info
+	float m_camera_position[2] = { 0.f };
+	float m_camera_zoom = 1.f;
+	float m_camera_move_speed = 1.f;
+	float m_camera_zoom_speed = 1.f;
+
 	//Solid render priority
 	render::Priority m_solid_render_priority;
 
@@ -678,6 +684,55 @@ public:
 			render::BeginPrepareRender(m_render_system);
 
 			render::Frame& render_frame = render::GetGameRenderFrame(m_render_system);
+
+			//UPDATE CAMERA
+			{
+				//New camera
+				if (GetInputSlotState(platform::InputSlot::PageDown))
+				{
+					m_camera_zoom += m_camera_zoom_speed * elapsed_time;
+				}
+				if (GetInputSlotState(platform::InputSlot::PageUp))
+				{
+					m_camera_zoom -= m_camera_zoom_speed * elapsed_time;
+					if (m_camera_zoom < 0.01f)
+					{
+						m_camera_zoom = 0.01f;
+					}
+				}
+				if (GetInputSlotState(platform::InputSlot::Right))
+				{
+					m_camera_position[0] += m_camera_move_speed * elapsed_time * m_camera_zoom;
+				}
+				if (GetInputSlotState(platform::InputSlot::Left))
+				{
+					m_camera_position[0] -= m_camera_move_speed * elapsed_time * m_camera_zoom;
+				}
+				if (GetInputSlotState(platform::InputSlot::Down))
+				{
+					m_camera_position[1] -= m_camera_move_speed * elapsed_time * m_camera_zoom;
+				}
+				if (GetInputSlotState(platform::InputSlot::Up))
+				{
+					m_camera_position[1] += m_camera_move_speed * elapsed_time * m_camera_zoom;
+				}
+
+				//Adjust aspect ratio
+				float max_size = static_cast<float>(std::max(m_width, m_height));
+				float aspect_ratio_x = static_cast<float>(m_height) / max_size;
+				float aspect_ratio_y = static_cast<float>(m_width) / max_size;
+
+				float position_zoom_buffer[4];
+				position_zoom_buffer[0] = aspect_ratio_x * m_camera_zoom;
+				position_zoom_buffer[1] = aspect_ratio_y * m_camera_zoom;
+				position_zoom_buffer[2] = m_camera_position[0];
+				position_zoom_buffer[3] = m_camera_position[1];
+
+				//Update buffer
+				auto command_offset = render_frame.GetBeginFrameComamndbuffer().Open();
+				render_frame.GetBeginFrameComamndbuffer().UploadResourceBuffer(m_display_resources.m_zoom_position, position_zoom_buffer, sizeof(position_zoom_buffer));
+				render_frame.GetBeginFrameComamndbuffer().Close();
+			}
 
 			render::PassInfo pass_info;
 			pass_info.width = m_width;

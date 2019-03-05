@@ -15,11 +15,35 @@ namespace display
 
 namespace platform
 {
+	enum class InputSlot : uint8_t
+	{
+		Back,
+		Tab,
+		Return,
+		LShift,
+		LControl,
+		RShift,
+		RControl,
+		Escape,
+		Space,
+		Left,
+		Up,
+		Right,
+		Down,
+		PageUp,
+		PageDown,
+
+		Count,
+		Invalid = 255
+	};
+
 	//Virtual interface that implements a game
 	class Game
 	{
 	protected:
 		void SetDevice(display::Device* device);
+
+		bool GetInputSlotState(InputSlot input_slot);
 	public:
 		//Interface
 		virtual void OnInit() = 0;

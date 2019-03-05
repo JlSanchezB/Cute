@@ -73,6 +73,35 @@ namespace
 	//Imgui render log
 	bool g_imgui_log_enable = false;
 
+	constexpr std::array<platform::InputSlot, 256> build_keyboard_conversion()
+	{
+		std::array<platform::InputSlot, 256> table = {platform::InputSlot::Invalid};
+
+		table[VK_BACK] = platform::InputSlot::Back;
+		table[VK_TAB] = platform::InputSlot::Tab;
+		table[VK_RETURN] = platform::InputSlot::Return;
+		table[VK_LSHIFT] = platform::InputSlot::LShift;
+		table[VK_LCONTROL] = platform::InputSlot::LControl;
+		table[VK_RSHIFT] = platform::InputSlot::RShift;
+		table[VK_RCONTROL] = platform::InputSlot::RControl;
+		table[VK_ESCAPE] = platform::InputSlot::Escape;
+		table[VK_SPACE] = platform::InputSlot::Space;
+		table[VK_LEFT] = platform::InputSlot::Left;
+		table[VK_UP] = platform::InputSlot::Up;
+		table[VK_DOWN] = platform::InputSlot::Down;
+		table[VK_RIGHT] = platform::InputSlot::Right;
+		table[VK_PRIOR] = platform::InputSlot::PageUp;
+		table[VK_NEXT] = platform::InputSlot::PageDown;
+
+		return table;
+	}
+
+	//Table for converting from VK values to platform enum
+	std::array<platform::InputSlot,256> g_keyboard_conversion = build_keyboard_conversion();
+
+	//Input state
+	std::array<bool, static_cast<size_t>(platform::InputSlot::Count)> g_input_slot_state = { false };
+
 	//Windows message handle
 	LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	{
@@ -119,6 +148,21 @@ namespace
 			if (wParam == VK_OEM_8)
 			{
 				g_imgui_menu_enable = ! g_imgui_menu_enable;
+			}
+			else
+			{
+				if (g_keyboard_conversion[wParam] != platform::InputSlot::Invalid)
+				{
+					g_input_slot_state[static_cast<size_t>(g_keyboard_conversion[wParam])] = true;
+				}
+			}
+			break;
+		}
+		case WM_KEYUP:
+		{
+			if (g_keyboard_conversion[wParam] != platform::InputSlot::Invalid)
+			{
+				g_input_slot_state[static_cast<size_t>(g_keyboard_conversion[wParam])] = false;
 			}
 			break;
 		}
@@ -303,6 +347,11 @@ namespace platform
 
 		//Create all resources for imgui
 		imgui_render::CreateResources(device);
+	}
+
+	bool Game::GetInputSlotState(InputSlot input_slot)
+	{
+		return g_input_slot_state[static_cast<size_t>(input_slot)];
 	}
 
 	char Run(const char* name, void* param, uint32_t width, uint32_t height, Game* game)
