@@ -263,8 +263,10 @@ public:
 	float m_gazelle_speed_variation = 5.0f;
 	float m_gazelle_looking_for_target_speed = 1.f;
 	float m_gazelle_collision_speed = 200.f;
+	float m_gazelle_avoiding_lion_speed = 5.0f;
 	size_t m_gazelle_num_repro = 3;
 	float m_gazelle_looking_max_distance = 0.2f;
+	float m_gazelle_lion_avoid_max_distance = 0.15f;
 
 	float m_lion_init_size = 0.01f;
 	float m_lion_creation_rate = 0.2f;
@@ -616,6 +618,39 @@ public:
 								}
 							}
 						}, collision_influence_zone_bitset);
+
+
+						//Avoid lions
+						const auto& lion_influence_zone_bitset = GridZone::CalculateInfluence(position.position_angle.x, position.position_angle.y, m_gazelle_lion_avoid_max_distance);
+
+						ecs::Process<GameDatabase, LionComponent, PositionComponent>([&](const auto& instance_iterator_b, LionComponent& lion, const PositionComponent& position_b)
+						{
+							glm::vec2 lion_position(position_b.position_angle.x, position_b.position_angle.y);
+							glm::vec2 lion_direction(glm::rotate(glm::vec2(0.f, 1.f), position_b.position_angle.z));
+
+							glm::vec2 difference = (gazelle_position - lion_position);
+							float distance = glm::length(difference);
+
+							if (distance < m_gazelle_lion_avoid_max_distance)
+							{
+								glm::vec2 normalize_difference = glm::normalize(difference);
+								glm::vec2 normalize_lion_direction = glm::normalize(lion_direction);
+
+								float dot_lion_gazelle = glm::dot(normalize_difference, normalize_lion_direction);
+
+								//Check lion direction
+								float worried_factor = glm::max<float>(glm::clamp(dot_lion_gazelle, 0.f, 1.f), 0.25f * (m_gazelle_lion_avoid_max_distance - distance) / m_gazelle_lion_avoid_max_distance);
+									
+								//Reaction
+								glm::vec2 response = glm::normalize(normalize_difference - dot_lion_gazelle * normalize_lion_direction);
+
+								response *= worried_factor * m_gazelle_avoiding_lion_speed * elapsed_time;
+
+								//Avoid
+								velocity.lineal_angle_velocity.x += response.x;
+								velocity.lineal_angle_velocity.y += response.y;
+							}
+						}, lion_influence_zone_bitset);
 					}
 					else
 					{
@@ -1143,8 +1178,10 @@ public:
 			ImGui::SliderFloat("Gazelle speed variation", &m_gazelle_speed_variation, 0.f, 50.f);
 			ImGui::SliderFloat("Gazelle no target speed", &m_gazelle_looking_for_target_speed, 0.f, 5.f);
 			ImGui::SliderFloat("Gazelle colision speed", &m_gazelle_collision_speed, 0.f, 1000.f);
+			ImGui::SliderFloat("Gazelle avoiding lion speed", &m_gazelle_avoiding_lion_speed, 0.f, 100.f);
 			ImGui::SliderInt("Gazelle number repro", reinterpret_cast<int*>(&m_gazelle_num_repro), 1, 10);
 			ImGui::SliderFloat("Gazelle looking max distance", &m_gazelle_looking_max_distance, 0.f, 1.f);
+			ImGui::SliderFloat("Gazelle lion avoid max distance", &m_gazelle_lion_avoid_max_distance, 0.f, 1.f);
 			ImGui::Separator();
 			ImGui::SliderFloat("Lion init size", &m_lion_init_size, 0.f, 0.35f);
 			ImGui::SliderFloat2("Lion grow speed", &m_min_lion_grow_speed, 0.f, 0.01f);
