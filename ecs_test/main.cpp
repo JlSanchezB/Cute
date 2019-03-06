@@ -256,7 +256,7 @@ public:
 	float m_min_gazelle_top_size = 0.015f;
 	float m_max_gazelle_top_size = 0.02f;
 	float m_gazelle_food_grow_ratio = 15.f;
-	float m_gazelle_food_moving = 0.001f;
+	float m_gazelle_food_moving = 0.002f;
 	float m_min_gazelle_size_distance_rate = 0.6f;
 	float m_max_gazelle_size_distance_rate = 1.5f;
 	float m_gazelle_speed = 10.0f;
@@ -266,7 +266,7 @@ public:
 	float m_gazelle_avoiding_lion_speed = 5.0f;
 	size_t m_gazelle_num_repro = 3;
 	float m_gazelle_looking_max_distance = 0.2f;
-	float m_gazelle_lion_avoid_max_distance = 0.15f;
+	float m_gazelle_lion_avoid_max_distance = 0.2f;
 
 	float m_lion_init_size = 0.01f;
 	float m_lion_creation_rate = 0.2f;
@@ -638,13 +638,15 @@ public:
 
 								float dot_lion_gazelle = glm::dot(normalize_difference, normalize_lion_direction);
 
+								float distance_factor = (m_gazelle_lion_avoid_max_distance - distance) / m_gazelle_lion_avoid_max_distance;
 								//Check lion direction
-								float worried_factor = glm::max<float>(glm::clamp(dot_lion_gazelle, 0.f, 1.f), 0.25f * (m_gazelle_lion_avoid_max_distance - distance) / m_gazelle_lion_avoid_max_distance);
+								float worried_factor_front = glm::clamp(dot_lion_gazelle, 0.f, 1.f) * distance_factor;
+								float worried_factor_close = 0.25f * distance_factor;
 									
 								//Reaction
-								glm::vec2 response = glm::normalize(normalize_difference - dot_lion_gazelle * normalize_lion_direction);
-
-								response *= worried_factor * m_gazelle_avoiding_lion_speed * elapsed_time;
+								glm::vec2 response_front = glm::normalize(normalize_difference - dot_lion_gazelle * normalize_lion_direction);
+								glm::vec2 response = response_front * worried_factor_front + normalize_difference * worried_factor_close;
+								response *= m_gazelle_avoiding_lion_speed * elapsed_time;
 
 								//Avoid
 								velocity.lineal_angle_velocity.x += response.x;
@@ -756,7 +758,7 @@ public:
 						//Consume size by lengh moved
 						gazelle.size -= m_gazelle_food_moving * glm::length(glm::vec2(velocity.lineal_angle_velocity.x * elapsed_time, velocity.lineal_angle_velocity.y * elapsed_time));
 
-						if (gazelle.size < 0.f)
+						if (gazelle.size < 0.001f)
 						{
 							//Dead, moved a lot and didn't eat
 							instance_iterator.Dealloc();
@@ -774,7 +776,7 @@ public:
 						//Consume size by lengh moved
 						lion.size -= m_lion_food_moving * glm::length(glm::vec2(velocity.lineal_angle_velocity.x * elapsed_time, velocity.lineal_angle_velocity.y * elapsed_time));
 
-						if (lion.size < 0.f)
+						if (lion.size < 0.001f)
 						{
 							//Dead, moved a lot and didn't eat
 							instance_iterator.Dealloc();
@@ -1172,7 +1174,7 @@ public:
 			ImGui::SliderFloat2("Gazelle grow speed", &m_min_gazelle_grow_speed, 0.f, 0.01f);
 			ImGui::SliderFloat2("Gazelle top size", &m_min_gazelle_top_size, 0.f, 0.35f);
 			ImGui::SliderFloat("Gazelle grow food ratio", &m_gazelle_food_grow_ratio, 0.f, 100.f);
-			ImGui::SliderFloat("Gazelle movement waste", &m_gazelle_food_moving, 0.f, 0.01f);
+			ImGui::SliderFloat("Gazelle movement waste", &m_gazelle_food_moving, 0.f, 0.04f);
 			ImGui::SliderFloat2("Gazelle search size/distance ratio", &m_min_gazelle_size_distance_rate, 0.f, 4.f);
 			ImGui::SliderFloat("Gazelle speed", &m_gazelle_speed, 0.f, 100.f);
 			ImGui::SliderFloat("Gazelle speed variation", &m_gazelle_speed_variation, 0.f, 50.f);
