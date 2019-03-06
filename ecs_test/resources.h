@@ -45,7 +45,7 @@ struct DisplayResource
 				}\
 				float4 main_ps(PSInput input) : SV_TARGET\
 				{\
-					float alpha = smoothstep(1.f, 0.85f, length(input.coords.xy));\
+					float alpha = smoothstep(1.f, 0.75f, length(input.coords.xy));\
 					return float4(0.f, alpha, 0.f, alpha);\
 				}";
 
@@ -152,7 +152,10 @@ struct DisplayResource
 				PSInput main_vs(float2 position : POSITION, float4 instance_data : TEXCOORD)\
 				{\
 					PSInput result; \
-					result.position.xy = position.xy * instance_data.w + instance_data.xy; \
+					float2 rotate_position;\
+					rotate_position.x = cos(instance_data.z) * position.x - sin(instance_data.z) * position.y;\
+					rotate_position.y = sin(instance_data.z) * position.x + cos(instance_data.z) * position.y;\
+					result.position.xy = rotate_position.xy * instance_data.w + instance_data.xy; \
 					result.position.xy = (result.position.xy - zoom_position.zw) * zoom_position.xy; \
 					result.position.zw = float2(0.f, 1.f); \
 					result.coords.xy = position.xy; \
@@ -160,7 +163,9 @@ struct DisplayResource
 				}\
 				float4 main_ps(PSInput input) : SV_TARGET\
 				{\
-					float alpha = smoothstep(1.f, 0.95f, length(input.coords.xy));\
+					float distance = ( 0.5f + 0.5f * input.coords.y) / abs(input.coords.x + 0.0001f); \
+					distance *= smoothstep(1.0f, 0.8f, input.coords.y); \
+					float alpha = smoothstep(0.8f, 0.95f, distance);\
 					return float4(alpha, alpha, 0.f, alpha);\
 				}";
 
