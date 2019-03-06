@@ -277,8 +277,9 @@ public:
 	float m_lion_food_moving = 0.001f;
 	float m_min_lion_size_distance_rate = 0.6f;
 	float m_max_lion_size_distance_rate = 1.5f;
-	float m_lion_speed = 10.0f;
-	float m_lion_attack_speed = 100.f;
+	float m_lion_speed = 0.2f;
+	float m_lion_rotation_speed = 1.0f;
+	float m_lion_attack_speed = 4.f;
 	float m_min_lion_looking_between_attacks = 5.f;
 	float m_max_lion_looking_between_attacks = 20.f;
 	float m_min_lion_attack_time = 1.f;
@@ -634,6 +635,60 @@ public:
 			}
 
 			{
+				MICROPROFILE_SCOPEI("ECSTest", "LionUpdate", 0xFFFF77FF);
+
+				ecs::Process<GameDatabase, LionComponent, PositionComponent, VelocityComponent>([&](const auto& instance_iterator, LionComponent& lion, const PositionComponent& position, VelocityComponent& velocity)
+				{
+					glm::vec2 lion_position(position.position_angle.x, position.position_angle.y);
+					glm::vec2 lion_direction(glm::rotate(glm::vec2(0.f, 1.f), position.position_angle.z));
+
+					velocity.lineal_angle_velocity.x += lion_direction.x * m_lion_speed * elapsed_time;
+					velocity.lineal_angle_velocity.y += lion_direction.y * m_lion_speed * elapsed_time;
+					
+					const float border_detection = 0.3f;
+
+					//Avoid sides or other lions
+					if (lion_position.x - border_detection < m_world_left)
+					{
+						//Calculate better direction
+						if (glm::dot(lion_direction, glm::vec2(0.f, 1.f)) > 0.f)
+							velocity.lineal_angle_velocity.z -= m_lion_rotation_speed * elapsed_time;
+						else
+							velocity.lineal_angle_velocity.z += m_lion_rotation_speed * elapsed_time;
+					}
+					else 
+					if (lion_position.x + border_detection > m_world_right)
+					{
+						//Calculate better direction
+						if (glm::dot(lion_direction, glm::vec2(0.f, 1.f)) > 0.f)
+							velocity.lineal_angle_velocity.z += m_lion_rotation_speed * elapsed_time;
+						else
+							velocity.lineal_angle_velocity.z -= m_lion_rotation_speed * elapsed_time;
+					}
+					else
+					if (lion_position.y - border_detection < m_world_bottom)
+					{
+						//Calculate better direction
+						if (glm::dot(lion_direction, glm::vec2(1.f, 0.f)) > 0.f)
+							velocity.lineal_angle_velocity.z += m_lion_rotation_speed * elapsed_time;
+						else
+							velocity.lineal_angle_velocity.z -= m_lion_rotation_speed * elapsed_time;
+					}
+					else
+					if (lion_position.y + border_detection > m_world_top)
+					{
+						//Calculate better direction
+						if (glm::dot(lion_direction, glm::vec2(1.f, 0.f)) > 0.f)
+							velocity.lineal_angle_velocity.z -= m_lion_rotation_speed * elapsed_time;
+						else
+							velocity.lineal_angle_velocity.z += m_lion_rotation_speed * elapsed_time;
+					}
+					
+
+				}, zone_bitset);
+			}
+
+			{
 				MICROPROFILE_SCOPEI("ECSTest", "EntitiesMove", 0xFFFF77FF);
 				//Move entities
 				ecs::Process<GameDatabase, PositionComponent, VelocityComponent>([&](const auto& instance_iterator, PositionComponent& position, VelocityComponent& velocity)
@@ -678,9 +733,27 @@ public:
 						}
 					}
 
+					if (instance_iterator.Contain<LionComponent>())
+					{
+						auto& lion = instance_iterator.Get<LionComponent>();
+						//Consume size by lengh moved
+						lion.size -= m_lion_food_moving * glm::length(glm::vec2(velocity.lineal_angle_velocity.x * elapsed_time, velocity.lineal_angle_velocity.y * elapsed_time));
+
+						if (lion.size < 0.f)
+						{
+							//Dead, moved a lot and didn't eat
+							instance_iterator.Dealloc();
+						}
+						else
+						{
+							auto zone = GridZone::GetZone(position.position_angle.x, position.position_angle.y, lion.size);
+							instance_iterator.Move(zone);
+						}
+					}
+
 					//Friction
-					velocity.lineal_angle_velocity.x -= velocity.lineal_angle_velocity.x * glm::clamp(m_friction * elapsed_time, 0.f, 1.f);
-					velocity.lineal_angle_velocity.y -= velocity.lineal_angle_velocity.y * glm::clamp(m_friction * elapsed_time, 0.f, 1.f);
+					velocity.lineal_angle_velocity -= velocity.lineal_angle_velocity * glm::clamp(m_friction * elapsed_time, 0.f, 1.f);
+			
 					
 				}, zone_bitset);
 
@@ -1080,6 +1153,7 @@ public:
 			ImGui::SliderFloat("Lion movement waste", &m_lion_food_moving, 0.f, 0.01f);
 			ImGui::SliderFloat2("Lion search size/distance ratio", &m_min_lion_size_distance_rate, 0.f, 4.f);
 			ImGui::SliderFloat("Lion speed", &m_lion_speed, 0.f, 10.f);
+			ImGui::SliderFloat("Lion rotation speed", &m_lion_rotation_speed, 0.f, 10.f);
 			ImGui::SliderFloat("Lion attack speed", &m_lion_attack_speed, 0.f, 200.f);
 			ImGui::SliderFloat2("Lion looking between attacks", &m_lion_attack_speed, 0.f, 50.f);
 			ImGui::SliderFloat2("Lion attack time", &m_lion_attack_speed, 0.f, 10.f);

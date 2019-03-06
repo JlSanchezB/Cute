@@ -163,8 +163,8 @@ struct DisplayResource
 				}\
 				float4 main_ps(PSInput input) : SV_TARGET\
 				{\
-					float distance = ( 0.5f + 0.5f * input.coords.y) / abs(input.coords.x + 0.0001f); \
-					distance *= smoothstep(1.0f, 0.8f, input.coords.y); \
+					float distance = ( 0.5f - 0.5f * input.coords.y) / abs(input.coords.x + 0.0001f); \
+					distance *= smoothstep(1.0f, 0.7f, -input.coords.y); \
 					float alpha = smoothstep(0.8f, 0.95f, distance);\
 					return float4(alpha, alpha, 0.f, alpha);\
 				}";
