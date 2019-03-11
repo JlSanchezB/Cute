@@ -12,6 +12,7 @@
 #include <core/profile.h>
 
 #define GLM_ENABLE_EXPERIMENTAL
+#include <ext/glm/gtx/vector_angle.hpp>
 #include <ext/glm/gtx/rotate_vector.hpp>
 
 #ifndef WIN32_LEAN_AND_MEAN
@@ -168,10 +169,11 @@ struct LionComponent
 {
 	float repro_size;
 	float grow_speed;
-	float next_attack;
+	float size_distance_rate;
+	float attack_recharge;
 
-	LionComponent(float _repro_size, float _grow_speed, float _next_attack) : 
-		repro_size(_repro_size), grow_speed(_grow_speed), next_attack(_next_attack)
+	LionComponent(float _repro_size, float _grow_speed, float _size_distance_rate, float _attack_recharge) :
+		repro_size(_repro_size), grow_speed(_grow_speed), size_distance_rate(_size_distance_rate), attack_recharge(_attack_recharge)
 	{
 	}
 };
@@ -307,34 +309,30 @@ public:
 	float m_gazelle_speed_variation = 5.0f;
 	float m_gazelle_looking_for_target_speed = 1.f;
 	float m_gazelle_collision_speed = 200.f;
-	float m_gazelle_avoiding_lion_speed = 5.0f;
+	float m_gazelle_avoiding_lion_speed = 2.0f;
 	size_t m_gazelle_num_repro = 3;
 	float m_gazelle_looking_max_distance = 0.2f;
-	float m_gazelle_lion_avoid_max_distance = 0.2f;
+	float m_gazelle_lion_avoid_max_distance = 0.1f;
 
 	float m_lion_init_size = 0.01f;
-	float m_lion_creation_rate = 0.2f;
+	float m_lion_creation_rate = 0.05f;
 	float m_lion_creation_desviation = 0.8f;
-	float m_min_lion_grow_speed = 0.002f;
-	float m_max_lion_grow_speed = 0.006f;
+	float m_min_lion_eat_factor = 0.2f;
+	float m_max_lion_eat_factor = 0.6f;
 	float m_min_lion_top_size = 0.025f;
 	float m_max_lion_top_size = 0.03f;
-	float m_lion_food_grow_ratio = 5.f;
 	float m_lion_food_moving = 0.001f;
 	float m_min_lion_size_distance_rate = 0.6f;
 	float m_max_lion_size_distance_rate = 1.5f;
 	float m_lion_speed = 0.2f;
-	float m_lion_rotation_speed = 1.0f;
-	float m_lion_attack_speed = 4.f;
-	float m_min_lion_looking_between_attacks = 5.f;
-	float m_max_lion_looking_between_attacks = 20.f;
-	float m_min_lion_attack_time = 1.f;
-	float m_max_lion_attack_time = 3.f;
-	float m_lion_collision_speed = 200.f;
-	float m_lion_avoid_speed = 2.f;
+	float m_lion_rotation_speed = 2.0f;
+	float m_lion_attack_speed = 4.5f;
+	float m_lion_attack_rotation_speed = 50.f;
+	float m_min_lion_attack_recharge = 1.f;
+	float m_max_lion_attack_recharge = 3.f;
+	float m_lion_avoid_speed = 3.f;
 	size_t m_lion_num_repro = 3;
-	float m_lion_attack_max_distance = 0.1f;
-	float m_lion_target_attack_max_distance = 0.3f;
+	float m_lion_target_attack_max_distance = 0.1f;
 
 	float m_friction = 4.0f;
 	float m_min_size = 0.001f;
@@ -491,14 +489,14 @@ public:
 	{
 		//Calculate zone, already based to the bigger size
 		float top_size = Random(m_min_lion_top_size, m_max_lion_top_size);
-		float grow_seed = Random(m_min_lion_grow_speed, m_max_lion_grow_speed);
+		float eat_factor = Random(m_min_lion_eat_factor, m_max_lion_eat_factor);
 		float size_distance_rate = Random(m_min_lion_size_distance_rate, m_max_lion_size_distance_rate);
-		float next_attack = Random(m_min_lion_looking_between_attacks, m_max_lion_looking_between_attacks);
+		float attack_recharge = Random(m_min_lion_attack_recharge, m_max_lion_attack_recharge);
 		auto zone = GridZone::GetZone(position.x, position.y, top_size);
 		ecs::AllocInstance<GameDatabase, LionEntityType>(zone)
 			.Init<PositionComponent>(position.x, position.y, Random(0.f, glm::two_pi<float>()))
 			.Init<LionStateComponent>((size < 0.f) ? m_lion_init_size : size, 0.f)
-			.Init<LionComponent>(top_size, grow_seed, next_attack)
+			.Init<LionComponent>(top_size, eat_factor, size_distance_rate, attack_recharge)
 			.Init<VelocityComponent>(0.f, 0.f, 0.f);
 	}
 
@@ -583,7 +581,8 @@ public:
 
 						//Eaten speed
 						float eaten = gazelle.grow_speed * elapsed_time;
-						//Random value in case nothing is found
+						
+						//Find the target grass
 						glm::vec2 target;
 						float max_target_size = 0.f;
 
@@ -693,7 +692,7 @@ public:
 								float distance_factor = (m_gazelle_lion_avoid_max_distance - distance) / m_gazelle_lion_avoid_max_distance;
 								//Check lion direction
 								float worried_factor_front = glm::clamp(dot_lion_gazelle, 0.f, 1.f) * distance_factor;
-								float worried_factor_close = 0.25f * distance_factor;
+								float worried_factor_close = 0.5f * distance_factor;
 									
 								//Reaction
 								glm::vec2 response_front = glm::normalize(normalize_difference - dot_lion_gazelle * normalize_lion_direction);
@@ -771,6 +770,82 @@ public:
 							velocity.AddAngleVelocity(m_lion_rotation_speed * elapsed_time);
 					}
 					
+					//Check areas in front of the lion for activating attack or check if there is collision
+					glm::vec2 lion_look_at = lion_position + m_lion_target_attack_max_distance * lion_direction;
+					const auto& gazelle_influence_zone_bitset = GridZone::CalculateInfluence(lion_look_at.x, lion_look_at.y, m_lion_target_attack_max_distance + lion_state.size);
+
+					//Find the target gazelle
+					glm::vec2 target;
+					float max_target_size = 0.f;
+
+					ecs::Process<GameDatabase, GazelleStateComponent, PositionComponent>([&](const auto& instance_iterator_b, GazelleStateComponent& gazelle_state, const PositionComponent& position_gazelle)
+					{
+						float distance = glm::length(position_gazelle.position - lion_position);
+
+						if (distance < (gazelle_state.size + lion_state.size))
+						{
+							//Eats the gazelle
+							instance_iterator_b.Dealloc();
+							
+							lion_state.size += gazelle_state.size * lion.grow_speed;
+							gazelle_state.size = 0.f;
+						}
+						else if (distance < m_lion_target_attack_max_distance)
+						{
+							float direction_target = std::clamp(2.f * glm::dot(glm::normalize((position_gazelle.position - lion_position)),
+								lion_direction),0.f, 1.f);
+							float size_distance_rate = powf(gazelle_state.size, lion.size_distance_rate) / (distance + 0.0001f);
+
+							float target_rate = direction_target * size_distance_rate;
+
+							if (target_rate > max_target_size)
+							{
+								//New target
+								target = position_gazelle.position;
+								max_target_size = target_rate;
+							}
+						}
+					}, gazelle_influence_zone_bitset);
+
+					if (max_target_size != 0.f)
+					{
+						if (lion_state.attack > 0.f)
+						{
+							//Start an attack
+							lion_state.attack = -lion_state.attack;
+						}
+						else
+						{
+							//Attacking, orientate to target
+							float angle = glm::orientedAngle(glm::normalize(target - lion_position), lion_direction);
+
+							velocity.AddAngleVelocity(-angle * m_lion_attack_rotation_speed * elapsed_time);
+							velocity.AddLinealVelocity(lion_direction * m_lion_attack_speed * elapsed_time);
+
+							//Remove attack to the lion
+							lion_state.attack += elapsed_time;
+						}
+					}
+					
+					//Recharge attack
+					if (lion_state.attack > 0.f)
+					{
+						lion_state.attack += lion.attack_recharge * elapsed_time;
+					}
+
+					if (lion_state.size > lion.repro_size)
+					{
+						//Repro
+						instance_iterator.Dealloc();
+
+						for (size_t i = 0; i < m_lion_num_repro; ++i)
+						{
+							glm::vec2 offset = glm::rotate(glm::vec2(0.005f, 0.f), Random(0.f, glm::two_pi<float>()));
+							glm::vec2 new_position = lion_position + offset;
+
+							CreateLion(new_position, lion_state.size / static_cast<float>(m_lion_num_repro));
+						}
+					}
 
 				}, zone_bitset);
 			}
@@ -1242,20 +1317,16 @@ public:
 			ImGui::SliderFloat("Gazelle lion avoid max distance", &m_gazelle_lion_avoid_max_distance, 0.f, 1.f);
 			ImGui::Separator();
 			ImGui::SliderFloat("Lion init size", &m_lion_init_size, 0.f, 0.35f);
-			ImGui::SliderFloat2("Lion grow speed", &m_min_lion_grow_speed, 0.f, 0.01f);
+			ImGui::SliderFloat2("Lion eat factor", &m_min_lion_eat_factor, 0.f, 1.0f);
 			ImGui::SliderFloat2("Lion top size", &m_min_lion_top_size, 0.f, 0.35f);
-			ImGui::SliderFloat("Lion grow food ratio", &m_lion_food_grow_ratio, 0.f, 100.f);
 			ImGui::SliderFloat("Lion movement waste", &m_lion_food_moving, 0.f, 0.01f);
 			ImGui::SliderFloat2("Lion search size/distance ratio", &m_min_lion_size_distance_rate, 0.f, 4.f);
 			ImGui::SliderFloat("Lion speed", &m_lion_speed, 0.f, 10.f);
 			ImGui::SliderFloat("Lion rotation speed", &m_lion_rotation_speed, 0.f, 10.f);
-			ImGui::SliderFloat("Lion attack speed", &m_lion_attack_speed, 0.f, 200.f);
-			ImGui::SliderFloat2("Lion looking between attacks", &m_lion_attack_speed, 0.f, 50.f);
-			ImGui::SliderFloat2("Lion attack time", &m_lion_attack_speed, 0.f, 10.f);
-			ImGui::SliderFloat("Lion colision speed", &m_lion_collision_speed, 0.f, 1000.f);
-			ImGui::SliderFloat("Lion avoid speed", &m_lion_collision_speed, 0.f, 10.f);
+			ImGui::SliderFloat("Lion attack speed", &m_lion_attack_speed, 0.f, 100.f);
+			ImGui::SliderFloat("Lion attack rotation speed", &m_lion_attack_rotation_speed, 0.f, 100.f);
+			ImGui::SliderFloat("Lion avoid speed", &m_lion_avoid_speed, 0.f, 10.f);
 			ImGui::SliderInt("Lion number repro", reinterpret_cast<int*>(&m_lion_num_repro), 1, 10);
-			ImGui::SliderFloat("Lion looking max distance", &m_lion_attack_max_distance, 0.f, 1.f);
 			ImGui::SliderFloat("Lion target max distance", &m_lion_target_attack_max_distance, 0.f, 1.f);
 			ImGui::End();
 		}
