@@ -318,10 +318,10 @@ public:
 	float m_lion_creation_rate = 0.05f;
 	float m_lion_creation_desviation = 0.8f;
 	float m_min_lion_eat_factor = 0.2f;
-	float m_max_lion_eat_factor = 0.6f;
+	float m_max_lion_eat_factor = 0.45f;
 	float m_min_lion_top_size = 0.025f;
 	float m_max_lion_top_size = 0.03f;
-	float m_lion_food_moving = 0.001f;
+	float m_lion_food_moving = 0.002f;
 	float m_min_lion_size_distance_rate = 0.6f;
 	float m_max_lion_size_distance_rate = 1.5f;
 	float m_lion_speed = 0.2f;
@@ -792,7 +792,7 @@ public:
 						}
 						else if (distance < m_lion_target_attack_max_distance)
 						{
-							float direction_target = std::clamp(2.f * glm::dot(glm::normalize((position_gazelle.position - lion_position)),
+							float direction_target = std::clamp(8.f * glm::dot(glm::normalize((position_gazelle.position - lion_position)),
 								lion_direction),0.f, 1.f);
 							float size_distance_rate = powf(gazelle_state.size, lion.size_distance_rate) / (distance + 0.0001f);
 
