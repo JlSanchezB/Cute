@@ -39,6 +39,9 @@
     <Filter Include="ext\microprofile">
       <UniqueIdentifier>{a988f678-e626-4a6e-a662-033175a16dab}</UniqueIdentifier>
     </Filter>
+    <Filter Include="job">
+      <UniqueIdentifier>{3e768d30-2166-4dd6-83a7-1a3000a3e8f0}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="display\display.h">
@@ -890,6 +893,9 @@
     <ClInclude Include="ecs\zone_bitmask_helper.h">
       <Filter>ecs</Filter>
     </ClInclude>
+    <ClInclude Include="job\job.h">
+      <Filter>job</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="display\pc_dx12\display.cpp">
@@ -954,6 +960,9 @@
     </ClCompile>
     <ClCompile Include="render\internal\render_command_buffer.cpp">
       <Filter>render\internal</Filter>
+    </ClCompile>
+    <ClCompile Include="job\job.cpp">
+      <Filter>job</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
