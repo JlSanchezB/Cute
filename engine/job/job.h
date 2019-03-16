@@ -32,13 +32,8 @@ namespace job
 	System* CreateSystem(const SystemDesc& system_desc);
 	void DestroySystem(System* system);
 
-	//Start job system, create workers and be ready for jobs
-	void Start(System* system);
-	//Stop all workers
-	void Stop(System* system);
-
 	//Add job
-	void AddJob(System* system, JobFunction job, const Fence fence);
+	void AddJob(System* system, const JobFunction job, const void* data, const Fence fence);
 
 	//Wait in fence
 	void Wait(System* system, const Fence fence);
