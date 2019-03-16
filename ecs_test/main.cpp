@@ -455,7 +455,7 @@ public:
 		const auto& zone_bitset = GridZone::All();
 
 		bool inside = false;
-		ecs::Process<GameDatabase, GrassStateComponent, PositionComponent>([&](const auto& instance_iterator, GrassStateComponent& grass, const PositionComponent& position_grass)
+		ecs::Process<GameDatabase, const GrassStateComponent, const PositionComponent>([&](const auto& instance_iterator, const GrassStateComponent& grass, const PositionComponent& position_grass)
 		{
 			float distance = glm::length(position - position_grass.position);
 
@@ -528,7 +528,7 @@ public:
 			{
 				MICROPROFILE_SCOPEI("ECSTest", "GrassGrow", 0xFFFF77FF);
 				//Grow grass
-				ecs::Process<GameDatabase, GrassComponent, GrassStateComponent, PositionComponent>([&](const auto& instance_iterator, const GrassComponent& grass, GrassStateComponent& grass_state, PositionComponent& position)
+				ecs::Process<GameDatabase, const GrassComponent, GrassStateComponent, PositionComponent>([&](const auto& instance_iterator, const GrassComponent& grass, GrassStateComponent& grass_state, PositionComponent& position)
 				{
 					if (!grass_state.stop_growing && (grass_state.size < grass.top_size))
 					{
@@ -570,7 +570,7 @@ public:
 			{
 				MICROPROFILE_SCOPEI("ECSTest", "GazelleUpdate", 0xFFFF77FF);
 				
-				ecs::Process<GameDatabase, GazelleComponent, GazelleStateComponent, PositionComponent, VelocityComponent>([&](const auto& instance_iterator, const GazelleComponent& gazelle, GazelleStateComponent& gazelle_state, PositionComponent& position_gazelle, VelocityComponent& velocity)
+				ecs::Process<GameDatabase, const GazelleComponent, GazelleStateComponent, PositionComponent, VelocityComponent>([&](const auto& instance_iterator, const GazelleComponent& gazelle, GazelleStateComponent& gazelle_state, PositionComponent& position_gazelle, VelocityComponent& velocity)
 				{
 					glm::vec2 gazelle_position = position_gazelle.position;
 
@@ -587,7 +587,7 @@ public:
 						float max_target_size = 0.f;
 
 						//Check if it eats grass or find grass
-						ecs::Process<GameDatabase, GrassComponent, GrassStateComponent, PositionComponent>([&](const auto& instance_iterator_b, const GrassComponent& grass, GrassStateComponent& grass_state, const PositionComponent& position_grass)
+						ecs::Process<GameDatabase, const GrassComponent, GrassStateComponent, const PositionComponent>([&](const auto& instance_iterator_b, const GrassComponent& grass, GrassStateComponent& grass_state, const PositionComponent& position_grass)
 						{
 							glm::vec2 grass_position = position_grass.position;
 
@@ -642,7 +642,7 @@ public:
 						//Check collision
 						const auto& collision_influence_zone_bitset = GridZone::CalculateInfluence(position_gazelle.position.x, position_gazelle.position.y, gazelle_state.size + m_gazelle_min_distance);
 
-						ecs::Process<GameDatabase, GazelleComponent, GazelleStateComponent, PositionComponent>([&](const auto& instance_iterator_b, const GazelleComponent& gazelle_b, GazelleStateComponent& gazelle_state_b, const PositionComponent& position_gazelle_b)
+						ecs::Process<GameDatabase, const GazelleComponent, GazelleStateComponent, const PositionComponent>([&](const auto& instance_iterator_b, const GazelleComponent& gazelle_b, GazelleStateComponent& gazelle_state_b, const PositionComponent& position_gazelle_b)
 						{
 							if (instance_iterator != instance_iterator_b)
 							{
@@ -674,7 +674,7 @@ public:
 						//Avoid lions
 						const auto& lion_influence_zone_bitset = GridZone::CalculateInfluence(position_gazelle.position.x, position_gazelle.position.y, m_gazelle_lion_avoid_max_distance);
 
-						ecs::Process<GameDatabase, LionComponent, LionStateComponent, PositionComponent>([&](const auto& instance_iterator_b, const LionComponent& lion, LionStateComponent& lion_state, const PositionComponent& position_lion)
+						ecs::Process<GameDatabase, const LionComponent, LionStateComponent, const PositionComponent>([&](const auto& instance_iterator_b, const LionComponent& lion, LionStateComponent& lion_state, const PositionComponent& position_lion)
 						{
 							glm::vec2 lion_position = position_lion.position;
 							glm::vec2 lion_direction = position_lion.GetDirection();
@@ -724,7 +724,7 @@ public:
 			{
 				MICROPROFILE_SCOPEI("ECSTest", "LionUpdate", 0xFFFF77FF);
 
-				ecs::Process<GameDatabase, LionComponent, LionStateComponent, PositionComponent, VelocityComponent>([&](const auto& instance_iterator, const LionComponent& lion, LionStateComponent& lion_state, const PositionComponent& position, VelocityComponent& velocity)
+				ecs::Process<GameDatabase, const LionComponent, LionStateComponent, const PositionComponent, VelocityComponent>([&](const auto& instance_iterator, const LionComponent& lion, LionStateComponent& lion_state, const PositionComponent& position, VelocityComponent& velocity)
 				{
 					glm::vec2 lion_position = position.position;
 					glm::vec2 lion_direction = position.GetDirection();
@@ -778,7 +778,7 @@ public:
 					glm::vec2 target;
 					float max_target_size = 0.f;
 
-					ecs::Process<GameDatabase, GazelleStateComponent, PositionComponent>([&](const auto& instance_iterator_b, GazelleStateComponent& gazelle_state, const PositionComponent& position_gazelle)
+					ecs::Process<GameDatabase, GazelleStateComponent, const PositionComponent>([&](const auto& instance_iterator_b, GazelleStateComponent& gazelle_state, const PositionComponent& position_gazelle)
 					{
 						float distance = glm::length(position_gazelle.position - lion_position);
 

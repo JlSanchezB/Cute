@@ -6,6 +6,7 @@
 
 #include <vector>
 #include <cassert>
+#include <type_traits>
 #include <core/type_list.h>
 #include "entity_component_common.h"
 #include "entity_component_instance.h"
@@ -166,7 +167,7 @@ namespace ecs
 			return reinterpret_cast<COMPONENT*>(GetStorageComponent(DATABASE_DECLARATION::s_database,
 				zone_index,
 				entity_type,
-				DATABASE_DECLARATION::template ComponentIndex<COMPONENT>()));
+				DATABASE_DECLARATION::template ComponentIndex<std::remove_const<COMPONENT>::type>()));
 		}
 
 		//Get num instances
@@ -327,7 +328,7 @@ namespace ecs
 	void Process(FUNCTION&& kernel, BITSET&& zone_bitset)
 	{
 		//Calculate component mask
-		const EntityTypeMask component_mask = EntityType<COMPONENTS...>::template EntityTypeMask<DATABASE_DECLARATION>();
+		const EntityTypeMask component_mask = EntityType<std::remove_const<COMPONENTS>::type...>::template EntityTypeMask<DATABASE_DECLARATION>();
 		
 		const ZoneType num_zones = internal::GetNumZones(DATABASE_DECLARATION::s_database);
 
