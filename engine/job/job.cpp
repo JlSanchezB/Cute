@@ -7,7 +7,106 @@
 namespace
 {
 	//Each thread has it correct worker id using thread local storage variable
-	thread_local uint8_t g_worker_id = static_cast<uint8_t>(-1);
+	thread_local size_t g_worker_id = static_cast<size_t>(-1);
+
+	//JobQueue
+	//Lock free queue
+	//Push and Pop is LIFO (only can be done from the worker thread, cache lines are hot around end)
+	//Steal is FIFO, used from other threads (cache lines are hot in the begin, so no sharing between push/pop and steal)
+	template<typename JOB, size_t NUM_JOBS>
+	class Queue
+	{
+		//Push a new job in the end
+		//Returns false if the job could not be added (queue full)
+		bool Push(const JOB& job)
+		{
+			size_t begin = m_begin_index.load(std::memory_order::memory_order_acquire);
+			size_t end = m_end_index.load(std::memory_order::memory_order_acquire);
+
+			//Maybe begin moves left here, but no problem, next time will be ready to push
+			if (begin != end)
+			{
+				m_jobs[end] = job;
+
+				end = (end + 1) % NUM_JOBS;
+
+				//Store end
+				m_end_index.store(end, std::memory_order::memory_order_release);
+
+				return true;
+			}
+			else
+			{
+				//Full
+				return false;
+			}
+		}
+
+		//Pop a job if there is any job
+		//Only use from the worker, pop from end
+		bool Pop(JOB& job)
+		{
+			size_t begin = m_begin_index.load(std::memory_order::memory_order_acquire);
+			size_t end = m_end_index.load(std::memory_order::memory_order_acquire);
+
+			if (begin != end)
+			{
+				end = (end - 1 + NUM_JOB) % NUM_JOBS;
+
+				job = m_jobs[end];
+
+				
+
+				return true;
+			}
+			else
+			{
+				//Nothing to pop
+				return false;
+			}
+		}
+
+		//Steal from another worker if there is any job
+		//Steal is from the begin
+		bool Steal(JOB& job)
+		{
+			size_t begin = m_begin_index.load(std::memory_order::memory_order_acquire);
+			size_t end = m_end_index.load(std::memory_order::memory_order_acquire);
+
+			if (begin != end)
+			{
+				//There is something to steal, maybe
+				job = m_jobs[begin];
+
+				//Trying to confirm that this job can be steal
+				if (begin.compare_exchange_strong(begin, (begin + 1) % NUM_JOB, std::memory_order_acq_rel))
+				{
+					//We manage to steal this index
+					return true;
+				}
+				else
+				{
+					//Other thread steal this index, nothing to steal
+					return false;
+				}
+			}
+			else
+			{
+				//Nothing in the queue
+				return false;
+			}
+		}
+
+	private:
+		//Begin index of the queue (steal)
+		std::atomic_size_t m_begin_index = 0;
+
+		//Array of jobs
+		std::array<JOB, NUM_JOBS> m_jobs;
+
+		//End index of the queue (push and pop)
+		std::atomic_size_t m_end_index = 0;
+	};
 }
 
 namespace job
@@ -40,6 +139,11 @@ namespace job
 				//Create a thread associated to this worker
 				m_thread = std::make_unique<std::thread>(&Worker::ThreadRun, this);
 			}
+			else
+			{
+				//Set local thread storage for fast access, inclusive for main thread
+				g_worker_id = worker_index;
+			}
 		}
 
 		void Start()
@@ -63,6 +167,9 @@ namespace job
 		//Code running in the worker thread
 		void ThreadRun()
 		{
+			//Set local thread storage for fast access
+			g_worker_id = m_worker_index;
+
 			while (m_running)
 			{
 				//Get Job
