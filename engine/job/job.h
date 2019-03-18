@@ -33,7 +33,7 @@ namespace job
 	void DestroySystem(System* system);
 
 	//Add job
-	void AddJob(System* system, const JobFunction job, const void* data, const Fence fence);
+	void AddJob(System* system, const JobFunction job, void* data, const Fence fence);
 
 	//Wait in fence
 	void Wait(System* system, const Fence fence);

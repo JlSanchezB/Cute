@@ -16,6 +16,7 @@ namespace job
 	template<typename JOB, size_t NUM_JOBS>
 	class Queue
 	{
+	public:
 		//Push a new job in the end
 		//Returns false if the job could not be added (queue full)
 		bool Push(const JOB& job)
@@ -92,7 +93,7 @@ namespace job
 				if (m_begin_index.compare_exchange_strong(begin, NextIndex(begin), std::memory_order_acq_rel))
 				{
 					//We manage to increment without issues
-					return true
+					return true;
 				}
 				else
 				{
@@ -126,7 +127,7 @@ namespace job
 				job = m_jobs[begin];
 
 				//Trying to confirm that this job can be steal
-				if (begin.compare_exchange_strong(begin, (begin + 1) % NUM_JOB, std::memory_order_acq_rel))
+				if (m_begin_index.compare_exchange_strong(begin, NextIndex(begin), std::memory_order_acq_rel))
 				{
 					//We manage to steal this index
 					return true;

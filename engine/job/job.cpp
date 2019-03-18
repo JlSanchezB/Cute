@@ -5,6 +5,7 @@
 #include <thread>
 #include <atomic>
 #include "job_queue.h"
+#include <cstdlib>
 
 namespace
 {
@@ -37,12 +38,7 @@ namespace job
 		Worker(size_t worker_index, bool main_thread, System* system) :
 			m_worker_index(worker_index), m_system(system)
 		{
-			if (!main_thread)
-			{
-				//Create a thread associated to this worker
-				m_thread = std::make_unique<std::thread>(&Worker::ThreadRun, this);
-			}
-			else
+			if (main_thread)
 			{
 				//Set local thread storage for fast access, inclusive for main thread
 				g_worker_id = worker_index;
@@ -51,12 +47,47 @@ namespace job
 
 		void Start()
 		{
+			assert(m_worker_index > 0);
 
+			m_running = true;
+
+			//Create a thread associated to this worker
+			m_thread = std::make_unique<std::thread>(&Worker::ThreadRun, this);
 		}
+
 		void Stop()
 		{
+			assert(m_worker_index > 0);
 
+			m_running = false;
+
+			if (m_thread)
+			{
+				//Wait until the current job is finished
+				m_thread->join();
+
+				//Delete thread
+				m_thread.release();
+			}
 		}
+
+		bool Steal(Job& job)
+		{
+			return m_job_queue.Steal(job);
+		}
+
+		void AddJob(const Job& job)
+		{
+			//Try to push the job
+			while (!m_job_queue.Push(job))
+			{
+				//Yield thread
+				std::this_thread::yield();
+			};
+		}
+
+		bool GetJob(Job& job);
+
 	private:
 		//Thread if it needed
 		std::unique_ptr<std::thread> m_thread;
@@ -68,20 +99,9 @@ namespace job
 		System* m_system;
 		//Queue
 		Queue<Job, 4096> m_job_queue;
-		
+
 		//Code running in the worker thread
-		void ThreadRun()
-		{
-			//Set local thread storage for fast access
-			g_worker_id = m_worker_index;
-
-			while (m_running)
-			{
-				//Get Job
-
-				//Execute
-			}
-		}
+		void ThreadRun();
 	};
 
 	struct System
@@ -89,7 +109,7 @@ namespace job
 		//Fence vector
 		std::unique_ptr<FenceData[]> m_fences;
 		//Worker vector
-		std::vector<Worker*> m_workers;
+		std::vector<std::unique_ptr<Worker>> m_workers;
 
 		//Num fences
 		size_t m_num_fences;
@@ -102,6 +122,42 @@ namespace job
 		};
 
 		State m_state = State::Stopped;
+
+		bool StealJob(size_t current_worker_id, Job& job)
+		{
+			//Get random value
+			size_t worker_to_steal = std::rand() % m_workers.size();
+
+			if (worker_to_steal != current_worker_id)
+			{
+				return m_workers[worker_to_steal]->Steal(job);
+			}
+			else
+			{
+				return false;
+			}
+
+		}
+
+		//Increment fence
+		void IncrementFence(const Fence& fence)
+		{
+			assert(fence < m_num_fences);
+			m_fences[fence].value.fetch_add(1);
+		}
+
+		//Decrement fence
+		void DecrementFence(const Fence& fence)
+		{
+			assert(fence < m_num_fences);
+			m_fences[fence].value.fetch_sub(1);
+		}
+
+		//Fence done
+		bool FinishFence(const Fence& fence) const
+		{
+			return m_fences[fence].value == 0;
+		}
 	};
 
 	System * CreateSystem(const SystemDesc & system_desc)
@@ -125,16 +181,21 @@ namespace job
 		system->m_workers.reserve(num_workers);
 		
 		//Main thread is the worker 0
-		system->m_workers.push_back(new Worker(0, true, system));
+		system->m_workers.push_back(std::make_unique<Worker>(0, true, system));
 
 		//Create the rest of the workers
 		for (size_t i = 1; i < num_workers; ++i)
 		{
-			system->m_workers.push_back(new Worker(i, false, system));
+			system->m_workers.push_back(std::make_unique<Worker>(i, false, system));
 		}
 
-		//Start system
-		//Start(system);
+		//Start workers
+		for (size_t i = 1; i < num_workers; ++i)
+		{
+			system->m_workers[i]->Start();
+		}
+
+		system->m_state = System::State::Started;
 
 		return system;
 	}
@@ -142,40 +203,92 @@ namespace job
 	void DestroySystem(System * system)
 	{
 		//Only can be called in the main thread
+		assert(g_worker_id == 0);
 
-		//Stop job system if needed
-		//Stop(system);
+		system->m_state = System::State::Stopping;
+
+		//Stop workers
+		for (size_t i = 1; i < system->m_workers.size(); ++i)
+		{
+			system->m_workers[i]->Stop();
+		}
+		
+		system->m_state = System::State::Stopped;
 
 		//Destroy
 		delete system;
 	}
 
-	void Start(System * system)
+	void AddJob(System * system, const JobFunction job, void* data, const Fence fence)
 	{
-		//Only called from the main thread
+		//Increment the fence
+		system->IncrementFence(fence);
 
-		//Start all the workers
-
-	}
-
-	void Stop(System * system)
-	{
-		//Only called from the main thread
-
-		//Wait until all the fences are finished
-		
-		//Stop all workers
-	}
-
-	void AddJob(System * system, const JobFunction job, const void* data, const Fence fence)
-	{
+		//Add job to current worker
+		system->m_workers[g_worker_id]->AddJob(Job{ job, data, fence });
 	}
 
 	void Wait(System * system, const Fence fence)
 	{
+		auto& worker = *system->m_workers[g_worker_id].get();
+		while (!system->FinishFence(fence))
+		{
+			//Work for a job during waiting
+			Job job;
+
+			if (worker.GetJob(job))
+			{
+				//Execute
+				job.function(job.data);
+
+				//Decrement the fence
+				system->DecrementFence(job.fence);
+			}
+		}
 	}
-	Fence SystemDesc::ReserveFence()
+	
+	//Worker inline functions
+	inline bool Worker::GetJob(Job & job)
 	{
-		return num_fences++;
+		//Try to pop from the worker job queue
+		if (m_job_queue.Pop(job))
+		{
+			return true;
+		}
+
+		//Try to steal from a random queue
+		if (m_system->StealJob(m_worker_index, job))
+		{
+			return true;
+		}
+
+		//Yield thread
+		std::this_thread::yield();
+
+		return false;
+	}
+
+	//Code running in the worker thread
+
+	inline void Worker::ThreadRun()
+	{
+		//Set local thread storage for fast access
+		g_worker_id = m_worker_index;
+
+		while (m_running)
+		{
+			//Get Job
+			Job job;
+
+			if (GetJob(job))
+			{
+				//Execute
+				job.function(job.data);
+
+				//Decrement the fence
+				m_system->DecrementFence(job.fence);
+			}
+
+		}
 	}
 }
