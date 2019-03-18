@@ -127,7 +127,8 @@ namespace job
 			size_t begin = m_begin_index.load(std::memory_order::memory_order_acquire);
 			size_t end = m_end_index.load(std::memory_order::memory_order_acquire);
 
-			if (begin != end)
+			//Or it is empty or it is empty but during pop with a predecrement of the end
+			if (begin != end && begin != NextIndex(end))
 			{
 				//There is something to steal, maybe
 				job = m_jobs[begin];

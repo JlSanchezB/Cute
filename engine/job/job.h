@@ -30,7 +30,7 @@ namespace job
 	};
 
 	System* CreateSystem(const SystemDesc& system_desc);
-	void DestroySystem(System* system);
+	void DestroySystem(System*& system);
 
 	//Add job
 	void AddJob(System* system, const JobFunction job, void* data, const Fence fence);

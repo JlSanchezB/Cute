@@ -10,6 +10,7 @@
 #include <ext/glm/vec2.hpp>
 #include <ext/glm/gtc/constants.hpp>
 #include <core/profile.h>
+#include <job/job.h>
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include <ext/glm/gtx/vector_angle.hpp>
@@ -223,6 +224,8 @@ public:
 
 	render::System* m_render_system = nullptr;
 
+	job::System* m_job_system = nullptr;
+
 	//Game constant buffer
 	display::ConstantBufferHandle m_game_constant_buffer;
 
@@ -430,10 +433,19 @@ public:
 		database_desc.num_max_entities_zone = 1024 * 128;
 		database_desc.num_zones = GridZone::zone_count;
 		ecs::CreateDatabase<GameDatabase>(database_desc);
+
+		//Create job system
+		job::SystemDesc job_system_desc;
+		m_job_system = job::CreateSystem(job_system_desc);
 		
 	}
 	void OnDestroy() override
 	{
+		if (m_job_system)
+		{
+			job::DestroySystem(m_job_system);
+		}
+
 		if (m_render_system)
 		{
 			render::DestroyRenderSystem(m_render_system, m_device);

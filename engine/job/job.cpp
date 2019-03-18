@@ -201,7 +201,7 @@ namespace job
 		return system;
 	}
 
-	void DestroySystem(System * system)
+	void DestroySystem(System *& system)
 	{
 		//Only can be called in the main thread
 		assert(g_worker_id == 0);
@@ -218,6 +218,8 @@ namespace job
 
 		//Destroy
 		delete system;
+
+		system = nullptr;
 	}
 
 	void AddJob(System * system, const JobFunction job, void* data, const Fence fence)
