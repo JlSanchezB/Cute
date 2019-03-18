@@ -292,4 +292,8 @@ namespace job
 
 		}
 	}
+	Fence SystemDesc::ReserveFence()
+	{
+		return num_fences++;
+	}
 }
