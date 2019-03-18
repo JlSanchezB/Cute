@@ -67,6 +67,17 @@ namespace job
 				//Nothing to pop
 				return false;
 			}
+			//Check first the most common case
+			else if (!(begin == end || NextIndex(begin) == end)) //Check if this two conditions are not happening (explain during the else) 
+			{
+				//It was more than 1 job between pop and steal
+								//It is save to just capture the job
+								//That is the most common case and we don't needed a lot of sync
+
+				job = m_jobs[end];
+
+				return true;
+			}
 			else if (begin == end) //end is decremented
 			{
 				//Begin has incremented and now match the decremented end
@@ -103,13 +114,8 @@ namespace job
 			}
 			else
 			{
-				//It was more than 1 job between pop and steal
-				//It is save to just capture the job
-				//That is the most common case and we don't needed a lot of sync
-
-				job = m_jobs[end];
-
-				return true;
+				assert(false);
+				return false;
 			}
 
 		}
