@@ -156,6 +156,7 @@ namespace job
 		//Fence done
 		bool FinishFence(const Fence& fence) const
 		{
+			assert(fence < m_num_fences);
 			return m_fences[fence].value == 0;
 		}
 	};
