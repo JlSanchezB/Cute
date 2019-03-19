@@ -56,7 +56,10 @@ namespace
 	LARGE_INTEGER g_begin_time;
 
 	//Total accumulated time
-	double m_total_time = 0.f;
+	double g_total_time = 0.f;
+
+	//Last elapsed time
+	float g_last_elapsed_time = 0.f;
 
 	//Imgui menu enabled
 	bool g_imgui_menu_enable = false;
@@ -276,7 +279,7 @@ namespace
 		ImGui::End();
 	}
 
-	void RenderImgui(platform::Game* game, float elapsed_time)
+	void RenderImgui(platform::Game* game)
 	{
 		if (g_imgui_menu_enable)
 		{
@@ -307,7 +310,7 @@ namespace
 
 		if (g_imgui_fps_enable)
 		{
-			RenderFPSOverlay(elapsed_time);
+			RenderFPSOverlay(g_last_elapsed_time);
 		}
 
 		if (g_imgui_display_stats && g_device)
@@ -362,6 +365,21 @@ namespace platform
 	const std::vector<InputEvent> Game::GetInputEvents() const
 	{
 		return g_input_events;
+	}
+
+	void Game::DestroyDisplayResources()
+	{
+		//Destroy all imgui resources
+		imgui_render::DestroyResources(g_device);
+	}
+
+	void Game::Present()
+	{
+		{
+			MICROPROFILE_SCOPEI("Platform", "Present", 0xFFFF00FF);
+			//Present
+			display::Present(g_device);
+		}
 	}
 
 	char Run(const char* name, void* param, uint32_t width, uint32_t height, Game* game)
@@ -444,21 +462,27 @@ namespace platform
 				core::LogInfo("Timestep was really high (Debugging?), limited to 30fps");
 				elapsed_time = 1.f / 30.f;
 			}
-			m_total_time += elapsed_time;
-			
+			g_total_time += elapsed_time;
+			g_last_elapsed_time = elapsed_time;
+
 			//New frame for imgui
 			imgui_render::NextFrame(g_current_hwnd, elapsed_time);
 
 			{
 				MICROPROFILE_SCOPEI("Platform", "GameTick", 0xFFFF00FF);
 				//Render
-				game->OnTick(m_total_time, elapsed_time);
+				game->OnTick(g_total_time, elapsed_time);
+			}
+
+			{
+				//Clear input events
+				g_input_events.clear();
 			}
 
 			{
 				MICROPROFILE_SCOPEI("Platform", "BuildImgui", 0xFFFF00FF);
 				//Render platform imgui (menu, fps,...)
-				RenderImgui(game, elapsed_time);
+				RenderImgui(game);
 			}
 
 			{
@@ -467,16 +491,6 @@ namespace platform
 				ImGui::Render();
 			}
 
-			{
-				MICROPROFILE_SCOPEI("Platform", "Present", 0xFFFF00FF);
-				//Present
-				display::Present(g_device);
-			}
-
-			{
-				//Clear input events
-				g_input_events.clear();
-			}
 
 			MicroProfileFlip();
 
@@ -484,13 +498,12 @@ namespace platform
 
 		core::LogInfo("Closing game");
 
-		//Destroy all imgui resources
-		imgui_render::DestroyResources(g_device);
 		//Destroy Imgui
 		ImGui::DestroyContext();
 
 		//Destroy callback
 		game->OnDestroy();
+
 
 #ifdef _STRING_HASH_MAP_ENABLED_
 		core::DestroyStringHashMap();

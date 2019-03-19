@@ -188,6 +188,9 @@ public:
 		}
 
 		display::EndFrame(m_device);
+
+		//Present render
+		Present();
 	}
 
 	void OnSizeChange(uint32_t width, uint32_t height, bool minimized) override

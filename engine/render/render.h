@@ -7,6 +7,16 @@
 #include <render/render_common.h>
 #include <render/render_frame.h>
 
+namespace job
+{
+	struct System;
+}
+
+namespace platform
+{
+	class Game;
+}
+
 namespace render
 {
 	
@@ -55,7 +65,7 @@ namespace render
 	};
 
 	//Create render system
-	System* CreateRenderSystem(display::Device* device);
+	System* CreateRenderSystem(display::Device* device, job::System* job_system = nullptr, platform::Game* game = nullptr);
 
 	//Destroy render system
 	void DestroyRenderSystem(System*& system, display::Device* device);

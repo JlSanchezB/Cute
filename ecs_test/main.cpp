@@ -408,8 +408,12 @@ public:
 		//Create a command list for rendering the render frame
 		m_render_command_list = display::CreateCommandList(m_device, "BeginFrameCommandList");
 
+		//Create job system
+		job::SystemDesc job_system_desc;
+		m_job_system = job::CreateSystem(job_system_desc);
+
 		//Create render pass system
-		m_render_system = render::CreateRenderSystem(m_device);
+		m_render_system = render::CreateRenderSystem(m_device, m_job_system, this);
 
 		//Add game resources
 		render::AddGameResource(m_render_system, "GameGlobal"_sh32, CreateResourceFromHandle<render::ConstantBufferResource>(display::WeakConstantBufferHandle(m_game_constant_buffer)));
@@ -436,23 +440,21 @@ public:
 		database_desc.num_max_entities_zone = 1024 * 128;
 		database_desc.num_zones = GridZone::zone_count;
 		ecs::CreateDatabase<GameDatabase>(database_desc);
-
-		//Create job system
-		job::SystemDesc job_system_desc;
-		m_job_system = job::CreateSystem(job_system_desc);
-		
 	}
 	void OnDestroy() override
 	{
+		if (m_render_system)
+		{
+			render::DestroyRenderSystem(m_render_system, m_device);
+		}
+
 		if (m_job_system)
 		{
 			job::DestroySystem(m_job_system);
 		}
 
-		if (m_render_system)
-		{
-			render::DestroyRenderSystem(m_render_system, m_device);
-		}
+		//Destroy platform resources
+		DestroyDisplayResources();
 
 		//Destroy handles
 		display::DestroyHandle(m_device, m_game_constant_buffer);

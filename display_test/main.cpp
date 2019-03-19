@@ -594,6 +594,8 @@ public:
 			m_test_4.m_compute_unordered_access_buffer = display::CreateUnorderedAccessBuffer(m_device, unodered_access_buffer_desc, "Unordered access buffer por positions");
 		}
 
+		//Present render
+		Present();
 	}
 	void OnDestroy() override
 	{

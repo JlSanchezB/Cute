@@ -211,6 +211,9 @@ namespace display
 
 		//Device resources
 
+		//Command allocator used for building command list during the update
+		ComPtr<ID3D12CommandAllocator> m_main_thread_command_allocator;
+
 		//Per frame system resources
 		struct FrameResources
 		{
@@ -249,6 +252,7 @@ namespace display
 		struct CommandList
 		{
 			ComPtr<ID3D12GraphicsCommandList> resource;
+			bool used_from_update;
 		};
 		struct RootSignature
 		{

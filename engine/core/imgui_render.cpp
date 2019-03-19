@@ -372,118 +372,122 @@ void imgui_render::Draw(display::Context* context)
 {
 	auto draw_data = ImGui::GetDrawData();
 
-	display::Device* device = context->GetDevice();
-
-	//Set back buffer
-	context->SetRenderTargets(1, &display::GetBackBuffer(device), display::WeakDepthBufferHandle());
-
-	//Check if we need to create a vertex buffer
-	if (current_vertex_buffer_size < draw_data->TotalVtxCount)
+	if (draw_data)
 	{
-		//Grow
-		current_vertex_buffer_size = draw_data->TotalVtxCount + 5000;
 
-		//Destroy old vertex buffer
-		display::DestroyVertexBuffer(device, g_vertex_buffer);
+		display::Device* device = context->GetDevice();
 
-		//Create a new one
-		display::VertexBufferDesc vertex_buffer_desc;
-		vertex_buffer_desc.access = display::Access::Dynamic;
-		vertex_buffer_desc.size = current_vertex_buffer_size * sizeof(ImDrawVert);
-		vertex_buffer_desc.stride = 20;
-		g_vertex_buffer = display::CreateVertexBuffer(device, vertex_buffer_desc, "imgui");
-	}
+		//Set back buffer
+		context->SetRenderTargets(1, &display::GetBackBuffer(device), display::WeakDepthBufferHandle());
 
-	//Check if we need to create a index buffer
-	if (current_index_buffer_size < draw_data->TotalIdxCount)
-	{
-		//Grow
-		current_index_buffer_size = draw_data->TotalIdxCount + 10000;
-
-		//Destroy old index buffer
-		display::DestroyIndexBuffer(device, g_index_buffer);
-
-		//Create new one
-		display::IndexBufferDesc index_buffer_desc;
-		index_buffer_desc.access = display::Access::Dynamic;
-		index_buffer_desc.size = current_index_buffer_size * sizeof(ImDrawIdx);
-		g_index_buffer = display::CreateIndexBuffer(device, index_buffer_desc, "imgui");
-	}
-
-	//Update constant buffer
-	float L = draw_data->DisplayPos.x;
-	float R = draw_data->DisplayPos.x + draw_data->DisplaySize.x;
-	float T = draw_data->DisplayPos.y;
-	float B = draw_data->DisplayPos.y + draw_data->DisplaySize.y;
-	float mvp[4][4] =
-	{
-		{ 2.0f / (R - L),   0.0f,           0.0f,       0.0f },
-		{ 0.0f,         2.0f / (T - B),     0.0f,       0.0f },
-		{ 0.0f,         0.0f,           0.5f,       0.0f },
-		{ (R + L) / (L - R),  (T + B) / (B - T),    0.5f,       1.0f },
-	};
-
-	//Update vertex buffer and index buffer
-	std::vector<ImDrawVert> vertex_buffer(draw_data->TotalVtxCount);
-	std::vector<ImDrawIdx> index_buffer(draw_data->TotalIdxCount);
-
-	ImDrawVert* vtx_dst = vertex_buffer.data();
-	ImDrawIdx* idx_dst = index_buffer.data();
-	for (int n = 0; n < draw_data->CmdListsCount; n++)
-	{
-		const ImDrawList* cmd_list = draw_data->CmdLists[n];
-		memcpy(vtx_dst, cmd_list->VtxBuffer.Data, cmd_list->VtxBuffer.Size * sizeof(ImDrawVert));
-		memcpy(idx_dst, cmd_list->IdxBuffer.Data, cmd_list->IdxBuffer.Size * sizeof(ImDrawIdx));
-		vtx_dst += cmd_list->VtxBuffer.Size;
-		idx_dst += cmd_list->IdxBuffer.Size;
-	}
-
-	display::UpdateResourceBuffer(device, g_vertex_buffer, vertex_buffer.data(), draw_data->TotalVtxCount * sizeof(ImDrawVert));
-	display::UpdateResourceBuffer(device, g_index_buffer, index_buffer.data(), draw_data->TotalIdxCount * sizeof(ImDrawIdx));
-
-
-	//Set all the resources
-	context->SetRootSignature(display::Pipe::Graphics, g_rootsignature);
-	context->SetPipelineState(g_pipeline_state);
-	context->SetVertexBuffers(0, 1, &g_vertex_buffer);
-	context->SetIndexBuffer(g_index_buffer);
-	//display::SetConstantBuffer(device, command_list_handle, 0, g_constant_buffer);
-	context->SetConstants(display::Pipe::Graphics, 0, mvp, 16);
-	context->SetViewport(display::Viewport(draw_data->DisplaySize.x, draw_data->DisplaySize.y));
-
-	// Render command lists
-	int vtx_offset = 0;
-	int idx_offset = 0;
-	ImVec2 pos = draw_data->DisplayPos;
-	for (int n = 0; n < draw_data->CmdListsCount; n++)
-	{
-		const ImDrawList* cmd_list = draw_data->CmdLists[n];
-		for (int cmd_i = 0; cmd_i < cmd_list->CmdBuffer.Size; cmd_i++)
+		//Check if we need to create a vertex buffer
+		if (current_vertex_buffer_size < draw_data->TotalVtxCount)
 		{
-			const ImDrawCmd* pcmd = &cmd_list->CmdBuffer[cmd_i];
-			if (pcmd->UserCallback)
-			{
-				pcmd->UserCallback(cmd_list, pcmd);
-			}
-			else
-			{
-				display::Rect rect;
-				rect.left = static_cast<size_t>(pcmd->ClipRect.x - pos.x);
-				rect.top = static_cast<size_t>(pcmd->ClipRect.y - pos.y);
-				rect.right = static_cast<size_t>(pcmd->ClipRect.z - pos.x);
-				rect.bottom = static_cast<size_t>(pcmd->ClipRect.w - pos.y);
-				context->SetScissorRect( rect);
-				
-				context->SetDescriptorTable(display::Pipe::Graphics, 1, *reinterpret_cast<display::DescriptorTableHandle*>(pcmd->TextureId));
+			//Grow
+			current_vertex_buffer_size = draw_data->TotalVtxCount + 5000;
 
-				display::DrawIndexedDesc draw_desc;
-				draw_desc.index_count = pcmd->ElemCount;
-				draw_desc.base_vertex = vtx_offset;
-				draw_desc.start_index = idx_offset;
-				context->DrawIndexed(draw_desc);
-			}
-			idx_offset += pcmd->ElemCount;
+			//Destroy old vertex buffer
+			display::DestroyVertexBuffer(device, g_vertex_buffer);
+
+			//Create a new one
+			display::VertexBufferDesc vertex_buffer_desc;
+			vertex_buffer_desc.access = display::Access::Dynamic;
+			vertex_buffer_desc.size = current_vertex_buffer_size * sizeof(ImDrawVert);
+			vertex_buffer_desc.stride = 20;
+			g_vertex_buffer = display::CreateVertexBuffer(device, vertex_buffer_desc, "imgui");
 		}
-		vtx_offset += cmd_list->VtxBuffer.Size;
+
+		//Check if we need to create a index buffer
+		if (current_index_buffer_size < draw_data->TotalIdxCount)
+		{
+			//Grow
+			current_index_buffer_size = draw_data->TotalIdxCount + 10000;
+
+			//Destroy old index buffer
+			display::DestroyIndexBuffer(device, g_index_buffer);
+
+			//Create new one
+			display::IndexBufferDesc index_buffer_desc;
+			index_buffer_desc.access = display::Access::Dynamic;
+			index_buffer_desc.size = current_index_buffer_size * sizeof(ImDrawIdx);
+			g_index_buffer = display::CreateIndexBuffer(device, index_buffer_desc, "imgui");
+		}
+
+		//Update constant buffer
+		float L = draw_data->DisplayPos.x;
+		float R = draw_data->DisplayPos.x + draw_data->DisplaySize.x;
+		float T = draw_data->DisplayPos.y;
+		float B = draw_data->DisplayPos.y + draw_data->DisplaySize.y;
+		float mvp[4][4] =
+		{
+			{ 2.0f / (R - L),   0.0f,           0.0f,       0.0f },
+			{ 0.0f,         2.0f / (T - B),     0.0f,       0.0f },
+			{ 0.0f,         0.0f,           0.5f,       0.0f },
+			{ (R + L) / (L - R),  (T + B) / (B - T),    0.5f,       1.0f },
+		};
+
+		//Update vertex buffer and index buffer
+		std::vector<ImDrawVert> vertex_buffer(draw_data->TotalVtxCount);
+		std::vector<ImDrawIdx> index_buffer(draw_data->TotalIdxCount);
+
+		ImDrawVert* vtx_dst = vertex_buffer.data();
+		ImDrawIdx* idx_dst = index_buffer.data();
+		for (int n = 0; n < draw_data->CmdListsCount; n++)
+		{
+			const ImDrawList* cmd_list = draw_data->CmdLists[n];
+			memcpy(vtx_dst, cmd_list->VtxBuffer.Data, cmd_list->VtxBuffer.Size * sizeof(ImDrawVert));
+			memcpy(idx_dst, cmd_list->IdxBuffer.Data, cmd_list->IdxBuffer.Size * sizeof(ImDrawIdx));
+			vtx_dst += cmd_list->VtxBuffer.Size;
+			idx_dst += cmd_list->IdxBuffer.Size;
+		}
+
+		display::UpdateResourceBuffer(device, g_vertex_buffer, vertex_buffer.data(), draw_data->TotalVtxCount * sizeof(ImDrawVert));
+		display::UpdateResourceBuffer(device, g_index_buffer, index_buffer.data(), draw_data->TotalIdxCount * sizeof(ImDrawIdx));
+
+
+		//Set all the resources
+		context->SetRootSignature(display::Pipe::Graphics, g_rootsignature);
+		context->SetPipelineState(g_pipeline_state);
+		context->SetVertexBuffers(0, 1, &g_vertex_buffer);
+		context->SetIndexBuffer(g_index_buffer);
+		//display::SetConstantBuffer(device, command_list_handle, 0, g_constant_buffer);
+		context->SetConstants(display::Pipe::Graphics, 0, mvp, 16);
+		context->SetViewport(display::Viewport(draw_data->DisplaySize.x, draw_data->DisplaySize.y));
+
+		// Render command lists
+		int vtx_offset = 0;
+		int idx_offset = 0;
+		ImVec2 pos = draw_data->DisplayPos;
+		for (int n = 0; n < draw_data->CmdListsCount; n++)
+		{
+			const ImDrawList* cmd_list = draw_data->CmdLists[n];
+			for (int cmd_i = 0; cmd_i < cmd_list->CmdBuffer.Size; cmd_i++)
+			{
+				const ImDrawCmd* pcmd = &cmd_list->CmdBuffer[cmd_i];
+				if (pcmd->UserCallback)
+				{
+					pcmd->UserCallback(cmd_list, pcmd);
+				}
+				else
+				{
+					display::Rect rect;
+					rect.left = static_cast<size_t>(pcmd->ClipRect.x - pos.x);
+					rect.top = static_cast<size_t>(pcmd->ClipRect.y - pos.y);
+					rect.right = static_cast<size_t>(pcmd->ClipRect.z - pos.x);
+					rect.bottom = static_cast<size_t>(pcmd->ClipRect.w - pos.y);
+					context->SetScissorRect(rect);
+
+					context->SetDescriptorTable(display::Pipe::Graphics, 1, *reinterpret_cast<display::DescriptorTableHandle*>(pcmd->TextureId));
+
+					display::DrawIndexedDesc draw_desc;
+					draw_desc.index_count = pcmd->ElemCount;
+					draw_desc.base_vertex = vtx_offset;
+					draw_desc.start_index = idx_offset;
+					context->DrawIndexed(draw_desc);
+				}
+				idx_offset += pcmd->ElemCount;
+			}
+			vtx_offset += cmd_list->VtxBuffer.Size;
+		}
 	}
 }

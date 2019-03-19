@@ -59,7 +59,15 @@ namespace platform
 		//Input
 		bool GetInputSlotState(InputSlot input_slot) const;
 		const std::vector<InputEvent> GetInputEvents() const;
+
+		//Destroy display resources 
+		void DestroyDisplayResources();
 	public:
+		//Present 
+		//Needs to be called at the end of each tick
+		//or from the render thread (if any)
+		void Present();
+
 		//Interface
 		virtual void OnInit() = 0;
 		virtual void OnDestroy() = 0;

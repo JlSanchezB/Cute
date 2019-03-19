@@ -7,6 +7,7 @@
 #include <core/profile.h>
 #include "render_pass.h"
 
+#include <cassert>
 #include <stdarg.h>
 
 namespace
@@ -22,6 +23,9 @@ namespace
 	}
 
 	constexpr uint32_t kRenderProfileColour = 0xFF3333FF;
+
+	//Sync fence, it avoids the render frame been used before the render has been submited
+	job::Fence g_render_fence;
 }
 
 namespace render
@@ -344,7 +348,7 @@ namespace render
 	}
 
 
-	System * CreateRenderSystem(display::Device* device)
+	System * CreateRenderSystem(display::Device* device, job::System* job_system, platform::Game* game)
 	{
 		System* system = new System();
 
@@ -371,6 +375,11 @@ namespace render
 		RegisterPassFactory<DrawRenderItemsPass>(system);
 
 		system->m_device = device;
+		system->m_job_system = job_system;
+		system->m_game = game;
+
+		//If there is a job system, means that there is a render thread, means game is needed
+		assert(!system->m_job_system || (system->m_job_system && system->m_game));
 
 		//Create render command list
 		system->m_render_command_list = display::CreateCommandList(device, "RenderSystem");
@@ -380,6 +389,12 @@ namespace render
 
 	void DestroyRenderSystem(System *& system, display::Device* device)
 	{
+		//Wait of the render task to be finished
+		if (system->m_job_system)
+		{
+			job::Wait(system->m_job_system, g_render_fence);
+		}
+
 		//Destroy resources and passes
 		DestroyResources(device, system->m_game_resources_map);
 		DestroyResources(device, system->m_global_resources_map);
@@ -621,16 +636,33 @@ namespace render
 		display::EndFrame(m_device);
 
 		render_frame.Reset();
+
+		if (m_game)
+		{
+			//We need to present from the render thread
+			m_game->Present();
+		}
 	}
 
 	void BeginPrepareRender(System * system)
 	{
-		//Check if there is sufficient space in the render frame buffers
-
-		//Allocate a frame in the render frame buffer
+		if (system->m_job_system)
+		{
+			//Sync with the submit job
+			job::Wait(system->m_job_system, g_render_fence);
+		}
+		
 
 		//Increase render index
 		system->m_game_thread_frame++;
+	}
+
+	//Submit render job
+	void SubmitRenderJob(void* data)
+	{
+		System* render_system = reinterpret_cast<System*>(data);
+
+		render_system->SubmitRender();
 	}
 
 	void EndPrepareRenderAndSubmit(System * system)
@@ -640,8 +672,17 @@ namespace render
 		//Submit render
 		system->m_render_thread_frame++;
 
-		//Submit (current implementation is single thread
-		system->SubmitRender();
+		if (system->m_job_system)
+		{
+			assert(system->m_game);
+
+			job::AddJob(system->m_job_system, SubmitRenderJob, system, g_render_fence);
+		}
+		else
+		{
+			//Submit (current implementation is single thread
+			system->SubmitRender();
+		}
 	}
 
 	Frame & GetGameRenderFrame(System * system)

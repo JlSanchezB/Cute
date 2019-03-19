@@ -8,6 +8,8 @@
 #include <unordered_map>
 #include <core/simple_pool.h>
 #include <render/render_frame.h>
+#include <job/job.h>
+#include <core/platform.h>
 
 namespace render
 {
@@ -69,6 +71,12 @@ namespace render
 	{
 		//Display device
 		display::Device* m_device;
+
+		//Job system, it can be null
+		job::System* m_job_system;
+
+		//Platform game, it can be null. Used for present
+		platform::Game* m_game;
 
 		using ResourceFactoryMap = std::unordered_map<RenderClassType, std::unique_ptr<FactoryInterface<Resource>>>;
 		using PassFactoryMap = std::unordered_map<RenderClassType, std::unique_ptr<FactoryInterface<Pass>>>;
