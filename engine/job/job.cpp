@@ -2,8 +2,6 @@
 #include <vector>
 #include <array>
 #include <cassert>
-#include <thread>
-#include <atomic>
 #include "job_queue.h"
 #include <cstdlib>
 
@@ -20,16 +18,8 @@ namespace job
 	{
 		JobFunction function;
 		void* data;
-		Fence fence;
+		Fence* fence;
 	};
-
-	//Fence
-	struct alignas(std::hardware_destructive_interference_size) FenceData
-	{
-		//Number of tasks waiting in this fence
-		std::atomic_size_t value = 0;
-	};
-
 
 	//Worker
 	class alignas(std::hardware_destructive_interference_size) Worker
@@ -106,13 +96,9 @@ namespace job
 
 	struct System
 	{
-		//Fence vector
-		std::unique_ptr<FenceData[]> m_fences;
 		//Worker vector
 		std::vector<std::unique_ptr<Worker>> m_workers;
 
-		//Num fences
-		size_t m_num_fences;
 		//State
 		enum class State
 		{
@@ -140,24 +126,21 @@ namespace job
 		}
 
 		//Increment fence
-		void IncrementFence(const Fence& fence)
+		void IncrementFence(Fence& fence) const
 		{
-			assert(fence < m_num_fences);
-			m_fences[fence].value.fetch_add(1);
+			fence.value.fetch_add(1);
 		}
 
 		//Decrement fence
-		void DecrementFence(const Fence& fence)
+		void DecrementFence(Fence& fence) const
 		{
-			assert(fence < m_num_fences);
-			m_fences[fence].value.fetch_sub(1);
+			fence.value.fetch_sub(1);
 		}
 
 		//Fence done
-		bool FinishFence(const Fence& fence) const
+		bool IsFenceFinished(Fence& fence) const
 		{
-			assert(fence < m_num_fences);
-			return m_fences[fence].value == 0;
+			return (fence.value == 0);
 		}
 	};
 
@@ -166,9 +149,6 @@ namespace job
 		System* system = new System();
 
 		//Init system
-		system->m_num_fences = system_desc.GetNumFences();
-		system->m_fences = std::make_unique<FenceData[]>(system->m_num_fences);
-
 		size_t num_workers;
 		if (system_desc.num_workers != static_cast<size_t>(-1))
 		{
@@ -222,19 +202,19 @@ namespace job
 		system = nullptr;
 	}
 
-	void AddJob(System * system, const JobFunction job, void* data, const Fence fence)
+	void AddJob(System * system, const JobFunction job, void* data, Fence& fence)
 	{
 		//Increment the fence
 		system->IncrementFence(fence);
 
 		//Add job to current worker
-		system->m_workers[g_worker_id]->AddJob(Job{ job, data, fence });
+		system->m_workers[g_worker_id]->AddJob(Job{ job, data, &fence });
 	}
 
-	void Wait(System * system, const Fence fence)
+	void Wait(System * system, Fence& fence)
 	{
 		auto& worker = *system->m_workers[g_worker_id].get();
-		while (!system->FinishFence(fence))
+		while (!system->IsFenceFinished(fence))
 		{
 			//Work for a job during waiting
 			Job job;
@@ -245,7 +225,7 @@ namespace job
 				job.function(job.data);
 
 				//Decrement the fence
-				system->DecrementFence(job.fence);
+				system->DecrementFence(*job.fence);
 			}
 		}
 	}
@@ -289,13 +269,9 @@ namespace job
 				job.function(job.data);
 
 				//Decrement the fence
-				m_system->DecrementFence(job.fence);
+				m_system->DecrementFence(*job.fence);
 			}
 
 		}
-	}
-	Fence SystemDesc::ReserveFence()
-	{
-		return num_fences++;
 	}
 }

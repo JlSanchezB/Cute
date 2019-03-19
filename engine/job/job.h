@@ -4,39 +4,39 @@
 #ifndef JOB_H_
 #define JOB_H_
 
+#include <atomic>
+#include <thread>
+
 namespace job
 {
 	struct System;
-	using Fence = size_t;
+	
+	//Fence (each system can be declared, recomended a global variable)
+	class alignas(std::hardware_destructive_interference_size) Fence
+	{
+		friend struct System;
+
+		//Number of tasks waiting in this fence
+		std::atomic_size_t value = 0;
+	};
 
 	using JobFunction = void(*)(void*);
 
 	struct SystemDesc
 	{
-	private:
-		size_t num_fences = 0;
-	public:
 		size_t num_workers = static_cast<size_t>(-1);
 		bool force_hardware_affinity = true;
 		size_t max_sleep = 1000;
-
-		//Fences are reserved before the job system is created
-		Fence ReserveFence();
-
-		size_t GetNumFences() const
-		{
-			return num_fences;
-		}
 	};
 
 	System* CreateSystem(const SystemDesc& system_desc);
 	void DestroySystem(System*& system);
 
 	//Add job
-	void AddJob(System* system, const JobFunction job, void* data, const Fence fence);
+	void AddJob(System* system, const JobFunction job, void* data, Fence& fence);
 
 	//Wait in fence
-	void Wait(System* system, const Fence fence);
+	void Wait(System* system, Fence& fence);
 }
 
 #endif //JOB_H_
