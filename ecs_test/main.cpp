@@ -530,240 +530,243 @@ public:
 		return true;
 	}
 
-	void OnTick(double total_time, float elapsed_time) override
+	void GrassUpdate(float elapsed_time)
 	{
-		//UPDATE GAME
+		MICROPROFILE_SCOPEI("ECSTest", "GrassGrow", 0xFFFF77FF);
+
+		const auto& zone_bitset = GridZone::All();
+
+		//Grow grass
+		ecs::Process<GameDatabase, const GrassComponent, GrassStateComponent, PositionComponent>([&](const auto& instance_iterator, const GrassComponent& grass, GrassStateComponent& grass_state, PositionComponent& position)
 		{
-			MICROPROFILE_SCOPEI("ECSTest", "Update", 0xFFFF77FF);
-			const auto& zone_bitset = GridZone::All();
-
+			if (!grass_state.stop_growing && (grass_state.size < grass.top_size))
 			{
-				MICROPROFILE_SCOPEI("ECSTest", "GrassGrow", 0xFFFF77FF);
-				//Grow grass
-				ecs::Process<GameDatabase, const GrassComponent, GrassStateComponent, PositionComponent>([&](const auto& instance_iterator, const GrassComponent& grass, GrassStateComponent& grass_state, PositionComponent& position)
+				float new_size = grass_state.size + grass.grow_speed * elapsed_time;
+				glm::vec2 grass_position = position.position;
+
+				//Calculate zone bitset based of the range
+				const auto& influence_zone_bitset = GridZone::CalculateInfluence(position.position.x, position.position.y, new_size);
+
+				//Check if it collides with another grass O(N*N)
+				bool collides = false;
+				ecs::Process<GameDatabase, GrassComponent, GrassStateComponent, PositionComponent>([&](const auto& instance_iterator_b, const GrassComponent& grass_b, GrassStateComponent& grass_state_b, const PositionComponent& position_b)
 				{
-					if (!grass_state.stop_growing && (grass_state.size < grass.top_size))
+					if (instance_iterator_b != instance_iterator)
 					{
-						float new_size = grass_state.size + grass.grow_speed * elapsed_time;
-						glm::vec2 grass_position  = position.position;
-
-						//Calculate zone bitset based of the range
-						const auto& influence_zone_bitset = GridZone::CalculateInfluence(position.position.x, position.position.y, new_size);
-
-						//Check if it collides with another grass O(N*N)
-						bool collides = false;
-						ecs::Process<GameDatabase, GrassComponent, GrassStateComponent, PositionComponent>([&](const auto& instance_iterator_b, const GrassComponent& grass_b, GrassStateComponent& grass_state_b,  const PositionComponent& position_b)
+						float distance = glm::length(grass_position - position_b.position);
+						if (distance <= (new_size + grass_state_b.size))
 						{
-							if (instance_iterator_b != instance_iterator)
-							{
-								float distance = glm::length(grass_position - position_b.position);
-								if (distance <= (new_size + grass_state_b.size))
-								{
-									collides = true;
-								}
-							}
-						}, influence_zone_bitset);
-
-						if (collides)
-						{
-							//It is dead, it is not going to grow more, just set the dead space to the current size
-							grass_state.stop_growing = true;
-						}
-						else
-						{
-							//Grow
-							grass_state.size = std::fmin(new_size, grass.top_size);
+							collides = true;
 						}
 					}
+				}, influence_zone_bitset);
 
-				}, zone_bitset);
+				if (collides)
+				{
+					//It is dead, it is not going to grow more, just set the dead space to the current size
+					grass_state.stop_growing = true;
+				}
+				else
+				{
+					//Grow
+					grass_state.size = std::fmin(new_size, grass.top_size);
+				}
 			}
 
+		}, zone_bitset);
+	}
+
+	void GazelleUpdate(double total_time, float elapsed_time)
+	{
+		MICROPROFILE_SCOPEI("ECSTest", "GazelleUpdate", 0xFFFF77FF);
+
+		const auto& zone_bitset = GridZone::All();
+
+		ecs::Process<GameDatabase, const GazelleComponent, GazelleStateComponent, PositionComponent, VelocityComponent>([&](const auto& instance_iterator, const GazelleComponent& gazelle, GazelleStateComponent& gazelle_state, PositionComponent& position_gazelle, VelocityComponent& velocity)
+		{
+			glm::vec2 gazelle_position = position_gazelle.position;
+
+			if (gazelle_state.size < gazelle.repro_size)
 			{
-				MICROPROFILE_SCOPEI("ECSTest", "GazelleUpdate", 0xFFFF77FF);
-				
-				ecs::Process<GameDatabase, const GazelleComponent, GazelleStateComponent, PositionComponent, VelocityComponent>([&](const auto& instance_iterator, const GazelleComponent& gazelle, GazelleStateComponent& gazelle_state, PositionComponent& position_gazelle, VelocityComponent& velocity)
+				//Calculate zone bitset based of the range
+				const auto& grass_influence_zone_bitset = GridZone::CalculateInfluence(position_gazelle.position.x, position_gazelle.position.y, m_gazelle_looking_max_distance);
+
+				//Eaten speed
+				float eaten = gazelle.grow_speed * elapsed_time;
+
+				//Find the target grass
+				glm::vec2 target;
+				float max_target_size = 0.f;
+
+				//Check if it eats grass or find grass
+				ecs::Process<GameDatabase, const GrassComponent, GrassStateComponent, const PositionComponent>([&](const auto& instance_iterator_b, const GrassComponent& grass, GrassStateComponent& grass_state, const PositionComponent& position_grass)
 				{
-					glm::vec2 gazelle_position = position_gazelle.position;
+					glm::vec2 grass_position = position_grass.position;
 
-					if (gazelle_state.size < gazelle.repro_size)
+					float distance = glm::length(grass_position - gazelle_position);
+
+					if (distance < (gazelle_state.size + grass_state.size))
 					{
-						//Calculate zone bitset based of the range
-						const auto& grass_influence_zone_bitset = GridZone::CalculateInfluence(position_gazelle.position.x, position_gazelle.position.y, m_gazelle_looking_max_distance);
-
-						//Eaten speed
-						float eaten = gazelle.grow_speed * elapsed_time;
-						
-						//Find the target grass
-						glm::vec2 target;
-						float max_target_size = 0.f;
-
-						//Check if it eats grass or find grass
-						ecs::Process<GameDatabase, const GrassComponent, GrassStateComponent, const PositionComponent>([&](const auto& instance_iterator_b, const GrassComponent& grass, GrassStateComponent& grass_state, const PositionComponent& position_grass)
+						//Eats all the grass
+						if (grass_state.size <= eaten * m_gazelle_food_grow_ratio)
 						{
-							glm::vec2 grass_position = position_grass.position;
-
-							float distance = glm::length(grass_position - gazelle_position);
-
-							if (distance < (gazelle_state.size + grass_state.size))
-							{
-								//Eats all the grass
-								if (grass_state.size <= eaten * m_gazelle_food_grow_ratio)
-								{
-									//Grow 
-									gazelle_state.size += grass_state.size / m_gazelle_food_grow_ratio;
+							//Grow 
+							gazelle_state.size += grass_state.size / m_gazelle_food_grow_ratio;
 
 
-									//Kill grass
-									grass_state.size = 0.f;
-									instance_iterator_b.Dealloc();
-								}
-								else
-								{
-									gazelle_state.size += eaten;
-									grass_state.size -= eaten * m_gazelle_food_grow_ratio;
-								}	
-							}
-							if (distance < m_gazelle_looking_max_distance)
-							{
-								float target_rate = powf(grass_state.size, gazelle.size_distance_rate) / (distance + 0.0001f);
-
-								if (target_rate > max_target_size)
-								{
-									//New target
-									target = grass_position;
-									max_target_size = target_rate;
-								}
-							}
-						}, grass_influence_zone_bitset);
-
-						glm::vec2 target_velocity;
-						float gazelle_speed = m_gazelle_speed + m_gazelle_speed_variation * static_cast<float>(cos(total_time + gazelle.offset_time * glm::two_pi<float>()));
-						if (max_target_size == 0.f)
-						{
-							//Didn't find any, just go in the predeterminated direction
-							target_velocity = glm::rotate(glm::vec2(elapsed_time * m_gazelle_looking_for_target_speed, 0.f), glm::two_pi<float>() * (static_cast<float>(total_time * 0.05) + gazelle.offset_time));
- 						}
+							//Kill grass
+							grass_state.size = 0.f;
+							instance_iterator_b.Dealloc();
+						}
 						else
 						{
-							target_velocity = (target - gazelle_position) * gazelle_speed * elapsed_time;
+							gazelle_state.size += eaten;
+							grass_state.size -= eaten * m_gazelle_food_grow_ratio;
 						}
-
-						velocity.AddLinealVelocity(target_velocity);
-
-						//Check collision
-						const auto& collision_influence_zone_bitset = GridZone::CalculateInfluence(position_gazelle.position.x, position_gazelle.position.y, gazelle_state.size + m_gazelle_min_distance);
-
-						ecs::Process<GameDatabase, const GazelleComponent, GazelleStateComponent, const PositionComponent>([&](const auto& instance_iterator_b, const GazelleComponent& gazelle_b, GazelleStateComponent& gazelle_state_b, const PositionComponent& position_gazelle_b)
-						{
-							if (instance_iterator != instance_iterator_b)
-							{
-								glm::vec2 gazelle_position_b = position_gazelle_b.position;
-
-								glm::vec2 difference = (gazelle_position_b - gazelle_position);
-								float distance = glm::length(difference);
-
-								float inside = distance - (gazelle_state.size + gazelle_state_b.size + m_gazelle_min_distance);
-								if (inside < 0.f)
-								{
-									glm::vec2 response;
-									if (distance < 0.0001f)
-									{
-										response = glm::rotate(glm::vec2(1.f, 0.f), Random(0.f, glm::two_pi<float>()));
-									}
-									else
-									{
-										response = glm::normalize(difference);
-									}
-
-									//Collision
-									velocity.AddLinealVelocity(response * inside * m_gazelle_collision_speed * elapsed_time);
-								}
-							}
-						}, collision_influence_zone_bitset);
-
-
-						//Avoid lions
-						const auto& lion_influence_zone_bitset = GridZone::CalculateInfluence(position_gazelle.position.x, position_gazelle.position.y, m_gazelle_lion_avoid_max_distance);
-
-						ecs::Process<GameDatabase, const LionComponent, LionStateComponent, const PositionComponent>([&](const auto& instance_iterator_b, const LionComponent& lion, LionStateComponent& lion_state, const PositionComponent& position_lion)
-						{
-							glm::vec2 lion_position = position_lion.position;
-							glm::vec2 lion_direction = position_lion.GetDirection();
-
-							glm::vec2 difference = (gazelle_position - lion_position);
-							float distance = glm::length(difference);
-
-							if (distance < m_gazelle_lion_avoid_max_distance)
-							{
-								glm::vec2 normalize_difference = glm::normalize(difference);
-								glm::vec2 normalize_lion_direction = glm::normalize(lion_direction);
-
-								float dot_lion_gazelle = glm::dot(normalize_difference, normalize_lion_direction);
-
-								float distance_factor = (m_gazelle_lion_avoid_max_distance - distance) / m_gazelle_lion_avoid_max_distance;
-								//Check lion direction
-								float worried_factor_front = glm::clamp(dot_lion_gazelle, 0.f, 1.f) * distance_factor;
-								float worried_factor_close = 0.5f * distance_factor;
-									
-								//Reaction
-								glm::vec2 response_front = glm::normalize(normalize_difference - dot_lion_gazelle * normalize_lion_direction);
-								glm::vec2 response = response_front * worried_factor_front + normalize_difference * worried_factor_close;
-								response *= m_gazelle_avoiding_lion_speed * elapsed_time;
-
-								//Avoid
-								velocity.AddLinealVelocity(response);
-							}
-						}, lion_influence_zone_bitset);
 					}
-					else
+					if (distance < m_gazelle_looking_max_distance)
 					{
-						//Repro
-						instance_iterator.Dealloc();
+						float target_rate = powf(grass_state.size, gazelle.size_distance_rate) / (distance + 0.0001f);
 
-						for (size_t i = 0; i < m_gazelle_num_repro; ++i)
+						if (target_rate > max_target_size)
 						{
-							glm::vec2 offset = glm::rotate(glm::vec2(0.005f, 0.f), Random(0.f, glm::two_pi<float>()));
-							glm::vec2 new_position = gazelle_position + offset;
-
-							CreateGazelle(new_position, gazelle_state.size / static_cast<float>(m_gazelle_num_repro));
+							//New target
+							target = grass_position;
+							max_target_size = target_rate;
 						}
 					}
+				}, grass_influence_zone_bitset);
 
-				}, zone_bitset);
+				glm::vec2 target_velocity;
+				float gazelle_speed = m_gazelle_speed + m_gazelle_speed_variation * static_cast<float>(cos(total_time + gazelle.offset_time * glm::two_pi<float>()));
+				if (max_target_size == 0.f)
+				{
+					//Didn't find any, just go in the predeterminated direction
+					target_velocity = glm::rotate(glm::vec2(elapsed_time * m_gazelle_looking_for_target_speed, 0.f), glm::two_pi<float>() * (static_cast<float>(total_time * 0.05) + gazelle.offset_time));
+				}
+				else
+				{
+					target_velocity = (target - gazelle_position) * gazelle_speed * elapsed_time;
+				}
+
+				velocity.AddLinealVelocity(target_velocity);
+
+				//Check collision
+				const auto& collision_influence_zone_bitset = GridZone::CalculateInfluence(position_gazelle.position.x, position_gazelle.position.y, gazelle_state.size + m_gazelle_min_distance);
+
+				ecs::Process<GameDatabase, const GazelleComponent, GazelleStateComponent, const PositionComponent>([&](const auto& instance_iterator_b, const GazelleComponent& gazelle_b, GazelleStateComponent& gazelle_state_b, const PositionComponent& position_gazelle_b)
+				{
+					if (instance_iterator != instance_iterator_b)
+					{
+						glm::vec2 gazelle_position_b = position_gazelle_b.position;
+
+						glm::vec2 difference = (gazelle_position_b - gazelle_position);
+						float distance = glm::length(difference);
+
+						float inside = distance - (gazelle_state.size + gazelle_state_b.size + m_gazelle_min_distance);
+						if (inside < 0.f)
+						{
+							glm::vec2 response;
+							if (distance < 0.0001f)
+							{
+								response = glm::rotate(glm::vec2(1.f, 0.f), Random(0.f, glm::two_pi<float>()));
+							}
+							else
+							{
+								response = glm::normalize(difference);
+							}
+
+							//Collision
+							velocity.AddLinealVelocity(response * inside * m_gazelle_collision_speed * elapsed_time);
+						}
+					}
+				}, collision_influence_zone_bitset);
+
+
+				//Avoid lions
+				const auto& lion_influence_zone_bitset = GridZone::CalculateInfluence(position_gazelle.position.x, position_gazelle.position.y, m_gazelle_lion_avoid_max_distance);
+
+				ecs::Process<GameDatabase, const LionComponent, LionStateComponent, const PositionComponent>([&](const auto& instance_iterator_b, const LionComponent& lion, LionStateComponent& lion_state, const PositionComponent& position_lion)
+				{
+					glm::vec2 lion_position = position_lion.position;
+					glm::vec2 lion_direction = position_lion.GetDirection();
+
+					glm::vec2 difference = (gazelle_position - lion_position);
+					float distance = glm::length(difference);
+
+					if (distance < m_gazelle_lion_avoid_max_distance)
+					{
+						glm::vec2 normalize_difference = glm::normalize(difference);
+						glm::vec2 normalize_lion_direction = glm::normalize(lion_direction);
+
+						float dot_lion_gazelle = glm::dot(normalize_difference, normalize_lion_direction);
+
+						float distance_factor = (m_gazelle_lion_avoid_max_distance - distance) / m_gazelle_lion_avoid_max_distance;
+						//Check lion direction
+						float worried_factor_front = glm::clamp(dot_lion_gazelle, 0.f, 1.f) * distance_factor;
+						float worried_factor_close = 0.5f * distance_factor;
+
+						//Reaction
+						glm::vec2 response_front = glm::normalize(normalize_difference - dot_lion_gazelle * normalize_lion_direction);
+						glm::vec2 response = response_front * worried_factor_front + normalize_difference * worried_factor_close;
+						response *= m_gazelle_avoiding_lion_speed * elapsed_time;
+
+						//Avoid
+						velocity.AddLinealVelocity(response);
+					}
+				}, lion_influence_zone_bitset);
+			}
+			else
+			{
+				//Repro
+				instance_iterator.Dealloc();
+
+				for (size_t i = 0; i < m_gazelle_num_repro; ++i)
+				{
+					glm::vec2 offset = glm::rotate(glm::vec2(0.005f, 0.f), Random(0.f, glm::two_pi<float>()));
+					glm::vec2 new_position = gazelle_position + offset;
+
+					CreateGazelle(new_position, gazelle_state.size / static_cast<float>(m_gazelle_num_repro));
+				}
 			}
 
+		}, zone_bitset);
+	};
+
+	void LionUpdate(float elapsed_time)
+	{
+		MICROPROFILE_SCOPEI("ECSTest", "LionUpdate", 0xFFFF77FF);
+
+		const auto& zone_bitset = GridZone::All();
+
+		ecs::Process<GameDatabase, const LionComponent, LionStateComponent, const PositionComponent, VelocityComponent>([&](const auto& instance_iterator, const LionComponent& lion, LionStateComponent& lion_state, const PositionComponent& position, VelocityComponent& velocity)
+		{
+			glm::vec2 lion_position = position.position;
+			glm::vec2 lion_direction = position.GetDirection();
+
+			velocity.AddLinealVelocity(lion_direction * m_lion_speed * elapsed_time);
+
+			const float border_detection = 0.3f;
+
+			//Avoid sides or other lions
+			if (lion_position.x - border_detection < m_world_left)
 			{
-				MICROPROFILE_SCOPEI("ECSTest", "LionUpdate", 0xFFFF77FF);
-
-				ecs::Process<GameDatabase, const LionComponent, LionStateComponent, const PositionComponent, VelocityComponent>([&](const auto& instance_iterator, const LionComponent& lion, LionStateComponent& lion_state, const PositionComponent& position, VelocityComponent& velocity)
+				//Calculate better direction
+				if (glm::dot(lion_direction, glm::vec2(0.f, 1.f)) > 0.f)
+					velocity.AddAngleVelocity(-m_lion_rotation_speed * elapsed_time);
+				else
+					velocity.AddAngleVelocity(m_lion_rotation_speed * elapsed_time);
+			}
+			else
+				if (lion_position.x + border_detection > m_world_right)
 				{
-					glm::vec2 lion_position = position.position;
-					glm::vec2 lion_direction = position.GetDirection();
-
-					velocity.AddLinealVelocity( lion_direction * m_lion_speed * elapsed_time);
-					
-					const float border_detection = 0.3f;
-
-					//Avoid sides or other lions
-					if (lion_position.x - border_detection < m_world_left)
-					{
-						//Calculate better direction
-						if (glm::dot(lion_direction, glm::vec2(0.f, 1.f)) > 0.f)
-							velocity.AddAngleVelocity(-m_lion_rotation_speed * elapsed_time);
-						else
-							velocity.AddAngleVelocity(m_lion_rotation_speed * elapsed_time);
-					}
-					else 
-					if (lion_position.x + border_detection > m_world_right)
-					{
-						//Calculate better direction
-						if (glm::dot(lion_direction, glm::vec2(0.f, 1.f)) > 0.f)
-							velocity.AddAngleVelocity(m_lion_rotation_speed * elapsed_time);
-						else
-							velocity.AddAngleVelocity(-m_lion_rotation_speed * elapsed_time);
-					}
+					//Calculate better direction
+					if (glm::dot(lion_direction, glm::vec2(0.f, 1.f)) > 0.f)
+						velocity.AddAngleVelocity(m_lion_rotation_speed * elapsed_time);
 					else
+						velocity.AddAngleVelocity(-m_lion_rotation_speed * elapsed_time);
+				}
+				else
 					if (lion_position.y - border_detection < m_world_bottom)
 					{
 						//Calculate better direction
@@ -773,97 +776,112 @@ public:
 							velocity.AddAngleVelocity(-m_lion_rotation_speed * elapsed_time);
 					}
 					else
-					if (lion_position.y + border_detection > m_world_top)
+						if (lion_position.y + border_detection > m_world_top)
+						{
+							//Calculate better direction
+							if (glm::dot(lion_direction, glm::vec2(1.f, 0.f)) > 0.f)
+								velocity.AddAngleVelocity(-m_lion_rotation_speed * elapsed_time);
+							else
+								velocity.AddAngleVelocity(m_lion_rotation_speed * elapsed_time);
+						}
+
+			//Check areas in front of the lion for activating attack or check if there is collision
+			glm::vec2 lion_look_at = lion_position + m_lion_target_attack_max_distance * lion_direction;
+			const auto& gazelle_influence_zone_bitset = GridZone::CalculateInfluence(lion_look_at.x, lion_look_at.y, m_lion_target_attack_max_distance + lion_state.size);
+
+			//Find the target gazelle
+			glm::vec2 target;
+			float max_target_size = 0.f;
+
+			ecs::Process<GameDatabase, GazelleStateComponent, const PositionComponent>([&](const auto& instance_iterator_b, GazelleStateComponent& gazelle_state, const PositionComponent& position_gazelle)
+			{
+				float distance = glm::length(position_gazelle.position - lion_position);
+
+				if (distance < (gazelle_state.size + lion_state.size))
+				{
+					//Eats the gazelle
+					instance_iterator_b.Dealloc();
+
+					lion_state.size += gazelle_state.size * lion.grow_speed;
+					gazelle_state.size = 0.f;
+				}
+				else if (distance < m_lion_target_attack_max_distance)
+				{
+					float direction_target = std::clamp(8.f * glm::dot(glm::normalize((position_gazelle.position - lion_position)),
+						lion_direction), 0.f, 1.f);
+					float size_distance_rate = powf(gazelle_state.size, lion.size_distance_rate) / (distance + 0.0001f);
+
+					float target_rate = direction_target * size_distance_rate;
+
+					if (target_rate > max_target_size)
 					{
-						//Calculate better direction
-						if (glm::dot(lion_direction, glm::vec2(1.f, 0.f)) > 0.f)
-							velocity.AddAngleVelocity(-m_lion_rotation_speed * elapsed_time);
-						else
-							velocity.AddAngleVelocity(m_lion_rotation_speed * elapsed_time);
+						//New target
+						target = position_gazelle.position;
+						max_target_size = target_rate;
 					}
-					
-					//Check areas in front of the lion for activating attack or check if there is collision
-					glm::vec2 lion_look_at = lion_position + m_lion_target_attack_max_distance * lion_direction;
-					const auto& gazelle_influence_zone_bitset = GridZone::CalculateInfluence(lion_look_at.x, lion_look_at.y, m_lion_target_attack_max_distance + lion_state.size);
+				}
+			}, gazelle_influence_zone_bitset);
 
-					//Find the target gazelle
-					glm::vec2 target;
-					float max_target_size = 0.f;
+			if (max_target_size != 0.f)
+			{
+				if (lion_state.attack > 0.f)
+				{
+					//Start an attack
+					lion_state.attack = -lion_state.attack;
+				}
+				else
+				{
+					//Attacking, orientate to target
+					float angle = glm::orientedAngle(glm::normalize(target - lion_position), lion_direction);
 
-					ecs::Process<GameDatabase, GazelleStateComponent, const PositionComponent>([&](const auto& instance_iterator_b, GazelleStateComponent& gazelle_state, const PositionComponent& position_gazelle)
-					{
-						float distance = glm::length(position_gazelle.position - lion_position);
+					velocity.AddAngleVelocity(-angle * m_lion_attack_rotation_speed * elapsed_time);
+					velocity.AddLinealVelocity(lion_direction * m_lion_attack_speed * elapsed_time);
 
-						if (distance < (gazelle_state.size + lion_state.size))
-						{
-							//Eats the gazelle
-							instance_iterator_b.Dealloc();
-							
-							lion_state.size += gazelle_state.size * lion.grow_speed;
-							gazelle_state.size = 0.f;
-						}
-						else if (distance < m_lion_target_attack_max_distance)
-						{
-							float direction_target = std::clamp(8.f * glm::dot(glm::normalize((position_gazelle.position - lion_position)),
-								lion_direction),0.f, 1.f);
-							float size_distance_rate = powf(gazelle_state.size, lion.size_distance_rate) / (distance + 0.0001f);
-
-							float target_rate = direction_target * size_distance_rate;
-
-							if (target_rate > max_target_size)
-							{
-								//New target
-								target = position_gazelle.position;
-								max_target_size = target_rate;
-							}
-						}
-					}, gazelle_influence_zone_bitset);
-
-					if (max_target_size != 0.f)
-					{
-						if (lion_state.attack > 0.f)
-						{
-							//Start an attack
-							lion_state.attack = -lion_state.attack;
-						}
-						else
-						{
-							//Attacking, orientate to target
-							float angle = glm::orientedAngle(glm::normalize(target - lion_position), lion_direction);
-
-							velocity.AddAngleVelocity(-angle * m_lion_attack_rotation_speed * elapsed_time);
-							velocity.AddLinealVelocity(lion_direction * m_lion_attack_speed * elapsed_time);
-
-							//Remove attack to the lion
-							lion_state.attack += elapsed_time;
-						}
-					}
-					
-					//Recharge attack
-					if (lion_state.attack > 0.f)
-					{
-						lion_state.attack += lion.attack_recharge * elapsed_time;
-					}
-
-					if (lion_state.size > lion.repro_size)
-					{
-						//Repro
-						instance_iterator.Dealloc();
-
-						for (size_t i = 0; i < m_lion_num_repro; ++i)
-						{
-							glm::vec2 offset = glm::rotate(glm::vec2(0.005f, 0.f), Random(0.f, glm::two_pi<float>()));
-							glm::vec2 new_position = lion_position + offset;
-
-							CreateLion(new_position, lion_state.size / static_cast<float>(m_lion_num_repro));
-						}
-					}
-
-				}, zone_bitset);
+					//Remove attack to the lion
+					lion_state.attack += elapsed_time;
+				}
 			}
+
+			//Recharge attack
+			if (lion_state.attack > 0.f)
+			{
+				lion_state.attack += lion.attack_recharge * elapsed_time;
+			}
+
+			if (lion_state.size > lion.repro_size)
+			{
+				//Repro
+				instance_iterator.Dealloc();
+
+				for (size_t i = 0; i < m_lion_num_repro; ++i)
+				{
+					glm::vec2 offset = glm::rotate(glm::vec2(0.005f, 0.f), Random(0.f, glm::two_pi<float>()));
+					glm::vec2 new_position = lion_position + offset;
+
+					CreateLion(new_position, lion_state.size / static_cast<float>(m_lion_num_repro));
+				}
+			}
+
+		}, zone_bitset);
+	}
+
+	void OnTick(double total_time, float elapsed_time) override
+	{
+		//UPDATE GAME
+		{
+			MICROPROFILE_SCOPEI("ECSTest", "Update", 0xFFFF77FF);
+
+			GrassUpdate(elapsed_time);
+
+			GazelleUpdate(total_time, elapsed_time);
+
+			LionUpdate(elapsed_time);
 
 			{
 				MICROPROFILE_SCOPEI("ECSTest", "EntitiesMove", 0xFFFF77FF);
+
+				const auto& zone_bitset = GridZone::All();
+
 				//Move entities
 				ecs::Process<GameDatabase, PositionComponent, VelocityComponent>([&](const auto& instance_iterator, PositionComponent& position, VelocityComponent& velocity)
 				{
