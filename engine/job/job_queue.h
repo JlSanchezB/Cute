@@ -68,7 +68,7 @@ namespace job
 				return false;
 			}
 			//Check first the most common case
-			else if (!(begin == end || NextIndex(begin) == end)) //Check if this two conditions are not happening (explain during the else) 
+			else if (!(begin == end || begin == NextIndex(end))) //Check if this two conditions are not happening (explain during the else) 
 			{
 				//It was more than 1 job between pop and steal
 								//It is save to just capture the job
@@ -78,7 +78,7 @@ namespace job
 
 				return true;
 			}
-			else if (begin == end) //end is decremented
+			else if (begin == NextIndex(end)) //end is decremented
 			{
 				//Begin has incremented and now match the decremented end
 				//This can only happens when a steal has happen, so we need to cancel our pop
@@ -91,8 +91,12 @@ namespace job
 				//Nothing to pop
 				return false;
 			}
-			else if (NextIndex(begin) == end)
+			else if (begin == end) //end is decremented
 			{
+				//It was only one left, and begin and end are the same slot
+				//At this moment we need to sync agains a steal
+				//that means, that the best sync is using the same atomic that steal (begin_index)
+
 				job = m_jobs[begin];
 
 				//Restore the end to the begin as we predecremented the end index

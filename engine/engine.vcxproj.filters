@@ -899,6 +899,9 @@
     <ClInclude Include="job\job_queue.h">
       <Filter>job</Filter>
     </ClInclude>
+    <ClInclude Include="core\sync.h">
+      <Filter>core</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="display\pc_dx12\display.cpp">

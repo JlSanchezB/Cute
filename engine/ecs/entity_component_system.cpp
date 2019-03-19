@@ -1,5 +1,6 @@
 #include "entity_component_system.h"
 #include <core/virtual_buffer.h>
+#include <core/sync.h>
 
 namespace ecs
 {
@@ -53,6 +54,12 @@ namespace ecs
 
 		//Index to the first free slot avaliable in the indirection instance table
 		InstanceIndexType m_first_free_slot_indirection_instance_table = -1;
+
+		//Spinlock mutex for deferred deletes
+		core::SpinLockMutex m_deferred_deletes_spinlock_mutex;
+
+		//Spinlock mutex for deferred moves
+		core::SpinLockMutex m_deferred_moves_spinlock_mutex;
 
 		//List of deferred instance deletes
 		std::vector<InstanceIndexType> m_deferred_instance_deletes;
@@ -374,6 +381,7 @@ namespace ecs
 		}
 		void DeallocInstance(Database * database, InstanceIndirectionIndexType indirection_index)
 		{
+			core::SpinLockMutexGuard(database->m_deferred_deletes_spinlock_mutex);
 			//Add to the deferred list
 			database->m_deferred_instance_deletes.push_back(indirection_index);
 		}
@@ -389,6 +397,8 @@ namespace ecs
 			auto internal_index = database->m_indirection_instance_table[index];
 			if (internal_index.zone_index != new_zone_index)
 			{
+				core::SpinLockMutexGuard(database->m_deferred_moves_spinlock_mutex);
+
 				//Add to the deferred moves
 				database->m_deferred_instance_moves.emplace_back(InstanceMove{ index , new_zone_index });
 			}

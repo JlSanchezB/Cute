@@ -27,6 +27,9 @@
 
 #include "resources.h"
 
+//Fence to sync jobs for update
+job::Fence g_UpdateFinishedFence;
+
 class RandomEventsGenerator
 {
 	std::normal_distribution<float> m_distribution;
@@ -865,17 +868,58 @@ public:
 		}, zone_bitset);
 	}
 
+	//Jobs data
+	struct JobData
+	{
+		ECSGame* game;
+		double total_time;
+		float elapsed_time;
+	};
+
+	//Jobs
+	static void GrassUpdateJob(void* data)
+	{
+		JobData* ecs_data = reinterpret_cast<JobData*>(data);
+
+		ecs_data->game->GrassUpdate(ecs_data->elapsed_time);
+	}
+
+	static void GazelleUpdateJob(void* data)
+	{
+		JobData* ecs_data = reinterpret_cast<JobData*>(data);
+
+		ecs_data->game->GazelleUpdate(ecs_data->total_time, ecs_data->elapsed_time);
+	}
+
+	static void LionUpdateJob(void* data)
+	{
+		JobData* ecs_data = reinterpret_cast<JobData*>(data);
+
+		ecs_data->game->LionUpdate(ecs_data->elapsed_time);
+	}
+
 	void OnTick(double total_time, float elapsed_time) override
 	{
 		//UPDATE GAME
 		{
 			MICROPROFILE_SCOPEI("ECSTest", "Update", 0xFFFF77FF);
 
-			GrassUpdate(elapsed_time);
+			//Data for update jobs
+			JobData job_data = { this, total_time, elapsed_time };
 
-			GazelleUpdate(total_time, elapsed_time);
+			//GrassUpdate(elapsed_time);
 
-			LionUpdate(elapsed_time);
+			//GazelleUpdate(total_time, elapsed_time);
+
+			//LionUpdate(elapsed_time);
+
+			//Add jobs to the job system
+			job::AddJob(m_job_system, GrassUpdateJob, &job_data, g_UpdateFinishedFence);
+			job::AddJob(m_job_system, GazelleUpdateJob, &job_data, g_UpdateFinishedFence);
+			job::AddJob(m_job_system, LionUpdateJob, &job_data, g_UpdateFinishedFence);
+
+			//Wait in the fence
+			job::Wait(m_job_system, g_UpdateFinishedFence);
 
 			{
 				MICROPROFILE_SCOPEI("ECSTest", "EntitiesMove", 0xFFFF77FF);
