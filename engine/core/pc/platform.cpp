@@ -43,6 +43,8 @@ namespace
 
 		void Capture()
 		{
+			Clear();
+
 			ImDrawData* source = ImGui::GetDrawData();
 
 			//Copy the data
