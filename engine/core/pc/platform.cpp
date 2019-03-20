@@ -109,6 +109,11 @@ namespace
 
 		//Input events
 		std::vector<platform::InputEvent> m_input_events;
+
+		//Index of the update frame, used for syncs
+		size_t m_update_frame_index = 0;
+		//Index of the render thread
+		size_t m_render_frame_index = 0;
 	};
 	
 	//Global platform access
@@ -380,6 +385,9 @@ namespace platform
 			//Present
 			display::Present(g_Platform->m_device);
 		}
+
+		//Increment frame index for render
+		g_Platform->m_render_frame_index++;
 	}
 
 	char Run(const char* name, void* param, uint32_t width, uint32_t height, Game* game)
@@ -495,6 +503,9 @@ namespace platform
 
 
 			MicroProfileFlip();
+
+			//Increment frame index for update
+			g_Platform->m_update_frame_index++;
 
 		} while (true);
 
