@@ -35,78 +35,84 @@ namespace core
 
 namespace
 {
-	//Device
-	display::Device* g_device = nullptr;
-
-	//Fullscreen
-	RECT g_window_rect;
-	UINT g_window_style = WS_OVERLAPPEDWINDOW;
-	bool g_windowed = true;
-
-	//global variable with the current hwnd, needed for specicif win32 and dx12 init
-	HWND g_current_hwnd;
-
-	//Frecuency for the perfomance timer
-	LARGE_INTEGER g_frequency;
-
-	//Frecuency for the perfomance timer
-	LARGE_INTEGER g_current_time;
-
-	//Begin time
-	LARGE_INTEGER g_begin_time;
-
-	//Total accumulated time
-	double g_total_time = 0.f;
-
-	//Last elapsed time
-	float g_last_elapsed_time = 0.f;
-
-	//Imgui menu enabled
-	bool g_imgui_menu_enable = false;
-
-	//Imgui fps enable
-	bool g_imgui_fps_enable = true;
-
-	//Imgui demo
-	bool g_imgui_demo_enable = false;
-
-	//Imgui display stats
-	bool g_imgui_display_stats = false;
-
-	//Imgui render log
-	bool g_imgui_log_enable = false;
-
-	constexpr std::array<platform::InputSlot, 256> build_keyboard_conversion()
+	struct Platform
 	{
-		std::array<platform::InputSlot, 256> table = {platform::InputSlot::Invalid};
+		//Device
+		display::Device* m_device = nullptr;
 
-		table[VK_BACK] = platform::InputSlot::Back;
-		table[VK_TAB] = platform::InputSlot::Tab;
-		table[VK_RETURN] = platform::InputSlot::Return;
-		table[VK_LSHIFT] = platform::InputSlot::LShift;
-		table[VK_LCONTROL] = platform::InputSlot::LControl;
-		table[VK_RSHIFT] = platform::InputSlot::RShift;
-		table[VK_RCONTROL] = platform::InputSlot::RControl;
-		table[VK_ESCAPE] = platform::InputSlot::Escape;
-		table[VK_SPACE] = platform::InputSlot::Space;
-		table[VK_LEFT] = platform::InputSlot::Left;
-		table[VK_UP] = platform::InputSlot::Up;
-		table[VK_DOWN] = platform::InputSlot::Down;
-		table[VK_RIGHT] = platform::InputSlot::Right;
-		table[VK_PRIOR] = platform::InputSlot::PageUp;
-		table[VK_NEXT] = platform::InputSlot::PageDown;
+		//Fullscreen
+		RECT m_window_rect;
+		UINT m_window_style = WS_OVERLAPPEDWINDOW;
+		bool m_windowed = true;
 
-		return table;
-	}
+		//global variable with the current hwnd, needed for specicif win32 and dx12 init
+		HWND m_current_hwnd;
 
-	//Table for converting from VK values to platform enum
-	std::array<platform::InputSlot,256> g_keyboard_conversion = build_keyboard_conversion();
+		//Frecuency for the perfomance timer
+		LARGE_INTEGER m_frequency;
 
-	//Input state
-	std::array<bool, static_cast<size_t>(platform::InputSlot::Count)> g_input_slot_state = { false };
+		//Frecuency for the perfomance timer
+		LARGE_INTEGER m_current_time;
 
-	//Input events
-	std::vector<platform::InputEvent> g_input_events;
+		//Begin time
+		LARGE_INTEGER m_begin_time;
+
+		//Total accumulated time
+		double m_total_time = 0.f;
+
+		//Last elapsed time
+		float m_last_elapsed_time = 0.f;
+
+		//Imgui menu enabled
+		bool m_imgui_menu_enable = false;
+
+		//Imgui fps enable
+		bool m_imgui_fps_enable = true;
+
+		//Imgui demo
+		bool m_imgui_demo_enable = false;
+
+		//Imgui display stats
+		bool m_imgui_display_stats = false;
+
+		//Imgui render log
+		bool m_imgui_log_enable = false;
+
+		constexpr std::array<platform::InputSlot, 256> build_keyboard_conversion()
+		{
+			std::array<platform::InputSlot, 256> table = { platform::InputSlot::Invalid };
+
+			table[VK_BACK] = platform::InputSlot::Back;
+			table[VK_TAB] = platform::InputSlot::Tab;
+			table[VK_RETURN] = platform::InputSlot::Return;
+			table[VK_LSHIFT] = platform::InputSlot::LShift;
+			table[VK_LCONTROL] = platform::InputSlot::LControl;
+			table[VK_RSHIFT] = platform::InputSlot::RShift;
+			table[VK_RCONTROL] = platform::InputSlot::RControl;
+			table[VK_ESCAPE] = platform::InputSlot::Escape;
+			table[VK_SPACE] = platform::InputSlot::Space;
+			table[VK_LEFT] = platform::InputSlot::Left;
+			table[VK_UP] = platform::InputSlot::Up;
+			table[VK_DOWN] = platform::InputSlot::Down;
+			table[VK_RIGHT] = platform::InputSlot::Right;
+			table[VK_PRIOR] = platform::InputSlot::PageUp;
+			table[VK_NEXT] = platform::InputSlot::PageDown;
+
+			return table;
+		}
+
+		//Table for converting from VK values to platform enum
+		std::array<platform::InputSlot, 256> m_keyboard_conversion = build_keyboard_conversion();
+
+		//Input state
+		std::array<bool, static_cast<size_t>(platform::InputSlot::Count)> m_input_slot_state = { false };
+
+		//Input events
+		std::vector<platform::InputEvent> m_input_events;
+	};
+	
+	//Global platform access
+	Platform* g_Platform;
 
 	//Windows message handle
 	LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
@@ -141,9 +147,9 @@ namespace
 				core::LogInfo("Windows is going to change size (%i,%i)", clientRect.right - clientRect.left, clientRect.bottom - clientRect.top);
 
 				//Call the device
-				if (g_device)
+				if (g_Platform->m_device)
 				{
-					display::ChangeWindowSize(g_device, clientRect.right - clientRect.left, clientRect.bottom - clientRect.top, wParam == SIZE_MINIMIZED);
+					display::ChangeWindowSize(g_Platform->m_device, clientRect.right - clientRect.left, clientRect.bottom - clientRect.top, wParam == SIZE_MINIMIZED);
 				}
 				//Call the game
 				game->OnSizeChange(clientRect.right - clientRect.left, clientRect.bottom - clientRect.top, wParam == SIZE_MINIMIZED);
@@ -153,24 +159,24 @@ namespace
 		{
 			if (wParam == VK_OEM_8)
 			{
-				g_imgui_menu_enable = ! g_imgui_menu_enable;
+				g_Platform->m_imgui_menu_enable = !g_Platform->m_imgui_menu_enable;
 			}
 			else
 			{
-				if (g_keyboard_conversion[wParam] != platform::InputSlot::Invalid)
+				if (g_Platform->m_keyboard_conversion[wParam] != platform::InputSlot::Invalid)
 				{
-					g_input_slot_state[static_cast<size_t>(g_keyboard_conversion[wParam])] = true;
-					g_input_events.push_back({ platform::EventType::KeyDown, g_keyboard_conversion[wParam] });
+					g_Platform->m_input_slot_state[static_cast<size_t>(g_Platform->m_keyboard_conversion[wParam])] = true;
+					g_Platform->m_input_events.push_back({ platform::EventType::KeyDown, g_Platform->m_keyboard_conversion[wParam] });
 				}
 			}
 			break;
 		}
 		case WM_KEYUP:
 		{
-			if (g_keyboard_conversion[wParam] != platform::InputSlot::Invalid)
+			if (g_Platform->m_keyboard_conversion[wParam] != platform::InputSlot::Invalid)
 			{
-				g_input_slot_state[static_cast<size_t>(g_keyboard_conversion[wParam])] = false;
-				g_input_events.push_back({ platform::EventType::KeyUp, g_keyboard_conversion[wParam] });
+				g_Platform->m_input_slot_state[static_cast<size_t>(g_Platform->m_keyboard_conversion[wParam])] = false;
+				g_Platform->m_input_events.push_back({ platform::EventType::KeyUp, g_Platform->m_keyboard_conversion[wParam] });
 			}
 			break;
 		}
@@ -178,23 +184,23 @@ namespace
 			// Handle ALT+ENTER:
 			if ((wParam == VK_RETURN) && (lParam & (1 << 29)))
 			{
-				if (game && g_device && display::IsTearingEnabled(g_device))
+				if (game && g_Platform->m_device && display::IsTearingEnabled(g_Platform->m_device))
 				{
-					if (g_windowed)
+					if (g_Platform->m_windowed)
 					{
 						core::LogInfo("Windows is going to full screen");
 						//Change to full screen
 
 						// Save the old window rect so we can restore it when exiting fullscreen mode.
-						GetWindowRect(hWnd, &g_window_rect);
+						GetWindowRect(hWnd, &g_Platform->m_window_rect);
 
 						// Make the window borderless so that the client area can fill the screen.
-						SetWindowLong(hWnd, GWL_STYLE, g_window_style & ~(WS_CAPTION | WS_MAXIMIZEBOX | WS_MINIMIZEBOX | WS_SYSMENU | WS_THICKFRAME));
+						SetWindowLong(hWnd, GWL_STYLE, g_Platform->m_window_style & ~(WS_CAPTION | WS_MAXIMIZEBOX | WS_MINIMIZEBOX | WS_SYSMENU | WS_THICKFRAME));
 
 						//Get current display size
 						RECT fullscreenWindowRect;
 						display::Rect rect;
-						if (display::GetCurrentDisplayRect(g_device, rect))
+						if (display::GetCurrentDisplayRect(g_Platform->m_device, rect))
 						{
 							fullscreenWindowRect.bottom = static_cast<LONG>(rect.bottom);
 							fullscreenWindowRect.top = static_cast<LONG>(rect.top);
@@ -228,27 +234,27 @@ namespace
 
 						ShowWindow(hWnd, SW_MAXIMIZE);
 
-						g_windowed = false;
+						g_Platform->m_windowed = false;
 					}
 					else
 					{
 						core::LogInfo("Windows is restoring size");
 
 						// Restore the window's attributes and size.
-						SetWindowLong(hWnd, GWL_STYLE, g_window_style);
+						SetWindowLong(hWnd, GWL_STYLE, g_Platform->m_window_style);
 
 						SetWindowPos(
 							hWnd,
 							HWND_NOTOPMOST,
-							g_window_rect.left,
-							g_window_rect.top,
-							g_window_rect.right - g_window_rect.left,
-							g_window_rect.bottom - g_window_rect.top,
+							g_Platform->m_window_rect.left,
+							g_Platform->m_window_rect.top,
+							g_Platform->m_window_rect.right - g_Platform->m_window_rect.left,
+							g_Platform->m_window_rect.bottom - g_Platform->m_window_rect.top,
 							SWP_FRAMECHANGED | SWP_NOACTIVATE);
 
 						ShowWindow(hWnd, SW_NORMAL);
 
-						g_windowed = true;
+						g_Platform->m_windowed = true;
 					}
 					return 0;
 				}
@@ -281,7 +287,7 @@ namespace
 
 	void RenderImgui(platform::Game* game)
 	{
-		if (g_imgui_menu_enable)
+		if (g_Platform->m_imgui_menu_enable)
 		{
 			//Display menu
 			if (ImGui::BeginMainMenuBar())
@@ -289,10 +295,10 @@ namespace
 				if (ImGui::BeginMenu("Cute"))
 				{
 					if (ImGui::MenuItem("Logger")) {};
-					ImGui::Checkbox("Show FPS", &g_imgui_fps_enable);
-					ImGui::Checkbox("Show Log", &g_imgui_log_enable);
-					ImGui::Checkbox("Show Imgui Demo", &g_imgui_demo_enable);
-					ImGui::Checkbox("Display Stats", &g_imgui_display_stats);
+					ImGui::Checkbox("Show FPS", &g_Platform->m_imgui_fps_enable);
+					ImGui::Checkbox("Show Log", &g_Platform->m_imgui_log_enable);
+					ImGui::Checkbox("Show Imgui Demo", &g_Platform->m_imgui_demo_enable);
+					ImGui::Checkbox("Display Stats", &g_Platform->m_imgui_display_stats);
 					ImGui::EndMenu();
 				}
 				//Call game to add it owns menus
@@ -302,25 +308,25 @@ namespace
 			}
 		}
 
-		if (g_imgui_demo_enable)
+		if (g_Platform->m_imgui_demo_enable)
 		{
 			//Show Imgui demo
-			ImGui::ShowDemoWindow(&g_imgui_demo_enable);
+			ImGui::ShowDemoWindow(&g_Platform->m_imgui_demo_enable);
 		}
 
-		if (g_imgui_fps_enable)
+		if (g_Platform->m_imgui_fps_enable)
 		{
-			RenderFPSOverlay(g_last_elapsed_time);
+			RenderFPSOverlay(g_Platform->m_last_elapsed_time);
 		}
 
-		if (g_imgui_display_stats && g_device)
+		if (g_Platform->m_imgui_display_stats && g_Platform->m_device)
 		{
-			display::DisplayImguiStats(g_device, &g_imgui_display_stats);
+			display::DisplayImguiStats(g_Platform->m_device, &g_Platform->m_imgui_display_stats);
 		}
 
-		if (g_imgui_log_enable)
+		if (g_Platform->m_imgui_log_enable)
 		{
-			g_imgui_log_enable = core::LogRender();
+			g_Platform->m_imgui_log_enable = core::LogRender();
 		}
 
 		//Render game imgui
@@ -332,7 +338,7 @@ namespace platform
 {
 	HWND GetHwnd()
 	{
-		return g_current_hwnd;
+		return g_Platform->m_current_hwnd;
 	}
 
 	//Called from the device before present with the present command list
@@ -343,7 +349,7 @@ namespace platform
 
 	void Game::SetDevice(display::Device * device)
 	{
-		g_device = device;
+		g_Platform->m_device = device;
 
 		//Create IMGUI
 		IMGUI_CHECKVERSION();
@@ -351,7 +357,7 @@ namespace platform
 		ImGui::StyleColorsDark();
 
 		//Init imgui
-		imgui_render::Init(g_current_hwnd);
+		imgui_render::Init(g_Platform->m_current_hwnd);
 
 		//Create all resources for imgui
 		imgui_render::CreateResources(device);
@@ -359,12 +365,12 @@ namespace platform
 
 	bool Game::GetInputSlotState(InputSlot input_slot) const
 	{
-		return g_input_slot_state[static_cast<size_t>(input_slot)];
+		return g_Platform->m_input_slot_state[static_cast<size_t>(input_slot)];
 	}
 
 	const std::vector<InputEvent> Game::GetInputEvents() const
 	{
-		return g_input_events;
+		return g_Platform->m_input_events;
 	}
 
 	void Game::Present()
@@ -372,7 +378,7 @@ namespace platform
 		{
 			MICROPROFILE_SCOPEI("Platform", "Present", 0xFFFF00FF);
 			//Present
-			display::Present(g_device);
+			display::Present(g_Platform->m_device);
 		}
 	}
 
@@ -381,6 +387,8 @@ namespace platform
 #ifdef _STRING_HASH_MAP_ENABLED_
 		core::CreateStringHashMap();
 #endif
+
+		g_Platform = new Platform;
 
 		HINSTANCE hInstance = *(reinterpret_cast<HINSTANCE*>(param));
 
@@ -398,7 +406,7 @@ namespace platform
 		AdjustWindowRect(&windowRect, WS_OVERLAPPEDWINDOW, FALSE);
 
 		// Create the window and store a handle to it.
-		g_current_hwnd = CreateWindow(
+		g_Platform->m_current_hwnd = CreateWindow(
 			windowClass.lpszClassName,
 			name,
 			WS_OVERLAPPEDWINDOW,
@@ -411,7 +419,7 @@ namespace platform
 			hInstance,
 			game);
 
-		ShowWindow(g_current_hwnd, true);
+		ShowWindow(g_Platform->m_current_hwnd, true);
 
 		//Init microprofiler
 		MicroProfileOnThreadCreate("Main");
@@ -425,9 +433,9 @@ namespace platform
 		game->OnInit();
 
 		//Calculate frecuency for timer
-		QueryPerformanceFrequency(&g_frequency);
-		QueryPerformanceCounter(&g_current_time);
-		QueryPerformanceCounter(&g_begin_time);
+		QueryPerformanceFrequency(&g_Platform->m_frequency);
+		QueryPerformanceCounter(&g_Platform->m_current_time);
+		QueryPerformanceCounter(&g_Platform->m_begin_time);
 
 		// Main sample loop.
 		MSG msg = {};
@@ -448,29 +456,29 @@ namespace platform
 			}
 
 			//Calculate time
-			LARGE_INTEGER last_time = g_current_time;
-			QueryPerformanceCounter(&g_current_time);
-			float elapsed_time = static_cast<float>(g_current_time.QuadPart - last_time.QuadPart) / g_frequency.QuadPart;
+			LARGE_INTEGER last_time = g_Platform->m_current_time;
+			QueryPerformanceCounter(&g_Platform->m_current_time);
+			float elapsed_time = static_cast<float>(g_Platform->m_current_time.QuadPart - last_time.QuadPart) / g_Platform->m_frequency.QuadPart;
 			if (elapsed_time > 0.5f)
 			{
 				core::LogInfo("Timestep was really high (Debugging?), limited to 30fps");
 				elapsed_time = 1.f / 30.f;
 			}
-			g_total_time += elapsed_time;
-			g_last_elapsed_time = elapsed_time;
+			g_Platform->m_total_time += elapsed_time;
+			g_Platform->m_last_elapsed_time = elapsed_time;
 
 			//New frame for imgui
-			imgui_render::NextFrame(g_current_hwnd, elapsed_time);
+			imgui_render::NextFrame(g_Platform->m_current_hwnd, elapsed_time);
 
 			{
 				MICROPROFILE_SCOPEI("Platform", "GameTick", 0xFFFF00FF);
 				//Render
-				game->OnTick(g_total_time, elapsed_time);
+				game->OnTick(g_Platform->m_total_time, elapsed_time);
 			}
 
 			{
 				//Clear input events
-				g_input_events.clear();
+				g_Platform->m_input_events.clear();
 			}
 
 			{
@@ -499,7 +507,7 @@ namespace platform
 		ImGui::DestroyContext();
 
 		//Destroy all imgui resources
-		imgui_render::DestroyResources(g_device);
+		imgui_render::DestroyResources(g_Platform->m_device);
 
 		//Destroy callback
 		game->OnDestroy();
@@ -511,6 +519,9 @@ namespace platform
 
 		MicroProfileWebServerStop();
 		MicroProfileShutdown();
+
+		delete g_Platform;
+		g_Platform = nullptr;
 
 		// Return this part of the WM_QUIT message to Windows.
 		return static_cast<char>(msg.wParam);
