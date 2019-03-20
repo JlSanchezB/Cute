@@ -35,6 +35,46 @@ namespace core
 
 namespace
 {
+	//Clone the data for deferred rendering of the imgui
+	struct ImguiCloneFrameData
+	{
+		//Container, we need to control the command list
+		ImDrawData draw_data;
+
+		void Capture()
+		{
+			ImDrawData* source = ImGui::GetDrawData();
+
+			//Copy the data
+			draw_data = *source;
+
+			//Allocate space for the command lists
+			draw_data.CmdLists = new ImDrawList*[draw_data.CmdListsCount];
+
+			//Close all command lists
+			for (int i = 0; i < draw_data.CmdListsCount; i++)
+			{
+				draw_data.CmdLists[i] = source->CmdLists[i]->CloneOutput();
+			}
+		}
+
+		void Clear()
+		{
+			for (int i = 0; i < draw_data.CmdListsCount; i++)
+			{
+				delete draw_data.CmdLists[i];
+			}
+
+			delete draw_data.CmdLists;
+			draw_data.CmdLists = nullptr;
+		}
+
+		~ImguiCloneFrameData()
+		{
+			Clear();
+		}
+	};
+
 	struct Platform
 	{
 		//Device
@@ -115,47 +155,8 @@ namespace
 		//Index of the render thread, used for syncs
 		size_t m_render_frame_index = 1;
 
+		//Number of frames saved for imgui
 		static constexpr size_t kNumImguiFrames = 5;
-
-		struct ImguiCloneFrameData
-		{
-			//Container, we need to control the command list
-			ImDrawData draw_data;
-
-			void Capture()
-			{
-				ImDrawData* source = ImGui::GetDrawData();
-
-				//Copy the data
-				draw_data = *source;
-
-				//Allocate space for the command lists
-				draw_data.CmdLists = new ImDrawList* [draw_data.CmdListsCount];
-
-				//Close all command lists
-				for (int i = 0; i < draw_data.CmdListsCount; i++)
-				{
-					draw_data.CmdLists[i] = source->CmdLists[i]->CloneOutput();
-				}
-			}
-
-			void Clear()
-			{
-				for (int i = 0; i < draw_data.CmdListsCount; i++)
-				{
-					delete draw_data.CmdLists[i];
-				}
-
-				delete draw_data.CmdLists;
-				draw_data.CmdLists = nullptr;
-			}
-
-			~ImguiCloneFrameData()
-			{
-				Clear();
-			}
-
-		};
 
 		std::array <ImguiCloneFrameData, kNumImguiFrames> m_imgui_draw_data;
 	};
