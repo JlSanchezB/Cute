@@ -112,8 +112,52 @@ namespace
 
 		//Index of the update frame, used for syncs
 		size_t m_update_frame_index = 0;
-		//Index of the render thread
-		size_t m_render_frame_index = 0;
+		//Index of the render thread, used for syncs
+		size_t m_render_frame_index = 1;
+
+		static constexpr size_t kNumImguiFrames = 5;
+
+		struct ImguiCloneFrameData
+		{
+			//Container, we need to control the command list
+			ImDrawData draw_data;
+
+			void Capture()
+			{
+				ImDrawData* source = ImGui::GetDrawData();
+
+				//Copy the data
+				draw_data = *source;
+
+				//Allocate space for the command lists
+				draw_data.CmdLists = new ImDrawList* [draw_data.CmdListsCount];
+
+				//Close all command lists
+				for (int i = 0; i < draw_data.CmdListsCount; i++)
+				{
+					draw_data.CmdLists[i] = source->CmdLists[i]->CloneOutput();
+				}
+			}
+
+			void Clear()
+			{
+				for (int i = 0; i < draw_data.CmdListsCount; i++)
+				{
+					delete draw_data.CmdLists[i];
+				}
+
+				delete draw_data.CmdLists;
+				draw_data.CmdLists = nullptr;
+			}
+
+			~ImguiCloneFrameData()
+			{
+				Clear();
+			}
+
+		};
+
+		std::array <ImguiCloneFrameData, kNumImguiFrames> m_imgui_draw_data;
 	};
 	
 	//Global platform access
@@ -349,7 +393,7 @@ namespace platform
 	//Called from the device before present with the present command list
 	void PresentCallback(display::Context* context)
 	{
-		imgui_render::Draw(context);
+		imgui_render::Draw(context, &g_Platform->m_imgui_draw_data[g_Platform->m_render_frame_index % Platform::kNumImguiFrames].draw_data);
 	}
 
 	void Game::SetDevice(display::Device * device)
@@ -490,15 +534,18 @@ namespace platform
 			}
 
 			{
-				MICROPROFILE_SCOPEI("Platform", "BuildImgui", 0xFFFF00FF);
+				MICROPROFILE_SCOPEI("Platform", "RenderPlatformImgui", 0xFFFF00FF);
 				//Render platform imgui (menu, fps,...)
 				RenderImgui(game);
 			}
 
 			{
-				MICROPROFILE_SCOPEI("Platform", "RenderImgui", 0xFFFF00FF);
+				MICROPROFILE_SCOPEI("Platform", "BuildImguiRender", 0xFFFF00FF);
 				//Render IMGUI
 				ImGui::Render();
+
+				//Copy the current draw data to the correct frame data
+				g_Platform->m_imgui_draw_data[g_Platform->m_update_frame_index % Platform::kNumImguiFrames].Capture();
 			}
 
 

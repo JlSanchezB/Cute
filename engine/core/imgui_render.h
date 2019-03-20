@@ -7,6 +7,8 @@
 
 #include "display/display.h"
 
+struct ImDrawData;
+
 namespace imgui_render
 {
 	//Init
@@ -25,7 +27,7 @@ namespace imgui_render
 	bool WndProcHandler(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 	//Draw imgui system
-	void Draw(display::Context* context);
+	void Draw(display::Context* context, ImDrawData* draw_data);
 }
 
 #endif //IMGUI_RENDER_H_

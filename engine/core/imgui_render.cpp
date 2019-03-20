@@ -368,10 +368,8 @@ bool imgui_render::WndProcHandler(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
 	return false;
 }
 
-void imgui_render::Draw(display::Context* context)
+void imgui_render::Draw(display::Context* context, ImDrawData* draw_data)
 {
-	auto draw_data = ImGui::GetDrawData();
-
 	if (draw_data)
 	{
 
@@ -427,8 +425,11 @@ void imgui_render::Draw(display::Context* context)
 		};
 
 		//Update vertex buffer and index buffer
-		std::vector<ImDrawVert> vertex_buffer(draw_data->TotalVtxCount);
-		std::vector<ImDrawIdx> index_buffer(draw_data->TotalIdxCount);
+		static std::vector<ImDrawVert> vertex_buffer;
+		static std::vector<ImDrawIdx> index_buffer;
+
+		vertex_buffer.resize(draw_data->TotalVtxCount);
+		index_buffer.resize(draw_data->TotalIdxCount);
 
 		ImDrawVert* vtx_dst = vertex_buffer.data();
 		ImDrawIdx* idx_dst = index_buffer.data();
