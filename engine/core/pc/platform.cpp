@@ -367,12 +367,6 @@ namespace platform
 		return g_input_events;
 	}
 
-	void Game::DestroyDisplayResources()
-	{
-		//Destroy all imgui resources
-		imgui_render::DestroyResources(g_device);
-	}
-
 	void Game::Present()
 	{
 		{
@@ -498,8 +492,14 @@ namespace platform
 
 		core::LogInfo("Closing game");
 
+		//Sync jobs preparing to destroy
+		game->OnPrepareDestroy();
+
 		//Destroy Imgui
 		ImGui::DestroyContext();
+
+		//Destroy all imgui resources
+		imgui_render::DestroyResources(g_device);
 
 		//Destroy callback
 		game->OnDestroy();

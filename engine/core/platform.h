@@ -60,8 +60,6 @@ namespace platform
 		bool GetInputSlotState(InputSlot input_slot) const;
 		const std::vector<InputEvent> GetInputEvents() const;
 
-		//Destroy display resources 
-		void DestroyDisplayResources();
 	public:
 		//Present 
 		//Needs to be called at the end of each tick
@@ -70,6 +68,7 @@ namespace platform
 
 		//Interface
 		virtual void OnInit() = 0;
+		virtual void OnPrepareDestroy() {}; //In case a job needs to be sync
 		virtual void OnDestroy() = 0;
 		virtual void OnTick(double total_time, float elapsed_time) = 0;
 		virtual void OnSizeChange(uint32_t width, uint32_t height, bool minimized) = 0;

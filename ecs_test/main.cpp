@@ -441,8 +441,10 @@ public:
 		database_desc.num_zones = GridZone::zone_count;
 		ecs::CreateDatabase<GameDatabase>(database_desc);
 	}
-	void OnDestroy() override
+
+	void OnPrepareDestroy() override
 	{
+		//Sync the render and the jobs, so we can safe destroy the resources
 		if (m_render_system)
 		{
 			render::DestroyRenderSystem(m_render_system, m_device);
@@ -452,10 +454,10 @@ public:
 		{
 			job::DestroySystem(m_job_system);
 		}
+	}
 
-		//Destroy platform resources
-		DestroyDisplayResources();
-
+	void OnDestroy() override
+	{
 		//Destroy handles
 		display::DestroyHandle(m_device, m_game_constant_buffer);
 		display::DestroyHandle(m_device, m_instances_vertex_buffer);
