@@ -783,55 +783,71 @@ public:
 
 		const auto& zone_bitset = GridZone::All();
 
-		ecs::Process<GameDatabase, const LionComponent, LionStateComponent, const PositionComponent, VelocityComponent>([&](const auto& instance_iterator, const LionComponent& lion, LionStateComponent& lion_state, const PositionComponent& position, VelocityComponent& velocity)
+		struct LionJobData
 		{
+			float elapsed_time;
+			ECSGame* game;
+		};
+
+		//Create JobData
+		auto job_data = m_update_job_allocator.Alloc<LionJobData>();
+		job_data->elapsed_time = elapsed_time;
+		job_data->game = this;
+
+		ecs::AddJobs<GameDatabase, const LionComponent, LionStateComponent, const PositionComponent, VelocityComponent>(m_job_system, g_UpdateFinishedFence, m_update_job_allocator, 64, 
+			[](void* data, const auto& instance_iterator, const LionComponent& lion, LionStateComponent& lion_state, const PositionComponent& position, VelocityComponent& velocity)
+		{
+			auto job_data = reinterpret_cast<LionJobData*>(data);
+			auto game = job_data->game;
+			const float elapsed_time = job_data->elapsed_time;
+
 			glm::vec2 lion_position = position.position;
 			glm::vec2 lion_direction = position.GetDirection();
 
-			velocity.AddLinealVelocity(lion_direction * m_lion_speed * elapsed_time);
+			velocity.AddLinealVelocity(lion_direction * game->m_lion_speed * elapsed_time);
 
 			const float border_detection = 0.3f;
 
 			//Avoid sides or other lions
-			if (lion_position.x - border_detection < m_world_left)
+			if (lion_position.x - border_detection < game->m_world_left)
 			{
 				//Calculate better direction
 				if (glm::dot(lion_direction, glm::vec2(0.f, 1.f)) > 0.f)
-					velocity.AddAngleVelocity(-m_lion_rotation_speed * elapsed_time);
+					velocity.AddAngleVelocity(-game->m_lion_rotation_speed * elapsed_time);
 				else
-					velocity.AddAngleVelocity(m_lion_rotation_speed * elapsed_time);
+					velocity.AddAngleVelocity(game->m_lion_rotation_speed * elapsed_time);
 			}
 			else
-				if (lion_position.x + border_detection > m_world_right)
+				if (lion_position.x + border_detection > game->m_world_right)
 				{
 					//Calculate better direction
 					if (glm::dot(lion_direction, glm::vec2(0.f, 1.f)) > 0.f)
-						velocity.AddAngleVelocity(m_lion_rotation_speed * elapsed_time);
+						velocity.AddAngleVelocity(game->m_lion_rotation_speed * elapsed_time);
 					else
-						velocity.AddAngleVelocity(-m_lion_rotation_speed * elapsed_time);
+						velocity.AddAngleVelocity(-game->m_lion_rotation_speed * elapsed_time);
 				}
 				else
-					if (lion_position.y - border_detection < m_world_bottom)
+					if (lion_position.y - border_detection < game->m_world_bottom)
 					{
 						//Calculate better direction
 						if (glm::dot(lion_direction, glm::vec2(1.f, 0.f)) > 0.f)
-							velocity.AddAngleVelocity(m_lion_rotation_speed * elapsed_time);
+							velocity.AddAngleVelocity(game->m_lion_rotation_speed * elapsed_time);
 						else
-							velocity.AddAngleVelocity(-m_lion_rotation_speed * elapsed_time);
+							velocity.AddAngleVelocity(-game->m_lion_rotation_speed * elapsed_time);
 					}
 					else
-						if (lion_position.y + border_detection > m_world_top)
+						if (lion_position.y + border_detection > game->m_world_top)
 						{
 							//Calculate better direction
 							if (glm::dot(lion_direction, glm::vec2(1.f, 0.f)) > 0.f)
-								velocity.AddAngleVelocity(-m_lion_rotation_speed * elapsed_time);
+								velocity.AddAngleVelocity(-game->m_lion_rotation_speed * elapsed_time);
 							else
-								velocity.AddAngleVelocity(m_lion_rotation_speed * elapsed_time);
+								velocity.AddAngleVelocity(game->m_lion_rotation_speed * elapsed_time);
 						}
 
 			//Check areas in front of the lion for activating attack or check if there is collision
-			glm::vec2 lion_look_at = lion_position + m_lion_target_attack_max_distance * lion_direction;
-			const auto& gazelle_influence_zone_bitset = GridZone::CalculateInfluence(lion_look_at.x, lion_look_at.y, m_lion_target_attack_max_distance + lion_state.size);
+			glm::vec2 lion_look_at = lion_position + game->m_lion_target_attack_max_distance * lion_direction;
+			const auto& gazelle_influence_zone_bitset = GridZone::CalculateInfluence(lion_look_at.x, lion_look_at.y, game->m_lion_target_attack_max_distance + lion_state.size);
 
 			//Find the target gazelle
 			glm::vec2 target;
@@ -849,7 +865,7 @@ public:
 					lion_state.size += gazelle_state.size * lion.grow_speed;
 					gazelle_state.size = 0.f;
 				}
-				else if (distance < m_lion_target_attack_max_distance)
+				else if (distance < game->m_lion_target_attack_max_distance)
 				{
 					float direction_target = std::clamp(8.f * glm::dot(glm::normalize((position_gazelle.position - lion_position)),
 						lion_direction), 0.f, 1.f);
@@ -878,8 +894,8 @@ public:
 					//Attacking, orientate to target
 					float angle = glm::orientedAngle(glm::normalize(target - lion_position), lion_direction);
 
-					velocity.AddAngleVelocity(-angle * m_lion_attack_rotation_speed * elapsed_time);
-					velocity.AddLinealVelocity(lion_direction * m_lion_attack_speed * elapsed_time);
+					velocity.AddAngleVelocity(-angle * game->m_lion_attack_rotation_speed * elapsed_time);
+					velocity.AddLinealVelocity(lion_direction * game->m_lion_attack_speed * elapsed_time);
 
 					//Remove attack to the lion
 					lion_state.attack += elapsed_time;
@@ -897,16 +913,16 @@ public:
 				//Repro
 				instance_iterator.Dealloc();
 
-				for (size_t i = 0; i < m_lion_num_repro; ++i)
+				for (size_t i = 0; i < game->m_lion_num_repro; ++i)
 				{
-					glm::vec2 offset = glm::rotate(glm::vec2(0.005f, 0.f), Random(0.f, glm::two_pi<float>()));
+					glm::vec2 offset = glm::rotate(glm::vec2(0.005f, 0.f), game->Random(0.f, glm::two_pi<float>()));
 					glm::vec2 new_position = lion_position + offset;
 
-					CreateLion(new_position, lion_state.size / static_cast<float>(m_lion_num_repro));
+					game->CreateLion(new_position, lion_state.size / static_cast<float>(game->m_lion_num_repro));
 				}
 			}
 
-		}, zone_bitset);
+		}, job_data, zone_bitset);
 	}
 
 	//Jobs data
