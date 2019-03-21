@@ -30,6 +30,15 @@ namespace core
 		//Memory commited for this buffer
 		size_t m_memory_commited;
 	};
+
+	template <size_t RESERVED_MEMORY>
+	class VirtualBufferInitied : public VirtualBuffer
+	{
+	public:
+		VirtualBufferInitied() : VirtualBuffer(RESERVED_MEMORY)
+		{
+		}
+	};
 }
 
 #endif //VIRTUAL_BUFFER_H_

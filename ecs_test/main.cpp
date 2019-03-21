@@ -11,6 +11,7 @@
 #include <ext/glm/gtc/constants.hpp>
 #include <core/profile.h>
 #include <job/job.h>
+#include <job/job_helper.h>
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include <ext/glm/gtx/vector_angle.hpp>
@@ -229,6 +230,9 @@ public:
 
 	job::System* m_job_system = nullptr;
 
+	//Job allocator
+	job::JobAllocator<1024 * 1024> m_update_job_allocator;
+
 	//Game constant buffer
 	display::ConstantBufferHandle m_game_constant_buffer;
 
@@ -411,6 +415,9 @@ public:
 		//Create job system
 		job::SystemDesc job_system_desc;
 		m_job_system = job::CreateSystem(job_system_desc);
+
+		//Reset the update job allocator
+		m_update_job_allocator.Reset();
 
 		//Create render pass system
 		m_render_system = render::CreateRenderSystem(m_device, m_job_system, this);

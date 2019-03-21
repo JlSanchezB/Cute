@@ -7,12 +7,27 @@
 
 namespace
 {
+	//Number of workers
+	size_t g_num_workers = 1;
+
 	//Each thread has it correct worker id using thread local storage variable
 	thread_local size_t g_worker_id = static_cast<size_t>(-1);
 }
 
 namespace job
 {
+	//Get current worker index helper
+	size_t GetWorkerIndex()
+	{
+		return g_worker_id;
+	}
+
+	//Get num workers helper
+	size_t GetNumWorkers()
+	{
+		return g_num_workers;
+	}
+
 	//Job data
 	struct Job
 	{
@@ -161,6 +176,8 @@ namespace job
 		}
 		system->m_workers.reserve(num_workers);
 		
+		g_num_workers = num_workers;
+
 		//Main thread is the worker 0
 		system->m_workers.push_back(std::make_unique<Worker>(0, true, system));
 
