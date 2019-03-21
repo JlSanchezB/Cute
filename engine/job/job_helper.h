@@ -51,7 +51,7 @@ namespace job
 		
 		//Data needs to be aligned to cache lines, so we don't false shared between the workers
 		template<typename DATA_TO_ALIGN>
-		class alignas(std::hardware_destructive_interference_size) AlignedData : DATA_TO_ALIGN
+		struct alignas(std::hardware_destructive_interference_size) AlignedData : DATA_TO_ALIGN
 		{
 		};
 
@@ -63,7 +63,7 @@ namespace job
 	struct JobAllocationData
 	{
 		core::VirtualBufferInitied<RESERVED_MEMORY> buffer;
-		size_t current_position;
+		size_t current_position = 0;
 	};
 
 	template<size_t RESERVED_MEMORY>
@@ -74,14 +74,14 @@ namespace job
 		{
 			for (size_t i = 0; i < GetNumWorkers(); ++i)
 			{
-				AccessThreadData(i).current_position = 0;
+				ThreadData<JobAllocationData<RESERVED_MEMORY>>::AccessThreadData(i).current_position = 0;
 			}
 		}
 		
 		template<typename JOBDATA>
-		JOBDATA* Alloc(const JOBDATA& data)
+		JOBDATA* Alloc()
 		{
-			static_assert(std::is_trivially_constructible<JOBDATA>::value);
+			//static_assert(std::is_trivially_constructible<JOBDATA>::value);
 
 			auto& buffer = ThreadData<JobAllocationData<RESERVED_MEMORY>>::Get().buffer;
 			auto& position = ThreadData<JobAllocationData<RESERVED_MEMORY>>::Get().current_position;
@@ -92,13 +92,10 @@ namespace job
 			//Reserve memory as needed
 			const size_t begin_offset = position + alignment_offset;
 			buffer.SetCommitedSize(position + alignment_offset + sizeof(JOBDATA));
-			void* data_ptr = reinterpret_cast<uint8_t>(buffer.GetPtr()) + begin_offset;
-
-			//Copy data
-			memcpy(data_ptr, &data, sizeof(JOBDATA));
+			void* data_ptr = reinterpret_cast<uint8_t*>(buffer.GetPtr()) + begin_offset;
 
 			//Advance position
-			position += alignment_offset + sizeof(JOBDATA);
+			position += (alignment_offset + sizeof(JOBDATA));
 
 			//Return pointer
 			return reinterpret_cast<JOBDATA*>(data_ptr);

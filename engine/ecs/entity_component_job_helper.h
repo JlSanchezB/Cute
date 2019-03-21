@@ -18,31 +18,34 @@ namespace ecs
 		std::tuple<COMPONENTS*...> components;
 
 		//function to call for each component
-		FUNCTION kernel;
+		void(*kernel)(void*, const InstanceIterator<DATABASE_DECLARATION>&, COMPONENTS&...);
+
+		//Job data
+		void* job_data;
 
 		//Instance interator
 		InstanceIterator<DATABASE_DECLARATION> instance_iterator;
 
 		//Begin instance
-		size_t begin_instance;
+		InstanceIndexType begin_instance;
 
 		//End instance
-		size_t end_instances;
+		InstanceIndexType end_instance;
 
 		//Job for running this bucket
-		static void Job(void* data)
+		static void Job(void* bucket_job_data)
 		{
 			MICROPROFILE_SCOPEI("Ecs", "Job", 0xFFFFAAAA);
 
-			JobBucketData* this_bucket_data = reinterpret_cast<JobBucketData>(data);
+			JobBucketData* this_bucket_job_data = reinterpret_cast<JobBucketData*>(bucket_job_data);
 
 			//Go for all the instances and call the kernel function
-			for (InstanceIndexType instance_index = this_bucket_data->begin_instance; instance_index < (this_bucket_data->begin_instance + this_bucket_data->num_instances); ++instance_index)
+			for (InstanceIndexType instance_index = this_bucket_job_data->begin_instance; instance_index < this_bucket_job_data->end_instance; ++instance_index)
 			{
-				this_bucket_data->instance_iterator.m_instance_index = instance_index;
+				this_bucket_job_data->instance_iterator.m_instance_index = instance_index;
 
 				//Call kernel
-				internal::caller_helper<DATABASE_DECLARATION>(kernel, data, this_bucket_data->instance_iterator, instance_index, std::make_index_sequence<sizeof...(COMPONENTS)>(), components);
+				internal::caller_helper<DATABASE_DECLARATION>(this_bucket_job_data->kernel, this_bucket_job_data->job_data, this_bucket_job_data->instance_iterator, instance_index, std::make_index_sequence<sizeof...(COMPONENTS)>(), this_bucket_job_data->components);
 			}
 		}
 	};
@@ -84,23 +87,24 @@ namespace ecs
 
 						if (num_instances > 0)
 						{
-							size_t num_buckets = (num_instances / num_instances_per_job) + 1;
+							const InstanceIndexType num_buckets = (num_instances / static_cast<InstanceIndexType>(num_instances_per_job)) + 1;
 
-							for (size_t bucket_index = 0; bucket_index < num_buckets; ++num_buckets)
+							for (InstanceIndexType bucket_index = 0; bucket_index < num_buckets; ++bucket_index)
 							{
 								//Create job data
-								using JobData = JobBucketData<DATABASE_DECLARATION, FUNCTION, COMPONENTS...>;
+								using JobBucketDataT = JobBucketData<DATABASE_DECLARATION, FUNCTION, COMPONENTS...>;
 								
-								JobData& job_data = *job_allocator.Alloc<JobData>();
+								JobBucketDataT* job_bucket_data = job_allocator.Alloc<JobBucketDataT>();
 
-								job_data.components = argument_component_buffers;
-								job_data.begin_instance = bucket_index * num_instances_per_job;
-								job_data.num_instances = std::min((bucket_index + 1) * num_instances_per_job);
-								job_data.function = kernel;
-								job_data.instance_iterator = instance_iterator;
+								job_bucket_data->components = argument_component_buffers;
+								job_bucket_data->begin_instance = bucket_index * static_cast<InstanceIndexType>(num_instances_per_job);
+								job_bucket_data->end_instance = std::min((bucket_index + 1) * static_cast<InstanceIndexType>(num_instances_per_job), num_instances);
+								job_bucket_data->kernel = kernel;
+								job_bucket_data->instance_iterator = instance_iterator;
+								job_bucket_data->job_data = job_data;
 								
 								//Add job
-								job::AddJob(job_system, JobData::Job, &job_data, fence);
+								job::AddJob(job_system, JobBucketDataT::Job, job_bucket_data, fence);
 							}
 						}
 					}

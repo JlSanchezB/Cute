@@ -551,12 +551,24 @@ public:
 
 		const auto& zone_bitset = GridZone::All();
 
-		//Grow grass
-		ecs::Process<GameDatabase, const GrassComponent, GrassStateComponent, PositionComponent>([&](const auto& instance_iterator, const GrassComponent& grass, GrassStateComponent& grass_state, PositionComponent& position)
+		struct GrassJobData
 		{
+			float elapsed_time;
+		};
+
+		//Create JobData
+		auto job_data = m_update_job_allocator.Alloc<GrassJobData>();
+		job_data->elapsed_time = elapsed_time;
+
+		//Grow grass
+		ecs::AddJobs<GameDatabase, const GrassComponent, GrassStateComponent, PositionComponent>(m_job_system, g_UpdateFinishedFence, m_update_job_allocator, 64,
+			[](void* data, const auto& instance_iterator, const GrassComponent& grass, GrassStateComponent& grass_state, PositionComponent& position) 
+		{
+			auto job_data = reinterpret_cast<GrassJobData*>(data);
+
 			if (!grass_state.stop_growing && (grass_state.size < grass.top_size))
 			{
-				float new_size = grass_state.size + grass.grow_speed * elapsed_time;
+				float new_size = grass_state.size + grass.grow_speed * job_data->elapsed_time;
 				glm::vec2 grass_position = position.position;
 
 				//Calculate zone bitset based of the range
@@ -588,7 +600,7 @@ public:
 				}
 			}
 
-		}, zone_bitset);
+		}, job_data, zone_bitset);
 	}
 
 	void GazelleUpdate(double total_time, float elapsed_time)
@@ -915,6 +927,9 @@ public:
 		//UPDATE GAME
 		{
 			MICROPROFILE_SCOPEI("ECSTest", "Update", 0xFFFF77FF);
+
+			//Reset job allocators
+			m_update_job_allocator.Clear();
 
 			//Data for update jobs
 			JobData job_data = { this, total_time, elapsed_time };
