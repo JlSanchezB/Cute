@@ -79,7 +79,7 @@ namespace job
 		}
 		
 		template<typename JOBDATA>
-		void* Push(const JOBDATA& data)
+		JOBDATA* Alloc(const JOBDATA& data)
 		{
 			static_assert(std::is_trivially_constructible<JOBDATA>::value);
 
@@ -101,7 +101,7 @@ namespace job
 			position += alignment_offset + sizeof(JOBDATA);
 
 			//Return pointer
-			return data_ptr;
+			return reinterpret_cast<JOBDATA*>(data_ptr);
 		}
 	private:
 		inline size_t CalculateAlignment(size_t alignment, size_t offset)

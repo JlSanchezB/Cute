@@ -12,6 +12,7 @@
 #include <core/profile.h>
 #include <job/job.h>
 #include <job/job_helper.h>
+#include <ecs/entity_component_job_helper.h>
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include <ext/glm/gtx/vector_angle.hpp>

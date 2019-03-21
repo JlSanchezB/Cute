@@ -905,6 +905,9 @@
     <ClInclude Include="job\job_helper.h">
       <Filter>job</Filter>
     </ClInclude>
+    <ClInclude Include="ecs\entity_component_job_helper.h">
+      <Filter>ecs</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="display\pc_dx12\display.cpp">
