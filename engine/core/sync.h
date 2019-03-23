@@ -14,7 +14,7 @@ namespace core
 	public:
 		void lock()
 		{
-			while (m_atomic.test_and_set(std::memory_order_acquire)); //spin
+			while (m_atomic.test_and_set(std::memory_order_acquire)) { ; }; //spin
 		}
 
 		void unlock()

@@ -11,17 +11,17 @@
 
 namespace ecs
 {
-	template<typename DATABASE_DECLARATION, typename FUNCTION, typename ...COMPONENTS>
+	template<typename DATABASE_DECLARATION, typename FUNCTION, typename JOB_DATA, typename ...COMPONENTS>
 	struct JobBucketData
 	{
 		//tuple for pointers of the components
 		std::tuple<COMPONENTS*...> components;
 
 		//function to call for each component
-		void(*kernel)(void*, const InstanceIterator<DATABASE_DECLARATION>&, COMPONENTS&...);
+		void(*kernel)(JOB_DATA*, const InstanceIterator<DATABASE_DECLARATION>&, COMPONENTS&...);
 
 		//Job data
-		void* job_data;
+		JOB_DATA* job_data;
 
 		//Instance interator
 		InstanceIterator<DATABASE_DECLARATION> instance_iterator;
@@ -53,9 +53,9 @@ namespace ecs
 	//Add jobs for processing the kernel function
 	//Jobs will be created using the job_allocator and sync to the fence
 	//Kernel needs to be a function with parameters (job_data passed here, InstanceIterator, COMPONENTS)
-	template<typename DATABASE_DECLARATION, typename ...COMPONENTS, typename FUNCTION, typename BITSET, typename JOB_ALLOCATOR>
+	template<typename DATABASE_DECLARATION, typename ...COMPONENTS, typename FUNCTION, typename BITSET, typename JOB_ALLOCATOR, typename JOB_DATA>
 	void AddJobs(job::System* job_system, job::Fence& fence, JOB_ALLOCATOR& job_allocator, size_t num_instances_per_job,
-		FUNCTION&& kernel, void* job_data, BITSET&& zone_bitset)
+		FUNCTION&& kernel, JOB_DATA* job_data, BITSET&& zone_bitset)
 	{
 		//Calculate component mask
 		const EntityTypeMask component_mask = EntityType<std::remove_const<COMPONENTS>::type...>::template EntityTypeMask<DATABASE_DECLARATION>();
@@ -92,7 +92,7 @@ namespace ecs
 							for (InstanceIndexType bucket_index = 0; bucket_index < num_buckets; ++bucket_index)
 							{
 								//Create job data
-								using JobBucketDataT = JobBucketData<DATABASE_DECLARATION, FUNCTION, COMPONENTS...>;
+								using JobBucketDataT = JobBucketData<DATABASE_DECLARATION, FUNCTION, JOB_DATA, COMPONENTS...>;
 								
 								JobBucketDataT* job_bucket_data = job_allocator.Alloc<JobBucketDataT>();
 

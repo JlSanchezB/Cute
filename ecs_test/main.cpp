@@ -32,6 +32,9 @@
 //Fence to sync jobs for update
 job::Fence g_UpdateFinishedFence;
 
+//fence to sync jobs for update move
+job::Fence g_MovedFinishedFence;
+
 class RandomEventsGenerator
 {
 	std::normal_distribution<float> m_distribution;
@@ -562,10 +565,8 @@ public:
 
 		//Grow grass
 		ecs::AddJobs<GameDatabase, const GrassComponent, GrassStateComponent, PositionComponent>(m_job_system, g_UpdateFinishedFence, m_update_job_allocator, 64,
-			[](void* data, const auto& instance_iterator, const GrassComponent& grass, GrassStateComponent& grass_state, PositionComponent& position) 
+			[](GrassJobData* job_data, const auto& instance_iterator, const GrassComponent& grass, GrassStateComponent& grass_state, PositionComponent& position)
 		{
-			auto job_data = reinterpret_cast<GrassJobData*>(data);
-
 			if (!grass_state.stop_growing && (grass_state.size < grass.top_size))
 			{
 				float new_size = grass_state.size + grass.grow_speed * job_data->elapsed_time;
@@ -623,9 +624,8 @@ public:
 		job_data->game = this;
 
 		ecs::AddJobs<GameDatabase, const GazelleComponent, GazelleStateComponent, PositionComponent, VelocityComponent>(m_job_system, g_UpdateFinishedFence, m_update_job_allocator, 64, 
-			[](void* data, const auto& instance_iterator, const GazelleComponent& gazelle, GazelleStateComponent& gazelle_state, PositionComponent& position_gazelle, VelocityComponent& velocity)
+			[](GazelleJobData* job_data, const auto& instance_iterator, const GazelleComponent& gazelle, GazelleStateComponent& gazelle_state, PositionComponent& position_gazelle, VelocityComponent& velocity)
 		{
-			auto job_data = reinterpret_cast<GazelleJobData*>(data);
 			auto game = job_data->game;
 
 			glm::vec2 gazelle_position = position_gazelle.position;
@@ -795,9 +795,8 @@ public:
 		job_data->game = this;
 
 		ecs::AddJobs<GameDatabase, const LionComponent, LionStateComponent, const PositionComponent, VelocityComponent>(m_job_system, g_UpdateFinishedFence, m_update_job_allocator, 64, 
-			[](void* data, const auto& instance_iterator, const LionComponent& lion, LionStateComponent& lion_state, const PositionComponent& position, VelocityComponent& velocity)
+			[](LionJobData* job_data, const auto& instance_iterator, const LionComponent& lion, LionStateComponent& lion_state, const PositionComponent& position, VelocityComponent& velocity)
 		{
-			auto job_data = reinterpret_cast<LionJobData*>(data);
 			auto game = job_data->game;
 			const float elapsed_time = job_data->elapsed_time;
 
@@ -955,6 +954,100 @@ public:
 		ecs_data->game->LionUpdate(ecs_data->elapsed_time);
 	}
 
+	void MoveEntities(float elapsed_time)
+	{
+		MICROPROFILE_SCOPEI("ECSTest", "EntitiesMove", 0xFFFF77FF);
+
+		const auto& zone_bitset = GridZone::All();
+
+		struct MovesJobData
+		{
+			float elapsed_time;
+			ECSGame* game;
+		};
+
+		//Create JobData
+		auto job_data = m_update_job_allocator.Alloc<MovesJobData>();
+		job_data->elapsed_time = elapsed_time;
+		job_data->game = this;
+
+		//Move entities
+		ecs::AddJobs<GameDatabase, PositionComponent, VelocityComponent>(m_job_system, g_MovedFinishedFence, m_update_job_allocator, 64,
+			[](MovesJobData* job_data, const auto& instance_iterator, PositionComponent& position, VelocityComponent& velocity)
+		{
+			const float elapsed_time = job_data->elapsed_time;
+			ECSGame* game = job_data->game;
+
+			position.position += velocity.lineal * elapsed_time;
+			position.angle += velocity.angular * elapsed_time;
+
+			if (position.position.x > m_world_right)
+			{
+				position.position.x = m_world_right;
+				velocity.lineal.x = 0.f;
+			}
+			if (position.position.x < m_world_left)
+			{
+				position.position.x = m_world_left;
+				velocity.lineal.x = 0.f;
+			}
+			if (position.position.y > m_world_top)
+			{
+				position.position.y = m_world_top;
+				velocity.lineal.y = 0.f;
+			}
+			if (position.position.y < m_world_bottom)
+			{
+				position.position.y = m_world_bottom;
+				velocity.lineal.y = 0.f;
+			}
+
+			float size = 0.f;
+			if (instance_iterator.Contain<LionStateComponent>())
+			{
+				auto& lion_state = instance_iterator.Get<LionStateComponent>();
+
+				//Consume size by lenght moved
+				lion_state.size -= game->m_lion_food_moving * glm::length(velocity.lineal * elapsed_time);
+
+				if (lion_state.size < game->m_min_size)
+				{
+					//Dead, moved a lot and didn't eat
+					instance_iterator.Dealloc();
+				}
+
+				size = lion_state.size;
+			}
+			else if (instance_iterator.Contain<GazelleStateComponent>())
+			{
+				auto& gazelle_state = instance_iterator.Get<GazelleStateComponent>();
+
+				//Consume size by lenght moved
+				gazelle_state.size -= game->m_gazelle_food_moving * glm::length(velocity.lineal * elapsed_time);
+
+				if (gazelle_state.size < game->m_min_size)
+				{
+					//Dead, moved a lot and didn't eat
+					instance_iterator.Dealloc();
+				}
+
+				size = gazelle_state.size;
+			}
+
+			//Move to the new zone if needed
+			auto zone = GridZone::GetZone(position.position.x, position.position.y, size);
+			instance_iterator.Move(zone);
+
+			//Friction
+			float friction = glm::clamp(game->m_friction * elapsed_time, 0.f, 1.f);
+			velocity.lineal -= velocity.lineal * friction;
+			velocity.angular -= velocity.angular * friction;
+
+
+		}, job_data, zone_bitset);
+
+	}
+
 	void OnTick(double total_time, float elapsed_time) override
 	{
 		//UPDATE GAME
@@ -967,11 +1060,6 @@ public:
 			//Data for update jobs
 			JobData job_data = { this, total_time, elapsed_time };
 
-			//GrassUpdate(elapsed_time);
-
-			//GazelleUpdate(total_time, elapsed_time);
-
-			//LionUpdate(elapsed_time);
 
 			//Add jobs to the job system
 			job::AddJob(m_job_system, GrassUpdateJob, &job_data, g_UpdateFinishedFence);
@@ -982,82 +1070,11 @@ public:
 			job::Wait(m_job_system, g_UpdateFinishedFence);
 
 			{
-				MICROPROFILE_SCOPEI("ECSTest", "EntitiesMove", 0xFFFF77FF);
-
-				const auto& zone_bitset = GridZone::All();
-
-				//Move entities
-				ecs::Process<GameDatabase, PositionComponent, VelocityComponent>([&](const auto& instance_iterator, PositionComponent& position, VelocityComponent& velocity)
-				{
-					position.position += velocity.lineal * elapsed_time;
-					position.angle += velocity.angular * elapsed_time;
-
-					if (position.position.x > m_world_right)
-					{
-						position.position.x = m_world_right;
-						velocity.lineal.x = 0.f;
-					}
-					if (position.position.x < m_world_left)
-					{
-						position.position.x = m_world_left;
-						velocity.lineal.x = 0.f;
-					}
-					if (position.position.y > m_world_top)
-					{
-						position.position.y = m_world_top;
-						velocity.lineal.y = 0.f;
-					}
-					if (position.position.y < m_world_bottom)
-					{
-						position.position.y = m_world_bottom;
-						velocity.lineal.y = 0.f;
-					}
-
-					float size = 0.f;
-					if (instance_iterator.Contain<LionStateComponent>())
-					{
-						auto& lion_state = instance_iterator.Get<LionStateComponent>();
-
-						//Consume size by lenght moved
-						lion_state.size -= m_lion_food_moving * glm::length(velocity.lineal * elapsed_time);
-
-						if (lion_state.size < m_min_size)
-						{
-							//Dead, moved a lot and didn't eat
-							instance_iterator.Dealloc();
-						}
-
-						size = lion_state.size;
-					}
-					else if (instance_iterator.Contain<GazelleStateComponent>())
-					{
-						auto& gazelle_state = instance_iterator.Get<GazelleStateComponent>();
-
-						//Consume size by lenght moved
-						gazelle_state.size -= m_gazelle_food_moving * glm::length(velocity.lineal * elapsed_time);
-
-						if (gazelle_state.size < m_min_size)
-						{
-							//Dead, moved a lot and didn't eat
-							instance_iterator.Dealloc();
-						}
-
-						size = gazelle_state.size;
-					}
-
-					//Move to the new zone if needed
-					auto zone = GridZone::GetZone(position.position.x, position.position.y, size);
-					instance_iterator.Move(zone);
-					
-					//Friction
-					float friction = glm::clamp(m_friction * elapsed_time, 0.f, 1.f);
-					velocity.lineal -= velocity.lineal * friction;
-					velocity.angular -= velocity.angular * friction;
-			
-					
-				}, zone_bitset);
-
+				MoveEntities(elapsed_time);
 			}
+
+			//Wait in the fence
+			job::Wait(m_job_system, g_MovedFinishedFence);	
 
 			{
 				MICROPROFILE_SCOPEI("ECSTest", "NewGrass", 0xFFFF77FF);
