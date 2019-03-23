@@ -1,6 +1,7 @@
 #include "entity_component_system.h"
 #include <core/virtual_buffer.h>
 #include <core/sync.h>
+#include <memory>
 
 namespace ecs
 {
@@ -44,6 +45,10 @@ namespace ecs
 		//Flat list of all component containers (one virtual buffer for each)
 		//Dimensions are <Zone, EntityType, Component>
 		std::vector<core::VirtualBuffer> m_component_containers;
+
+		//Flat list of spin locks to control access to the components
+		//Dimensions are <Zone, EntityType>
+		std::unique_ptr<core::SpinLockMutex[]> m_components_spinlock_mutex;
 
 		//Flat list with the number of instances for each Zone/EntityType
 		//Dimensions are <Zone, EntityType>
@@ -124,6 +129,8 @@ namespace ecs
 
 		InstanceIndexType AllocInstance(ZoneType zone_index, EntityTypeType entity_type_index)
 		{
+			core::SpinLockMutexGuard component_access(m_components_spinlock_mutex[entity_type_index + zone_index * m_num_entity_types]);
+
 			const InstanceIndexType instance_index = AddInstanceCount(zone_index, entity_type_index);
 
 			//Grow all components
@@ -356,6 +363,10 @@ namespace ecs
 			{
 				num_instance = 0;
 			}
+
+			//Init mutex for access to each instance components
+			database->m_components_spinlock_mutex = std::make_unique<core::SpinLockMutex[]>(database->m_num_zones * database->m_num_entity_types);
+
 
 			//Reserve memory for the indirection indexes
 			database->m_indirection_instance_table.reserve(1024);
