@@ -37,6 +37,16 @@ namespace job
 			return m_thread_data[worker_index];
 		}
 
+		//Visit all data
+		template<typename VISITOR>
+		void Visit(VISITOR&& visitor)
+		{
+			for (auto& data : m_thread_data)
+			{
+				visitor(data);
+			}
+		}
+
 		ThreadData()
 		{
 			Reset();

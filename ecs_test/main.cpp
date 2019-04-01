@@ -35,6 +35,9 @@ job::Fence g_UpdateFinishedFence;
 //fence to sync jobs for update move
 job::Fence g_MovedFinishedFence;
 
+//fence to sync jobs for calculate instance buffer
+job::Fence g_InstanceBufferFinishedFence;
+
 class RandomEventsGenerator
 {
 	std::normal_distribution<float> m_distribution;
@@ -284,6 +287,9 @@ public:
 	//Instance buffer
 	std::vector<glm::vec4> m_instance_buffer;
 
+	//Parallel instance buffer, for each entity type
+	std::array<job::ThreadData<std::vector<glm::vec4>>, 3> m_parallel_instance_buffer;
+
 	//Show ecs debug info
 	bool m_show_ecs_stats = false;
 
@@ -422,6 +428,11 @@ public:
 
 		//Reset the update job allocator
 		m_update_job_allocator.Reset();
+
+		//Reset parallel instance buffer
+		m_parallel_instance_buffer[0].Reset();
+		m_parallel_instance_buffer[1].Reset();
+		m_parallel_instance_buffer[2].Reset();
 
 		//Create render pass system
 		m_render_system = render::CreateRenderSystem(m_device, m_job_system, this);
@@ -1148,7 +1159,10 @@ public:
 		{
 			MICROPROFILE_SCOPEI("ECSTest", "PrepareRendering", 0xFFFF77FF);
 
-			render::BeginPrepareRender(m_render_system);
+			{
+				MICROPROFILE_SCOPEI("ECSTest", "BeginPrepareRendering", 0xFFFF77FF);
+				render::BeginPrepareRender(m_render_system);
+			}
 
 			render::Frame& render_frame = render::GetGameRenderFrame(m_render_system);
 
@@ -1242,17 +1256,78 @@ public:
 			auto& point_of_view = render_frame.AllocPointOfView("Main"_sh32, 0, 0, pass_info, m_init_map_resource_map);
 			auto& command_buffer = point_of_view.GetCommandBuffer();
 
+			//Clear parallel instance buffer
+			//Fill the buffer
+			m_parallel_instance_buffer[0].Visit([&](auto& data)
+			{
+				data.clear();
+			});
+
+			m_parallel_instance_buffer[1].Visit([&](auto& data)
+			{
+				data.clear();
+			});
+
+			m_parallel_instance_buffer[2].Visit([&](auto& data)
+			{
+				data.clear();
+			});
+
+			//Generate task for culling for each instance type
+			struct JobData
+			{
+				ECSGame* game;
+				Border borders;
+			};
+
+			//Create JobData
+			auto job_data = m_update_job_allocator.Alloc<JobData>();
+			job_data->game = this;
+			job_data->borders = borders;
+
+			ecs::AddJobs<GameDatabase, const PositionComponent, const GrassStateComponent>(m_job_system, g_InstanceBufferFinishedFence, m_update_job_allocator, 64,
+				[](JobData* job_data, const auto& instance_iterator, const PositionComponent& position, const GrassStateComponent& grass)
+			{
+				auto& buffer = job_data->game->m_parallel_instance_buffer[0].Get();
+				if (job_data->game->IsInside(job_data->borders, position.position.x, position.position.y, grass.size))
+				{
+					buffer.emplace_back(position.position.x, position.position.y, position.angle, grass.size);
+				}
+			}, job_data, zone_bitset);
+
+			ecs::AddJobs<GameDatabase, const PositionComponent, const GazelleStateComponent>(m_job_system, g_InstanceBufferFinishedFence, m_update_job_allocator, 64,
+				[](JobData* job_data, const auto& instance_iterator, const PositionComponent& position, const GazelleStateComponent& gazelle)
+			{
+				auto& buffer = job_data->game->m_parallel_instance_buffer[1].Get();
+				//Add to the instance buffer the instance
+				if (job_data->game->IsInside(job_data->borders, position.position.x, position.position.y, gazelle.size))
+				{
+					buffer.emplace_back(position.position.x, position.position.y, position.angle, gazelle.size);
+				}
+			}, job_data, zone_bitset);
+
+			ecs::AddJobs<GameDatabase, const PositionComponent, const LionStateComponent>(m_job_system, g_InstanceBufferFinishedFence, m_update_job_allocator, 64,
+				[](JobData* job_data, const auto& instance_iterator, const PositionComponent& position, const LionStateComponent& lion)
+			{
+				auto& buffer = job_data->game->m_parallel_instance_buffer[2].Get();
+				//Add to the instance buffer the instance
+				if (job_data->game->IsInside(job_data->borders, position.position.x, position.position.y, lion.size))
+				{
+					buffer.emplace_back(position.position.x, position.position.y, position.angle, lion.size);
+				}
+			}, job_data, zone_bitset);
+
+			//Wait for the fence
+			job::Wait(m_job_system, g_InstanceBufferFinishedFence);
 
 			//Culling and draw per type
 			m_instance_buffer.clear();
 
-			ecs::Process<GameDatabase, PositionComponent, GrassStateComponent>([&](const auto& instance_iterator, const PositionComponent& position, const GrassStateComponent& grass)
+			//Fill the buffer
+			m_parallel_instance_buffer[0].Visit([&](auto& data)
 			{
-				if (IsInside(borders, position.position.x, position.position.y, grass.size))
-				{
-					m_instance_buffer.emplace_back(position.position.x, position.position.y, position.angle, grass.size);
-				}
-			}, zone_bitset);
+				m_instance_buffer.insert(m_instance_buffer.end(), data.begin(), data.end());
+			});
 
 			if (m_instance_buffer.size() > 0)
 			{
@@ -1273,14 +1348,11 @@ public:
 
 			size_t instance_offset = m_instance_buffer.size();
 
-			ecs::Process<GameDatabase, PositionComponent, GazelleStateComponent>([&](const auto& instance_iterator, PositionComponent& position, GazelleStateComponent& gazelle)
+			//Fill the buffer
+			m_parallel_instance_buffer[1].Visit([&](auto& data)
 			{
-				//Add to the instance buffer the instance
-				if (IsInside(borders, position.position.x, position.position.y, gazelle.size))
-				{
-					m_instance_buffer.emplace_back(position.position.x, position.position.y, position.angle, gazelle.size);
-				}
-			}, zone_bitset);
+				m_instance_buffer.insert(m_instance_buffer.end(), data.begin(), data.end());
+			});
 
 			if ((m_instance_buffer.size() - instance_offset) > 0)
 			{
@@ -1301,15 +1373,12 @@ public:
 			}
 
 			instance_offset = m_instance_buffer.size();
-		
-			ecs::Process<GameDatabase, PositionComponent, LionStateComponent>([&](const auto& instance_iterator, PositionComponent& position, LionStateComponent& lion)
+	
+			//Fill the buffer
+			m_parallel_instance_buffer[2].Visit([&](auto& data)
 			{
-				//Add to the instance buffer the instance
-				if (IsInside(borders, position.position.x, position.position.y, lion.size))
-				{
-					m_instance_buffer.emplace_back(position.position.x, position.position.y, position.angle, lion.size);
-				}
-			}, zone_bitset);
+				m_instance_buffer.insert(m_instance_buffer.end(), data.begin(), data.end());
+			});
 
 			if ((m_instance_buffer.size() - instance_offset) > 0)
 			{
