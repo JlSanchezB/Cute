@@ -104,6 +104,8 @@ namespace job
 		System* m_system;
 		//Queue
 		Queue<Job, 4096> m_job_queue;
+		//Count for yield, count of failed job search before to yield
+		size_t m_count_for_yield = 0;
 
 		//Code running in the worker thread
 		void ThreadRun();
@@ -125,6 +127,8 @@ namespace job
 		State m_state = State::Stopped;
 
 		bool m_single_thread_mode = false;
+
+		size_t m_count_for_yield = 0;
 
 		bool StealJob(size_t current_worker_id, Job& job)
 		{
@@ -194,6 +198,8 @@ namespace job
 		{
 			system->m_workers[i]->Start();
 		}
+
+		system->m_count_for_yield = system_desc.count_for_yield;
 
 		system->m_state = System::State::Started;
 
@@ -282,8 +288,15 @@ namespace job
 			return true;
 		}
 
-		//Yield thread
-		std::this_thread::yield();
+		//Increase the count for yield of this worker
+		m_count_for_yield++;
+
+		if (m_count_for_yield >= m_system->m_count_for_yield)
+		{
+			m_count_for_yield = 0;
+			//Yield thread
+			std::this_thread::yield();
+		}
 
 		return false;
 	}

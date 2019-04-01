@@ -25,8 +25,7 @@ namespace job
 	struct SystemDesc
 	{
 		size_t num_workers = static_cast<size_t>(-1);
-		bool force_hardware_affinity = true;
-		size_t max_sleep = 1000;
+		size_t count_for_yield = 128;
 	};
 
 	System* CreateSystem(const SystemDesc& system_desc);
