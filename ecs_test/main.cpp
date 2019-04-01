@@ -1362,6 +1362,11 @@ public:
 			m_show_edit_descriptor_file = ImGui::MenuItem("Edit descriptor file");
 			m_show_ecs_stats = ImGui::MenuItem("Show ECS stats");
 			m_show_word_settings = ImGui::MenuItem("Show world settings");
+			bool single_frame_mode = job::GetSingleThreadMode(m_job_system);
+			if (ImGui::Checkbox("Single thread mode", &single_frame_mode))
+			{
+				job::SetSingleThreadMode(m_job_system, single_frame_mode);
+			}
 			ImGui::EndMenu();
 		}
 	}

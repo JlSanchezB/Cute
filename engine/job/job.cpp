@@ -124,6 +124,8 @@ namespace job
 
 		State m_state = State::Stopped;
 
+		bool m_single_thread_mode = false;
+
 		bool StealJob(size_t current_worker_id, Job& job)
 		{
 			//Get random value
@@ -219,13 +221,31 @@ namespace job
 		system = nullptr;
 	}
 
+	void SetSingleThreadMode(System* system, bool single_thread_mode)
+	{
+		system->m_single_thread_mode = single_thread_mode;
+	}
+
+	bool GetSingleThreadMode(System * system)
+	{
+		return system->m_single_thread_mode;
+	}
+
 	void AddJob(System * system, const JobFunction job, void* data, Fence& fence)
 	{
-		//Increment the fence
-		system->IncrementFence(fence);
+		if (system->m_single_thread_mode)
+		{
+			//Just run the job
+			job(data);
+		}
+		else
+		{
+			//Increment the fence
+			system->IncrementFence(fence);
 
-		//Add job to current worker
-		system->m_workers[g_worker_id]->AddJob(Job{ job, data, &fence });
+			//Add job to current worker
+			system->m_workers[g_worker_id]->AddJob(Job{ job, data, &fence });
+		}
 	}
 
 	void Wait(System * system, Fence& fence)
