@@ -42,10 +42,11 @@ class RandomEventsGenerator
 {
 	std::normal_distribution<float> m_distribution;
 	float m_num_events_per_second;
+	float m_area_factor;
 	float m_event_timer;
 public:
-	RandomEventsGenerator(float num_events_per_second, float desviation)
-		: m_distribution(1.f, desviation), m_num_events_per_second(num_events_per_second), m_event_timer(0.f)
+	RandomEventsGenerator(float num_events_per_second, float area_factor, float desviation)
+		: m_distribution(1.f, desviation), m_num_events_per_second(num_events_per_second), m_area_factor(area_factor), m_event_timer(0.f)
 	{
 	}
 
@@ -58,7 +59,7 @@ public:
 	template<typename RANDON_GENERATOR>
 	size_t Events(RANDON_GENERATOR& generator, float elapsed_time)
 	{
-		m_event_timer += m_num_events_per_second * m_distribution(generator) * elapsed_time;
+		m_event_timer += m_num_events_per_second * m_distribution(generator) * elapsed_time * m_area_factor;
 
 		if (m_event_timer >= 1.f)
 		{
@@ -76,12 +77,21 @@ public:
 
 struct ZoneDescriptor
 {
+#ifndef _DEBUG
+	static constexpr uint16_t side_count = 32;
+	static constexpr float world_top = 4.f;
+	static constexpr float world_bottom = -4.f;
+	static constexpr float world_left = -4.f;
+	static constexpr float world_right = 4.f;
+	static constexpr float object_zero_zone_max_size = 0.035f;
+#else
 	static constexpr uint16_t side_count = 16;
 	static constexpr float world_top = 1.f;
 	static constexpr float world_bottom = -1.f;
 	static constexpr float world_left = -1.f;
 	static constexpr float world_right = 1.f;
 	static constexpr float object_zero_zone_max_size = 0.035f;
+#endif
 };
 
 using GridZone = ecs::GridOneLevel<ZoneDescriptor>;
@@ -302,6 +312,9 @@ public:
 	constexpr static float m_world_left = ZoneDescriptor::world_left;
 	constexpr static float m_world_right = ZoneDescriptor::world_right;
 
+	//Original calculations where done for world size (-1.f - 1.f)
+	constexpr static float m_area_factor = (m_world_top - m_world_bottom) * (m_world_right - m_world_left) / 4.f;
+
 	//Random generators
 	std::random_device m_random_device;
 	std::mt19937 m_random_generator;
@@ -378,9 +391,9 @@ public:
 		m_random_position_x(m_world_left, m_world_right),
 		m_random_position_y(m_world_bottom, m_world_top),
 		m_random_position_angle(0.f, glm::two_pi<float>()),
-		m_grass_creation_events(m_grass_creation_rate, m_grass_creation_desviation),
-		m_gazelle_creation_events(m_gazelle_creation_rate, m_gazelle_creation_desviation),
-		m_lion_creation_events(m_lion_creation_rate, m_lion_creation_desviation)
+		m_grass_creation_events(m_grass_creation_rate, m_area_factor, m_grass_creation_desviation),
+		m_gazelle_creation_events(m_gazelle_creation_rate, m_area_factor, m_gazelle_creation_desviation),
+		m_lion_creation_events(m_lion_creation_rate, m_area_factor, m_lion_creation_desviation)
 	{
 	}
 
