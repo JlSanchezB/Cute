@@ -38,6 +38,14 @@ job::Fence g_MovedFinishedFence;
 //fence to sync jobs for calculate instance buffer
 job::Fence g_InstanceBufferFinishedFence;
 
+//Microprofile tokens
+MICROPROFILE_DEFINE(GrassToken, "Main", "Grass", 0xFFFFAAAA);
+MICROPROFILE_DEFINE(GazelleToken, "Main", "Gazelle", 0xFFFFAAAA);
+MICROPROFILE_DEFINE(LionToken, "Main", "Lion", 0xFFFFAAAA);
+MICROPROFILE_DEFINE(MoveToken, "Main", "Move", 0xFFFFAAAA);
+MICROPROFILE_DEFINE(PrepareRenderToken, "Main", "PrepareRender", 0xFFFFAAAA);
+
+
 class RandomEventsGenerator
 {
 	std::normal_distribution<float> m_distribution;
@@ -625,7 +633,7 @@ public:
 				}
 			}
 
-		}, job_data, zone_bitset);
+		}, job_data, zone_bitset, &g_mp_GrassToken);
 	}
 
 	void GazelleUpdate(double total_time, float elapsed_time)
@@ -798,7 +806,7 @@ public:
 				}
 			}
 
-		}, job_data, zone_bitset);
+		}, job_data, zone_bitset, &g_mp_GazelleToken);
 	};
 
 	void LionUpdate(float elapsed_time)
@@ -945,7 +953,7 @@ public:
 				}
 			}
 
-		}, job_data, zone_bitset);
+		}, job_data, zone_bitset, &g_mp_LionToken);
 	}
 
 	//Jobs data
@@ -1068,7 +1076,7 @@ public:
 			velocity.angular -= velocity.angular * friction;
 
 
-		}, job_data, zone_bitset);
+		}, job_data, zone_bitset, &g_mp_MoveToken);
 
 	}
 
@@ -1306,7 +1314,7 @@ public:
 				{
 					buffer.emplace_back(position.position.x, position.position.y, position.angle, grass.size);
 				}
-			}, job_data, zone_bitset);
+			}, job_data, zone_bitset, &g_mp_PrepareRenderToken);
 
 			ecs::AddJobs<GameDatabase, const PositionComponent, const GazelleStateComponent>(m_job_system, g_InstanceBufferFinishedFence, m_update_job_allocator, 64,
 				[](JobData* job_data, const auto& instance_iterator, const PositionComponent& position, const GazelleStateComponent& gazelle)
@@ -1317,7 +1325,7 @@ public:
 				{
 					buffer.emplace_back(position.position.x, position.position.y, position.angle, gazelle.size);
 				}
-			}, job_data, zone_bitset);
+			}, job_data, zone_bitset, &g_mp_PrepareRenderToken);
 
 			ecs::AddJobs<GameDatabase, const PositionComponent, const LionStateComponent>(m_job_system, g_InstanceBufferFinishedFence, m_update_job_allocator, 64,
 				[](JobData* job_data, const auto& instance_iterator, const PositionComponent& position, const LionStateComponent& lion)
@@ -1328,7 +1336,7 @@ public:
 				{
 					buffer.emplace_back(position.position.x, position.position.y, position.angle, lion.size);
 				}
-			}, job_data, zone_bitset);
+			}, job_data, zone_bitset, &g_mp_PrepareRenderToken);
 
 			//Wait for the fence
 			job::Wait(m_job_system, g_InstanceBufferFinishedFence);

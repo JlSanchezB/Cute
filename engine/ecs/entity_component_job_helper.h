@@ -9,6 +9,8 @@
 #include <job/job_helper.h>
 #include <core/profile.h>
 
+MICROPROFILE_DECLARE(ECSJob);
+
 namespace ecs
 {
 	template<typename DATABASE_DECLARATION, typename FUNCTION, typename JOB_DATA, typename ...COMPONENTS>
@@ -32,12 +34,15 @@ namespace ecs
 		//End instance
 		InstanceIndexType end_instance;
 
+		//Microprofile token
+		MicroProfileToken* microprofile_token = nullptr;
+
 		//Job for running this bucket
 		static void Job(void* bucket_job_data)
 		{
-			MICROPROFILE_SCOPEI("Ecs", "Job", 0xFFFFAAAA);
-
 			JobBucketData* this_bucket_job_data = reinterpret_cast<JobBucketData*>(bucket_job_data);
+
+			MICROPROFILE_SCOPE_TOKEN((this_bucket_job_data->microprofile_token) ? *this_bucket_job_data->microprofile_token :g_mp_ECSJob);
 
 			//Go for all the instances and call the kernel function
 			for (InstanceIndexType instance_index = this_bucket_job_data->begin_instance; instance_index < this_bucket_job_data->end_instance; ++instance_index)
@@ -55,7 +60,7 @@ namespace ecs
 	//Kernel needs to be a function with parameters (job_data passed here, InstanceIterator, COMPONENTS)
 	template<typename DATABASE_DECLARATION, typename ...COMPONENTS, typename FUNCTION, typename BITSET, typename JOB_ALLOCATOR, typename JOB_DATA>
 	void AddJobs(job::System* job_system, job::Fence& fence, JOB_ALLOCATOR& job_allocator, size_t num_instances_per_job,
-		FUNCTION&& kernel, JOB_DATA* job_data, BITSET&& zone_bitset)
+		FUNCTION&& kernel, JOB_DATA* job_data, BITSET&& zone_bitset, MicroProfileToken* profile_token = nullptr)
 	{
 		//Calculate component mask
 		const EntityTypeMask component_mask = EntityType<std::remove_const<COMPONENTS>::type...>::template EntityTypeMask<DATABASE_DECLARATION>();
@@ -102,6 +107,7 @@ namespace ecs
 								job_bucket_data->kernel = kernel;
 								job_bucket_data->instance_iterator = instance_iterator;
 								job_bucket_data->job_data = job_data;
+								job_bucket_data->microprofile_token = profile_token;
 								
 								//Add job
 								job::AddJob(job_system, JobBucketDataT::Job, job_bucket_data, fence);

@@ -2,6 +2,9 @@
 #include <core/virtual_buffer.h>
 #include <core/sync.h>
 #include <memory>
+#include <core/profile.h>
+
+MICROPROFILE_DEFINE(ECSJob, "ECSJob", "ECS", 0xFFFFAAAA);
 
 namespace ecs
 {
