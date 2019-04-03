@@ -338,7 +338,6 @@ namespace render
 
 		auto& context = render_context_internal.m_display_context;
 		auto& render_items = render_context_internal.m_render_items.m_sorted_render_items;
-		auto& command_buffer = render_context_internal.m_point_of_view->GetCommandBuffer();
 		const size_t begin_render_item = render_context_internal.m_render_items.m_priority_table[m_priority].first;
 		const size_t end_render_item = render_context_internal.m_render_items.m_priority_table[m_priority].second;
 		if (begin_render_item != -1)
@@ -347,6 +346,8 @@ namespace render
 			for (size_t render_item_index = begin_render_item; render_item_index <= end_render_item; ++render_item_index)
 			{
 				auto& render_item = render_items[render_item_index];
+
+				auto& command_buffer = render_context_internal.m_point_of_view->m_command_buffer.AccessThreadData(render_item.command_worker);
 
 				//Execute commands for this render item
 				command_buffer.Execute(*context, render_item.command_offset);

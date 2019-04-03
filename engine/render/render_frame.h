@@ -7,6 +7,7 @@
 #include <render/render_common.h>
 #include <render/render_command_buffer.h>
 #include <list>
+#include <job/job_helper.h>
 
 namespace render
 {
@@ -29,10 +30,12 @@ namespace render
 			uint32_t full_32bit_sort_key;
 		};
 		//Command buffer for rendering this item
-		CommandBuffer::CommandOffset command_offset;
+		uint32_t command_offset : 24;
+		//Worker that built the commands
+		uint32_t command_worker : 8;
 
 		Item(Priority _priority, SortKey _sort_key, const CommandBuffer::CommandOffset& _command_offset) :
-			priority(_priority), sort_key(_sort_key), command_offset(_command_offset)
+			priority(_priority), sort_key(_sort_key), command_offset(_command_offset), command_worker(static_cast<uint32_t>(job::GetWorkerIndex()))
 		{
 		}
 	};
@@ -50,17 +53,17 @@ namespace render
 
 		void PushRenderItem(Priority priority, SortKey sort_key, const CommandBuffer::CommandOffset& command_offset)
 		{
-			m_render_items.emplace_back(priority , sort_key, command_offset);
+			m_render_items.Get().emplace_back(priority , sort_key, command_offset);
 		}
 
 		CommandBuffer& GetCommandBuffer()
 		{
-			return m_command_buffer;
+			return m_command_buffer.Get();
 		}
 
 		CommandBuffer& GetBeginRenderCommandBuffer()
 		{
-			return m_begin_render_command_buffer;
+			return m_begin_render_command_buffer.Get();
 		}
 
 		//Reset memory for next frame
@@ -80,17 +83,18 @@ namespace render
 		ResourceMap m_init_resources;
 
 		//Command buffer with commands that will run during the start of the point of view
-		CommandBuffer m_begin_render_command_buffer;
+		job::ThreadData <CommandBuffer> m_begin_render_command_buffer;
 
 		//List of render items
-		std::vector<Item> m_render_items;
+		job::ThreadData<std::vector<Item>> m_render_items;
 		//Command buffer associated to this view
-		CommandBuffer m_command_buffer;
+		job::ThreadData<CommandBuffer> m_command_buffer;
 		//Allocated
 		bool m_allocated;
 
 		friend class Frame;
 		friend struct System;
+		friend class DrawRenderItemsPass;
 	};
 
 	//Render frame will keep memory between frames to avoid reallocations
@@ -107,22 +111,32 @@ namespace render
 		//Get begin frame command buffer
 		CommandBuffer& GetBeginFrameComamndbuffer()
 		{
-			return m_begin_frame_command_buffer;
+			return m_begin_frame_command_buffer.Get();
 		}
 	private:
 		//List of all point of views in the frame
 		std::list<PointOfView> m_point_of_views;
 		//Command buffer with commands that will run during the start of the frame
-		CommandBuffer m_begin_frame_command_buffer;
+		job::ThreadData<CommandBuffer> m_begin_frame_command_buffer;
 
 		friend struct System;
 	};
 
 	inline void PointOfView::Reset()
 	{
-		m_render_items.clear();
-		m_command_buffer.Reset();
-		m_begin_render_command_buffer.Reset();
+		//Reset all the data for all the workers
+		m_render_items.Visit([](auto& data)
+		{
+			data.clear();
+		});
+		m_command_buffer.Visit([](auto& data)
+		{
+			data.Reset();
+		});
+		m_begin_render_command_buffer.Visit([](auto& data)
+		{
+			data.Reset();
+		});
 		m_allocated = false;
 	}
 
@@ -153,7 +167,10 @@ namespace render
 		{
 			point_of_view.Reset();
 		}
-		m_begin_frame_command_buffer.Reset();
+		m_begin_frame_command_buffer.Visit([](auto& data)
+		{
+			data.Reset();
+		});
 	}
 }
 #endif //RENDER_FRAME_H

@@ -530,11 +530,14 @@ namespace render
 
 			auto render_context = display::OpenCommandList(m_device, m_render_command_list);
 
-			render::CommandBuffer::CommandOffset command_offset = 0;
-			while (command_offset != render::CommandBuffer::InvalidCommandOffset)
+			render_frame.m_begin_frame_command_buffer.Visit([&](auto& data)
 			{
-				command_offset = render_frame.GetBeginFrameComamndbuffer().Execute(*render_context, command_offset);
-			}
+				render::CommandBuffer::CommandOffset command_offset = 0;
+				while (command_offset != render::CommandBuffer::InvalidCommandOffset)
+				{
+					command_offset = data.Execute(*render_context, command_offset);
+				}
+			});
 
 			display::CloseCommandList(m_device, render_context);
 			display::ExecuteCommandList(m_device, m_render_command_list);
@@ -562,12 +565,15 @@ namespace render
 
 					auto render_context = display::OpenCommandList(m_device, m_render_command_list);
 
-					render::CommandBuffer::CommandOffset command_offset = 0;
-					while (command_offset != render::CommandBuffer::InvalidCommandOffset)
+					point_of_view.m_begin_render_command_buffer.Visit([&](auto& data)
 					{
-						command_offset = point_of_view.GetBeginRenderCommandBuffer().Execute(*render_context, command_offset);
-					}
-
+						render::CommandBuffer::CommandOffset command_offset = 0;
+						while (command_offset != render::CommandBuffer::InvalidCommandOffset)
+						{
+							command_offset = data.Execute(*render_context, command_offset);
+						}
+					});
+					
 					display::CloseCommandList(m_device, render_context);
 					display::ExecuteCommandList(m_device, m_render_command_list);
 				}
@@ -582,8 +588,12 @@ namespace render
 					MICROPROFILE_SCOPEI("Render", "SortRenderItems", kRenderProfileColour);
 
 					auto& render_items = render_context->m_render_items;
-					//Copy render items from the point of view to the render context
-					render_items.m_sorted_render_items = point_of_view.m_render_items;
+					//Copy render items from the point of view for each worker to the render context
+					point_of_view.m_render_items.Visit([&](auto& data)
+					{
+						render_items.m_sorted_render_items.insert(render_items.m_sorted_render_items.end(), data.begin(), data.end());
+					});
+					 
 					//Sort render items
 					std::sort(render_items.m_sorted_render_items.begin(), render_items.m_sorted_render_items.end(),
 						[](const Item& a, const Item& b)
