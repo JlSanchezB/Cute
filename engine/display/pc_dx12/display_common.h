@@ -35,14 +35,14 @@ using Microsoft::WRL::ComPtr;
 namespace display
 {
 	//Graphics handle pool, it is a handle pool with deferred deallocation
-	template<typename HANDLE, typename DATA>
-	class GraphicHandlePool : public core::HandlePool<HANDLE, DATA>
+	template<typename HANDLE>
+	class GraphicHandlePool : public core::HandlePool<HANDLE>
 	{
 	public:
 		//Init
 		void Init(size_t max_size, size_t init_size, size_t num_frames)
 		{
-			core::HandlePool<HANDLE, DATA>::Init(max_size, init_size);
+			core::HandlePool<HANDLE>::Init(max_size, init_size);
 			m_deferred_delete_handles.resize(num_frames);
 		}
 
@@ -68,7 +68,7 @@ namespace display
 			for (auto& handle : m_deferred_delete_handles[last_frame])
 			{
 				DeferredFree(handle);
-				core::HandlePool<HANDLE, DATA>::Free(handle);
+				core::HandlePool<HANDLE>::Free(handle);
 			}
 			m_deferred_delete_handles[last_frame].clear();
 			//New frame is the last frame
@@ -95,19 +95,19 @@ namespace display
 	};
 
 	//GraphicsHandlePool with descriptor heap pool support
-	template<typename HANDLE, typename DATA>
-	class GraphicDescriptorHandlePool : public GraphicHandlePool<HANDLE, DATA>, public DescriptorHeapPool
+	template<typename HANDLE>
+	class GraphicDescriptorHandlePool : public GraphicHandlePool<HANDLE>, public DescriptorHeapPool
 	{
 	public:
 		void Init(size_t max_size, size_t init_size, size_t num_frames, Device* device, D3D12_DESCRIPTOR_HEAP_TYPE heap_type)
 		{
-			GraphicHandlePool<HANDLE, DATA>::Init(max_size, init_size, num_frames);
+			GraphicHandlePool<HANDLE>::Init(max_size, init_size, num_frames);
 			AddHeap(device, heap_type, max_size);
 		}
 
 		void InitMultipleHeaps(size_t max_size, size_t init_size, size_t num_frames, Device* device, size_t num_heaps, D3D12_DESCRIPTOR_HEAP_TYPE* heap_type)
 		{
-			GraphicHandlePool<HANDLE, DATA>::Init(max_size, init_size, num_frames);
+			GraphicHandlePool<HANDLE>::Init(max_size, init_size, num_frames);
 			for (size_t i = 0; i < num_heaps; ++i)
 			{
 				AddHeap(device, heap_type[i], max_size);
@@ -121,12 +121,12 @@ namespace display
 
 		CD3DX12_CPU_DESCRIPTOR_HANDLE GetDescriptor(const Accessor& handle, size_t heap_index = 0)
 		{
-			return DescriptorHeapPool::GetDescriptor(GraphicHandlePool<HANDLE, DATA>::GetInternalIndex(handle), heap_index);
+			return DescriptorHeapPool::GetDescriptor(GraphicHandlePool<HANDLE>::GetInternalIndex(handle), heap_index);
 		}
 
 		CD3DX12_GPU_DESCRIPTOR_HANDLE GetGPUDescriptor(const Accessor& handle, size_t heap_index = 0)
 		{
-			return DescriptorHeapPool::GetGPUDescriptor(GraphicHandlePool<HANDLE, DATA>::GetInternalIndex(handle), heap_index);
+			return DescriptorHeapPool::GetGPUDescriptor(GraphicHandlePool<HANDLE>::GetInternalIndex(handle), heap_index);
 		}
 	};
 
@@ -140,13 +140,13 @@ namespace display
 	};
 
 	//GraphicsHandlePool with descriptor heap free list support
-	template<typename HANDLE, typename DATA>
-	class GraphicDescriptorHandleFreeList : public GraphicHandlePool<HANDLE, DATA>, public DescriptorHeapFreeList
+	template<typename HANDLE>
+	class GraphicDescriptorHandleFreeList : public GraphicHandlePool<HANDLE>, public DescriptorHeapFreeList
 	{
 	public:
 		void Init(size_t max_size, size_t init_size, size_t num_frames, size_t average_descriptors_per_handle, Device* device, D3D12_DESCRIPTOR_HEAP_TYPE heap_type)
 		{
-			GraphicHandlePool<HANDLE, DATA>::Init(max_size, init_size, num_frames);
+			GraphicHandlePool<HANDLE>::Init(max_size, init_size, num_frames);
 			CreateHeap(device, heap_type, max_size * average_descriptors_per_handle);
 		}
 
@@ -159,7 +159,7 @@ namespace display
 		template<typename ...Args>
 		HANDLE Alloc(uint16_t num_descriptors, Args&&... args)
 		{
-			HANDLE handle = GraphicHandlePool<HANDLE, DATA>::Alloc(args...);
+			HANDLE handle = GraphicHandlePool<HANDLE>::Alloc(args...);
 			DescriptorHeapFreeList::AllocDescriptors(operator[](handle), num_descriptors);
 			return handle;
 		}
@@ -197,6 +197,63 @@ namespace display
 		ComPtr<ID3D12GraphicsCommandList> command_list;
 		WeakRootSignatureHandle current_graphics_root_signature;
 		WeakRootSignatureHandle current_compute_root_signature;
+	};
+
+	//Pool of resources
+	struct CommandList
+	{
+		ComPtr<ID3D12GraphicsCommandList> resource;
+		bool used_from_update;
+	};
+	struct RootSignature
+	{
+		ComPtr<ID3D12RootSignature> resource;
+		RootSignatureDesc desc;
+	};
+	struct PipelineState : ComPtr<ID3D12PipelineState>
+	{
+	};
+
+	struct RenderTarget : RingResourceSupport<RenderTargetHandle>
+	{
+		ComPtr<ID3D12Resource> resource;
+		D3D12_RESOURCE_STATES current_state;
+	};
+	struct DepthBuffer : RingResourceSupport<DepthBufferHandle>
+	{
+		ComPtr<ID3D12Resource> resource;
+		D3D12_RESOURCE_STATES current_state;
+	};
+	struct VertexBuffer : RingResourceSupport<VertexBufferHandle>
+	{
+		ComPtr<ID3D12Resource> resource;
+		D3D12_VERTEX_BUFFER_VIEW view;
+	};
+	struct IndexBuffer : RingResourceSupport<IndexBufferHandle>
+	{
+		ComPtr<ID3D12Resource> resource;
+		D3D12_INDEX_BUFFER_VIEW view;
+	};
+	struct ConstantBuffer : RingResourceSupport<ConstantBufferHandle>
+	{
+		ComPtr<ID3D12Resource> resource;
+	};
+	struct UnorderedAccessBuffer
+	{
+		ComPtr<ID3D12Resource> resource;
+	};
+	struct ShaderResource : RingResourceSupport<ShaderResourceHandle>
+	{
+		ComPtr<ID3D12Resource> resource;
+	};
+	struct DescriptorTable : DescriptorHeapFreeList::Block, RingResourceSupport<DescriptorTableHandle>
+	{
+	};
+	struct Sampler
+	{
+	};
+	struct SamplerDescriptorTable : DescriptorHeapFreeList::Block
+	{
 	};
 
 	//Device internal implementation
@@ -248,73 +305,18 @@ namespace display
 		//Pool for context
 		core::SimplePool<DX12Context, 256> m_context_pool;
 
-		//Pool of resources
-		struct CommandList
-		{
-			ComPtr<ID3D12GraphicsCommandList> resource;
-			bool used_from_update;
-		};
-		struct RootSignature
-		{
-			ComPtr<ID3D12RootSignature> resource;
-			RootSignatureDesc desc;
-		};
-		using PipelineState = ComPtr<ID3D12PipelineState>;
-		struct RenderTarget : RingResourceSupport<RenderTargetHandle>
-		{
-			ComPtr<ID3D12Resource> resource;
-			D3D12_RESOURCE_STATES current_state;
-		};
-		struct DepthBuffer : RingResourceSupport<DepthBufferHandle>
-		{
-			ComPtr<ID3D12Resource> resource;
-			D3D12_RESOURCE_STATES current_state;
-		};
-		struct VertexBuffer : RingResourceSupport<VertexBufferHandle>
-		{
-			ComPtr<ID3D12Resource> resource;
-			D3D12_VERTEX_BUFFER_VIEW view;
-		};
-		struct IndexBuffer : RingResourceSupport<IndexBufferHandle>
-		{
-			ComPtr<ID3D12Resource> resource;
-			D3D12_INDEX_BUFFER_VIEW view;
-		};
-		struct ConstantBuffer : RingResourceSupport<ConstantBufferHandle>
-		{
-			ComPtr<ID3D12Resource> resource;
-		};
-		struct UnorderedAccessBuffer
-		{
-			ComPtr<ID3D12Resource> resource;
-		};
-		struct ShaderResource : RingResourceSupport<ShaderResourceHandle>
-		{
-			ComPtr<ID3D12Resource> resource;
-		};
-		struct DescriptorTable : DescriptorHeapFreeList::Block, RingResourceSupport<DescriptorTableHandle>
-		{
-		};
-		struct Sampler
-		{
-		};
-		struct SamplerDescriptorTable : DescriptorHeapFreeList::Block
-		{
-		};
-		
-
-		GraphicHandlePool<CommandListHandle, CommandList> m_command_list_pool;
-		GraphicDescriptorHandlePool<RenderTargetHandle, RenderTarget> m_render_target_pool;
-		GraphicDescriptorHandlePool<DepthBufferHandle, DepthBuffer> m_depth_buffer_pool;
-		GraphicHandlePool<RootSignatureHandle, RootSignature> m_root_signature_pool;
-		GraphicHandlePool<PipelineStateHandle, PipelineState> m_pipeline_state_pool;
-		GraphicHandlePool<VertexBufferHandle, VertexBuffer> m_vertex_buffer_pool;
-		GraphicHandlePool<IndexBufferHandle, IndexBuffer> m_index_buffer_pool;
-		GraphicDescriptorHandlePool<ConstantBufferHandle, ConstantBuffer> m_constant_buffer_pool;
-		GraphicDescriptorHandlePool<UnorderedAccessBufferHandle, UnorderedAccessBuffer> m_unordered_access_buffer_pool;
-		GraphicDescriptorHandlePool<ShaderResourceHandle, ShaderResource> m_shader_resource_pool;
-		GraphicDescriptorHandleFreeList<DescriptorTableHandle, DescriptorTable> m_descriptor_table_pool;
-		GraphicDescriptorHandleFreeList<SamplerDescriptorTableHandle, SamplerDescriptorTable> m_sampler_descriptor_table_pool;
+		GraphicHandlePool<CommandListHandle> m_command_list_pool;
+		GraphicDescriptorHandlePool<RenderTargetHandle> m_render_target_pool;
+		GraphicDescriptorHandlePool<DepthBufferHandle> m_depth_buffer_pool;
+		GraphicHandlePool<RootSignatureHandle> m_root_signature_pool;
+		GraphicHandlePool<PipelineStateHandle> m_pipeline_state_pool;
+		GraphicHandlePool<VertexBufferHandle> m_vertex_buffer_pool;
+		GraphicHandlePool<IndexBufferHandle> m_index_buffer_pool;
+		GraphicDescriptorHandlePool<ConstantBufferHandle> m_constant_buffer_pool;
+		GraphicDescriptorHandlePool<UnorderedAccessBufferHandle> m_unordered_access_buffer_pool;
+		GraphicDescriptorHandlePool<ShaderResourceHandle> m_shader_resource_pool;
+		GraphicDescriptorHandleFreeList<DescriptorTableHandle> m_descriptor_table_pool;
+		GraphicDescriptorHandleFreeList<SamplerDescriptorTableHandle> m_sampler_descriptor_table_pool;
 
 		//Accesor to the resources (we need a specialitation for each type)
 		template<typename HANDLE>

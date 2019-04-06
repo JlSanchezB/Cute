@@ -13,12 +13,12 @@
 
 namespace core
 {
-	template <typename ENUM, typename TYPE>
+	template <typename DATA, typename TYPE>
 	class HandleAccessor
 	{
 	protected:
 		using type_param = TYPE;
-		using enum_param = ENUM;
+		using data_param = DATA;
 
 		//Index inside the handlepool to access the data associated to this handle 
 		TYPE m_index;
@@ -26,7 +26,7 @@ namespace core
 		//Invalid handle
 		static const TYPE kInvalid = -1;
 
-		template<typename HANDLE, typename DATA>
+		template<typename HANDLE>
 		friend class HandlePool;
 
 		HandleAccessor() : m_index(kInvalid)
@@ -55,10 +55,10 @@ namespace core
 
 	//Weak handle only can be create from a handle
 	//They can be copied
-	template <typename ENUM, typename TYPE>
-	class WeakHandle : public HandleAccessor<ENUM, TYPE>
+	template <typename DATA, typename TYPE>
+	class WeakHandle : public HandleAccessor<DATA, TYPE>
 	{
-		using Accessor = HandleAccessor<ENUM, TYPE>;
+		using Accessor = HandleAccessor<DATA, TYPE>;
 
 	public:
 		//Default constructor
@@ -69,10 +69,10 @@ namespace core
 	};
 
 	//Handles can only be created from a pool and they can not be copied, only moved
-	template <typename ENUM, typename TYPE>
-	class Handle : public WeakHandle<ENUM, TYPE>
+	template <typename DATA, typename TYPE>
+	class Handle : public WeakHandle<DATA, TYPE>
 	{
-		using Accessor = HandleAccessor<ENUM, TYPE>;
+		using Accessor = HandleAccessor<DATA, TYPE>;
 
 		//Private constructor of a handle, only a pool can create valid handles
 		Handle(TYPE index)
@@ -82,14 +82,14 @@ namespace core
 			HandleAccessor::m_index = index;
 		}
 
-		template<typename HANDLE, typename DATA>
+		template<typename HANDLE>
 		friend class HandlePool;
 
-		template<typename HANDLE, typename DATA>
+		template<typename DATA, typename TYPE>
 		friend class WeakHandle;
 
 	public:
-		using WeakHandleVersion = WeakHandle<ENUM, TYPE>;
+		using WeakHandleVersion = WeakHandle<DATA, TYPE>;
 
 		//Public constructor
 		Handle()
@@ -128,12 +128,14 @@ namespace core
 
 
 	//Pool of resources
-	template<typename HANDLE, typename DATA>
+	template<typename HANDLE>
 	class HandlePool
 	{
+		using DATA = typename HANDLE::data_param;
+
 		static_assert(std::is_default_constructible<DATA>::value);
 	protected:
-		using Accessor = HandleAccessor<typename HANDLE::enum_param, typename HANDLE::type_param>;
+		using Accessor = HandleAccessor<typename HANDLE::data_param, typename HANDLE::type_param>;
 
 	public:
 		~HandlePool();
@@ -205,8 +207,8 @@ namespace core
 		}
 	};
 
-	template<typename HANDLE, typename DATA>
-	inline HandlePool<HANDLE, DATA>::~HandlePool()
+	template<typename HANDLE>
+	inline HandlePool<HANDLE>::~HandlePool()
 	{
 		if (m_data.size() && Size() > 0)
 		{
@@ -244,8 +246,8 @@ namespace core
 	}
 
 	//Init pool with a list of free slots avaliable
-	template<typename HANDLE, typename DATA>
-	inline void HandlePool<HANDLE, DATA>::Init(size_t max_size, size_t init_size)
+	template<typename HANDLE>
+	inline void HandlePool<HANDLE>::Init(size_t max_size, size_t init_size)
 	{
 		assert(max_size < std::numeric_limits<typename HANDLE::type_param>::max() - 1);
 		assert(init_size <= max_size);
@@ -258,9 +260,9 @@ namespace core
 
 
 	//Allocate a handle
-	template<typename HANDLE, typename DATA>
+	template<typename HANDLE>
 	template<typename ...Args>
-	inline HANDLE HandlePool<HANDLE, DATA>::Alloc(Args && ...args)
+	inline HANDLE HandlePool<HANDLE>::Alloc(Args && ...args)
 	{
 		//If there is free slots, it will use the last one free
 		if (m_first_free_allocated == HANDLE::kInvalid)
@@ -295,8 +297,8 @@ namespace core
 	}
 
 	//Free unused handle
-	template<typename HANDLE, typename DATA>
-	inline void HandlePool<HANDLE, DATA>::Free(HANDLE & handle)
+	template<typename HANDLE>
+	inline void HandlePool<HANDLE>::Free(HANDLE & handle)
 	{
 		if (handle.IsValid())
 		{
@@ -321,8 +323,8 @@ namespace core
 		}
 	}
 
-	template<typename HANDLE, typename DATA>
-	inline void HandlePool<HANDLE, DATA>::GrowDataStorage(size_t new_size)
+	template<typename HANDLE>
+	inline void HandlePool<HANDLE>::GrowDataStorage(size_t new_size)
 	{
 		//assert(m_first_free_allocated == 1);
 

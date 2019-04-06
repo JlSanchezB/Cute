@@ -262,7 +262,7 @@ namespace display
 		else if (vertex_buffer_desc.access == Access::Dynamic)
 		{
 			VertexBufferHandle handle = CreateRingResources(device, data, CD3DX12_RESOURCE_DESC::Buffer(vertex_buffer_desc.size), device->m_vertex_buffer_pool, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER,
-			[&](display::Device* device, const VertexBufferHandle& handle, display::Device::VertexBuffer& vertex_buffer)
+			[&](display::Device* device, const VertexBufferHandle& handle, display::VertexBuffer& vertex_buffer)
 			{
 				// Initialize the vertex buffer view.
 				vertex_buffer.view.BufferLocation = vertex_buffer.resource->GetGPUVirtualAddress();
@@ -312,7 +312,7 @@ namespace display
 		else if (index_buffer_desc.access == Access::Dynamic)
 		{
 			IndexBufferHandle handle = CreateRingResources(device, data, CD3DX12_RESOURCE_DESC::Buffer(index_buffer_desc.size), device->m_index_buffer_pool, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER,
-				[&](display::Device* device, const IndexBufferHandle& handle, display::Device::IndexBuffer& index_buffer)
+				[&](display::Device* device, const IndexBufferHandle& handle, display::IndexBuffer& index_buffer)
 			{
 				// Initialize the vertex buffer view.
 				index_buffer.view.BufferLocation = index_buffer.resource->GetGPUVirtualAddress();
@@ -362,7 +362,7 @@ namespace display
 		else if (constant_buffer_desc.access == Access::Dynamic)
 		{
 			ConstantBufferHandle handle = CreateRingResources(device, data, CD3DX12_RESOURCE_DESC::Buffer(size), device->m_constant_buffer_pool, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER,
-				[&](display::Device* device, const ConstantBufferHandle& handle, display::Device::ConstantBuffer& constant_buffer)
+				[&](display::Device* device, const ConstantBufferHandle& handle, display::ConstantBuffer& constant_buffer)
 			{
 				//Size needs to be 256byte aligned
 				D3D12_CONSTANT_BUFFER_VIEW_DESC dx12_constant_buffer_desc = {};
@@ -490,7 +490,7 @@ namespace display
 			if (shader_resource_desc.type == ShaderResourceType::Buffer)
 			{
 				ShaderResourceHandle handle = CreateRingResources(device, data, d12_resource_desc, device->m_shader_resource_pool, init_resource_state,
-					[&](display::Device* device, const ShaderResourceHandle& handle, display::Device::ShaderResource& shader_resource)
+					[&](display::Device* device, const ShaderResourceHandle& handle, display::ShaderResource& shader_resource)
 				{
 					D3D12_SHADER_RESOURCE_VIEW_DESC dx12_shader_resource_desc = {};
 					dx12_shader_resource_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;

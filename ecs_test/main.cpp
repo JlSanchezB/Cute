@@ -409,7 +409,12 @@ public:
 	{
 		display::DeviceInitParams device_init_params;
 
+#ifdef _DEBUG
 		device_init_params.debug = true;
+#else
+		device_init_params.debug = false;
+#endif
+
 		device_init_params.width = kInitWidth;
 		device_init_params.height = kInitHeight;
 		device_init_params.tearing = true;
