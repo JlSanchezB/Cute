@@ -588,6 +588,10 @@ namespace render
 					MICROPROFILE_SCOPEI("Render", "SortRenderItems", kRenderProfileColour);
 
 					auto& render_items = render_context->m_render_items;
+
+					//Clear sort render items
+					render_items.m_sorted_render_items.clear();
+
 					//Copy render items from the point of view for each worker to the render context
 					point_of_view.m_render_items.Visit([&](auto& data)
 					{
