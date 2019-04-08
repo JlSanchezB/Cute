@@ -28,16 +28,19 @@ namespace core
 		template<typename DATA>
 		void* PushDataArray(const DATA* data, size_t num);
 
+		//Push buffer
+		std::byte* PushBuffer(const std::byte* buffer, size_t size);
+
 		//Get command
 		Command GetCommand(size_t& offset);
 
 		//Get command data
 		template<typename DATA>
-		DATA& GetData(size_t& offset);
+		DATA GetData(size_t& offset);
 
-		//Get command data array
-		template<typename DATA>
-		DATA* GetDataArray(size_t& offset, size_t num);
+		//Get buffer
+		const std::byte* GetBuffer(size_t& offset, size_t size);
+
 
 		//Get current offset of commands
 		size_t GetCurrentCommandPosition() const
@@ -94,7 +97,7 @@ namespace core
 	//Push command data
 	template<typename COMMAND_TYPE>
 	template<typename DATA>
-	inline void CommandBuffer<COMMAND_TYPE>::PushData(const DATA & data)
+	inline void CommandBuffer<COMMAND_TYPE>::PushData(const DATA& data)
 	{
 		size_t alignment_offset = CalculateAlignment(alignof(DATA), m_command_data.size());
 
@@ -102,8 +105,11 @@ namespace core
 		const size_t begin_offset = m_command_data.size() + alignment_offset;
 		m_command_data.resize(m_command_data.size() + alignment_offset + sizeof(DATA));
 
-		//Copy data
-		memcpy(&m_command_data[begin_offset], &data, sizeof(DATA));
+		std::byte* byte_ptr = m_command_data.data() + begin_offset;
+		DATA* data_ptr = reinterpret_cast<DATA*>(byte_ptr);
+		
+		//Construct a new DATA in the memory
+		new (data_ptr) DATA (data);
 	}
 
 	//Push command data array
@@ -120,16 +126,36 @@ namespace core
 		if (data)
 		{
 			//Copy data
-			memcpy(&m_command_data[begin_offset], data, sizeof(DATA) * num);
+			for (size_t i = 0; i < num; ++i)
+			{
+				std::byte* byte_ptr = m_command_data.data() + begin_offset + i;
+				DATA* data_ptr = reinterpret_cast<DATA*>(byte_ptr);
+
+				//Construct a new DATA in the memory
+				new (data_ptr) DATA(data[i]);
+			}
 		}
 
 		return &m_command_data[begin_offset];
 	}
+	//Push Buffer
+	template<typename COMMAND_TYPE>
+	inline std::byte* CommandBuffer<COMMAND_TYPE>::PushBuffer(const std::byte* buffer, size_t size)
+	{
+		//Reserve memory as needed
+		const size_t begin_offset = m_command_data.size();
+		m_command_data.resize(m_command_data.size() + size);
+
+		memcpy(&m_command_data[begin_offset], buffer, size);
+
+		return &m_command_data[begin_offset];
+	}
+
 
 	//Get command data
 	template<typename COMMAND_TYPE>
 	template<typename DATA>
-	inline DATA & CommandBuffer<COMMAND_TYPE>::GetData(size_t & offset)
+	inline DATA CommandBuffer<COMMAND_TYPE>::GetData(size_t & offset)
 	{
 		size_t alignment_offset = CalculateAlignment(alignof(DATA), offset);
 		const size_t begin_offset = offset + alignment_offset;
@@ -137,21 +163,20 @@ namespace core
 		//Move offset
 		offset += alignment_offset + sizeof(DATA);
 		//Return data
-		return *reinterpret_cast<DATA*>(&m_command_data[begin_offset]);
+		return std::move(*reinterpret_cast<DATA*>(&m_command_data[begin_offset]));
 	}
 
-	//Get command data array
+	//Get buffer
 	template<typename COMMAND_TYPE>
-	template<typename DATA>
-	inline DATA * CommandBuffer<COMMAND_TYPE>::GetDataArray(size_t & offset, size_t num)
+	inline const std::byte* CommandBuffer<COMMAND_TYPE>::GetBuffer(size_t & offset, size_t size)
 	{
-		size_t alignment_offset = CalculateAlignment(alignof(DATA), offset);
-		const size_t begin_offset = offset + alignment_offset;
+		const size_t begin_offset = offset;
 
 		//Move offset
-		offset += alignment_offset + sizeof(DATA) * num;
+		offset += size;
+
 		//Return data
-		return reinterpret_cast<DATA*>(&m_command_data[begin_offset]);
+		return &m_command_data[begin_offset];
 	}
 }
 

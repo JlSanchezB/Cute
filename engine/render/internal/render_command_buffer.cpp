@@ -72,7 +72,12 @@ namespace render
 			{
 				const uint8_t start_slot_index = GetData<uint8_t>(data_offset);
 				const uint8_t num_vertex_buffers = GetData<uint8_t>(data_offset);
-				context.SetVertexBuffers(start_slot_index, num_vertex_buffers, GetDataArray<display::WeakVertexBufferHandle>(data_offset, num_vertex_buffers));
+				display::WeakVertexBufferHandle handles[16];
+				for (size_t i = 0; i < num_vertex_buffers; ++i)
+				{
+					handles[i] = GetData<display::WeakVertexBufferHandle>(data_offset);
+				}
+				context.SetVertexBuffers(start_slot_index, num_vertex_buffers, handles);
 			}
 				break;
 			case Commands::SetIndexBuffer:
@@ -108,8 +113,9 @@ namespace render
 			case Commands::UploadResourceBuffer:
 			{
 				size_t size = GetData<size_t>(data_offset);
-				uint8_t* data = GetDataArray<uint8_t>(data_offset, size);
-				display::UpdateResourceBuffer(context.GetDevice(), GetData<display::UpdatableResourceHandle>(data_offset), data, size);
+				const std::byte* buffer = GetBuffer(data_offset, size);
+				
+				display::UpdateResourceBuffer(context.GetDevice(), GetData<display::UpdatableResourceHandle>(data_offset), buffer, size);
 			}
 			break;
 			default:
@@ -220,7 +226,7 @@ namespace render
 	{
 		PushCommand(static_cast<uint8_t>(Commands::UploadResourceBuffer));
 		PushData(size);
-		void* data_buffer_inside_command_buffer = PushDataArray(reinterpret_cast<const uint8_t*>(data), size);
+		void* data_buffer_inside_command_buffer = PushBuffer(reinterpret_cast<const std::byte*>(data), size);
 		PushData(handle);
 
 		return data_buffer_inside_command_buffer;

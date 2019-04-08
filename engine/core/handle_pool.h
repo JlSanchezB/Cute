@@ -10,9 +10,42 @@
 #include <vector>
 #include <algorithm>
 #include <cassert>
+#include <core/sync.h>
+
+#ifdef _DEBUG
+#define WEAKHANDLE_TRACKING
+#endif
 
 namespace core
 {
+	template <typename DATA, typename TYPE>
+	class Handle;
+
+	template<typename HANDLE>
+	class HandlePool;
+
+#ifdef WEAKHANDLE_TRACKING
+	struct WeakHandleTracking
+	{
+		void AddWeakReference(size_t index)
+		{
+			core::SpinLockMutexGuard guard(m_spin_lock_mutex);
+			m_weak_handle_tracking[index]++;
+		}
+
+		void RemoveWeakReference(size_t index)
+		{
+			core::SpinLockMutexGuard guard(m_spin_lock_mutex);
+			m_weak_handle_tracking[index]--;
+		}
+
+		//Number of weak handles for each index
+		std::vector<size_t> m_weak_handle_tracking;
+		//Spin lock
+		core::SpinLockMutex m_spin_lock_mutex;
+	};
+#endif
+
 	template <typename DATA, typename TYPE>
 	class HandleAccessor
 	{
@@ -32,9 +65,7 @@ namespace core
 		HandleAccessor() : m_index(kInvalid)
 		{
 		}
-		HandleAccessor(type_param index) : m_index(index)
-		{
-		}
+	
 
 	public:
 		bool IsValid() const
@@ -60,12 +91,74 @@ namespace core
 	{
 		using Accessor = HandleAccessor<DATA, TYPE>;
 
+#ifdef WEAKHANDLE_TRACKING
+		//Access to the pool associated to this handle
+		inline static WeakHandleTracking* s_tracking_pool = nullptr;
+#endif
+
 	public:
 		//Default constructor
 		WeakHandle()
 		{
-
 		}
+
+#ifdef WEAKHANDLE_TRACKING
+		WeakHandle(const Handle<DATA, TYPE>& a);
+
+		WeakHandle(const WeakHandle & a)
+		{
+			if (Accessor::m_index != Accessor::kInvalid)
+			{
+				s_tracking_pool->RemoveWeakReference(Accessor::m_index);
+			}
+
+			Accessor::m_index = a.m_index;
+
+			if (Accessor::m_index != Accessor::kInvalid)
+			{
+				s_tracking_pool->AddWeakReference(Accessor::m_index);
+			}
+		}
+
+		WeakHandle& operator=(const WeakHandle& a)
+		{
+			if (Accessor::m_index != Accessor::kInvalid)
+			{
+				s_tracking_pool->RemoveWeakReference(Accessor::m_index);
+			}
+
+			Accessor::m_index = a.m_index;
+
+			if (Accessor::m_index != Accessor::kInvalid)
+			{
+				s_tracking_pool->AddWeakReference(Accessor::m_index);
+			}
+
+			return *this;
+		}
+
+		WeakHandle(WeakHandle&& a)
+		{
+			Accessor::m_index = a.m_index;
+			a.m_index = Accessor::kInvalid;
+		}
+
+		WeakHandle& operator=(WeakHandle&& a)
+		{
+			Accessor::m_index = a.m_index;
+			a.m_index = Accessor::kInvalid;
+
+			return *this;
+		}
+
+		~WeakHandle()
+		{
+			if (Accessor::m_index != Accessor::kInvalid)
+			{
+				s_tracking_pool->RemoveWeakReference(Accessor::m_index);
+			}
+		}
+#endif
 	};
 
 	//Handles can only be created from a pool and they can not be copied, only moved
@@ -126,10 +219,15 @@ namespace core
 		}
 	};
 
+	
+
 
 	//Pool of resources
 	template<typename HANDLE>
 	class HandlePool
+#ifdef WEAKHANDLE_TRACKING
+		: public WeakHandleTracking
+#endif
 	{
 		using DATA = typename HANDLE::data_param;
 
@@ -138,6 +236,13 @@ namespace core
 		using Accessor = HandleAccessor<typename HANDLE::data_param, typename HANDLE::type_param>;
 
 	public:
+#ifdef WEAKHANDLE_TRACKING
+		HandlePool()
+		{
+			//Init tracking pool
+			WeakHandle<typename HANDLE::data_param, typename HANDLE::type_param>::s_tracking_pool = this;
+		}
+#endif
 		~HandlePool();
 
 		//Init pool with a list of free slots avaliable
@@ -199,7 +304,6 @@ namespace core
 
 		//Vector of the data associated to this pool
 		std::vector<DataStorage> m_data;
-
 	protected:
 		typename HANDLE::type_param GetInternalIndex(const Accessor& handle) const
 		{
@@ -255,7 +359,7 @@ namespace core
 		m_first_free_allocated = HANDLE::kInvalid;
 		m_size = 0;
 
-		GrowDataStorage(init_size);
+		GrowDataStorage(init_size);		
 	}
 
 
@@ -293,6 +397,11 @@ namespace core
 
 		m_size++;
 
+#ifdef WEAKHANDLE_TRACKING
+		//Init tracking of weak handles
+		m_weak_handle_tracking[handle_slot] = 0;
+#endif
+		
 		return HANDLE(handle_slot);
 	}
 
@@ -317,6 +426,14 @@ namespace core
 			}
 
 			m_size--;
+
+#ifdef WEAKHANDLE_TRACKING
+			//Add log if there is still a weak handle
+			if (m_weak_handle_tracking[handle.m_index] > 0)
+			{
+				core::LogWarning("Handle <%i> has been deleted, but still there weakhandles from it", handle.m_index);
+			}
+#endif
 
 			//Reset handle to an invalid, it will avoid it keep the index
 			handle.m_index = HANDLE::kInvalid;
@@ -351,6 +468,23 @@ namespace core
 		}
 
 		m_first_free_allocated = static_cast<typename HANDLE::type_param>(old_size);
+
+#ifdef WEAKHANDLE_TRACKING
+		{
+			core::SpinLockMutexGuard guard(m_spin_lock_mutex);
+			m_weak_handle_tracking.resize(new_size);
+		}
+#endif
+	}
+	template<typename DATA, typename TYPE>
+	inline WeakHandle<DATA, TYPE>::WeakHandle(const Handle<DATA, TYPE>& a)
+	{
+		Accessor::m_index = a.m_index;
+
+		if (Accessor::m_index != Accessor::kInvalid)
+		{
+			s_tracking_pool->AddWeakReference(Accessor::m_index);
+		}
 	}
 }
 
