@@ -94,6 +94,9 @@ namespace core
 #ifdef WEAKHANDLE_TRACKING
 		//Access to the pool associated to this handle
 		inline static WeakHandleTracking* s_tracking_pool = nullptr;
+
+		template<typename HANDLE>
+		friend class HandlePool;
 #endif
 
 	public:
@@ -476,6 +479,8 @@ namespace core
 		}
 #endif
 	}
+
+#ifdef WEAKHANDLE_TRACKING
 	template<typename DATA, typename TYPE>
 	inline WeakHandle<DATA, TYPE>::WeakHandle(const Handle<DATA, TYPE>& a)
 	{
@@ -486,6 +491,7 @@ namespace core
 			s_tracking_pool->AddWeakReference(Accessor::m_index);
 		}
 	}
+#endif
 }
 
 #endif //HANDLE_POOL_H_

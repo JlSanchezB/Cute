@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+	
+	<Type Name="core::StringHashT&lt;*,*&gt;">
+		<DisplayString Condition="sizeof($T2) == 8">64Bits</DisplayString>
+		<DisplayString Condition="sizeof($T2) == 4">
+			{{ table = {core::g_namespaces_string_hash_table}}}
+		</DisplayString>
+		<DisplayString Condition="sizeof($T2) == 2">16Bits</DisplayString>
+	</Type>
+</AutoVisualizer>

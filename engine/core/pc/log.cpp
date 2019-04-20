@@ -39,7 +39,7 @@ namespace
 	constexpr ::std::array<char, kLogBufferSize> InitLogBuffer()
 	{
 		std::array<char, kLogBufferSize> buffer = {};
-		LogSlot* log_slot = reinterpret_cast<LogSlot*>(buffer.data());
+		LogSlot* log_slot = (LogSlot*)(buffer.data());
 		log_slot->priority = Priority::Free;
 		log_slot->size = static_cast<uint32_t>(kLogBufferSize - sizeof(LogSlot));
 

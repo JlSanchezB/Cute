@@ -1,6 +1,7 @@
 #include "string_hash.h"
 #include <unordered_map>
 #include <string>
+#include <stdexcept>
 #include "log.h"
 
 namespace core

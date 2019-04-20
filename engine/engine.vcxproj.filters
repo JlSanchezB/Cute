@@ -1383,4 +1383,7 @@
       <Filter>ext\glm</Filter>
     </Text>
   </ItemGroup>
+  <ItemGroup>
+    <Natvis Include="cute.natvis" />
+  </ItemGroup>
 </Project>
