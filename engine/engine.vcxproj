@@ -124,6 +124,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="core\command_buffer.h" />
+    <ClInclude Include="core\fast_map.h" />
     <ClInclude Include="core\handle_pool.h" />
     <ClInclude Include="core\imgui_render.h" />
     <ClInclude Include="core\log.h" />

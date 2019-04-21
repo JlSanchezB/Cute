@@ -908,6 +908,9 @@
     <ClInclude Include="ecs\entity_component_job_helper.h">
       <Filter>ecs</Filter>
     </ClInclude>
+    <ClInclude Include="core\fast_map.h">
+      <Filter>core</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="display\pc_dx12\display.cpp">
