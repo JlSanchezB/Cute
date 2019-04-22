@@ -10,26 +10,79 @@
 namespace core
 {
 	//Lineal probe map implemetation
-	template <typename Key, typename DATA>
+	template <typename KEY, typename DATA>
 	class FastMap
 	{
+	public:
+
+		//Accesor helper
+		template<typename DATA>
+		class Accesor
+		{
+		public:
+			const DATA* operator->()  const
+			{
+				return m_data;
+			}
+
+			const DATA& operator*()  const&
+			{
+				return *m_data;
+			}
+
+			const DATA&& operator*()  const&&
+			{
+				return *m_data;
+			}
+
+			explicit operator bool() const
+			{
+				return m_data != nullptr;
+			}
+
+			Accesor(const DATA* data) : m_data(data)
+			{
+			}
+
+		private:
+			const DATA* m_data;
+		};
+
 		//Set data
-		void Set(const Key& key, const DATA& data);
+		void Set(const KEY& key, DATA&& data);
 
 		//Access data
-		const std::optional<DATA>& operator[](const Key& key) const;
+		const Accesor<DATA> operator[](const KEY& key) const;
+
+		//Iterators begin and end
+		auto begin() const
+		{
+			return m_data.begin();
+		}
+		auto end() const
+		{
+			return m_data.end();
+		}
+
+		//Clear
+		void clear()
+		{
+			m_key.clear();
+			m_data.clear();
+		}
+
 	private:
 		//Lineal search inside a vector of keys
 		std::vector<KEY> m_key;
 		//Vector of data
 		std::vector<DATA> m_data;
 
-		size_t GetIndex(const Key& key);
+		size_t GetIndex(const KEY& key) const;
 		constexpr static size_t kInvalid = static_cast<size_t>(-1);
 	};
 
-	template<typename Key, typename DATA>
-	inline size_t FastMap<Key, DATA>::GetIndex(const Key& key)
+	template<typename KEY, typename DATA>
+	inline size_t FastMap<KEY, DATA>::GetIndex(const KEY& key) const
 	{
 		const size_t count = m_key.size();
 		for (size_t i = 0; i < count; ++i)
@@ -43,36 +96,36 @@ namespace core
 		return kInvalid;
 	}
 
-	template<typename Key, typename DATA>
-	inline void FastMap<Key, DATA>::Set(const Key& key, const DATA& data)
+	template<typename KEY, typename DATA>
+	inline void FastMap<KEY, DATA>::Set(const KEY& key, DATA&& data)
 	{
 		size_t index = GetIndex(key);
 
 		if (index == kInvalid)
 		{
 			m_key.push_back(key);
-			m_data.push_back(data);
+			m_data.emplace_back(std::forward<DATA>(data));
 
 		}
 		else
 		{
-			m_data[index] = data;
+			m_data[index] = std::forward<DATA>(data);
 		}
 	}
 
-	template<typename Key, typename DATA>
-	inline const std::optional<DATA>& FastMap<Key, DATA>::operator[](const Key& key) const
+	template<typename KEY, typename DATA>
+	inline const FastMap<KEY, DATA>::Accesor<DATA> FastMap<KEY, DATA>::operator[](const KEY& key) const
 	{
 		size_t index = GetIndex(key);
 
 		if (index != kInvalid)
 		{
-			return std::make_optional(m_data[index]);
+			return Accesor<DATA>(&m_data[index]);
 		}
 		else
 		{
 			//Invalid
-			return {};
+			return Accesor<DATA>(nullptr);
 		}
 	}
 }

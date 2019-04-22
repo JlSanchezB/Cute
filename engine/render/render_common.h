@@ -5,6 +5,7 @@
 #define RENDER_COMMON_H_
 
 #include <core/string_hash.h>
+#include <core/fast_map.h>
 #include <vector>
 #include <memory>
 #include <unordered_map>
@@ -122,7 +123,7 @@ namespace render
 		}
 	};
 
-	using ResourceMap = std::unordered_map<ResourceName, std::unique_ptr<Resource>>;
+	using ResourceMap = core::FastMap<ResourceName, std::unique_ptr<Resource>>;
 }
 
 

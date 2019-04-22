@@ -10,6 +10,7 @@
 #include <render/render_frame.h>
 #include <job/job.h>
 #include <core/platform.h>
+#include <core/fast_map.h>
 
 namespace render
 {
@@ -78,8 +79,8 @@ namespace render
 		//Platform game, it can be null. Used for present
 		platform::Game* m_game;
 
-		using ResourceFactoryMap = std::unordered_map<RenderClassType, std::unique_ptr<FactoryInterface<Resource>>>;
-		using PassFactoryMap = std::unordered_map<RenderClassType, std::unique_ptr<FactoryInterface<Pass>>>;
+		using ResourceFactoryMap = core::FastMap<RenderClassType, std::unique_ptr<FactoryInterface<Resource>>>;
+		using PassFactoryMap = core::FastMap<RenderClassType, std::unique_ptr<FactoryInterface<Pass>>>;
 
 		//Resource factories
 		ResourceFactoryMap m_resource_factories_map;
@@ -87,8 +88,8 @@ namespace render
 		//Pass factories
 		PassFactoryMap m_pass_factories_map;
 
-		using ResourceMap = std::unordered_map<ResourceName, std::unique_ptr<Resource>>;
-		using PassMap = std::unordered_map<PassName, std::unique_ptr<Pass>>;
+		using ResourceMap = core::FastMap<ResourceName, std::unique_ptr<Resource>>;
+		using PassMap =core::FastMap<PassName, std::unique_ptr<Pass>>;
 
 		//Gobal resources defined in the passes declaration
 		ResourceMap m_global_resources_map;

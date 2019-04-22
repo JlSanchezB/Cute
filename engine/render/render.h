@@ -27,7 +27,7 @@ namespace render
 	{
 	public:
 		//Add pass resource to this pass instance
-		void AddPassResource(const ResourceName& name , std::unique_ptr<Resource>& resource);
+		void AddPassResource(const ResourceName& name , std::unique_ptr<Resource>&& resource);
 		//Resource associated to this pass instance
 		Resource* GetRenderResource(const ResourceName& name) const;
 

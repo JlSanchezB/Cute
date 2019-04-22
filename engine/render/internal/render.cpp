@@ -9,6 +9,7 @@
 
 #include <cassert>
 #include <stdarg.h>
+#include <utility>
 
 namespace
 {
@@ -17,7 +18,7 @@ namespace
 	{
 		for (auto& item : container)
 		{
-			item.second->Destroy(device);
+			item->Destroy(device);
 		}
 		container.clear();
 	}
@@ -30,10 +31,10 @@ namespace
 
 namespace render
 {
-	void RenderContext::AddPassResource(const ResourceName& name, std::unique_ptr<Resource>& resource)
+	void RenderContext::AddPassResource(const ResourceName& name, std::unique_ptr<Resource>&& resource)
 	{
 		auto render_context = reinterpret_cast<RenderContextInternal*>(this);
-		render_context->m_game_resources_map[name] = std::move(resource);
+		render_context->m_game_resources_map.Set(name, std::move(resource));
 	}
 
 	Resource * RenderContext::GetRenderResource(const ResourceName& name) const
@@ -42,19 +43,19 @@ namespace render
 
 		//First check pass context resources
 		{
-			const auto& it = render_context->m_game_resources_map.find(name);
-			if (it != render_context->m_game_resources_map.end())
+			auto& it = render_context->m_game_resources_map[name];
+			if (it)
 			{
-				return it->second.get();
+				return it->get();
 			}
 		}
 
 		//Second check pass context resources
 		{
-			const auto& it = render_context->m_pass_resources_map.find(name);
-			if (it != render_context->m_pass_resources_map.end())
+			auto& it = render_context->m_pass_resources_map[name];
+			if (it)
 			{
-				return it->second.get();
+				return it->get();
 			}
 		}
 
@@ -120,12 +121,13 @@ namespace render
 		ResourceName resource_name(resource_name_string);
 		if (resource_type_string && resource_name_string)
 		{
-			auto& resource_factory_it = m_resource_factories_map.find(resource_type);
-			if (resource_factory_it != m_resource_factories_map.end())
+			auto& resource_factory_it = m_resource_factories_map[resource_type];
+			if (resource_factory_it)
 			{
-				if (m_global_resources_map.find(resource_name) == m_global_resources_map.end())
+				auto& global_resources_it = m_global_resources_map[resource_name];
+				if (!global_resources_it)
 				{
-					auto& factory = resource_factory_it->second;
+					auto& factory = *resource_factory_it;
 
 					assert(factory.get());
 
@@ -143,7 +145,7 @@ namespace render
 					core::LogInfo("Created Resource <%s> type <%s>", resource_name_string, resource_type_string);
 
 					//Add to the globals	
-					m_global_resources_map[resource_name].reset(resource_instance);
+					m_global_resources_map.Set(resource_name, std::unique_ptr<render::Resource>(resource_instance));
 					return resource_name;
 
 				}
@@ -171,11 +173,11 @@ namespace render
 		const char* pass_name = load_context.current_xml_element->Attribute("name");
 
 		
-		auto& pass_factory_it = m_pass_factories_map.find(RenderClassType(pass_type));
-		if (pass_factory_it != m_pass_factories_map.end())
+		auto& pass_factory_it = m_pass_factories_map[RenderClassType(pass_type)];
+		if (pass_factory_it)
 		{
 			//Load the pass
-			auto& factory = pass_factory_it->second;
+			auto& factory = *pass_factory_it;
 
 			assert(factory.get());
 
@@ -310,8 +312,8 @@ namespace render
 					PassName pass_name(pass_name_string);
 					if (pass_name_string)
 					{
-						auto pass_it = m_passes_map.find(pass_name);
-						if (pass_it == m_passes_map.end())
+						auto& pass_it = m_passes_map[pass_name];
+						if (!pass_it)
 						{
 							load_context.current_xml_element = pass_element;
 							load_context.name = pass_name_string;
@@ -322,7 +324,7 @@ namespace render
 							Pass* pass = LoadPass(load_context);
 
 							//Add it to the pass map
-							m_passes_map[pass_name].reset(pass);
+							m_passes_map.Set(pass_name, std::unique_ptr<Pass>(pass));
 
 							core::LogInfo("Created Pass <%s>", pass_name_string);
 						}
@@ -720,10 +722,11 @@ namespace render
 
 	bool AddGameResource(System * system, const ResourceName& name, std::unique_ptr<Resource>&& resource)
 	{
-		if ((system->m_global_resources_map.find(name) == system->m_global_resources_map.end()) &&
-			(system->m_game_resources_map.find(name) == system->m_game_resources_map.end()))
+		auto& global_resource_it = system->m_global_resources_map[name];
+		auto& game_resource_it = system->m_game_resources_map[name];
+		if (!global_resource_it && !game_resource_it)
 		{
-			system->m_game_resources_map[name] = std::move(resource);
+			system->m_game_resources_map.Set(name, std::move(resource));
 			return true;
 		}
 		else
@@ -736,49 +739,51 @@ namespace render
 
 	bool RegisterResourceFactory(System * system, const RenderClassType& resource_type, std::unique_ptr<FactoryInterface<Resource>>& resource_factory)
 	{
-		if (system->m_resource_factories_map.find(resource_type) != system->m_resource_factories_map.end())
+		auto& it = system->m_resource_factories_map[resource_type];
+		if (it)
 		{
 			core::LogWarning("Resource <%s> has been already added, discarting new resource type", resource_type.GetValue());
 			return false;
 		}
-		system->m_resource_factories_map[resource_type] = std::move(resource_factory);
+		system->m_resource_factories_map.Set(resource_type, std::move(resource_factory));
 		return true;
 	}
 
 	bool RegisterPassFactory(System * system, const RenderClassType& pass_type, std::unique_ptr<FactoryInterface<Pass>>& pass_factory)
 	{
-		if (system->m_resource_factories_map.find(pass_type) != system->m_resource_factories_map.end())
+		auto& it = system->m_resource_factories_map[pass_type];
+		if (it)
 		{
 			core::LogWarning("Pass <%s> has been already added, discarting new pass type", pass_type.GetValue());
 			return false;
 		}
 
-		system->m_pass_factories_map[pass_type] = std::move(pass_factory);
+		system->m_pass_factories_map.Set(pass_type, std::move(pass_factory));
 		return true;
 	}
 
 	Resource * GetResource(System* system, const ResourceName& name)
 	{
-		auto it_game = system->m_game_resources_map.find(name);
-		if (it_game != system->m_game_resources_map.end())
+		auto& it_game = system->m_game_resources_map[name];
+		if (it_game)
 		{
-			return it_game->second.get();
+			return it_game->get();
 		}
 
-		auto it_global = system->m_global_resources_map.find(name);
-		if (it_global != system->m_global_resources_map.end())
+		auto& it_global = system->m_global_resources_map[name];
+		if (it_global)
 		{
-			return it_global->second.get();
+			return it_global->get();
 		}
 		return nullptr;
 	}
 
 	Pass * GetPass(System* system, const PassName& name)
 	{
-		auto it = system->m_passes_map.find(name);
-		if (it != system->m_passes_map.end())
+		auto& it = system->m_passes_map[name];
+		if (it)
 		{
-			return it->second.get();
+			return it->get();
 		}
 		return nullptr;
 	}
@@ -801,10 +806,11 @@ namespace render
 
 	bool LoadContext::AddResource(const ResourceName& name, std::unique_ptr<Resource>& resource)
 	{
-		if ((render_system->m_global_resources_map.find(name) == render_system->m_global_resources_map.end()) &&
-			(render_system->m_game_resources_map.find(name) == render_system->m_game_resources_map.end()))
+		auto& global_resource_it = render_system->m_global_resources_map[name];
+		auto& game_resource_it = render_system->m_game_resources_map[name];
+		if (!global_resource_it && !global_resource_it)
 		{
-			render_system->m_global_resources_map[name] = std::move(resource);
+			render_system->m_global_resources_map.Set(name, std::move(resource));
 			return true;
 		}
 		else

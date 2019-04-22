@@ -152,8 +152,8 @@ public:
 
 			//Create pass
 			render::ResourceMap init_resource_map;
-			init_resource_map["GameGlobal"_sh32] = CreateResourceFromHandle<render::ConstantBufferResource>(display::WeakConstantBufferHandle(m_game_constant_buffer));
-			init_resource_map["BackBuffer"_sh32] = CreateResourceFromHandle<render::RenderTargetResource>(display::GetBackBuffer(m_device));
+			init_resource_map.Set("GameGlobal"_sh32, CreateResourceFromHandle<render::ConstantBufferResource>(display::WeakConstantBufferHandle(m_game_constant_buffer)));
+			init_resource_map.Set("BackBuffer"_sh32, CreateResourceFromHandle<render::RenderTargetResource>(display::GetBackBuffer(m_device)));
 
 			render::PassInfo pass_info;
 			pass_info.width = m_width;
