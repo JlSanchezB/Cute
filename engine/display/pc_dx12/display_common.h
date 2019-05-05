@@ -114,8 +114,9 @@ namespace display
 			}
 		}
 
-		~GraphicDescriptorHandlePool()
+		void Destroy()
 		{
+			GraphicHandlePool<HANDLE>::Destroy();
 			DestroyHeaps();
 		}
 
@@ -150,8 +151,9 @@ namespace display
 			CreateHeap(device, heap_type, max_size * average_descriptors_per_handle);
 		}
 
-		~GraphicDescriptorHandleFreeList()
+		void Destroy()
 		{
+			GraphicHandlePool<HANDLE>::Destroy();
 			DestroyHeap();
 		}
 
@@ -607,9 +609,13 @@ namespace
 
 		core::LogError("Error reported from display <%s>", device->m_last_error_message);
 	}
-}
 
-#define SAFE_RELEASE(p) if (p) (p)->Release()
+	template<typename COM>
+	inline void SafeRelease(COM& com_ptr)
+	{
+		com_ptr.Reset();
+	}
+}
 
 template<class... Ts> struct overloaded : Ts... { using Ts::operator()...; };
 template<class... Ts> overloaded(Ts...)->overloaded<Ts...>;

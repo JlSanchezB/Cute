@@ -22,7 +22,7 @@ namespace display
 	{
 		for (auto& it : m_descriptor_heap)
 		{
-			SAFE_RELEASE(it.heap);
+			SafeRelease(it.heap);
 		}
 	}
 
@@ -47,7 +47,7 @@ namespace display
 	}
 	void DescriptorHeapFreeList::DestroyHeap()
 	{
-		SAFE_RELEASE(m_descriptor_heap);
+		SafeRelease(m_descriptor_heap);
 	}
 	void DescriptorHeapFreeList::AllocDescriptors(Block & block, uint16_t num_descriptors)
 	{
