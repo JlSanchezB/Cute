@@ -50,9 +50,9 @@ namespace job
 			//Reserve a slot at the end (we pop decrementing the end index)
 			//Maybe the ring buffer is empty, but we can handle that after
 			//At the moment we want to reserve the slot as fast as possible
-			size_t end = m_end_index.load(std::memory_order::memory_order_acquire);
+			size_t end = m_end_index.load(std::memory_order::memory_order_seq_cst);
 			end = PreviousIndex(end);
-			m_end_index.store(end, std::memory_order::memory_order_release);
+			m_end_index.store(end, std::memory_order::memory_order_seq_cst);
 
 			//Read the top index, maybe a steal had happen
 			size_t begin = m_begin_index.load(std::memory_order::memory_order_acquire);
