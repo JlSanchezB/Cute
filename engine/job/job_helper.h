@@ -101,7 +101,7 @@ namespace job
 
 			//Reserve memory as needed
 			const size_t begin_offset = position + alignment_offset;
-			buffer.SetCommitedSize(position + alignment_offset + sizeof(JOBDATA));
+			buffer.SetCommitedSize(position + alignment_offset + sizeof(JOBDATA), false);
 			void* data_ptr = reinterpret_cast<uint8_t*>(buffer.GetPtr()) + begin_offset;
 
 			//Advance position

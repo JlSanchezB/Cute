@@ -1,4 +1,5 @@
 #include <core/virtual_alloc.h>
+#include <core/log.h>
 #include <Windows.h>
 #include <stdexcept>
 
@@ -27,6 +28,7 @@ namespace core
 
 		if (return_ptr == nullptr)
 		{
+			core::LogError("Error allocating virtual memory");
 			throw std::runtime_error("Invalid virtual allocation");
 		}
 

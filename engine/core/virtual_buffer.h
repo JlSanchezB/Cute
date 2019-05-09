@@ -16,7 +16,7 @@ namespace core
 		~VirtualBuffer();
 
 		//Set the memory that needs to be commited
-		void SetCommitedSize(size_t new_size);
+		void SetCommitedSize(size_t new_size, bool free_memory = true);
 
 		//Get memory
 		void* GetPtr() const

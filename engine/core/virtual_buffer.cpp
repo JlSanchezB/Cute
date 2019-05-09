@@ -1,5 +1,6 @@
 #include "virtual_buffer.h"
 #include <core/virtual_alloc.h>
+#include <algorithm>
 
 namespace
 {
@@ -45,9 +46,14 @@ namespace core
 		VirtualFree(m_memory_base, 0, FreeFlags::Release);
 	}
 
-	void VirtualBuffer::SetCommitedSize(size_t new_size)
+	void VirtualBuffer::SetCommitedSize(size_t new_size, bool free_memory)
 	{
 		size_t page_size = GetPageSize();
+
+		if (!free_memory)
+		{
+			new_size = std::max(new_size, m_memory_commited);
+		}
 
 		//Check if the new size means new pages to be commited or released
 		size_t page_index = calculate_page(m_memory_commited, page_size);
