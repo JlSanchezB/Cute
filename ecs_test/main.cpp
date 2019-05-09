@@ -767,7 +767,7 @@ public:
 				//Avoid lions
 				const auto& lion_influence_zone_bitset = GridZone::CalculateInfluence(position_gazelle.position.x, position_gazelle.position.y, game->m_gazelle_lion_avoid_max_distance);
 
-				ecs::Process<GameDatabase, const LionComponent, LionStateComponent, const PositionComponent>([&](const auto& instance_iterator_b, const LionComponent& lion, LionStateComponent& lion_state, const PositionComponent& position_lion)
+				ecs::Process<GameDatabase, const LionComponent, const PositionComponent>([&](const auto& instance_iterator_b, const LionComponent& lion, const PositionComponent& position_lion)
 				{
 					glm::vec2 lion_position = position_lion.position;
 					glm::vec2 lion_direction = position_lion.GetDirection();
