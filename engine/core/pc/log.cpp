@@ -78,6 +78,8 @@ namespace
 				//Start again with the first slot
 				top_slot = reinterpret_cast<LogSlot*>(&g_log_buffer[0]);
 				free_space = top_slot->size;
+				g_top_log_slot = 0;
+				next_slot = g_top_log_slot + sizeof(LogSlot) + top_slot->size;
 				continue;
 			}
 
