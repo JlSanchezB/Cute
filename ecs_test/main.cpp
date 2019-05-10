@@ -85,14 +85,21 @@ public:
 
 struct ZoneDescriptor
 {
-
+#ifndef _DEBUG
 	static constexpr uint16_t side_count = 12;
 	static constexpr float world_top = 4.f;
 	static constexpr float world_bottom = -4.f;
 	static constexpr float world_left = -4.f;
 	static constexpr float world_right = 4.f;
 	static constexpr float object_zero_zone_max_size = 0.035f;
-
+#else
+	static constexpr uint16_t side_count = 8;
+	static constexpr float world_top = 1.f;
+	static constexpr float world_bottom = -1.f;
+	static constexpr float world_left = -1.f;
+	static constexpr float world_right = 1.f;
+	static constexpr float object_zero_zone_max_size = 0.035f;
+#endif
 };
 
 using GridZone = ecs::GridOneLevel<ZoneDescriptor>;
