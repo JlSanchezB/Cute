@@ -60,6 +60,9 @@ namespace ecs
 		//Alloc indirection index spin lock mutex
 		core::SpinLockMutex m_indirection_instance_spinlock_mutex;
 
+		//Spinlock mutex for alloc instances, they need to be serialize
+		core::SpinLockMutex m_alloc_instance_spinlock_mutex;
+
 		//List of indirection instance indexes
 		std::vector<InternalInstanceIndex> m_indirection_instance_table;
 
@@ -113,6 +116,8 @@ namespace ecs
 
 		InstanceIndexType GetNumInstances(ZoneType zone_index, EntityTypeType entity_type_index) const
 		{
+			core::SpinLockMutexGuard component_access(m_components_spinlock_mutex[entity_type_index + zone_index * m_num_entity_types]);
+
 			const size_t index = entity_type_index + zone_index * m_num_entity_types;
 
 			return static_cast<InstanceIndexType>(m_num_instances[index]);
@@ -144,8 +149,8 @@ namespace ecs
 
 				if (component_container.GetPtr())
 				{
-					//Grow the size
-					component_container.SetCommitedSize(GetNumInstances(zone_index, entity_type_index) * m_components[i].size);
+					//Grow the size, instance_index is the index of the last instance in the container
+					component_container.SetCommitedSize((instance_index + 1) * m_components[i].size);
 				}
 			}
 
@@ -386,6 +391,8 @@ namespace ecs
 
 		InstanceIndirectionIndexType AllocInstance(Database * database, ZoneType zone_index, EntityTypeType entity_type_index)
 		{
+			core::SpinLockMutexGuard alloc_instance_guard(database->m_alloc_instance_spinlock_mutex);
+
 			//Alloc component data for this instance and create internal_instance_index
 			InternalInstanceIndex internal_index { zone_index, entity_type_index, database->AllocInstance(zone_index, entity_type_index)};
 
