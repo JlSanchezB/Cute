@@ -100,11 +100,11 @@ public:
 struct ZoneDescriptor
 {
 #ifndef _DEBUG
-	static constexpr uint16_t side_count = 12;
-	static constexpr float world_top = 4.f;
-	static constexpr float world_bottom = -4.f;
-	static constexpr float world_left = -4.f;
-	static constexpr float world_right = 4.f;
+	static constexpr uint16_t side_count = 24;
+	static constexpr float world_top = 8.f;
+	static constexpr float world_bottom = -8.f;
+	static constexpr float world_left = -8.f;
+	static constexpr float world_right = 8.f;
 	static constexpr float object_zero_zone_max_size = 0.035f;
 #else
 	static constexpr uint16_t side_count = 8;
@@ -363,11 +363,11 @@ public:
 	//Camera info
 	float m_camera_position[2] = { 0.f };
 	float m_camera_zoom = 1.f;
-	float m_camera_move_speed = 1.5f;
+	float m_camera_move_speed = 2.5f;
 	float m_camera_zoom_speed = 2.5f;
 	float m_camera_zoom_velocity = 0.f;
 	float m_camera_position_velocity[2] = { 0.f };
-	float m_camera_friction = 4.f;
+	float m_camera_friction = 3.0f;
 
 	//Solid render priority
 	render::Priority m_solid_render_priority;
@@ -1288,19 +1288,19 @@ public:
 				}
 				if (GetInputSlotState(platform::InputSlot::Right))
 				{
-					m_camera_position_velocity[0] += m_camera_move_speed * elapsed_time * m_camera_zoom;
+					m_camera_position_velocity[0] += m_camera_move_speed * elapsed_time / m_camera_zoom;
 				}
 				if (GetInputSlotState(platform::InputSlot::Left))
 				{
-					m_camera_position_velocity[0] -= m_camera_move_speed * elapsed_time * m_camera_zoom;
+					m_camera_position_velocity[0] -= m_camera_move_speed * elapsed_time / m_camera_zoom;
 				}
 				if (GetInputSlotState(platform::InputSlot::Down))
 				{
-					m_camera_position_velocity[1] -= m_camera_move_speed * elapsed_time * m_camera_zoom;
+					m_camera_position_velocity[1] -= m_camera_move_speed * elapsed_time / m_camera_zoom;
 				}
 				if (GetInputSlotState(platform::InputSlot::Up))
 				{
-					m_camera_position_velocity[1] += m_camera_move_speed * elapsed_time * m_camera_zoom;
+					m_camera_position_velocity[1] += m_camera_move_speed * elapsed_time / m_camera_zoom;
 				}
 
 				//Adjust aspect ratio
