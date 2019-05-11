@@ -118,6 +118,67 @@ struct ZoneDescriptor
 
 using GridZone = ecs::GridOneLevel<ZoneDescriptor>;
 
+//Helper for control the size of the entities
+class EntitySize
+{
+public:
+	float GetSize() const
+	{
+		return m_size.load(std::memory_order_acquire);
+	}
+
+	//Try to add value from the size, returns what can be able to consume
+	float Add(float value)
+	{
+		float size = m_size.load(std::memory_order_acquire);
+		float new_size = std::max(0.f, size + value);
+
+		//Try set the value
+		while (!m_size.compare_exchange_strong(size, new_size, std::memory_order_release))
+		{
+			//Not able to set it
+			//Recalculate with size calculated
+			new_size = std::max(0.f, size - value);
+		}
+
+		return new_size;
+	};
+
+	//Set
+	void Set(float value)
+	{
+		m_size.store(value, std::memory_order_release);
+	}
+
+	EntitySize(float init_size)
+	{
+		m_size.store(init_size, std::memory_order_release);
+	}
+
+	//It is going to live in a component, copies and move only during tick of the database, so it is safe
+	EntitySize(const EntitySize& in)
+	{
+		m_size.store(in.m_size.load());
+	}
+	EntitySize(EntitySize&& in)
+	{
+		m_size.store(in.m_size.load());
+	}
+	EntitySize operator=(const EntitySize& in)
+	{
+		m_size.store(in.m_size.load());
+		return *this;
+	}
+	EntitySize operator=(EntitySize&& in)
+	{
+		m_size.store(in.m_size.load());
+		return *this;
+	}
+private:
+	std::atomic<float> m_size;
+};
+
+
 struct PositionComponent
 {
 	glm::vec2 position;
@@ -153,7 +214,7 @@ struct VelocityComponent
 //State, write/read component
 struct GrassStateComponent
 {
-	float size;
+	EntitySize size;
 	bool stop_growing;
 
 	GrassStateComponent(float _size) : size(_size), stop_growing(false)
@@ -540,7 +601,7 @@ public:
 		{
 			float distance = glm::length(position - position_grass.position);
 
-			if (distance <= grass.size)
+			if (distance <= grass.size.GetSize())
 			{
 				//Inside
 				inside = true;
@@ -618,9 +679,9 @@ public:
 		ecs::AddJobs<GameDatabase, const GrassComponent, GrassStateComponent, PositionComponent>(m_job_system, g_UpdateFinishedFence, m_update_job_allocator, 64,
 			[](GrassJobData* job_data, const auto& instance_iterator, const GrassComponent& grass, GrassStateComponent& grass_state, PositionComponent& position)
 		{
-			if (!grass_state.stop_growing && (grass_state.size < grass.top_size))
+			if (!grass_state.stop_growing && (grass_state.size.GetSize() < grass.top_size))
 			{
-				float new_size = grass_state.size + grass.grow_speed * job_data->elapsed_time;
+				float new_size = grass_state.size.Add(grass.grow_speed * job_data->elapsed_time);
 				glm::vec2 grass_position = position.position;
 
 				//Calculate zone bitset based of the range
@@ -633,7 +694,7 @@ public:
 					if (instance_iterator_b != instance_iterator)
 					{
 						float distance = glm::length(grass_position - position_b.position);
-						if (distance <= (new_size + grass_state_b.size))
+						if (distance <= (new_size + grass_state_b.size.GetSize()))
 						{
 							collides = true;
 						}
@@ -644,11 +705,6 @@ public:
 				{
 					//It is dead, it is not going to grow more, just set the dead space to the current size
 					grass_state.stop_growing = true;
-				}
-				else
-				{
-					//Grow
-					grass_state.size = std::fmin(new_size, grass.top_size);
 				}
 			}
 
@@ -699,29 +755,28 @@ public:
 					glm::vec2 grass_position = position_grass.position;
 
 					float distance = glm::length(grass_position - gazelle_position);
-
-					if (distance < (gazelle_state.size + grass_state.size))
+					float old_grass_size = grass_state.size.GetSize();
+					if (distance < (gazelle_state.size + old_grass_size))
 					{
-						//Eats all the grass
-						if (grass_state.size <= eaten * game->m_gazelle_food_grow_ratio)
+						//Eats the grass
+						float new_grass_size = grass_state.size.Add(-eaten * game->m_gazelle_food_grow_ratio);
+						if (new_grass_size == 0.f)
 						{
-							//Grow 
-							gazelle_state.size += grass_state.size / game->m_gazelle_food_grow_ratio;
+							//Grow what was able to eat 
+							gazelle_state.size += old_grass_size / game->m_gazelle_food_grow_ratio;
 
 
 							//Kill grass
-							grass_state.size = 0.f;
 							instance_iterator_b.Dealloc();
 						}
 						else
 						{
 							gazelle_state.size += eaten;
-							grass_state.size -= eaten * game->m_gazelle_food_grow_ratio;
 						}
 					}
 					if (distance < game->m_gazelle_looking_max_distance)
 					{
-						float target_rate = powf(grass_state.size, gazelle.size_distance_rate) / (distance + 0.0001f);
+						float target_rate = powf(grass_state.size.GetSize(), gazelle.size_distance_rate) / (distance + 0.0001f);
 
 						if (target_rate > max_target_size)
 						{
@@ -1329,9 +1384,10 @@ public:
 				[](JobData* job_data, const auto& instance_iterator, const PositionComponent& position, const GrassStateComponent& grass)
 			{
 				auto& buffer = job_data->game->m_parallel_instance_buffer[0].Get();
-				if (job_data->game->IsInside(job_data->borders, position.position.x, position.position.y, grass.size))
+				float size = grass.size.GetSize();
+				if (job_data->game->IsInside(job_data->borders, position.position.x, position.position.y, size))
 				{
-					buffer.emplace_back(position.position.x, position.position.y, position.angle, grass.size);
+					buffer.emplace_back(position.position.x, position.position.y, position.angle, size);
 				}
 			}, job_data, zone_bitset, &g_mp_PrepareRenderToken);
 
