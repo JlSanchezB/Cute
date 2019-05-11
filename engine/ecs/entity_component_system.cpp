@@ -293,6 +293,9 @@ namespace ecs
 
 		InstanceIndirectionIndexType& GetIndirectionIndex(ZoneType zone_index, EntityTypeType entity_type_index, InstanceIndexType instance_index)
 		{
+			//Can not happen at the same time that an allocation because maybe the buffers are not correct
+			core::SpinLockMutexGuard alloc_instance_guard(m_alloc_instance_spinlock_mutex);
+
 			InternalInstanceIndex internal_index;
 			internal_index.zone_index = zone_index;
 			internal_index.entity_type_index = entity_type_index;

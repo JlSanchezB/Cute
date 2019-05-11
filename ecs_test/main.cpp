@@ -45,6 +45,20 @@ MICROPROFILE_DEFINE(LionToken, "Main", "Lion", 0xFFFFAAAA);
 MICROPROFILE_DEFINE(MoveToken, "Main", "Move", 0xFFFFAAAA);
 MICROPROFILE_DEFINE(PrepareRenderToken, "Main", "PrepareRender", 0xFFFFAAAA);
 
+namespace
+{
+	glm::vec2 safe_normalize(const glm::vec2& in)
+	{
+		if (glm::length2(in) > 0.00001f)
+		{
+			return glm::normalize(in);
+		}
+		else
+		{
+			return glm::vec2(0.f, 1.f);
+		}
+	}
+}
 
 class RandomEventsGenerator
 {
@@ -754,7 +768,7 @@ public:
 							}
 							else
 							{
-								response = glm::normalize(difference);
+								response = safe_normalize(difference);
 							}
 
 							//Collision
@@ -777,8 +791,8 @@ public:
 
 					if (distance < game->m_gazelle_lion_avoid_max_distance)
 					{
-						glm::vec2 normalize_difference = glm::normalize(difference);
-						glm::vec2 normalize_lion_direction = glm::normalize(lion_direction);
+						glm::vec2 normalize_difference = safe_normalize(difference);
+						glm::vec2 normalize_lion_direction = safe_normalize(lion_direction);
 
 						float dot_lion_gazelle = glm::dot(normalize_difference, normalize_lion_direction);
 
@@ -788,7 +802,7 @@ public:
 						float worried_factor_close = 0.5f * distance_factor;
 
 						//Reaction
-						glm::vec2 response_front = glm::normalize(normalize_difference - dot_lion_gazelle * normalize_lion_direction);
+						glm::vec2 response_front = safe_normalize(normalize_difference - dot_lion_gazelle * normalize_lion_direction);
 						glm::vec2 response = response_front * worried_factor_front + normalize_difference * worried_factor_close;
 						response *= game->m_gazelle_avoiding_lion_speed * job_data->elapsed_time;
 
@@ -903,7 +917,7 @@ public:
 				}
 				else if (distance < game->m_lion_target_attack_max_distance)
 				{
-					float direction_target = std::clamp(8.f * glm::dot(glm::normalize((position_gazelle.position - lion_position)),
+					float direction_target = std::clamp(8.f * glm::dot(safe_normalize((position_gazelle.position - lion_position)),
 						lion_direction), 0.f, 1.f);
 					float size_distance_rate = powf(gazelle_state.size, lion.size_distance_rate) / (distance + 0.0001f);
 
@@ -928,7 +942,7 @@ public:
 				else
 				{
 					//Attacking, orientate to target
-					float angle = glm::orientedAngle(glm::normalize(target - lion_position), lion_direction);
+					float angle = glm::orientedAngle(safe_normalize(target - lion_position), lion_direction);
 
 					velocity.AddAngleVelocity(-angle * game->m_lion_attack_rotation_speed * elapsed_time);
 					velocity.AddLinealVelocity(lion_direction * game->m_lion_attack_speed * elapsed_time);
