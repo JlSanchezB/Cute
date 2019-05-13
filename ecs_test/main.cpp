@@ -150,6 +150,13 @@ public:
 		m_size.store(value, std::memory_order_release);
 	}
 
+	//Kill, return if was able to kill it
+	bool Kill(float& size)
+	{
+		size = m_size.load(std::memory_order_acquire);
+		return m_size.compare_exchange_strong(size, 0.f, std::memory_order_release);
+	}
+
 	EntitySize(float init_size)
 	{
 		m_size.store(init_size, std::memory_order_release);
@@ -236,7 +243,7 @@ struct GrassComponent
 //State, write/read component
 struct GazelleStateComponent
 {
-	float size;
+	EntitySize size;
 
 	GazelleStateComponent(float _size) : size(_size)
 	{
@@ -737,7 +744,7 @@ public:
 
 			glm::vec2 gazelle_position = position_gazelle.position;
 
-			if (gazelle_state.size < gazelle.repro_size)
+			if (gazelle_state.size.GetSize() < gazelle.repro_size)
 			{
 				//Calculate zone bitset based of the range
 				const auto& grass_influence_zone_bitset = GridZone::CalculateInfluence(position_gazelle.position.x, position_gazelle.position.y, game->m_gazelle_looking_max_distance);
@@ -756,14 +763,14 @@ public:
 
 					float distance = glm::length(grass_position - gazelle_position);
 					float old_grass_size = grass_state.size.GetSize();
-					if (distance < (gazelle_state.size + old_grass_size))
+					if (distance < (gazelle_state.size.GetSize() + old_grass_size))
 					{
 						//Eats the grass
 						float new_grass_size = grass_state.size.Add(-eaten * game->m_gazelle_food_grow_ratio);
 						if (new_grass_size == 0.f)
 						{
 							//Grow what was able to eat 
-							gazelle_state.size += old_grass_size / game->m_gazelle_food_grow_ratio;
+							gazelle_state.size.Add(old_grass_size / game->m_gazelle_food_grow_ratio);
 
 
 							//Kill grass
@@ -771,7 +778,7 @@ public:
 						}
 						else
 						{
-							gazelle_state.size += eaten;
+							gazelle_state.size.Add(eaten);
 						}
 					}
 					if (distance < game->m_gazelle_looking_max_distance)
@@ -802,7 +809,7 @@ public:
 				velocity.AddLinealVelocity(target_velocity);
 
 				//Check collision
-				const auto& collision_influence_zone_bitset = GridZone::CalculateInfluence(position_gazelle.position.x, position_gazelle.position.y, gazelle_state.size + game->m_gazelle_min_distance);
+				const auto& collision_influence_zone_bitset = GridZone::CalculateInfluence(position_gazelle.position.x, position_gazelle.position.y, gazelle_state.size.GetSize() + game->m_gazelle_min_distance);
 
 				ecs::Process<GameDatabase, const GazelleComponent, GazelleStateComponent, const PositionComponent>([&](const auto& instance_iterator_b, const GazelleComponent& gazelle_b, GazelleStateComponent& gazelle_state_b, const PositionComponent& position_gazelle_b)
 				{
@@ -813,7 +820,7 @@ public:
 						glm::vec2 difference = (gazelle_position_b - gazelle_position);
 						float distance = glm::length(difference);
 
-						float inside = distance - (gazelle_state.size + gazelle_state_b.size + game->m_gazelle_min_distance);
+						float inside = distance - (gazelle_state.size.GetSize() + gazelle_state_b.size.GetSize() + game->m_gazelle_min_distance);
 						if (inside < 0.f)
 						{
 							glm::vec2 response;
@@ -876,7 +883,7 @@ public:
 					glm::vec2 offset = glm::rotate(glm::vec2(0.005f, 0.f), game->Random(0.f, glm::two_pi<float>()));
 					glm::vec2 new_position = gazelle_position + offset;
 
-					game->CreateGazelle(new_position, gazelle_state.size / static_cast<float>(game->m_gazelle_num_repro));
+					game->CreateGazelle(new_position, gazelle_state.size.GetSize() / static_cast<float>(game->m_gazelle_num_repro));
 				}
 			}
 
@@ -962,19 +969,22 @@ public:
 			{
 				float distance = glm::length(position_gazelle.position - lion_position);
 
-				if (distance < (gazelle_state.size + lion_state.size))
+				if (distance < (gazelle_state.size.GetSize() + lion_state.size))
 				{
-					//Eats the gazelle
-					instance_iterator_b.Dealloc();
+					//Eats the gazelle (try to kill it, maybe there is another lion that killed it before)
+					float gazelle_size_during_killing;
+					if (gazelle_state.size.Kill(gazelle_size_during_killing))
+					{
+						instance_iterator_b.Dealloc();
 
-					lion_state.size += gazelle_state.size * lion.grow_speed;
-					gazelle_state.size = 0.f;
+						lion_state.size += gazelle_size_during_killing * lion.grow_speed;
+					}
 				}
 				else if (distance < game->m_lion_target_attack_max_distance)
 				{
 					float direction_target = std::clamp(8.f * glm::dot(safe_normalize((position_gazelle.position - lion_position)),
 						lion_direction), 0.f, 1.f);
-					float size_distance_rate = powf(gazelle_state.size, lion.size_distance_rate) / (distance + 0.0001f);
+					float size_distance_rate = powf(gazelle_state.size.GetSize(), lion.size_distance_rate) / (distance + 0.0001f);
 
 					float target_rate = direction_target * size_distance_rate;
 
@@ -1129,26 +1139,28 @@ public:
 				auto& gazelle_state = instance_iterator.Get<GazelleStateComponent>();
 
 				//Consume size by lenght moved
-				gazelle_state.size -= game->m_gazelle_food_moving * glm::length(velocity.lineal * elapsed_time);
+				float gazelle_size = gazelle_state.size.Add(-game->m_gazelle_food_moving * glm::length(velocity.lineal * elapsed_time));
 
-				if (gazelle_state.size < game->m_min_size)
+				if (gazelle_size < game->m_min_size)
 				{
 					//Dead, moved a lot and didn't eat
 					instance_iterator.Dealloc();
 				}
 
-				size = gazelle_state.size;
+				size = gazelle_size;
 			}
 
-			//Move to the new zone if needed
-			auto zone = GridZone::GetZone(position.position.x, position.position.y, size);
-			instance_iterator.Move(zone);
+			if (size > 0.f)
+			{
+				//Move to the new zone if needed
+				auto zone = GridZone::GetZone(position.position.x, position.position.y, size);
+				instance_iterator.Move(zone);
 
-			//Friction
-			float friction = glm::clamp(game->m_friction * elapsed_time, 0.f, 1.f);
-			velocity.lineal -= velocity.lineal * friction;
-			velocity.angular -= velocity.angular * friction;
-
+				//Friction
+				float friction = glm::clamp(game->m_friction * elapsed_time, 0.f, 1.f);
+				velocity.lineal -= velocity.lineal * friction;
+				velocity.angular -= velocity.angular * friction;
+			}
 
 		}, job_data, zone_bitset, &g_mp_MoveToken);
 
@@ -1384,7 +1396,7 @@ public:
 				[](JobData* job_data, const auto& instance_iterator, const PositionComponent& position, const GrassStateComponent& grass)
 			{
 				auto& buffer = job_data->game->m_parallel_instance_buffer[0].Get();
-				float size = grass.size.GetSize();
+				const float size = grass.size.GetSize();
 				if (job_data->game->IsInside(job_data->borders, position.position.x, position.position.y, size))
 				{
 					buffer.emplace_back(position.position.x, position.position.y, position.angle, size);
@@ -1395,10 +1407,11 @@ public:
 				[](JobData* job_data, const auto& instance_iterator, const PositionComponent& position, const GazelleStateComponent& gazelle)
 			{
 				auto& buffer = job_data->game->m_parallel_instance_buffer[1].Get();
+				const float size = gazelle.size.GetSize();
 				//Add to the instance buffer the instance
-				if (job_data->game->IsInside(job_data->borders, position.position.x, position.position.y, gazelle.size))
+				if (job_data->game->IsInside(job_data->borders, position.position.x, position.position.y, size))
 				{
-					buffer.emplace_back(position.position.x, position.position.y, position.angle, gazelle.size);
+					buffer.emplace_back(position.position.x, position.position.y, position.angle, size);
 				}
 			}, job_data, zone_bitset, &g_mp_PrepareRenderToken);
 
