@@ -601,7 +601,7 @@ public:
 	//Check if there is a grass in the current position
 	bool FreeGrassPosition(const glm::vec2& position)
 	{
-		const auto& zone_bitset = GridZone::All();
+		const auto& zone_bitset = GridZone::CalculateInfluence(position.x, position.y, 0.0001f);
 
 		bool inside = false;
 		ecs::Process<GameDatabase, const GrassStateComponent, const PositionComponent>([&](const auto& instance_iterator, const GrassStateComponent& grass, const PositionComponent& position_grass)
@@ -1040,6 +1040,59 @@ public:
 		}, job_data, zone_bitset, &g_mp_LionToken);
 	}
 
+	void NewEntities(float elapsed_time)
+	{
+		{
+			MICROPROFILE_SCOPEI("ECSTest", "NewGrass", 0xFFFF77FF);
+			//Calculate new grass
+			const size_t grass_count_to_create = m_grass_creation_events.Events(m_random_generator, elapsed_time);
+
+			for (size_t i = 0; i < grass_count_to_create; ++i)
+			{
+				glm::vec2 position(m_random_position_x(m_random_generator), m_random_position_y(m_random_generator));
+
+				if (!FreeGrassPosition(position))
+				{
+					//Calculate zone, already based to the bigger size
+					float top_size = Random(m_min_grass_top_size, m_max_grass_top_size);
+					float grow_speed = Random(m_min_grass_grow_speed, m_max_grass_grow_speed);
+					auto zone = GridZone::GetZone(position.x, position.y, top_size);
+					ecs::AllocInstance<GameDatabase, GrassEntityType>(zone)
+						.Init<PositionComponent>(position.x, position.y, 0.f)
+						.Init<GrassComponent>(grow_speed, top_size)
+						.Init<GrassStateComponent>(0.f);
+				}
+			}
+		}
+
+		{
+			MICROPROFILE_SCOPEI("ECSTest", "NewGazelles", 0xFFFF77FF);
+			//Calculate new lions
+			const size_t gazelle_count_to_create = m_gazelle_creation_events.Events(m_random_generator, elapsed_time);
+
+			for (size_t i = 0; i < gazelle_count_to_create; ++i)
+			{
+				glm::vec2 position(m_random_position_x(m_random_generator), m_random_position_y(m_random_generator));
+
+				CreateGazelle(position);
+			}
+		}
+
+		{
+			MICROPROFILE_SCOPEI("ECSTest", "NewLions", 0xFFFF77FF);
+			//Calculate new lions
+			const size_t lions_count_to_create = m_lion_creation_events.Events(m_random_generator, elapsed_time);
+
+			for (size_t i = 0; i < lions_count_to_create; ++i)
+			{
+				glm::vec2 position(m_random_position_x(m_random_generator), m_random_position_y(m_random_generator));
+
+				CreateLion(position);
+			}
+		}
+
+	}
+
 	//Jobs data
 	struct JobData
 	{
@@ -1068,6 +1121,13 @@ public:
 		JobData* ecs_data = reinterpret_cast<JobData*>(data);
 
 		ecs_data->game->LionUpdate(ecs_data->elapsed_time);
+	}
+
+	static void NewEntitiesJob(void* data)
+	{
+		JobData* ecs_data = reinterpret_cast<JobData*>(data);
+
+		ecs_data->game->NewEntities(ecs_data->elapsed_time);
 	}
 
 	void MoveEntities(float elapsed_time)
@@ -1183,6 +1243,7 @@ public:
 			job::AddJob(m_job_system, GrassUpdateJob, &job_data, g_UpdateFinishedFence);
 			job::AddJob(m_job_system, GazelleUpdateJob, &job_data, g_UpdateFinishedFence);
 			job::AddJob(m_job_system, LionUpdateJob, &job_data, g_UpdateFinishedFence);
+			job::AddJob(m_job_system, NewEntitiesJob, &job_data, g_UpdateFinishedFence);
 
 			//Wait in the fence
 			job::Wait(m_job_system, g_UpdateFinishedFence);
@@ -1193,55 +1254,6 @@ public:
 
 			//Wait in the fence
 			job::Wait(m_job_system, g_MovedFinishedFence);	
-
-			{
-				MICROPROFILE_SCOPEI("ECSTest", "NewGrass", 0xFFFF77FF);
-				//Calculate new grass
-				const size_t grass_count_to_create = m_grass_creation_events.Events(m_random_generator, elapsed_time);
-
-				for (size_t i = 0; i < grass_count_to_create; ++i)
-				{
-					glm::vec2 position(m_random_position_x(m_random_generator), m_random_position_y(m_random_generator));
-
-					if (!FreeGrassPosition(position))
-					{
-						//Calculate zone, already based to the bigger size
-						float top_size = Random(m_min_grass_top_size, m_max_grass_top_size);
-						float grow_speed = Random(m_min_grass_grow_speed, m_max_grass_grow_speed);
-						auto zone = GridZone::GetZone(position.x, position.y, top_size);
-						ecs::AllocInstance<GameDatabase, GrassEntityType>(zone)
-							.Init<PositionComponent>(position.x, position.y, 0.f)
-							.Init<GrassComponent>(grow_speed, top_size)
-							.Init<GrassStateComponent>(0.f);
-					}
-				}
-			}
-
-			{
-				MICROPROFILE_SCOPEI("ECSTest", "NewGazelles", 0xFFFF77FF);
-				//Calculate new lions
-				const size_t gazelle_count_to_create = m_gazelle_creation_events.Events(m_random_generator, elapsed_time);
-
-				for (size_t i = 0; i < gazelle_count_to_create; ++i)
-				{
-					glm::vec2 position(m_random_position_x(m_random_generator), m_random_position_y(m_random_generator));
-
-					CreateGazelle(position);
-				}
-			}
-
-			{
-				MICROPROFILE_SCOPEI("ECSTest", "NewLions", 0xFFFF77FF);
-				//Calculate new lions
-				const size_t lions_count_to_create = m_lion_creation_events.Events(m_random_generator, elapsed_time);
-
-				for (size_t i = 0; i < lions_count_to_create; ++i)
-				{
-					glm::vec2 position(m_random_position_x(m_random_generator), m_random_position_y(m_random_generator));
-
-					CreateLion(position);
-				}
-			}
 		}
 
 		//Recreate the descriptor file and context if requested
