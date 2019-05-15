@@ -18,6 +18,12 @@ namespace core
 		//Set the memory that needs to be commited
 		void SetCommitedSize(size_t new_size, bool free_memory = true);
 
+		//Get Commited Size
+		size_t GetCommitedSize() const
+		{
+			return m_memory_commited;
+		}
+
 		//Get memory
 		void* GetPtr() const
 		{

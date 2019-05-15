@@ -20,17 +20,17 @@ namespace core
 		class Accesor
 		{
 		public:
-			const DATA* operator->()  const
+			DATA* operator->()
 			{
 				return m_data;
 			}
 
-			const DATA& operator*()  const&
+			DATA& operator*()&
 			{
 				return *m_data;
 			}
 
-			const DATA&& operator*()  const&&
+			DATA&& operator*()&&
 			{
 				return *m_data;
 			}
@@ -40,19 +40,32 @@ namespace core
 				return m_data != nullptr;
 			}
 
-			Accesor(const DATA* data) : m_data(data)
+			Accesor(DATA* data) : m_data(data)
 			{
 			}
 
 		private:
-			const DATA* m_data;
+			DATA* m_data;
 		};
 
 		//Set data
-		void Set(const KEY& key, DATA&& data);
+		template<typename SOURCE_DATA>
+		Accesor<DATA> Set(const KEY& key, SOURCE_DATA&& data);
 
 		//Access data
-		const Accesor<DATA> operator[](const KEY& key) const;
+		Accesor<DATA> Get(const KEY& key);
+		Accesor<const DATA> Get(const KEY& key) const;
+
+		Accesor<const DATA> operator[](const KEY& key) const
+		{
+			return Get(key);
+		}
+
+		Accesor<DATA> operator[](const KEY& key)
+		{
+			return Get(key);
+		}
+
 
 		//Iterators begin and end
 		auto begin() const
@@ -97,7 +110,8 @@ namespace core
 	}
 
 	template<typename KEY, typename DATA>
-	inline void FastMap<KEY, DATA>::Set(const KEY& key, DATA&& data)
+	template<typename SOURCE_DATA>
+	inline FastMap<KEY, DATA>::Accesor<DATA> FastMap<KEY, DATA>::Set(const KEY& key, SOURCE_DATA&& data)
 	{
 		size_t index = GetIndex(key);
 
@@ -105,16 +119,33 @@ namespace core
 		{
 			m_key.push_back(key);
 			m_data.emplace_back(std::forward<DATA>(data));
-
+			return Accesor<DATA>(&m_data.back());
 		}
 		else
 		{
 			m_data[index] = std::forward<DATA>(data);
+			return Accesor<DATA>(&m_data[index]);
 		}
 	}
 
 	template<typename KEY, typename DATA>
-	inline const FastMap<KEY, DATA>::Accesor<DATA> FastMap<KEY, DATA>::operator[](const KEY& key) const
+	inline FastMap<KEY, DATA>::Accesor<const DATA> FastMap<KEY, DATA>::Get(const KEY& key) const
+	{
+		size_t index = GetIndex(key);
+
+		if (index != kInvalid)
+		{
+			return Accesor<const DATA>(&m_data[index]);
+		}
+		else
+		{
+			//Invalid
+			return Accesor<const DATA>(nullptr);
+		}
+	}
+
+	template<typename KEY, typename DATA>
+	inline FastMap<KEY, DATA>::Accesor<DATA> FastMap<KEY, DATA>::Get(const KEY& key)
 	{
 		size_t index = GetIndex(key);
 

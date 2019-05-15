@@ -3,6 +3,8 @@
 #include <string>
 #include <stdexcept>
 #include "log.h"
+#include "fast_map.h"
+#include "virtual_buffer.h"
 
 namespace core
 {
@@ -10,29 +12,31 @@ namespace core
 	//String hash maps for finding the string value from a hash, only working in debug
 	struct NamespaceStringHashMap
 	{
-		std::unordered_map<uint16_t, std::string> string_hash_map_16;
-		std::unordered_map<uint32_t, std::string> string_hash_map_32;
-		std::unordered_map<uint64_t, std::string> string_hash_map_64;
+		core::FastMap<uint16_t, const char*> string_hash_map_16;
+		core::FastMap<uint32_t, const char*> string_hash_map_32;
+		core::FastMap<uint64_t, const char*> string_hash_map_64;
 		
 		template<typename TYPE>
 		auto& GetStringHashMap();
 
 		template<>
-		auto& GetStringHashMap<uint16_t>() { return string_hash_map_16;};
+		auto& GetStringHashMap<uint16_t>(){ return string_hash_map_16;};
 
 		template<>
-		auto& GetStringHashMap<uint32_t>() { return string_hash_map_32; };
+		auto& GetStringHashMap<uint32_t>(){ return string_hash_map_32; };
 
 		template<>
-		auto& GetStringHashMap<uint64_t>() { return string_hash_map_64; };
+		auto& GetStringHashMap<uint64_t>(){ return string_hash_map_64; };
 	};
 
 	//Global map for each namespace
-	std::unordered_map<uint64_t, NamespaceStringHashMap>* g_namespaces_string_hash_table = nullptr;
+	core::FastMap<uint64_t, NamespaceStringHashMap>* g_namespaces_string_hash_table = nullptr;
+
+	core::VirtualBufferInitied<1024 * 1024> g_string_buffer;
 
 	void CreateStringHashMap()
 	{
-		g_namespaces_string_hash_table = new std::unordered_map<uint64_t, NamespaceStringHashMap>;
+		g_namespaces_string_hash_table = new core::FastMap<uint64_t, NamespaceStringHashMap>;
 	}
 	void DestroyStringHashMap()
 	{
@@ -46,15 +50,13 @@ namespace core
 	{
 		if (g_namespaces_string_hash_table)
 		{
-			auto namespace_find = g_namespaces_string_hash_table->find(namespace_hash);
-			if (namespace_find != g_namespaces_string_hash_table->end())
+			auto& namespace_find = g_namespaces_string_hash_table->Get(namespace_hash);
+			if (namespace_find)
 			{
-				auto& namespace_string_hash_map = namespace_find->second;
-
-				auto& string_hash_find = namespace_string_hash_map.GetStringHashMap<TYPE>().find(string_hash);
-				if (string_hash_find != namespace_string_hash_map.GetStringHashMap<TYPE>().end())
+				auto string_hash_find = namespace_find->GetStringHashMap<TYPE>().Get(string_hash);
+				if (string_hash_find)
 				{
-					return string_hash_find->second.c_str();
+					return *string_hash_find;
 				}
 				else
 				{
@@ -92,13 +94,19 @@ namespace core
 	{
 		if (g_namespaces_string_hash_table)
 		{
-			auto& namespace_string_hash_map = (*g_namespaces_string_hash_table)[namespace_hash];
+			auto namespace_string_hash_map = g_namespaces_string_hash_table->Get(namespace_hash);
 
-			auto string_hash_find = namespace_string_hash_map.GetStringHashMap<TYPE>().find(string_hash);
-			if (string_hash_find != namespace_string_hash_map.GetStringHashMap<TYPE>().end())
+			if (!namespace_string_hash_map)
+			{
+				//Create namespace
+				namespace_string_hash_map = g_namespaces_string_hash_table->Set(namespace_hash, NamespaceStringHashMap());
+			}
+
+			auto string_hash_find = namespace_string_hash_map->GetStringHashMap<TYPE>().Get(string_hash);
+			if (string_hash_find)
 			{
 				//Check if the hash is the same
-				if (string_hash_find->second == string)
+				if (strcmp(*string_hash_find, string) == 0)
 				{
 					//Same string, all correct
 				}
@@ -106,14 +114,24 @@ namespace core
 				{
 					//Different string, that can not happen
 					//Collision detected, fatal error
-					core::LogError("Collision detected in string hashes, same hash <%i> in two values<'%s','%s'>", string_hash, string, string_hash_find->second.c_str());
+					core::LogError("Collision detected in string hashes, same hash <%i> in two values<'%s','%s'>", string_hash, string, *string_hash_find);
 					throw std::runtime_error("Collision detected in string hashes");
 				}
 			}
 			else
 			{
+				//Add string to the string table
+
+				//Increase the size of the buffer by the new string
+				size_t string_size = strlen(string);
+				char* buffer = (reinterpret_cast<char*>(g_string_buffer.GetPtr())) + g_string_buffer.GetCommitedSize();
+				g_string_buffer.SetCommitedSize(g_string_buffer.GetCommitedSize() + string_size + 1);
+
+				//Copy the string
+				strcpy_s(buffer, string_size + 1, string);
+
 				//Add the hash, all correct
-				namespace_string_hash_map.GetStringHashMap<TYPE>()[string_hash] = string;
+				namespace_string_hash_map->GetStringHashMap<TYPE>().Set(string_hash, reinterpret_cast<const char*>(buffer));
 			}
 		}
 	}
