@@ -12,9 +12,9 @@ namespace core
 	//String hash maps for finding the string value from a hash, only working in debug
 	struct NamespaceStringHashMap
 	{
-		core::FastMap<uint16_t, const char*> string_hash_map_16;
-		core::FastMap<uint32_t, const char*> string_hash_map_32;
-		core::FastMap<uint64_t, const char*> string_hash_map_64;
+		core::FastMap<uint16_t, const char*, 256> string_hash_map_16;
+		core::FastMap<uint32_t, const char*, 256> string_hash_map_32;
+		core::FastMap<uint64_t, const char*, 256> string_hash_map_64;
 		
 		template<typename TYPE>
 		auto& GetStringHashMap();
@@ -30,13 +30,13 @@ namespace core
 	};
 
 	//Global map for each namespace
-	core::FastMap<uint64_t, NamespaceStringHashMap>* g_namespaces_string_hash_table = nullptr;
+	core::FastMap<uint64_t, NamespaceStringHashMap, 16>* g_namespaces_string_hash_table = nullptr;
 
 	core::VirtualBufferInitied<1024 * 1024> g_string_buffer;
 
 	void CreateStringHashMap()
 	{
-		g_namespaces_string_hash_table = new core::FastMap<uint64_t, NamespaceStringHashMap>;
+		g_namespaces_string_hash_table = new core::FastMap<uint64_t, NamespaceStringHashMap, 16>;
 	}
 	void DestroyStringHashMap()
 	{

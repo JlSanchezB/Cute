@@ -16,10 +16,11 @@ namespace
 	template<class CONTAINER>
 	void DestroyResources(display::Device* device, CONTAINER& container)
 	{
-		for (auto& item : container)
+		container.Visit([&](auto& item)
 		{
 			item->Destroy(device);
-		}
+		});
+
 		container.clear();
 	}
 

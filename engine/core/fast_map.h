@@ -5,12 +5,13 @@
 #define FAST_MAP_h
 
 #include <vector>
-#include <optional>
+#include <array>
+
 
 namespace core
 {
 	//Lineal probe map implemetation
-	template <typename KEY, typename DATA>
+	template <typename KEY, typename DATA, size_t NUM_BUCKETS = 1>
 	class FastMap
 	{
 	public:
@@ -66,76 +67,99 @@ namespace core
 			return Get(key);
 		}
 
-
-		//Iterators begin and end
-		auto begin() const
+		//Visit
+		template<typename VISITOR>
+		void Visit(VISITOR&& visitor)
 		{
-			return m_data.begin();
-		}
-		auto end() const
-		{
-			return m_data.end();
+			for (auto& bucket : m_buckets)
+			{
+				for (auto& data : bucket.m_data)
+				{
+					visitor(data);
+				}
+			}
 		}
 
 		//Clear
 		void clear()
 		{
-			m_key.clear();
-			m_data.clear();
-		}
-
-	private:
-		//Lineal search inside a vector of keys
-		std::vector<KEY> m_key;
-		//Vector of data
-		std::vector<DATA> m_data;
-
-		size_t GetIndex(const KEY& key) const;
-		constexpr static size_t kInvalid = static_cast<size_t>(-1);
-	};
-
-	template<typename KEY, typename DATA>
-	inline size_t FastMap<KEY, DATA>::GetIndex(const KEY& key) const
-	{
-		const size_t count = m_key.size();
-		for (size_t i = 0; i < count; ++i)
-		{
-			if (m_key[i] == key)
+			for (auto& bucket : m_buckets)
 			{
-				return i;
+				bucket.m_key.clear();
+				bucket.m_data.clear();
 			}
 		}
 
-		return kInvalid;
-	}
-
-	template<typename KEY, typename DATA>
-	template<typename SOURCE_DATA>
-	inline FastMap<KEY, DATA>::Accesor<DATA> FastMap<KEY, DATA>::Set(const KEY& key, SOURCE_DATA&& data)
-	{
-		size_t index = GetIndex(key);
-
-		if (index == kInvalid)
+	private:
+		struct Bucket
 		{
-			m_key.push_back(key);
-			m_data.emplace_back(std::forward<DATA>(data));
-			return Accesor<DATA>(&m_data.back());
+			//Lineal search inside a vector of keys
+			std::vector<KEY> m_key;
+			//Vector of data
+			std::vector<DATA> m_data;
+		};
+
+		std::array<Bucket, NUM_BUCKETS> m_buckets;
+
+		std::pair<size_t,size_t> GetIndex(const KEY& key) const;
+		constexpr static size_t kInvalid = static_cast<size_t>(-1);
+	};
+
+	template<typename KEY, typename DATA, size_t NUM_BUCKETS>
+	inline std::pair<size_t, size_t> FastMap<KEY, DATA, NUM_BUCKETS>::GetIndex(const KEY& key) const
+	{
+		size_t bucket_index;
+		if constexpr (NUM_BUCKETS == 1)
+		{
+			bucket_index = 0;
 		}
 		else
 		{
-			m_data[index] = std::forward<DATA>(data);
-			return Accesor<DATA>(&m_data[index]);
+			bucket_index = key & (NUM_BUCKETS - 1);
+		}
+
+		auto& bucket = m_buckets[bucket_index];
+		const size_t count = bucket.m_key.size();
+		for (size_t i = 0; i < count; ++i)
+		{
+			if (bucket.m_key[i] == key)
+			{
+				return std::make_pair(bucket_index, i);
+			}
+		}
+
+		return std::make_pair(bucket_index, kInvalid);
+	}
+
+	template<typename KEY, typename DATA, size_t NUM_BUCKETS>
+	template<typename SOURCE_DATA>
+	inline FastMap<KEY, DATA, NUM_BUCKETS>::Accesor<DATA> FastMap<KEY, DATA, NUM_BUCKETS>::Set(const KEY& key, SOURCE_DATA&& data)
+	{
+		auto index = GetIndex(key);
+
+		if (index.second == kInvalid)
+		{
+			Bucket& bucket = m_buckets[index.first];
+			bucket.m_key.push_back(key);
+			bucket.m_data.emplace_back(std::forward<DATA>(data));
+			return Accesor<DATA>(&bucket.m_data.back());
+		}
+		else
+		{
+			Bucket& bucket = m_buckets[index.first];
+			bucket.m_data[index.first] = std::forward<DATA>(data);
+			return Accesor<DATA>(&bucket.m_data[index.second]);
 		}
 	}
 
-	template<typename KEY, typename DATA>
-	inline FastMap<KEY, DATA>::Accesor<const DATA> FastMap<KEY, DATA>::Get(const KEY& key) const
+	template<typename KEY, typename DATA, size_t NUM_BUCKETS>
+	inline FastMap<KEY, DATA, NUM_BUCKETS>::Accesor<const DATA> FastMap<KEY, DATA, NUM_BUCKETS>::Get(const KEY& key) const
 	{
-		size_t index = GetIndex(key);
+		auto index = GetIndex(key);
 
-		if (index != kInvalid)
+		if (index.second != kInvalid)
 		{
-			return Accesor<const DATA>(&m_data[index]);
+			return Accesor<const DATA>(&m_buckets[index.first].m_data[index.second]);
 		}
 		else
 		{
@@ -144,14 +168,14 @@ namespace core
 		}
 	}
 
-	template<typename KEY, typename DATA>
-	inline FastMap<KEY, DATA>::Accesor<DATA> FastMap<KEY, DATA>::Get(const KEY& key)
+	template<typename KEY, typename DATA, size_t NUM_BUCKETS>
+	inline FastMap<KEY, DATA, NUM_BUCKETS>::Accesor<DATA> FastMap<KEY, DATA, NUM_BUCKETS>::Get(const KEY& key)
 	{
-		size_t index = GetIndex(key);
+		auto index = GetIndex(key);
 
-		if (index != kInvalid)
+		if (index.second != kInvalid)
 		{
-			return Accesor<DATA>(&m_data[index]);
+			return Accesor<DATA>(&m_buckets[index.first].m_data[index.second]);
 		}
 		else
 		{
