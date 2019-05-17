@@ -15,7 +15,7 @@ namespace core
 		core::FastMap<uint16_t, const char*, 256> string_hash_map_16;
 		core::FastMap<uint32_t, const char*, 256> string_hash_map_32;
 		core::FastMap<uint64_t, const char*, 256> string_hash_map_64;
-		
+
 		template<typename TYPE>
 		auto& GetStringHashMap();
 
@@ -30,13 +30,26 @@ namespace core
 	};
 
 	//Global map for each namespace
-	core::FastMap<uint64_t, NamespaceStringHashMap, 16>* g_namespaces_string_hash_table = nullptr;
+	core::FastMap<uint64_t, NamespaceStringHashMap>* g_namespaces_string_hash_table = nullptr;
 
 	core::VirtualBufferInitied<1024 * 1024> g_string_buffer;
 
+	const char* AddString(const char* string)
+	{
+		//Increase the size of the buffer by the new string
+		size_t string_size = strlen(string);
+		char* buffer = (reinterpret_cast<char*>(g_string_buffer.GetPtr())) + g_string_buffer.GetCommitedSize();
+		g_string_buffer.SetCommitedSize(g_string_buffer.GetCommitedSize() + string_size + 1);
+
+		//Copy the string
+		strcpy_s(buffer, string_size + 1, string);
+
+		return buffer;
+	}
+
 	void CreateStringHashMap()
 	{
-		g_namespaces_string_hash_table = new core::FastMap<uint64_t, NamespaceStringHashMap, 16>;
+		g_namespaces_string_hash_table = new core::FastMap<uint64_t, NamespaceStringHashMap>;
 	}
 	void DestroyStringHashMap()
 	{
@@ -122,16 +135,9 @@ namespace core
 			{
 				//Add string to the string table
 
-				//Increase the size of the buffer by the new string
-				size_t string_size = strlen(string);
-				char* buffer = (reinterpret_cast<char*>(g_string_buffer.GetPtr())) + g_string_buffer.GetCommitedSize();
-				g_string_buffer.SetCommitedSize(g_string_buffer.GetCommitedSize() + string_size + 1);
-
-				//Copy the string
-				strcpy_s(buffer, string_size + 1, string);
 
 				//Add the hash, all correct
-				namespace_string_hash_map->GetStringHashMap<TYPE>().Set(string_hash, reinterpret_cast<const char*>(buffer));
+				namespace_string_hash_map->GetStringHashMap<TYPE>().Set(string_hash, AddString(string));
 			}
 		}
 	}
