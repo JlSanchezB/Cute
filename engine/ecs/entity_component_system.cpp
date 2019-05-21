@@ -90,6 +90,9 @@ namespace ecs
 		//List of deferred instance moves
 		std::vector< InstanceMove> m_deferred_instance_moves;
 
+		//Looked, used for detecting bad access patters
+		bool m_locked = false;
+
 		//Stats from last frames
 		DatabaseStats m_stats;
 
@@ -143,6 +146,7 @@ namespace ecs
 		//Can not be called outside the tick of the database
 		InstanceIndexType RemoveInstanceCount(ZoneType zone_index, EntityTypeType entity_type_index)
 		{
+			assert(m_locked);
 			const size_t index = entity_type_index + zone_index * m_num_entity_types;
 			return static_cast<InstanceIndexType>(--m_num_instances[index].count_created);
 		}
@@ -175,6 +179,8 @@ namespace ecs
 		//Fix all the redirections
 		void DestroyInstance(const InternalInstanceIndex& internal_instance_index, bool needs_destructor_call = true)
 		{
+			assert(m_locked);
+
 			const InstanceIndexType last_instance_index = RemoveInstanceCount(internal_instance_index.zone_index, internal_instance_index.entity_type_index);
 
 			//Check if the instance to delete is the last instance, then is nothing to do
@@ -229,6 +235,8 @@ namespace ecs
 		//Fix indirection index
 		void MoveInstance(const InternalInstanceIndex& internal_instance_index, ZoneType new_zone_index)
 		{
+			assert(m_locked);
+
 			//Get a copy, as it is going to be change after the move
 			InternalInstanceIndex old_internal_instance_index = internal_instance_index;
 
@@ -416,6 +424,8 @@ namespace ecs
 		}
 		void DeallocInstance(Database * database, InstanceIndirectionIndexType indirection_index)
 		{
+			assert(!database->m_locked);
+
 			database->m_deferred_deletes_spinlock_mutex.lock();
 
 			//Add to the deferred list
@@ -432,6 +442,8 @@ namespace ecs
 
 		void MoveZoneInstance(Database * database, InstanceIndirectionIndexType index, ZoneType new_zone_index)
 		{
+			assert(!database->m_locked);
+
 			auto internal_index = database->m_indirection_instance_table[index];
 			if (internal_index.zone_index != new_zone_index)
 			{
@@ -475,6 +487,9 @@ namespace ecs
 
 		void TickDatabase(Database* database)
 		{
+			//Lock database
+			database->m_locked = true;
+
 			//Process deletes
 			for (auto& deferred_deleted_indirection_index : database->m_deferred_instance_deletes)
 			{
@@ -515,6 +530,9 @@ namespace ecs
 			{
 				instance_count.count = instance_count.count_created;
 			}
+
+			//Unlock database
+			database->m_locked = false;
 		}
 		ZoneType GetNumZones(Database * database)
 		{
@@ -533,6 +551,7 @@ namespace ecs
 
 		void GetDatabaseStats(Database * database, DatabaseStats & stats)
 		{
+			assert(!database->m_locked);
 			stats = database->m_stats;
 		}
 	}
