@@ -25,6 +25,15 @@ namespace ecs
 		ZoneType new_zone;
 	};
 
+	struct InstanceCount
+	{
+		//Current instances in the world
+		size_t count = 0;
+		//Current instances in the world plus created
+		//Just created instances can not be access in the current frame, just after a tick in the database
+		size_t count_created = 0;
+	};
+
 	//Database
 	//Our Database will have a list of instance types
 	//Instance types depends of the combination of components added to a instance
@@ -55,7 +64,7 @@ namespace ecs
 
 		//Flat list with the number of instances for each Zone/EntityType
 		//Dimensions are <Zone, EntityType>
-		std::vector<size_t> m_num_instances;
+		std::vector<InstanceCount> m_num_instances;
 
 		//Alloc indirection index spin lock mutex
 		core::SpinLockMutex m_indirection_instance_spinlock_mutex;
@@ -114,25 +123,28 @@ namespace ecs
 			return data + internal_instance_index.instance_index * m_components[component_index].size;
 		}
 
+		//Can be called outside the tick database
 		InstanceIndexType GetNumInstances(ZoneType zone_index, EntityTypeType entity_type_index) const
 		{
 			core::SpinLockMutexGuard component_access(m_components_spinlock_mutex[entity_type_index + zone_index * m_num_entity_types]);
 
 			const size_t index = entity_type_index + zone_index * m_num_entity_types;
 
-			return static_cast<InstanceIndexType>(m_num_instances[index]);
+			return static_cast<InstanceIndexType>(m_num_instances[index].count);
 		}
 
+		//Can be called outside the tick database
 		InstanceIndexType AddInstanceCount(ZoneType zone_index, EntityTypeType entity_type_index)
 		{
 			const size_t index = entity_type_index + zone_index * m_num_entity_types;
-			return static_cast<InstanceIndexType>(m_num_instances[index]++);
+			return static_cast<InstanceIndexType>(m_num_instances[index].count_created++);
 		}
 
+		//Can not be called outside the tick of the database
 		InstanceIndexType RemoveInstanceCount(ZoneType zone_index, EntityTypeType entity_type_index)
 		{
 			const size_t index = entity_type_index + zone_index * m_num_entity_types;
-			return static_cast<InstanceIndexType>(--m_num_instances[index]);
+			return static_cast<InstanceIndexType>(--m_num_instances[index].count_created);
 		}
 
 		InstanceIndexType AllocInstance(ZoneType zone_index, EntityTypeType entity_type_index)
@@ -293,9 +305,6 @@ namespace ecs
 
 		InstanceIndirectionIndexType& GetIndirectionIndex(ZoneType zone_index, EntityTypeType entity_type_index, InstanceIndexType instance_index)
 		{
-			//Can not happen at the same time that an allocation because maybe the buffers are not correct
-			core::SpinLockMutexGuard alloc_instance_guard(m_alloc_instance_spinlock_mutex);
-
 			InternalInstanceIndex internal_index;
 			internal_index.zone_index = zone_index;
 			internal_index.entity_type_index = entity_type_index;
@@ -368,12 +377,9 @@ namespace ecs
 				}
 			}
 			
-			//Init all num of instances to zero
+			//Init all num of instances to zero, default constructor
 			database->m_num_instances.resize(database->m_num_zones * database->m_num_entity_types);
-			for (auto& num_instance : database->m_num_instances)
-			{
-				num_instance = 0;
-			}
+		
 
 			//Init mutex for access to each instance components
 			database->m_components_spinlock_mutex = std::make_unique<core::SpinLockMutex[]>(database->m_num_zones * database->m_num_entity_types);
@@ -503,6 +509,12 @@ namespace ecs
 
 			database->m_stats.num_deferred_moves = database->m_deferred_instance_moves.size();
 			database->m_deferred_instance_moves.clear();
+
+			//Moves and deleted are using the count_created as well as entities created during the last frame, update count 
+			for (auto& instance_count : database->m_num_instances)
+			{
+				instance_count.count = instance_count.count_created;
+			}
 		}
 		ZoneType GetNumZones(Database * database)
 		{
