@@ -426,12 +426,11 @@ namespace ecs
 		{
 			assert(!database->m_locked);
 
-			database->m_deferred_deletes_spinlock_mutex.lock();
+			core::SpinLockMutexGuard deferred_deletes_guard(database->m_deferred_deletes_spinlock_mutex);
 
 			//Add to the deferred list
 			database->m_deferred_instance_deletes.push_back(indirection_index);
 
-			database->m_deferred_deletes_spinlock_mutex.unlock();
 		}
 
 		void DeallocInstance(Database * database, ZoneType zone_index, EntityTypeType entity_type, InstanceIndexType instance_index)
@@ -447,12 +446,10 @@ namespace ecs
 			auto internal_index = database->m_indirection_instance_table[index];
 			if (internal_index.zone_index != new_zone_index)
 			{
-				database->m_deferred_moves_spinlock_mutex.lock();
+				core::SpinLockMutexGuard deferred_moves_guard(database->m_deferred_moves_spinlock_mutex);
 
 				//Add to the deferred moves
 				database->m_deferred_instance_moves.emplace_back(InstanceMove{ index , new_zone_index });
-
-				database->m_deferred_moves_spinlock_mutex.unlock();
 			}
 		}
 
