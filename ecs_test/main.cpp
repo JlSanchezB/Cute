@@ -875,15 +875,21 @@ public:
 			}
 			else
 			{
-				//Repro
+				//Repro, transfer properties to new children
 				instance_iterator.Dealloc();
 
+				const float new_size = gazelle_state.size.GetSize() / static_cast<float>(game->m_gazelle_num_repro);
 				for (size_t i = 0; i < game->m_gazelle_num_repro; ++i)
 				{
 					glm::vec2 offset = glm::rotate(glm::vec2(0.005f, 0.f), game->Random(0.f, glm::two_pi<float>()));
 					glm::vec2 new_position = gazelle_position + offset;
 
-					game->CreateGazelle(new_position, gazelle_state.size.GetSize() / static_cast<float>(game->m_gazelle_num_repro));
+					auto zone = GridZone::GetZone(new_position.x, new_position.y, new_size);
+					ecs::AllocInstance<GameDatabase, GazelleEntityType>(zone)
+						.Init<PositionComponent>(new_position.x, new_position.y, 0.f)
+						.Init<GazelleStateComponent>(new_size)
+						.Init<GazelleComponent>(gazelle)
+						.Init<VelocityComponent>(0.f, 0.f, 0.f);
 				}
 			}
 
@@ -1025,15 +1031,21 @@ public:
 
 			if (lion_state.size > lion.repro_size)
 			{
-				//Repro
+				//Repro, transfer properties to the children
 				instance_iterator.Dealloc();
 
+				const float new_size = lion_state.size / static_cast<float>(game->m_lion_num_repro);
 				for (size_t i = 0; i < game->m_lion_num_repro; ++i)
 				{
 					glm::vec2 offset = glm::rotate(glm::vec2(0.005f, 0.f), game->Random(0.f, glm::two_pi<float>()));
 					glm::vec2 new_position = lion_position + offset;
 
-					game->CreateLion(new_position, lion_state.size / static_cast<float>(game->m_lion_num_repro));
+					auto zone = GridZone::GetZone(new_position.x, new_position.y, new_size);
+					ecs::AllocInstance<GameDatabase, LionEntityType>(zone)
+						.Init<PositionComponent>(new_position.x, new_position.y, position.angle + game->Random(-0.1f, 0.1f))
+						.Init<LionStateComponent>(new_size, 0.f)
+						.Init<LionComponent>(lion)
+						.Init<VelocityComponent>(velocity);
 				}
 			}
 
