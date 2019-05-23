@@ -35,7 +35,7 @@ namespace
 	};
 
 	//Log ring buffer size
-	constexpr size_t kLogBufferSize = 64 * 1024;
+	constexpr size_t kLogBufferSize = 12 * 1024;
 
 	constexpr ::std::array<char, kLogBufferSize> InitLogBuffer()
 	{
@@ -129,7 +129,7 @@ namespace
 	{
 		char buffer[kLogFormatBufferSize];
 
-		int used = ImFormatStringV(buffer, kLogFormatBufferSize, message, args);
+		size_t used = ImFormatStringV(buffer, kLogFormatBufferSize, message, args);
 
 		//Add to the log
 		char* dest_buffer = nullptr;
