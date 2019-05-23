@@ -1,4 +1,5 @@
 #include <core/log.h>
+#include <core/sync.h>
 #include <windows.h>
 #include <array>
 #include <ext/imgui/imgui.h>
@@ -52,9 +53,14 @@ namespace
 	//Top slot in the log buffer
 	size_t g_top_log_slot = 0;
 
+	//Access mutex
+	core::SpinLockMutex g_log_mutex;
+
 	//Allocate slot, returns a free const char buffer ready to copy the log
 	void AllocSlot(Priority priority, size_t size, char*& message_slot_buffer)
 	{
+		core::SpinLockMutexGuard log_access_guard(g_log_mutex);
+
 		//Align size with sizeof LogSlot
 		size = (((size - 1) / alignof(LogSlot)) + 1) * alignof(LogSlot);
 
