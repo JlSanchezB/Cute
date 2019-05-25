@@ -39,11 +39,11 @@ job::Fence g_MovedFinishedFence;
 job::Fence g_InstanceBufferFinishedFence;
 
 //Microprofile tokens
-MICROPROFILE_DEFINE(GrassToken, "Main", "Grass", 0xFFFFAAAA);
-MICROPROFILE_DEFINE(GazelleToken, "Main", "Gazelle", 0xFFFFAAAA);
-MICROPROFILE_DEFINE(LionToken, "Main", "Lion", 0xFFFFAAAA);
-MICROPROFILE_DEFINE(MoveToken, "Main", "Move", 0xFFFFAAAA);
-MICROPROFILE_DEFINE(PrepareRenderToken, "Main", "PrepareRender", 0xFFFFAAAA);
+PROFILE_DEFINE_MARKER(g_profile_marker_GrassToken, "Main", "Grass", 0xFFFFAAAA);
+PROFILE_DEFINE_MARKER(g_profile_marker_GazelleToken, "Main", "Gazelle", 0xFFFFAAAA);
+PROFILE_DEFINE_MARKER(g_profile_marker_LionToken, "Main", "Lion", 0xFFFFAAAA);
+PROFILE_DEFINE_MARKER(g_profile_marker_MoveToken, "Main", "Move", 0xFFFFAAAA);
+PROFILE_DEFINE_MARKER(g_profile_marker_PrepareRenderToken, "Main", "PrepareRender", 0xFFFFAAAA);
 
 namespace
 {
@@ -669,7 +669,7 @@ public:
 
 	void GrassUpdate(float elapsed_time)
 	{
-		MICROPROFILE_SCOPEI("ECSTest", "GrassGrow", 0xFFFF77FF);
+		PROFILE_SCOPE("ECSTest", "GrassGrow", 0xFFFF77FF);
 
 		const auto& zone_bitset = GridZone::All();
 
@@ -715,12 +715,12 @@ public:
 				}
 			}
 
-		}, job_data, zone_bitset, &g_mp_GrassToken);
+		}, job_data, zone_bitset, &g_profile_marker_GrassToken);
 	}
 
 	void GazelleUpdate(double total_time, float elapsed_time)
 	{
-		MICROPROFILE_SCOPEI("ECSTest", "GazelleUpdate", 0xFFFF77FF);
+		PROFILE_SCOPE("ECSTest", "GazelleUpdate", 0xFFFF77FF);
 
 		const auto& zone_bitset = GridZone::All();
 
@@ -893,12 +893,12 @@ public:
 				}
 			}
 
-		}, job_data, zone_bitset, &g_mp_GazelleToken);
+		}, job_data, zone_bitset, & g_profile_marker_GazelleToken);
 	};
 
 	void LionUpdate(float elapsed_time)
 	{
-		MICROPROFILE_SCOPEI("ECSTest", "LionUpdate", 0xFFFF77FF);
+		PROFILE_SCOPE("ECSTest", "LionUpdate", 0xFFFF77FF);
 
 		const auto& zone_bitset = GridZone::All();
 
@@ -1049,13 +1049,13 @@ public:
 				}
 			}
 
-		}, job_data, zone_bitset, &g_mp_LionToken);
+		}, job_data, zone_bitset, & g_profile_marker_LionToken);
 	}
 
 	void NewEntities(float elapsed_time)
 	{
 		{
-			MICROPROFILE_SCOPEI("ECSTest", "NewGrass", 0xFFFF77FF);
+			PROFILE_SCOPE("ECSTest", "NewGrass", 0xFFFF77FF);
 			//Calculate new grass
 			const size_t grass_count_to_create = m_grass_creation_events.Events(m_random_generator, elapsed_time);
 
@@ -1078,7 +1078,7 @@ public:
 		}
 
 		{
-			MICROPROFILE_SCOPEI("ECSTest", "NewGazelles", 0xFFFF77FF);
+			PROFILE_SCOPE("ECSTest", "NewGazelles", 0xFFFF77FF);
 			//Calculate new lions
 			const size_t gazelle_count_to_create = m_gazelle_creation_events.Events(m_random_generator, elapsed_time);
 
@@ -1091,7 +1091,7 @@ public:
 		}
 
 		{
-			MICROPROFILE_SCOPEI("ECSTest", "NewLions", 0xFFFF77FF);
+			PROFILE_SCOPE("ECSTest", "NewLions", 0xFFFF77FF);
 			//Calculate new lions
 			const size_t lions_count_to_create = m_lion_creation_events.Events(m_random_generator, elapsed_time);
 
@@ -1144,7 +1144,7 @@ public:
 
 	void MoveEntities(float elapsed_time)
 	{
-		MICROPROFILE_SCOPEI("ECSTest", "EntitiesMove", 0xFFFF77FF);
+		PROFILE_SCOPE("ECSTest", "EntitiesMove", 0xFFFF77FF);
 
 		const auto& zone_bitset = GridZone::All();
 
@@ -1234,7 +1234,7 @@ public:
 				velocity.angular -= velocity.angular * friction;
 			}
 
-		}, job_data, zone_bitset, &g_mp_MoveToken);
+		}, job_data, zone_bitset, & g_profile_marker_MoveToken);
 
 	}
 
@@ -1242,7 +1242,7 @@ public:
 	{
 		//UPDATE GAME
 		{
-			MICROPROFILE_SCOPEI("ECSTest", "Update", 0xFFFF77FF);
+			PROFILE_SCOPE("ECSTest", "Update", 0xFFFF77FF);
 
 			//Reset job allocators
 			m_update_job_allocator.Clear();
@@ -1288,10 +1288,10 @@ public:
 
 		//PREPARE RENDERING
 		{
-			MICROPROFILE_SCOPEI("ECSTest", "PrepareRendering", 0xFFFF77FF);
+			PROFILE_SCOPE("ECSTest", "PrepareRendering", 0xFFFF77FF);
 
 			{
-				MICROPROFILE_SCOPEI("ECSTest", "BeginPrepareRendering", 0xFFFF77FF);
+				PROFILE_SCOPE("ECSTest", "BeginPrepareRendering", 0xFFFF77FF);
 				render::BeginPrepareRender(m_render_system);
 			}
 
@@ -1425,7 +1425,7 @@ public:
 				{
 					buffer.emplace_back(position.position.x, position.position.y, position.angle, size);
 				}
-			}, job_data, zone_bitset, &g_mp_PrepareRenderToken);
+			}, job_data, zone_bitset, & g_profile_marker_PrepareRenderToken);
 
 			ecs::AddJobs<GameDatabase, const PositionComponent, const GazelleStateComponent>(m_job_system, g_InstanceBufferFinishedFence, m_update_job_allocator, 64,
 				[](JobData* job_data, const auto& instance_iterator, const PositionComponent& position, const GazelleStateComponent& gazelle)
@@ -1437,7 +1437,7 @@ public:
 				{
 					buffer.emplace_back(position.position.x, position.position.y, position.angle, size);
 				}
-			}, job_data, zone_bitset, &g_mp_PrepareRenderToken);
+			}, job_data, zone_bitset, & g_profile_marker_PrepareRenderToken);
 
 			ecs::AddJobs<GameDatabase, const PositionComponent, const LionStateComponent>(m_job_system, g_InstanceBufferFinishedFence, m_update_job_allocator, 64,
 				[](JobData* job_data, const auto& instance_iterator, const PositionComponent& position, const LionStateComponent& lion)
@@ -1448,7 +1448,7 @@ public:
 				{
 					buffer.emplace_back(position.position.x, position.position.y, position.angle, lion.size);
 				}
-			}, job_data, zone_bitset, &g_mp_PrepareRenderToken);
+			}, job_data, zone_bitset, & g_profile_marker_PrepareRenderToken);
 
 			//Wait for the fence
 			job::Wait(m_job_system, g_InstanceBufferFinishedFence);
@@ -1544,7 +1544,7 @@ public:
 		}
 
 		{
-			MICROPROFILE_SCOPEI("ECSTest", "DatabaseTick", 0xFFFF77FF);
+			PROFILE_SCOPE("ECSTest", "DatabaseTick", 0xFFFF77FF);
 			//Tick database
 			ecs::Tick<GameDatabase>();
 		}

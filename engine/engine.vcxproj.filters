@@ -979,6 +979,9 @@
     <ClCompile Include="job\job.cpp">
       <Filter>job</Filter>
     </ClCompile>
+    <ClCompile Include="core\pc\profile.cpp">
+      <Filter>core</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="tools\compile_shader.bat">

@@ -417,6 +417,7 @@
     <ClCompile Include="core\imgui_render.cpp" />
     <ClCompile Include="core\pc\log.cpp" />
     <ClCompile Include="core\pc\platform.cpp" />
+    <ClCompile Include="core\pc\profile.cpp" />
     <ClCompile Include="core\pc\virtual_alloc.cpp" />
     <ClCompile Include="core\string_hash.cpp" />
     <ClCompile Include="core\virtual_buffer.cpp" />

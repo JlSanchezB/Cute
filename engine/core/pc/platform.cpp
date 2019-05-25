@@ -9,10 +9,7 @@
 #include <chrono>
 #include <core/imgui_render.h>
 #include <core/string_hash.h>
-
-#define MICROPROFILE_MAX_FRAME_HISTORY (2<<10)
-#define MICROPROFILE_IMPL
-#include <ext/microprofile/microprofile.h>
+#include <core/profile.h>
 
 namespace display
 {
@@ -428,7 +425,7 @@ namespace platform
 	void Game::Present()
 	{
 		{
-			MICROPROFILE_SCOPEI("Platform", "Present", 0xFFFF00FF);
+			PROFILE_SCOPE("Platform", "Present", 0xFFFF00FF);
 			//Present
 			display::Present(g_Platform->m_device);
 		}
@@ -476,13 +473,8 @@ namespace platform
 
 		ShowWindow(g_Platform->m_current_hwnd, true);
 
-		//Init microprofiler
-		MicroProfileOnThreadCreate("Main");
-		MicroProfileSetForceEnable(true);
-		MicroProfileSetEnableAllGroups(true);
-		MicroProfileSetForceMetaCounters(true);
-
-		MicroProfileWebServerStart();
+		//Init profiler system
+		core::InitProfiler();
 		
 		//Init callback
 		game->OnInit();
@@ -526,7 +518,7 @@ namespace platform
 			imgui_render::NextFrame(g_Platform->m_current_hwnd, elapsed_time);
 
 			{
-				MICROPROFILE_SCOPEI("Platform", "GameTick", 0xFFFF00FF);
+				PROFILE_SCOPE("Platform", "GameTick", 0xFFFF00FF);
 				//Render
 				game->OnTick(g_Platform->m_total_time, elapsed_time);
 			}
@@ -537,13 +529,13 @@ namespace platform
 			}
 
 			{
-				MICROPROFILE_SCOPEI("Platform", "RenderPlatformImgui", 0xFFFF00FF);
+				PROFILE_SCOPE("Platform", "RenderPlatformImgui", 0xFFFF00FF);
 				//Render platform imgui (menu, fps,...)
 				RenderImgui(game);
 			}
 
 			{
-				MICROPROFILE_SCOPEI("Platform", "BuildImguiRender", 0xFFFF00FF);
+				PROFILE_SCOPE("Platform", "BuildImguiRender", 0xFFFF00FF);
 				//Render IMGUI
 				ImGui::Render();
 
@@ -552,7 +544,8 @@ namespace platform
 			}
 
 
-			MicroProfileFlip();
+			//Flip profiler
+			core::FlipProfiler();
 
 			//Increment frame index for update
 			g_Platform->m_update_frame_index++;
@@ -578,8 +571,7 @@ namespace platform
 		core::DestroyStringHashMap();
 #endif
 
-		MicroProfileWebServerStop();
-		MicroProfileShutdown();
+		core::ShutdownProfiler();
 
 		delete g_Platform;
 		g_Platform = nullptr;

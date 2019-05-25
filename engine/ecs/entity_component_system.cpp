@@ -4,8 +4,6 @@
 #include <memory>
 #include <core/profile.h>
 
-MICROPROFILE_DEFINE(ECSJob, "ECSJob", "ECS", 0xFFFFAAAA);
-
 namespace ecs
 {
 	//Represent a instance (in one zone, one instance type and the index)

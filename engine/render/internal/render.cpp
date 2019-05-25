@@ -519,7 +519,7 @@ namespace render
 
 	void System::SubmitRender()
 	{
-		MICROPROFILE_SCOPEI("Render", "Submit", kRenderProfileColour);
+		PROFILE_SCOPE("Render", "Submit", kRenderProfileColour);
 
 		//Render thread
 		display::BeginFrame(m_device);
@@ -529,7 +529,7 @@ namespace render
 
 		//Execute begin commands in the render_frame
 		{
-			MICROPROFILE_SCOPEI("Render", "ExecuteBeginCommands", kRenderProfileColour);
+			PROFILE_SCOPE("Render", "ExecuteBeginCommands", kRenderProfileColour);
 
 			auto render_context = display::OpenCommandList(m_device, m_render_command_list);
 
@@ -555,7 +555,7 @@ namespace render
 		//For each point of view, we could run it in parallel
 		for (auto& point_of_view : render_frame.m_point_of_views)
 		{
-			MICROPROFILE_SCOPEI("Render", "SubmitPointOfView", kRenderProfileColour);
+			PROFILE_SCOPE("Render", "SubmitPointOfView", kRenderProfileColour);
 
 			//Find the render_context associated to it
 			RenderContextInternal* render_context = GetCachedRenderContext(point_of_view.m_pass_name, point_of_view.m_id, point_of_view.m_pass_info, point_of_view.m_init_resources);
@@ -564,7 +564,7 @@ namespace render
 			{
 				//Execute begin point of view command buffer
 				{
-					MICROPROFILE_SCOPEI("Render", "ExecuteBeginPointOfViewCommands", kRenderProfileColour);
+					PROFILE_SCOPE("Render", "ExecuteBeginPointOfViewCommands", kRenderProfileColour);
 
 					auto render_context = display::OpenCommandList(m_device, m_render_command_list);
 
@@ -588,7 +588,7 @@ namespace render
 				render_context->m_pass_info = point_of_view.m_pass_info;
 
 				{
-					MICROPROFILE_SCOPEI("Render", "SortRenderItems", kRenderProfileColour);
+					PROFILE_SCOPE("Render", "SortRenderItems", kRenderProfileColour);
 
 					auto& render_items = render_context->m_render_items;
 
@@ -638,12 +638,12 @@ namespace render
 				}
 
 				{
-					MICROPROFILE_SCOPEI("Render", "CapturePass", kRenderProfileColour);
+					PROFILE_SCOPE("Render", "CapturePass", kRenderProfileColour);
 					//Capture pass
 					render::CaptureRenderContext(this, render_context);
 				}
 				{
-					MICROPROFILE_SCOPEI("Render", "RenderPass", kRenderProfileColour);
+					PROFILE_SCOPE("Render", "RenderPass", kRenderProfileColour);
 					//Execute pass
 					render::ExecuteRenderContext(this, render_context);
 				}
