@@ -41,7 +41,7 @@ namespace core
 		template<size_t INDEX>
 		using ElementType = typename std::tuple_element<INDEX, std::tuple<ELEMENTS...>>::type;
 
-		constexpr static size_t Size()
+		constexpr static size_t Size() 
 		{
 			return sizeof...(ELEMENTS);
 		}
@@ -58,7 +58,7 @@ namespace core
 	struct num { static const constexpr auto value = N; };
 
 	template <class F, std::size_t... Is>
-	constexpr void visit(F func, std::index_sequence<Is...>)
+	constexpr inline void visit(F&& func, const std::index_sequence<Is...>&)
 	{
 		using expander = int[];
 		(void)expander {
@@ -67,7 +67,7 @@ namespace core
 	}
 
 	template <std::size_t N, typename F>
-	constexpr void visit(F func)
+	constexpr inline void visit(F&& func)
 	{
 		visit(func, std::make_index_sequence<N>());
 	}
