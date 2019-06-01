@@ -5,9 +5,11 @@
 #ifndef PROFILE_H_
 #define PROFILE_H_
 
-#define PROFILE_ENABLE
+#ifndef PROFILE_ENABLE
+	#define PROFILE_ENABLE 1
+#endif
 
-#ifdef PROFILE_ENABLE
+#if PROFILE_ENABLE == 1
 
 #include <stdint.h>
 namespace core
@@ -19,7 +21,13 @@ namespace core
 		ProfileMarker(const char* group, const char* name, const char* full_name, uint32_t colour);
 
 	private:
+
+		//Data for miniprofiler
 		uint64_t m_data;
+
+		//Data for pix
+		const char* m_name;
+		uint32_t m_colour;
 
 		friend class ProfileScope;
 	};
@@ -47,8 +55,8 @@ namespace core
 #define PASTE_HELPER(a,b) a ## b
 #define PASTE(a,b) PASTE_HELPER(a,b)
 
-#define PROFILE_DEFINE_MARKER(var, group, name, colour) inline core::ProfileMarker var(group, name, group ## name, colour);
-#define PROFILE_SCOPE(group, name, colour) static core::ProfileMarker PASTE(g_profile_marker_,__LINE__)(group, name, group ## name, colour); core::ProfileScope PASTE(g_profile_scope_,__LINE__)(PASTE(g_profile_marker_,__LINE__));
+#define PROFILE_DEFINE_MARKER(var, group, name, colour) inline core::ProfileMarker var(group, name, group ## "-" ##  name, colour);
+#define PROFILE_SCOPE(group, name, colour) static core::ProfileMarker PASTE(g_profile_marker_,__LINE__)(group, name, group ## "-" ## name, colour); core::ProfileScope PASTE(g_profile_scope_,__LINE__)(PASTE(g_profile_marker_,__LINE__));
 #define PROFILE_SCOPE_MARKER(marker) core::ProfileScope PASTE(g_profile_scope_, __LINE__)(marker);
 
 #else

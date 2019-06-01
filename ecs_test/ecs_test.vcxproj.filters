@@ -23,13 +23,14 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <Xml Include="ecs_render_passes.xml">
-      <Filter>Assets</Filter>
-    </Xml>
-  </ItemGroup>
-  <ItemGroup>
     <ClInclude Include="resources.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <CopyFileToFolders Include="ecs_render_passes.xml" />
   </ItemGroup>
 </Project>

@@ -2,11 +2,18 @@
 
 //Profiles enabled
 #define USE_MICROPROFILE
+#define USE_PIX_PROFILER
 
 #ifdef USE_MICROPROFILE
 	#define MICROPROFILE_MAX_FRAME_HISTORY (2<<10)
 	#define MICROPROFILE_IMPL
 	#include <ext/microprofile/microprofile.h>
+#endif
+
+#ifdef USE_PIX_PROFILER
+	#define USE_PIX
+	#include <windows.h>
+	#include "pix3.h"
 #endif
 
 namespace core
@@ -16,6 +23,11 @@ namespace core
 #ifdef USE_MICROPROFILE
 		m_data = MicroProfileGetToken(group, name, colour, MicroProfileTokenTypeCpu);
 #endif
+
+#ifdef USE_PIX_PROFILER
+		m_name = full_name;
+		m_colour = colour;
+#endif
 	}
 
 	ProfileScope::ProfileScope(ProfileMarker& marker) : m_marker(marker)
@@ -23,11 +35,19 @@ namespace core
 #ifdef USE_MICROPROFILE
 		m_data = MicroProfileEnter(m_marker.m_data);
 #endif
+
+#ifdef USE_PIX_PROFILER
+		PIXBeginEvent(m_marker.m_colour, m_marker.m_name);
+#endif
 	}
 	ProfileScope::~ProfileScope()
 	{
 #ifdef USE_MICROPROFILE
 		MicroProfileLeave(m_marker.m_data, m_data);
+#endif
+
+#ifdef USE_PIX_PROFILER
+		PIXEndEvent();
 #endif
 	}
 

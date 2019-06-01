@@ -1380,6 +1380,7 @@
     <None Include="ext\glm\gtx\wrap.inl">
       <Filter>ext\glm</Filter>
     </None>
+    <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="ext\imgui\LICENSE.txt">
