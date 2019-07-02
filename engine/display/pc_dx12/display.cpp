@@ -525,6 +525,12 @@ namespace display
 
 	}
 
+	uint64_t GetLastCompletedGPUFrame(Device* device)
+	{
+		//Returns the value of the frame fence, means that GPU is done with the returned frame
+		return static_cast<uint64_t>(device->m_fence->GetCompletedValue());
+	}
+
 	//Context
 	CommandListHandle CreateCommandList(Device* device, const char* name)
 	{

@@ -40,6 +40,9 @@ namespace display
 	void BeginFrame(Device* device);
 	void EndFrame(Device* device);
 
+	//Get Last Processed frame in the GPU, used for syning resources
+	uint64_t GetLastCompletedGPUFrame(Device* device);
+
 	//Command List
 	CommandListHandle CreateCommandList(Device* device, const char* name = nullptr);
 	void DestroyCommandList(Device* device, CommandListHandle& handle);
