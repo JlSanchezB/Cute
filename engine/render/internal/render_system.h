@@ -105,10 +105,10 @@ namespace render
 		Frame m_frame_data;
 
 		//Game thread frame
-		size_t m_game_thread_frame = 0;
+		uint64_t m_game_frame_index = 0;
 
 		//Render thread frame
-		size_t m_render_thread_frame = 0;
+		uint64_t m_render_frame_index = 0;
 
 		//List of activated render contexts, they get resused between frames using the pass name and id
 		std::vector<CachedRenderContext> m_cached_render_context;

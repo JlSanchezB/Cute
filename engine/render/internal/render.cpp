@@ -659,6 +659,9 @@ namespace render
 			//We need to present from the render thread
 			m_game->Present();
 		}
+
+		//Increase render index
+		m_render_frame_index++;
 	}
 
 	void BeginPrepareRender(System * system)
@@ -668,10 +671,6 @@ namespace render
 			//Sync with the submit job
 			job::Wait(system->m_job_system, g_render_fence);
 		}
-		
-
-		//Increase render index
-		system->m_game_thread_frame++;
 	}
 
 	//Submit render job
@@ -687,8 +686,6 @@ namespace render
 		//Render frame has all the information
 
 		//Submit render
-		system->m_render_thread_frame++;
-
 		if (system->m_job_system)
 		{
 			assert(system->m_game);
@@ -700,6 +697,19 @@ namespace render
 			//Submit (current implementation is single thread
 			system->SubmitRender();
 		}
+
+		//Increase game frame index
+		system->m_game_frame_index++;
+	}
+
+	uint64_t GetGameFrameIndex(System* system)
+	{
+		return system->m_game_frame_index;
+	}
+
+	uint64_t GetRenderFrameIndex(System* system)
+	{
+		return system->m_render_frame_index;
 	}
 
 	Frame & GetGameRenderFrame(System * system)

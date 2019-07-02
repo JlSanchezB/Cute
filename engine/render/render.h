@@ -135,6 +135,12 @@ namespace render
 	//The render is going to be submit to the GPU (on other thread)
 	void EndPrepareRenderAndSubmit(System* system);
 
+	//Return the current frame for the game
+	uint64_t GetGameFrameIndex(System* system);
+
+	//Return the current frame for the render 
+	uint64_t GetRenderFrameIndex(System* system);
+
 	//Get render frame for this frame
 	//Only can be called from the game thread, between begin and end prepare frame
 	Frame& GetGameRenderFrame(System* system);
