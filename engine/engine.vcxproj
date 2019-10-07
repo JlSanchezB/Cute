@@ -416,6 +416,7 @@
     <ClInclude Include="render\render_frame.h" />
     <ClInclude Include="render\render_helper.h" />
     <ClInclude Include="render\render_resource.h" />
+    <ClInclude Include="render\render_sub_allocators.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="core\imgui_render.cpp" />

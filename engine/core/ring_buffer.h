@@ -30,6 +30,9 @@ namespace core
 		template<typename ...Args>
 		void emplace(Args&&... args);
 
+		//Get the tail
+		DATA& tail();
+
 		//Get the head
 		DATA& head();
 
@@ -91,6 +94,12 @@ namespace core
 	inline DATA & RingBuffer<DATA, SIZE>::head()
 	{
 		return *reinterpret_cast<DATA*>(&m_buffer[m_head_index]);
+	}
+
+	template<typename DATA, size_t SIZE>
+	inline DATA& RingBuffer<DATA, SIZE>::tail()
+	{
+		return *reinterpret_cast<DATA*>(&m_buffer[m_tail_index]);
 	}
 
 	template<typename DATA, size_t SIZE>
