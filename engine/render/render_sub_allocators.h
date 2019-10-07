@@ -14,9 +14,6 @@ namespace render
 	class SegmentAllocator
 	{
 	public:
-		SegmentAllocator(size_t resource_size)
-		{
-		}
 		size_t Alloc(size_t size, uint64_t allocation_frame_index, uint64_t freed_frame_index)
 		{
 			//Allocation is bigger than one resource segment
@@ -73,6 +70,9 @@ namespace render
 			//Current allocated size
 			size_t size;
 
+			FrameAllocation()
+			{
+			};
 			FrameAllocation(uint64_t _frame_index) : frame_index(_frame_index)
 			{
 				size = 0;
