@@ -914,6 +914,9 @@
     <ClInclude Include="render\render_sub_allocators.h">
       <Filter>render</Filter>
     </ClInclude>
+    <ClInclude Include="render\internal\render_gpu_memory.h">
+      <Filter>render\internal</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="display\pc_dx12\display.cpp">

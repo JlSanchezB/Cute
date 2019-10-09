@@ -195,7 +195,7 @@ namespace core
 			for (size_t src_index = m_head_index; src_index != m_tail_index; src_index = (src_index + 1 + old_buffer_size) % old_buffer_size)
 			{
 				//Move data to the new vector
-				*reinterpret_cast<DATA*>(new_buffer[dest_index]) = std::move(*reinterpret_cast<DATA*>(m_buffer[src_index]));
+				*reinterpret_cast<DATA*>(&new_buffer[dest_index]) = std::move(*reinterpret_cast<DATA*>(&m_buffer[src_index]));
 
 				dest_index++;
 			}

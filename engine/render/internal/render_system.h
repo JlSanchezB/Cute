@@ -8,7 +8,7 @@
 #include <unordered_map>
 #include <core/simple_pool.h>
 #include <render/render_frame.h>
-#include <render/internal/render_instance_buffer.h>
+#include <render/internal/render_gpu_memory.h>
 #include <job/job.h>
 #include <core/platform.h>
 #include <core/fast_map.h>
@@ -106,7 +106,7 @@ namespace render
 		Frame m_frame_data;
 
 		//GPU Instance buffer system
-		RenderInstanceBuffer<20> m_instance_buffer_system;
+		RenderInstanceBuffer m_instance_buffer_system;
 
 		//Game thread frame
 		uint64_t m_game_frame_index = 0;
