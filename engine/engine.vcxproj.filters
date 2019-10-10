@@ -911,11 +911,14 @@
     <ClInclude Include="core\fast_map.h">
       <Filter>core</Filter>
     </ClInclude>
-    <ClInclude Include="render\render_sub_allocators.h">
-      <Filter>render</Filter>
-    </ClInclude>
     <ClInclude Include="render\internal\render_gpu_memory.h">
       <Filter>render\internal</Filter>
+    </ClInclude>
+    <ClInclude Include="render\render_segment_allocator.h">
+      <Filter>render</Filter>
+    </ClInclude>
+    <ClInclude Include="render\render_freelist_allocator.h">
+      <Filter>render</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

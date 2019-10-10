@@ -1,8 +1,8 @@
 //////////////////////////////////////////////////////////////////////////
-// Cute engine - Helpers to handle sub allocations inside a render resource
+// Cute engine - Segmented allocator, used for allocating memory in segments for the GPU
 //////////////////////////////////////////////////////////////////////////
-#ifndef RENDER_SUB_ALLOCATORS_H_
-#define RENDER_SUB_ALLOCATORS_H_
+#ifndef RENDER_SEGMENT_ALLOCATOR_H_
+#define RENDER_SEGMENT_ALLOCATOR_H_
 
 #include <core/ring_buffer.h>
 #include <core/log.h>
@@ -197,4 +197,4 @@ namespace render
 		return allocation_offset;
 	}
 }
-#endif //RENDER_SUB_ALLOCATORS_H_
+#endif //RENDER_SEGMENT_ALLOCATOR_H_

@@ -5,7 +5,7 @@
 #ifndef RENDER_GPU_MEMORY_H_
 #define RENDER_GPU_MEMORY_H_
 
-#include <render/render_sub_allocators.h>
+#include <render/render_segment_allocator.h>
 #include <display/display_handle.h>
 
 namespace render
