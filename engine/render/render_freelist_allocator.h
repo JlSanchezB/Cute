@@ -10,6 +10,7 @@
 #include <job/job_helper.h>
 #include <core/sync.h>
 #include <vector>
+#include <utility>
 
 namespace render
 {
@@ -137,7 +138,7 @@ namespace render
 		core::SpinLockMutexGuard guard(m_access_mutex);
 
 		//Add deallocation into our deallocation ring buffer
-		m_live_deallocations.emplace(handle, last_used_frame_index);
+		m_live_deallocations.emplace(std::move(handle), last_used_frame_index);
 	}
 
 	inline void FreeListAllocator::Sync(uint64_t freed_frame_index)

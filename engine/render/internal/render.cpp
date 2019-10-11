@@ -351,7 +351,7 @@ namespace render
 	}
 
 
-	System * CreateRenderSystem(display::Device* device, job::System* job_system, platform::Game* game)
+	System * CreateRenderSystem(display::Device* device, job::System* job_system, platform::Game* game, const SystemDesc& desc)
 	{
 		System* system = new System();
 
@@ -386,6 +386,9 @@ namespace render
 
 		//Create render command list
 		system->m_render_command_list = display::CreateCommandList(device, "RenderSystem");
+
+		//Init gpu memory
+		system->m_gpu_memory.Init(desc.static_gpu_memory_size, desc.dynamic_gpu_memory_size, desc.dynamic_gpu_memory_segment_size);
 
 		return system;
 	}

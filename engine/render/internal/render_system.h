@@ -105,8 +105,8 @@ namespace render
 		//At the moment just one
 		Frame m_frame_data;
 
-		//GPU Instance buffer system
-		RenderInstanceBuffer m_instance_buffer_system;
+		//GPU memory systems for syncing memory CPU-GPU
+		RenderGPUMemory m_gpu_memory;
 
 		//Game thread frame
 		uint64_t m_game_frame_index = 0;

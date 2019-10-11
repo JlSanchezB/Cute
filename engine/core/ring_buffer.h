@@ -6,6 +6,7 @@
 #define RING_BUFFER_H_
 
 #include <array>
+#include <vector>
 #include <cassert>
 
 namespace core

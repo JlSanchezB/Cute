@@ -19,7 +19,12 @@ namespace platform
 
 namespace render
 {
-	
+	struct SystemDesc
+	{
+		size_t static_gpu_memory_size = 64 * 1024;
+		size_t dynamic_gpu_memory_size = 64 * 1024;
+		size_t dynamic_gpu_memory_segment_size = 1024;
+	};
 
 	//Context used for rendering a pass
 	//It will include all the information that the render pass manager needs for rendering a pass
@@ -65,7 +70,7 @@ namespace render
 	};
 
 	//Create render system
-	System* CreateRenderSystem(display::Device* device, job::System* job_system = nullptr, platform::Game* game = nullptr);
+	System* CreateRenderSystem(display::Device* device, job::System* job_system = nullptr, platform::Game* game = nullptr, const SystemDesc& desc = SystemDesc());
 
 	//Destroy render system
 	void DestroyRenderSystem(System*& system, display::Device* device);

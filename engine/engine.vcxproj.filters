@@ -991,6 +991,9 @@
     <ClCompile Include="core\pc\profile.cpp">
       <Filter>core</Filter>
     </ClCompile>
+    <ClCompile Include="render\internal\render_gpu_memory.cpp">
+      <Filter>render\internal</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="tools\compile_shader.bat">
