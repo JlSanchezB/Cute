@@ -21,9 +21,9 @@ namespace render
 {
 	struct SystemDesc
 	{
-		size_t static_gpu_memory_size = 64 * 1024;
-		size_t dynamic_gpu_memory_size = 64 * 1024;
-		size_t dynamic_gpu_memory_segment_size = 1024;
+		uint32_t static_gpu_memory_size = 64 * 1024;
+		uint32_t dynamic_gpu_memory_size = 64 * 1024;
+		uint32_t dynamic_gpu_memory_segment_size = 1024;
 	};
 
 	//Context used for rendering a pass

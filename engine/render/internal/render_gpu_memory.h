@@ -9,6 +9,11 @@
 #include <render/render_freelist_allocator.h>
 #include <display/display_handle.h>
 
+namespace display
+{
+	struct Device;
+}
+
 namespace render
 {
 	//Render GPU memory offers the user a gpu memory for uploading data from the cpu
@@ -21,8 +26,8 @@ namespace render
 	class RenderGPUMemory
 	{
 	public:
-		void Init(size_t static_gpu_memory_size, size_t dynamic_gpu_memory_size, size_t dynamic_gpu_memory_segment_size);
-		void Destroy();
+		void Init(display::Device* device, uint32_t static_gpu_memory_size, uint32_t dynamic_gpu_memory_size, uint32_t dynamic_gpu_memory_segment_size);
+		void Destroy(display::Device* device);
 
 		//Static buffer resource in the GPU
 		display::UnorderedAccessBufferHandle m_static_gpu_memory_buffer;

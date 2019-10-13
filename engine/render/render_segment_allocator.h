@@ -129,6 +129,9 @@ namespace render
 		assert(size == 0);
 		assert(size < m_segment_size);
 
+		//Always align the size to 16
+		size = ((size << 4) + 1) >> 4;
+
 		//Check if there is an allocation for this job thread and sufficient size
 		auto& current_allocation = m_active_allocations.Get();
 

@@ -388,7 +388,7 @@ namespace render
 		system->m_render_command_list = display::CreateCommandList(device, "RenderSystem");
 
 		//Init gpu memory
-		system->m_gpu_memory.Init(desc.static_gpu_memory_size, desc.dynamic_gpu_memory_size, desc.dynamic_gpu_memory_segment_size);
+		system->m_gpu_memory.Init(system->m_device, desc.static_gpu_memory_size, desc.dynamic_gpu_memory_size, desc.dynamic_gpu_memory_segment_size);
 
 		return system;
 	}
@@ -401,6 +401,9 @@ namespace render
 			job::Wait(system->m_job_system, g_render_fence);
 		}
 
+		//Destroy gpu memory
+		system->m_gpu_memory.Destroy(system->m_device);
+
 		//Destroy resources and passes
 		DestroyResources(device, system->m_game_resources_map);
 		DestroyResources(device, system->m_global_resources_map);
@@ -408,6 +411,7 @@ namespace render
 
 		//Destroy command list
 		display::DestroyHandle(device, system->m_render_command_list);
+
 
 		delete system;
 

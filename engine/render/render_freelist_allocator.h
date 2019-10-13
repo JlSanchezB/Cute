@@ -92,6 +92,9 @@ namespace render
 		assert(size == 0);
 		assert(size < m_resource_size);
 
+		//Always align the size to 16
+		size = ((size << 4) + 1) >> 4;
+
 		core::SpinLockMutexGuard guard(m_access_mutex);
 
 		//Get a allocation for our free list
