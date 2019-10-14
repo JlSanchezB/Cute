@@ -37,39 +37,11 @@ namespace render
 			}
 
 			OnResize(m_segment_count);
-
-			//Reset the allocations
-			m_active_allocations.Reset();
 		}
 
-		//Freed live allocations will avaliable
-		//Close open allocations
-		void Sync(uint64_t freed_frame_index)
-		{
-			core::SpinLockMutexGuard guard(m_access_mutex);
-
-			//Free all allocations until freed_frame_index
-			while (!m_live_allocations.empty() && m_live_allocations.head().frame_index <= freed_frame_index)
-			{
-				//Add to the free list
-				m_free_allocations.push_back(m_live_allocations.head().segment_index);
-				m_live_allocations.pop();
-			}
-
-			//Add all current allocations
-			m_active_allocations.Visit([&](CurrentAllocation& allocation)
-				{
-					if (allocation.frame_index != 0)
-					{
-						//It was an allocation
-						m_live_allocations.emplace(allocation.frame_index, allocation.segment_index);
-
-						//Allocation free
-						allocation.frame_index = 0;
-						allocation.current_size = 0;
-					}
-				});
-		}
+		//Close frame cpu_frame_index
+		//Free all frames before freed_frame_index, as GPU is done with the frame
+		void Sync(uint64_t cpu_frame_index, uint64_t freed_frame_index);
 
 		//Called when more memory is needed
 		virtual void OnResize(size_t new_segment_count)
@@ -80,33 +52,33 @@ namespace render
 		size_t SegmentAllocator::Alloc(size_t size, uint64_t allocation_frame_index);
 
 	private:
-		struct FrameAllocation
-		{
-			//Frame that is going to be use
-			uint64_t frame_index;
-			//Allocation segment index
-			size_t segment_index;
 
-			FrameAllocation()
-			{
-			};
-			FrameAllocation(uint64_t _frame_index, size_t _segment_index) : frame_index(_frame_index), segment_index(_segment_index)
-			{
-			}
+		//An over approximation of max distance between CPU and GPU
+		//That is from the GAME thread to the GPU
+		static constexpr size_t kMaxFrames = 8;
+
+		static constexpr size_t kInvalidSegment = static_cast<size_t>(-1);
+
+		struct ActiveAllocation
+		{
+			size_t segment_index = kInvalidSegment;
+			size_t current_size = 0;
 		};
 
-		//List of live allocations, head old ones and tail new ones
-		core::GrowableRingBuffer<FrameAllocation> m_live_allocations;
-
-		struct CurrentAllocation
+		struct Frame
 		{
+			//Frame index
 			uint64_t frame_index = 0;
-			size_t segment_index;
-			size_t current_size;
+
+			//List of segments live in this frame
+			std::vector<size_t> live_segments;
+
+			//Current active allocations in this frame per thread
+			job::ThreadData <ActiveAllocation> active_allocations;
 		};
 
-		//Current allocations by job thread
-		job::ThreadData<CurrentAllocation> m_active_allocations;
+		//List of frames
+		std::array<Frame, kMaxFrames> m_frames;
 
 		//List of free allocation segment indexes
 		std::vector<size_t> m_free_allocations;
@@ -122,6 +94,25 @@ namespace render
 
 		//Access mutex
 		core::SpinLockMutex m_access_mutex;
+
+		Frame& GetFrame(uint64_t frame_index)
+		{
+			//Use a ring buffer with the max distance frames between CPU and GPU
+			auto& frame = m_frames[frame_index % kMaxFrames];
+
+			if (frame.frame_index == 0)
+			{
+				//New frame, the current frame is not active, so all is OK
+				frame.frame_index = frame_index;
+			}
+			else if (frame.frame_index != frame_index)
+			{
+				//the CPU and the GPU distance is higher than kMaxFrames
+				core::LogError("Distance between CPU and GPU is higher that max, GPU blocked?");
+				throw std::runtime_error("Distance between CPU and GPU is higher that max, GPU blocked?");
+			}
+			return frame;
+		}
 	};
 
 	inline size_t SegmentAllocator::Alloc(size_t size, uint64_t allocation_frame_index)
@@ -132,23 +123,23 @@ namespace render
 		//Always align the size to 16
 		size = ((size << 4) + 1) >> 4;
 
+		//Get frame
+		auto& frame = GetFrame(allocation_frame_index);
+
 		//Check if there is an allocation for this job thread and sufficient size
-		auto& current_allocation = m_active_allocations.Get();
+		auto& current_allocation = frame.active_allocations.Get();
 
-		const bool old_frame_index_allocation = current_allocation.frame_index != allocation_frame_index;
-		const bool non_sufficient_memory = (current_allocation.frame_index == allocation_frame_index && (current_allocation.current_size + size >= m_segment_size));
-		if (old_frame_index_allocation || non_sufficient_memory)
+		const bool first_allocation = current_allocation.segment_index == kInvalidSegment;
+		const bool non_sufficient_memory = (current_allocation.segment_index != kInvalidSegment && (current_allocation.current_size + size >= m_segment_size));
+		if (first_allocation || non_sufficient_memory)
 		{
-			//Check if there is an segment already active
-			if (old_frame_index_allocation)
+			//Check if there is an segment already active and send it to live allocations
+			if (non_sufficient_memory)
 			{
-				if (current_allocation.frame_index != 0)
-				{
-					core::SpinLockMutexGuard guard(m_access_mutex);
+				core::SpinLockMutexGuard guard(m_access_mutex);
 
-					//We need to register the current allocation
-					m_live_allocations.emplace(current_allocation.frame_index, current_allocation.segment_index);
-				}
+				//We need to register the current allocation
+				frame.live_segments.emplace_back(current_allocation.segment_index);
 			}
 
 			//Alloc a new segment
@@ -187,7 +178,6 @@ namespace render
 
 			//A clean new allocation ready
 			current_allocation.current_size = 0;
-			current_allocation.frame_index = allocation_frame_index;
 		}
 
 		//Calculate the offset
@@ -198,6 +188,39 @@ namespace render
 
 		//Return
 		return allocation_offset;
+	}
+
+	inline void SegmentAllocator::Sync(uint64_t cpu_frame_index, uint64_t freed_frame_index)
+	{
+		core::SpinLockMutexGuard guard(m_access_mutex);
+
+		for (size_t i = 0; i < kMaxFrames; ++i)
+		{
+			auto& frame = m_frames[i];
+			if (frame.frame_index > 0 && frame.frame_index <= freed_frame_index)
+			{
+				m_free_allocations.insert(m_free_allocations.end(), frame.live_segments.begin(), frame.live_segments.end());
+
+				//Marked as completly free
+				frame.frame_index = 0;
+				frame.live_segments.clear();
+			}
+		}
+
+		auto& clossing_frame = GetFrame(cpu_frame_index);
+		//close all active allocations for cpu_frame_index
+		clossing_frame.active_allocations.Visit([&](ActiveAllocation& allocation)
+			{
+				if (allocation.segment_index != kInvalidSegment)
+				{
+					//It was an allocation
+					clossing_frame.live_segments.emplace_back(allocation.segment_index);
+
+					//Allocation free
+					allocation.current_size = 0;
+					allocation.segment_index = kInvalidSegment;
+				}
+			});
 	}
 }
 #endif //RENDER_SEGMENT_ALLOCATOR_H_

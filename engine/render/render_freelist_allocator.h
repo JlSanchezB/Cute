@@ -60,22 +60,23 @@ namespace render
 
 	private:
 
+		//An over approximation of max distance between CPU and GPU
+		//That is from the GAME thread to the GPU
+		static constexpr size_t kMaxFrames = 8;
+
 		//List of free blocks
 		std::vector<FreeListAllocation> m_free_blocks_pool;
 
 		struct LiveDeallocation
 		{
-			AllocHandle handle;
-			uint64_t frame_index;
+			size_t frame_index = 0;
 
-			LiveDeallocation(AllocHandle&& _handle, uint64_t _last_used_frame_index) : frame_index(_last_used_frame_index)
-			{
-				handle = std::move(_handle);
-			}
+			//List all deallocations that can happen when that frame is done
+			std::vector<AllocHandle> handles;
 		};
 
-		//List of live allocations
-		core::GrowableRingBuffer<LiveDeallocation> m_live_deallocations;
+		//List of live dellocations per frame
+		std::array<LiveDeallocation, kMaxFrames> m_live_deallocations;
 
 		//Resource size
 		size_t m_resource_size;
@@ -85,6 +86,25 @@ namespace render
 
 		//Access mutex
 		core::SpinLockMutex m_access_mutex;
+
+		LiveDeallocation& GetLiveDeallocationsFrame(uint64_t frame_index)
+		{
+			//Use a ring buffer with the max distance frames between CPU and GPU
+			auto& frame = m_live_deallocations[frame_index % kMaxFrames];
+
+			if (frame.frame_index == 0)
+			{
+				//New frame, the current frame is not active, so all is OK
+				frame.frame_index = frame_index;
+			}
+			else if (frame.frame_index != frame_index)
+			{
+				//the CPU and the GPU distance is higher than kMaxFrames
+				core::LogError("Distance between CPU and GPU is higher that max, GPU blocked?");
+				throw std::runtime_error("Distance between CPU and GPU is higher that max, GPU blocked?");
+			}
+			return frame;
+		}
 	};
 
 	inline AllocHandle FreeListAllocator::Alloc(size_t size)
@@ -140,8 +160,10 @@ namespace render
 
 		core::SpinLockMutexGuard guard(m_access_mutex);
 
+		auto& frame = GetLiveDeallocationsFrame(last_used_frame_index);
+
 		//Add deallocation into our deallocation ring buffer
-		m_live_deallocations.emplace(std::move(handle), last_used_frame_index);
+		frame.handles.emplace_back(std::move(handle));
 	}
 
 	inline void FreeListAllocator::Sync(uint64_t freed_frame_index)
@@ -151,43 +173,49 @@ namespace render
 		//Check if the deallocations are not used in the gpu
 
 		//Free all allocations until freed_frame_index
-		while (!m_live_deallocations.empty() && m_live_deallocations.head().frame_index <= freed_frame_index)
+		for (size_t i = 0; i < kMaxFrames; ++i)
 		{
-			//Add to the free list
-			LiveDeallocation& deallocation = m_live_deallocations.head();
-
-			FreeListAllocation& block = m_handle_pool[deallocation.handle];
-
-			//Look inside the free blocks for blocks that connects with this block
-			bool merge = false;
-			for (size_t i = 0; i < m_free_blocks_pool.size(); ++i)
+			auto& frame = m_live_deallocations[i];
+			if (frame.frame_index > 0 && frame.frame_index <= freed_frame_index)
 			{
-				auto& free_block = m_free_blocks_pool[i];
-
-				if ((free_block.offset + free_block.size) == block.offset)
+				//Add to the free list
+				for (auto&& handle : frame.handles)
 				{
-					//Free block and block are continuos, merge
-					free_block.size += block.size;
-					merge = true;
-					break;
-				}
-				if ((block.offset + block.size) == block.offset)
-				{
-					//Block and free block are continuos, merge
-					free_block.offset = block.offset;
-					free_block.size += block.size;
-					merge = true;
-					break;
-				}
-			}
+					FreeListAllocation& block = m_handle_pool[handle];
 
-			if (!merge)
-			{
-				//add it as a free block
-				m_free_blocks_pool.push_back(block);
-			}
+					//Look inside the free blocks for blocks that connects with this block
+					bool merge = false;
+					for (size_t i = 0; i < m_free_blocks_pool.size(); ++i)
+					{
+						auto& free_block = m_free_blocks_pool[i];
 
-			m_live_deallocations.pop();
+						if ((free_block.offset + free_block.size) == block.offset)
+						{
+							//Free block and block are continuos, merge
+							free_block.size += block.size;
+							merge = true;
+							break;
+						}
+						if ((block.offset + block.size) == block.offset)
+						{
+							//Block and free block are continuos, merge
+							free_block.offset = block.offset;
+							free_block.size += block.size;
+							merge = true;
+							break;
+						}
+					}
+
+					if (!merge)
+					{
+						//add it as a free block
+						m_free_blocks_pool.push_back(block);
+					}
+				}
+
+				//Mark this frame as completly free
+				frame.frame_index = 0;
+			}
 		}
 	}
 }
