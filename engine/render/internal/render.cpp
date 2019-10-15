@@ -738,6 +738,43 @@ namespace render
 		return static_cast<Priority>(priorities_size);
 	}
 
+	AllocHandle AllocStaticGPUMemory(System* system, const size_t size, const void* data, const uint64_t frame_index)
+	{
+		AllocHandle handle = system->m_gpu_memory.m_static_gpu_memory_allocator.Alloc(size);
+
+		//TODO: Create copy command
+
+		return std::move(handle);
+	}
+
+	void DeallocStaticGPUMemory(System* system, AllocHandle&& handle, const uint64_t frame_index)
+	{
+		system->m_gpu_memory.m_static_gpu_memory_allocator.Dealloc(std::move(handle), frame_index);
+	}
+
+	void UpdateStaticGPUMemory(System* system, const void* data, const uint64_t frame_index)
+	{
+		//TODO: Create copy command
+	}
+
+	void* AllocDynamicGPUMemory(System* system, const size_t size, const uint64_t frame_index)
+	{
+		size_t offset = system->m_gpu_memory.m_dynamic_gpu_memory_allocator.Alloc(size, frame_index);
+
+		//Return the memory address inside the resource
+		return static_cast<uint8_t*>(display::GetResourceMemoryBuffer(system->m_device, system->m_gpu_memory.m_dynamic_gpu_memory_buffer)) + offset;
+	}
+
+	display::WeakUnorderedAccessBufferHandle GetStaticGPUMemoryResource(System* system)
+	{
+		return system->m_gpu_memory.m_static_gpu_memory_buffer;
+	}
+
+	display::WeakUnorderedAccessBufferHandle GetDynamicGPUMemoryResource(System* system)
+	{
+		return system->m_gpu_memory.m_dynamic_gpu_memory_buffer;
+	}
+
 	bool AddGameResource(System * system, const ResourceName& name, std::unique_ptr<Resource>&& resource)
 	{
 		auto& global_resource_it = system->m_global_resources_map[name];

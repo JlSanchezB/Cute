@@ -240,7 +240,7 @@ namespace display
 	{
 		ComPtr<ID3D12Resource> resource;
 	};
-	struct UnorderedAccessBuffer
+	struct UnorderedAccessBuffer : RingResourceSupport<UnorderedAccessBufferHandle>
 	{
 		ComPtr<ID3D12Resource> resource;
 	};

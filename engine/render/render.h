@@ -19,6 +19,9 @@ namespace platform
 
 namespace render
 {
+	using AllocHandle = core::Handle<class FreeListAllocation, uint16_t>;
+	using WeakAllocHandle = core::WeakHandle<class FreeListAllocation, uint16_t>;
+
 	struct SystemDesc
 	{
 		uint32_t static_gpu_memory_size = 64 * 1024;
@@ -153,6 +156,23 @@ namespace render
 	//Get the index of the priority for a priority name
 	Priority GetRenderItemPriority(System* system, PriorityName priority_name);
 
+	//Allocate a buffer in the static gpu memory
+	AllocHandle AllocStaticGPUMemory(System* system, const size_t size, const void* data, const uint64_t frame_index);
+
+	//Deallocate static gpu memory
+	void DeallocStaticGPUMemory(System* system, AllocHandle&& handle, const uint64_t frame_index);
+
+	//Update Static GPU memory
+	void UpdateStaticGPUMemory(System* system, const void* data, const uint64_t frame_index);
+
+	//Alloc dynamic gpu memory
+	void* AllocDynamicGPUMemory(System* system, const size_t size, const uint64_t frame_index);
+
+	//Get static gpu memory resource
+	display::WeakUnorderedAccessBufferHandle GetStaticGPUMemoryResource(System* system);
+
+	//Get dynamic gpu memory resource
+	display::WeakUnorderedAccessBufferHandle GetDynamicGPUMemoryResource(System* system);
 }
 
 #endif //RENDER_H_

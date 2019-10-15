@@ -124,8 +124,12 @@ namespace display
 	void DestroySamplerDescriptorTable(Device * device, SamplerDescriptorTableHandle& handle);
 
 	//Update resource buffer (only Access::Dynamic)
-	using UpdatableResourceHandle = std::variant<WeakConstantBufferHandle, WeakVertexBufferHandle, WeakIndexBufferHandle>;
+	using UpdatableResourceHandle = std::variant<WeakConstantBufferHandle, WeakVertexBufferHandle, WeakIndexBufferHandle, WeakUnorderedAccessBufferHandle>;
 	void UpdateResourceBuffer(Device* device, const UpdatableResourceHandle& handle, const void* data, size_t size);
+
+	//Get Resource memory
+	using DirectAccessResourceHandle = std::variant<WeakUnorderedAccessBufferHandle>;
+	void* GetResourceMemoryBuffer(Device* device, const DirectAccessResourceHandle& handle);
 
 	//Pipe used
 	enum class Pipe : uint8_t

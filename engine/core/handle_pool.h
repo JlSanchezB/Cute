@@ -320,7 +320,7 @@ namespace core
 		if (m_data.size() && Size() > 0)
 		{
 			//Report leaks
-			std::vector<bool> allocated;
+			std::vector<uint8_t> allocated;
 			allocated.resize(m_data.size());
 
 			for (auto& it : allocated) it = true;

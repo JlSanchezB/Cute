@@ -749,4 +749,25 @@ namespace display
 			device->uploaded_memory_frame += size;
 		}
 	}
+	void* GetResourceMemoryBuffer(Device* device, const DirectAccessResourceHandle& handle)
+	{
+		void* memory_data = nullptr;
+		size_t memory_size = 0;
+
+		std::visit(
+			overloaded
+			{
+				[&](auto handle)
+				{
+					auto& constant_buffer = device->Get(GetRingResource(device, handle, device->m_frame_index));
+					memory_data = constant_buffer.memory_data;
+					memory_size = constant_buffer.memory_size;
+				}
+			},
+			handle);
+
+		assert(memory_data);
+
+		return memory_data;
+	}
 }

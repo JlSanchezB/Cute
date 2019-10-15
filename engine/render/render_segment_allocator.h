@@ -108,8 +108,8 @@ namespace render
 			else if (frame.frame_index != frame_index)
 			{
 				//the CPU and the GPU distance is higher than kMaxFrames
-				core::LogError("Distance between CPU and GPU is higher that max, GPU blocked?");
-				throw std::runtime_error("Distance between CPU and GPU is higher that max, GPU blocked?");
+				core::LogError("Distance between CPU and GPU is over the max allocated, GPU blocked?");
+				throw std::runtime_error("Distance between CPU and GPU is over the max allocated, GPU blocked?");
 			}
 			return frame;
 		}
