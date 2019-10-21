@@ -92,6 +92,15 @@ namespace render
 		void Load(LoadContext& load_context) override;
 	};
 
+	//Unordered access buffer resource
+	class UnorderedAccessBufferResource : public DisplayHandleResource<display::UnorderedAccessBufferHandle>
+	{
+	public:
+		DECLARE_RENDER_CLASS("UnorderedAccessBuffer");
+
+		void Load(LoadContext& load_context) override;
+	};
+
 	//Vertex buffer resource
 	class VertexBufferResource : public DisplayHandleResource<display::VertexBufferHandle>
 	{

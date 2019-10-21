@@ -33,4 +33,9 @@ namespace render
 		display::DestroyUnorderedAccessBuffer(device, m_static_gpu_memory_buffer);
 		display::DestroyUnorderedAccessBuffer(device, m_dynamic_gpu_memory_buffer);
 	}
+	void RenderGPUMemory::Sync(uint64_t cpu_frame_index, uint64_t freed_frame_index)
+	{
+		m_dynamic_gpu_memory_allocator.Sync(cpu_frame_index, freed_frame_index);
+		m_static_gpu_memory_allocator.Sync(freed_frame_index);
+	}
 }

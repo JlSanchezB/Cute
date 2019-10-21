@@ -528,6 +528,9 @@ namespace render
 	{
 		PROFILE_SCOPE("Render", "Submit", kRenderProfileColour);
 
+		//Sync GPU memory resources
+		m_gpu_memory.Sync(m_render_frame_index, display::GetLastCompletedGPUFrame(m_device));
+
 		//Render thread
 		display::BeginFrame(m_device);
 

@@ -252,6 +252,11 @@ namespace render
 		AddError(load_context, "Constant buffer declaraction not supported from render passes, only game");
 	}
 
+	void UnorderedAccessBufferResource::Load(LoadContext& load_context)
+	{
+		AddError(load_context, "Unordered access buffer buffer declaraction not supported from render passes, only game");
+	}
+
 	void RootSignatureResource::Load(LoadContext& load_context)
 	{
 		display::RootSignatureDesc root_signature_desc;

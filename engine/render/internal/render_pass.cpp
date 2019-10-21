@@ -179,6 +179,20 @@ namespace render
 			render_context.GetContext()->SetConstantBuffer(m_pipe, m_root_parameter, constant_buffer->GetHandle());
 		}
 	}
+	void SetRootUnorderedAccessBufferPass::Load(LoadContext& load_context)
+	{
+		QueryTableAttribute(load_context, load_context.current_xml_element, "pipe", m_pipe, AttributeType::Optional);
+		QueryAttribute(load_context, load_context.current_xml_element, "root_param", m_root_parameter, AttributeType::NonOptional);
+		m_unordered_access_buffer.Set(load_context.GetResourceReference(load_context));
+	}
+	void SetRootUnorderedAccessBufferPass::Render(RenderContext& render_context) const
+	{
+		UnorderedAccessBufferResource* unordered_access_buffer = m_unordered_access_buffer.Get(render_context);
+		if (unordered_access_buffer)
+		{
+			render_context.GetContext()->SetUnorderedAccessBuffer(m_pipe, m_root_parameter, unordered_access_buffer->GetHandle());
+		}
+	}
 	void SetPipelineStatePass::Load(LoadContext & load_context)
 	{
 		m_pipeline_state.Set(load_context.GetResourceReference(load_context));
