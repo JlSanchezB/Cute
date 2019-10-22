@@ -128,7 +128,7 @@ namespace core
 			//Copy data
 			for (size_t i = 0; i < num; ++i)
 			{
-				std::byte* byte_ptr = m_command_data.data() + begin_offset + i;
+				std::byte* byte_ptr = m_command_data.data() + begin_offset + i * sizeof(DATA);
 				DATA* data_ptr = reinterpret_cast<DATA*>(byte_ptr);
 
 				//Construct a new DATA in the memory
@@ -163,7 +163,7 @@ namespace core
 		//Move offset
 		offset += alignment_offset + sizeof(DATA);
 		//Return data
-		return std::move(*reinterpret_cast<DATA*>(&m_command_data[begin_offset]));
+		return *reinterpret_cast<DATA*>(&m_command_data[begin_offset]);
 	}
 
 	//Get buffer
