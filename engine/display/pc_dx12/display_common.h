@@ -183,13 +183,18 @@ namespace display
 		}
 	};
 
-	//Ring resource support, used for dynamic type of resources
-	template <typename HANDLE>
-	struct RingResourceSupport
+	//All resources will keep access to the memory of the resource
+	struct ResourceMemoryAccess
 	{
-		HANDLE next_handle;
 		void* memory_data = nullptr;
 		size_t memory_size = 0;
+	};
+
+	//Ring resource support, used for dynamic type of resources
+	template <typename HANDLE>
+	struct RingResourceSupport : ResourceMemoryAccess
+	{
+		HANDLE next_handle;
 	};
 
 	//Internal context implementation
@@ -240,7 +245,7 @@ namespace display
 	{
 		ComPtr<ID3D12Resource> resource;
 	};
-	struct UnorderedAccessBuffer : RingResourceSupport<UnorderedAccessBufferHandle>
+	struct UnorderedAccessBuffer
 	{
 		ComPtr<ID3D12Resource> resource;
 	};

@@ -21,7 +21,7 @@ namespace
 	};
 
 	//Create a commited resource
-	bool CreateResource(display::Device* device, const SourceResourceData& source_data, bool static_buffer, const D3D12_RESOURCE_DESC& resource_desc, ComPtr<ID3D12Resource>& resource, D3D12_RESOURCE_STATES resource_state)
+	bool CreateResource(display::Device* device, const SourceResourceData& source_data, bool static_buffer, const D3D12_RESOURCE_DESC& resource_desc, ComPtr<ID3D12Resource>& resource, display::ResourceMemoryAccess& resource_memory_access, D3D12_RESOURCE_STATES resource_state)
 	{
 		//Upload resource
 		ComPtr<ID3D12Resource> upload_resource;
@@ -53,7 +53,6 @@ namespace
 				SetLastErrorMessage(device, "Error creating the copy resource helper in the upload heap");
 				return false;
 			}
-
 		}
 		else
 		{
@@ -68,6 +67,15 @@ namespace
 				SetLastErrorMessage(device, "Error creating a resource in the upload heap");
 				return false;
 			}
+
+			//capture memory pointer and size
+			CD3DX12_RANGE readRange(0, 0);		// We do not intend to read from this resource on the CPU.
+			if (FAILED(upload_resource->Map(0, &readRange, reinterpret_cast<void**>(&resource_memory_access.memory_data))))
+			{
+				SetLastErrorMessage(device, "Error mapping to CPU memory a resource");
+				return false;
+			}
+			resource_memory_access.memory_size = source_data.size;
 		}
 
 		if (static_buffer)
@@ -134,7 +142,7 @@ namespace
 		while (count)
 		{
 			//Create a dynamic resource
-			if (!CreateResource(device, source_data, false, resource_desc, resource->resource, resource_state))
+			if (!CreateResource(device, source_data, false, resource_desc, resource->resource, *resource, resource_state))
 			{
 				DeleteRingResource(device, resource_handle, pool);
 				return resource_handle;
@@ -142,16 +150,6 @@ namespace
 
 			//Create views for it
 			view_create(device, *resource_handle_ptr, *resource);
-
-			//capture memory pointer and size
-			CD3DX12_RANGE readRange(0, 0);		// We do not intend to read from this resource on the CPU.
-			if (FAILED(resource->resource->Map(0, &readRange, reinterpret_cast<void**>(&resource->memory_data))))
-			{
-				SetLastErrorMessage(device, "Error mapping to CPU memory a ring resource");
-				DeleteRingResource(device, resource_handle, pool);
-				return resource_handle;
-			}
-			resource->memory_size = source_data.size;
 
 			if (count > 1)
 			{
@@ -244,7 +242,7 @@ namespace display
 			VertexBufferHandle handle = device->m_vertex_buffer_pool.Alloc();
 			auto& vertex_buffer = device->Get(handle);
 
-			if (!CreateResource(device, data, true, CD3DX12_RESOURCE_DESC::Buffer(vertex_buffer_desc.size), vertex_buffer.resource, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER))
+			if (!CreateResource(device, data, true, CD3DX12_RESOURCE_DESC::Buffer(vertex_buffer_desc.size), vertex_buffer.resource, vertex_buffer, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER))
 			{
 				device->m_vertex_buffer_pool.Free(handle);
 				return VertexBufferHandle();
@@ -293,7 +291,7 @@ namespace display
 
 			auto& index_buffer = device->Get(handle);
 
-			if (!CreateResource(device, data, true, CD3DX12_RESOURCE_DESC::Buffer(index_buffer_desc.size), index_buffer.resource, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER))
+			if (!CreateResource(device, data, true, CD3DX12_RESOURCE_DESC::Buffer(index_buffer_desc.size), index_buffer.resource, index_buffer, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER))
 			{
 				device->m_index_buffer_pool.Free(handle);
 				return IndexBufferHandle();
@@ -343,7 +341,7 @@ namespace display
 			ConstantBufferHandle handle = device->m_constant_buffer_pool.Alloc();
 			auto& constant_buffer = device->Get(handle);
 
-			if (!CreateResource(device, data, true, CD3DX12_RESOURCE_DESC::Buffer(size), constant_buffer.resource, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER))
+			if (!CreateResource(device, data, true, CD3DX12_RESOURCE_DESC::Buffer(size), constant_buffer.resource, constant_buffer, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER))
 			{
 				device->m_constant_buffer_pool.Free(handle);
 				return ConstantBufferHandle();
@@ -450,14 +448,14 @@ namespace display
 			init_resource_state = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE; //Mainly used in compute or vertex shaders
 		}
 
-		if (shader_resource_desc.access == Access::Static)
+		if (shader_resource_desc.access == Access::Static || shader_resource_desc.access == Access::Upload)
 		{
 			ShaderResourceHandle handle = device->m_shader_resource_pool.Alloc();
 			auto& shader_resource = device->Get(handle);
 
 			SourceResourceData data(shader_resource_desc.init_data, shader_resource_desc.size, shader_resource_desc.pitch, shader_resource_desc.slice_pitch);
 
-			if (!CreateResource(device, data, true, d12_resource_desc, shader_resource.resource, init_resource_state))
+			if (!CreateResource(device, data, shader_resource_desc.access == Access::Static, d12_resource_desc, shader_resource.resource, shader_resource, init_resource_state))
 			{
 				device->m_shader_resource_pool.Free(handle);
 				return ShaderResourceHandle();
@@ -759,13 +757,14 @@ namespace display
 			{
 				[&](auto handle)
 				{
-					auto& constant_buffer = device->Get(GetRingResource(device, handle, device->m_frame_index));
-					memory_data = constant_buffer.memory_data;
-					memory_size = constant_buffer.memory_size;
+					auto& buffer = device->Get(GetRingResource(device, handle, device->m_frame_index));
+					memory_data = buffer.memory_data;
+					memory_size = buffer.memory_size;
 				}
 			},
 			handle);
 
+		//Only dynamic created resources can access the memory
 		assert(memory_data);
 
 		return memory_data;

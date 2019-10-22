@@ -117,7 +117,8 @@ namespace display
 	enum class Access : uint8_t
 	{
 		Static, //Only change in the initialization, never touch again
-		Dynamic, //Upload from the CPU to the GPU one per frame
+		Dynamic, //Upload from the CPU to the GPU one per frame, duplicates the resource so it needs to upload everyframe
+		Upload //It is a resource that lives in the upload heap, user needs to sync CPU and GPU
 	};
 
 	enum class ShaderResourceType : uint8_t
