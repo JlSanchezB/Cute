@@ -101,6 +101,15 @@ namespace render
 		void Load(LoadContext& load_context) override;
 	};
 
+	//Shader Resource resource
+	class ShaderResourceResource : public DisplayHandleResource<display::ShaderResourceHandle>
+	{
+	public:
+		DECLARE_RENDER_CLASS("ShaderResource");
+
+		void Load(LoadContext& load_context) override;
+	};
+
 	//Vertex buffer resource
 	class VertexBufferResource : public DisplayHandleResource<display::VertexBufferHandle>
 	{

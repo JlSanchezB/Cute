@@ -36,7 +36,7 @@ namespace render
 		FreeListAllocator m_static_gpu_memory_allocator;
 
 		//Dynamic buffer resource in the GPU
-		display::UnorderedAccessBufferHandle m_dynamic_gpu_memory_buffer;
+		display::ShaderResourceHandle m_dynamic_gpu_memory_buffer;
 		//Dynamic buffer resource in the GPU
 		SegmentAllocator m_dynamic_gpu_memory_allocator;
 

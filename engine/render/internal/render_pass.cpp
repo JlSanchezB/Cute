@@ -193,6 +193,20 @@ namespace render
 			render_context.GetContext()->SetUnorderedAccessBuffer(m_pipe, m_root_parameter, unordered_access_buffer->GetHandle());
 		}
 	}
+	void SetRootShaderResourcePass::Load(LoadContext& load_context)
+	{
+		QueryTableAttribute(load_context, load_context.current_xml_element, "pipe", m_pipe, AttributeType::Optional);
+		QueryAttribute(load_context, load_context.current_xml_element, "root_param", m_root_parameter, AttributeType::NonOptional);
+		m_shader_resource.Set(load_context.GetResourceReference(load_context));
+	}
+	void SetRootShaderResourcePass::Render(RenderContext& render_context) const
+	{
+		ShaderResourceResource* shader_resource = m_shader_resource.Get(render_context);
+		if (shader_resource)
+		{
+			render_context.GetContext()->SetShaderResource(m_pipe, m_root_parameter, shader_resource->GetHandle());
+		}
+	}
 	void SetPipelineStatePass::Load(LoadContext & load_context)
 	{
 		m_pipeline_state.Set(load_context.GetResourceReference(load_context));

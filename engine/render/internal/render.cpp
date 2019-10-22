@@ -372,6 +372,8 @@ namespace render
 		RegisterPassFactory<ClearRenderTargetPass>(system);
 		RegisterPassFactory<SetRootSignaturePass>(system);
 		RegisterPassFactory<SetRootConstantBufferPass>(system);
+		RegisterPassFactory<SetRootShaderResourcePass>(system);
+		RegisterPassFactory<SetRootUnorderedAccessBufferPass>(system);
 		RegisterPassFactory<SetPipelineStatePass>(system);
 		RegisterPassFactory<SetDescriptorTablePass>(system);
 		RegisterPassFactory<DrawFullScreenQuadPass>(system);
@@ -773,7 +775,7 @@ namespace render
 		return system->m_gpu_memory.m_static_gpu_memory_buffer;
 	}
 
-	display::WeakUnorderedAccessBufferHandle GetDynamicGPUMemoryResource(System* system)
+	display::WeakShaderResourceHandle GetDynamicGPUMemoryResource(System* system)
 	{
 		return system->m_gpu_memory.m_dynamic_gpu_memory_buffer;
 	}

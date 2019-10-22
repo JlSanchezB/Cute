@@ -94,6 +94,22 @@ namespace render
 		void Render(RenderContext& render_context) const override;
 	};
 
+	class SetRootShaderResourcePass : public Pass
+	{
+		//Pipe
+		display::Pipe m_pipe = display::Pipe::Graphics;
+		//Root parameter
+		uint8_t m_root_parameter = 0;
+		//Root signature name
+		ResourceReference<ShaderResourceResource> m_shader_resource;
+
+	public:
+		DECLARE_RENDER_CLASS("SetRootShaderResource");
+
+		void Load(LoadContext& load_context) override;
+		void Render(RenderContext& render_context) const override;
+	};
+
 	class SetPipelineStatePass : public Pass
 	{
 		ResourceReference<GraphicsPipelineStateResource> m_pipeline_state;

@@ -24,9 +24,9 @@ namespace render
 
 	struct SystemDesc
 	{
-		uint32_t static_gpu_memory_size = 64 * 1024;
-		uint32_t dynamic_gpu_memory_size = 64 * 1024;
-		uint32_t dynamic_gpu_memory_segment_size = 1024;
+		uint32_t static_gpu_memory_size = 128 * 1024;
+		uint32_t dynamic_gpu_memory_size = 128 * 1024;
+		uint32_t dynamic_gpu_memory_segment_size =  4 * 1024;
 	};
 
 	//Context used for rendering a pass
@@ -172,7 +172,7 @@ namespace render
 	display::WeakUnorderedAccessBufferHandle GetStaticGPUMemoryResource(System* system);
 
 	//Get dynamic gpu memory resource
-	display::WeakUnorderedAccessBufferHandle GetDynamicGPUMemoryResource(System* system);
+	display::WeakShaderResourceHandle GetDynamicGPUMemoryResource(System* system);
 }
 
 #endif //RENDER_H_
