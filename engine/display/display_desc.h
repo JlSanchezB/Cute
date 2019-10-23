@@ -345,6 +345,13 @@ namespace display
 		uint32_t group_count_y = 1;
 		uint32_t group_count_z = 1;
 	};
+
+	struct SetShaderResourceAsVertexBufferDesc
+	{
+		uint32_t stride = 0;
+		uint32_t size = 0;
+	};
+
 }
 #endif
 

@@ -99,6 +99,22 @@ namespace display
 
 		command_list->IASetVertexBuffers(static_cast<UINT>(start_slot_index), static_cast<UINT>(num_vertex_buffers), vertex_buffer_views.data());
 	}
+	void Context::SetShaderResourceAsVertexBuffer(uint8_t start_slot_index, const WeakShaderResourceHandle& handle, const SetShaderResourceAsVertexBufferDesc& desc)
+	{
+		auto dx12_context = reinterpret_cast<DX12Context*>(this);
+		Device* device = dx12_context->device;
+		const auto& command_list = dx12_context->command_list;
+
+		auto& shader_resource = device->Get(GetRingResource(device, handle, device->m_frame_index));
+
+		D3D12_VERTEX_BUFFER_VIEW vertex_buffer_view;
+		vertex_buffer_view.SizeInBytes = static_cast<UINT>(desc.size);
+		vertex_buffer_view.StrideInBytes = static_cast<UINT>(desc.stride);
+		vertex_buffer_view.BufferLocation = shader_resource.resource->GetGPUVirtualAddress();
+
+		command_list->IASetVertexBuffers(static_cast<UINT>(start_slot_index), 1, &vertex_buffer_view);
+	}
+
 	void Context::SetIndexBuffer(const WeakIndexBufferHandle & index_buffer_handle)
 	{
 		auto dx12_context = reinterpret_cast<DX12Context*>(this);
