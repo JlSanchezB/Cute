@@ -18,6 +18,7 @@ namespace render
 		DrawIndexedInstanced,
 		ExecuteCompute,
 		UploadResourceBuffer,
+		SetShaderResourceAsVertexBuffer,
 		Custom
 	};
 
@@ -29,10 +30,10 @@ namespace render
 		//if the command buffer commads represent the offset to the command data offset
 		uint32_t command_data_offset = static_cast<uint32_t>(GetCurrentCommandDataPosition());
 		uint32_t command_offset = static_cast<uint32_t>(GetCurrentCommandPosition());
-		PushCommand(static_cast<uint8_t>(command_data_offset));
-		PushCommand(static_cast<uint8_t>(command_data_offset << 8));
-		PushCommand(static_cast<uint8_t>(command_data_offset << 16));
-		PushCommand(static_cast<uint8_t>(command_data_offset << 24));
+		PushCommand(static_cast<uint8_t>((command_data_offset & 0x000000FF)));
+		PushCommand(static_cast<uint8_t>((command_data_offset & 0x0000FF00) >> 8));
+		PushCommand(static_cast<uint8_t>((command_data_offset & 0x00FF0000) >> 16));
+		PushCommand(static_cast<uint8_t>((command_data_offset & 0xFF000000) >> 24));
 		
 		return command_offset;
 	}
@@ -118,6 +119,14 @@ namespace render
 				display::UpdateResourceBuffer(context.GetDevice(), GetData<display::UpdatableResourceHandle>(data_offset), buffer, size);
 			}
 			break;
+			case Commands::SetShaderResourceAsVertexBuffer:
+			{
+				uint8_t start_slot_index = GetData<uint8_t>(data_offset);
+				display::WeakShaderResourceHandle handle = GetData<display::WeakShaderResourceHandle>(data_offset);
+				display::SetShaderResourceAsVertexBufferDesc desc = GetData<display::SetShaderResourceAsVertexBufferDesc>(data_offset);
+				context.SetShaderResourceAsVertexBuffer(1, handle, desc);
+			}
+			break;
 			default:
 				//Command non know
 				throw std::runtime_error("Command in the command buffer is not known");
@@ -150,6 +159,14 @@ namespace render
 		PushData(start_slot_index);
 		PushData(num_vertex_buffers);
 		PushDataArray(vertex_buffers, num_vertex_buffers);
+	}
+
+	void CommandBuffer::SetShaderResourceAsVertexBuffer(uint8_t start_slot_index, const display::WeakShaderResourceHandle& handle, const display::SetShaderResourceAsVertexBufferDesc& desc)
+	{
+		PushCommand(static_cast<uint8_t>(Commands::SetShaderResourceAsVertexBuffer));
+		PushData(start_slot_index);
+		PushData(handle);
+		PushData(desc);
 	}
 
 	void CommandBuffer::SetIndexBuffer(const display::WeakIndexBufferHandle & index_buffer)

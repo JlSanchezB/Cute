@@ -36,7 +36,7 @@ namespace core
 
 		//Get command data
 		template<typename DATA>
-		DATA GetData(size_t& offset);
+		DATA& GetData(size_t& offset);
 
 		//Get buffer
 		const std::byte* GetBuffer(size_t& offset, size_t size);
@@ -155,7 +155,7 @@ namespace core
 	//Get command data
 	template<typename COMMAND_TYPE>
 	template<typename DATA>
-	inline DATA CommandBuffer<COMMAND_TYPE>::GetData(size_t & offset)
+	inline DATA& CommandBuffer<COMMAND_TYPE>::GetData(size_t & offset)
 	{
 		size_t alignment_offset = CalculateAlignment(alignof(DATA), offset);
 		const size_t begin_offset = offset + alignment_offset;

@@ -31,6 +31,9 @@ namespace render
 		//Set Vertex buffers
 		void SetVertexBuffers(uint8_t start_slot_index, uint8_t num_vertex_buffers, display::WeakVertexBufferHandle* vertex_buffers);
 
+		//Set shader resource as a vertex buffer
+		void SetShaderResourceAsVertexBuffer(uint8_t start_slot_index, const display::WeakShaderResourceHandle& handle, const display::SetShaderResourceAsVertexBufferDesc& desc);
+
 		//Set Index Buffer
 		void SetIndexBuffer(const display::WeakIndexBufferHandle& index_buffer);
 
