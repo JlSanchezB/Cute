@@ -27,7 +27,7 @@ struct DisplayResource
 
 		//Create pipeline state
 		const char* shader_code =
-			"	float4 zoom_position : c0;\
+			"	float4 zoom_position : register(b0);\
 				struct PSInput\
 				{\
 					float4 position : SV_POSITION;\
@@ -55,12 +55,12 @@ struct DisplayResource
 		display::CompileShaderDesc compile_shader_desc;
 		compile_shader_desc.code = shader_code;
 		compile_shader_desc.entry_point = "main_vs";
-		compile_shader_desc.target = "vs_5_0";
+		compile_shader_desc.target = "vs_5_1";
 		display::CompileShader(device, compile_shader_desc, vertex_shader);
 
 		compile_shader_desc.code = shader_code;
 		compile_shader_desc.entry_point = "main_ps";
-		compile_shader_desc.target = "ps_5_0";
+		compile_shader_desc.target = "ps_5_1";
 		display::CompileShader(device, compile_shader_desc, pixel_shader);
 
 
@@ -96,7 +96,8 @@ struct DisplayResource
 		//Cow
 		//Create pipeline state
 		const char* gazelle_shader_code =
-			"	float4 zoom_position : c0;\
+			"	float4 zoom_position : register(b0);\
+				StructuredBuffer<float4> instance_buffer : register(t0);\
 				struct PSInput\
 				{\
 					float4 position : SV_POSITION;\
@@ -121,12 +122,12 @@ struct DisplayResource
 
 		compile_shader_desc.code = gazelle_shader_code;
 		compile_shader_desc.entry_point = "main_vs";
-		compile_shader_desc.target = "vs_5_0";
+		compile_shader_desc.target = "vs_5_1";
 		display::CompileShader(device, compile_shader_desc, vertex_shader);
 
 		compile_shader_desc.code = gazelle_shader_code;
 		compile_shader_desc.entry_point = "main_ps";
-		compile_shader_desc.target = "ps_5_0";
+		compile_shader_desc.target = "ps_5_1";
 		display::CompileShader(device, compile_shader_desc, pixel_shader);
 
 		//Add shaders
@@ -142,7 +143,8 @@ struct DisplayResource
 		//Lion
 		//Create pipeline state
 		const char* lion_shader_code =
-			"	float4 zoom_position : c0;\
+			"	float4 zoom_position : register(b0);\
+				StructuredBuffer<float4> instance_buffer : register(t0);\
 				struct PSInput\
 				{\
 					float4 position : SV_POSITION;\
@@ -172,12 +174,12 @@ struct DisplayResource
 
 		compile_shader_desc.code = lion_shader_code;
 		compile_shader_desc.entry_point = "main_vs";
-		compile_shader_desc.target = "vs_5_0";
+		compile_shader_desc.target = "vs_5_1";
 		display::CompileShader(device, compile_shader_desc, vertex_shader);
 
 		compile_shader_desc.code = lion_shader_code;
 		compile_shader_desc.entry_point = "main_ps";
-		compile_shader_desc.target = "ps_5_0";
+		compile_shader_desc.target = "ps_5_1";
 		display::CompileShader(device, compile_shader_desc, pixel_shader);
 
 		//Add shaders

@@ -58,6 +58,9 @@ namespace
 			return glm::vec2(0.f, 1.f);
 		}
 	}
+
+	constexpr size_t kChunkAllocationSize = 4 * 1024;
+	constexpr size_t kDynamicGPUSize = 16 * 1024 * 1024;
 }
 
 class RandomEventsGenerator
@@ -343,9 +346,6 @@ public:
 	//Game constant buffer
 	display::ConstantBufferHandle m_game_constant_buffer;
 
-	//Instances instance buffer
-	display::VertexBufferHandle m_instances_vertex_buffer;
-
 	//Command buffer
 	display::CommandListHandle m_render_command_list;
 
@@ -384,11 +384,32 @@ public:
 	std::vector<std::string> m_render_system_errors;
 	std::vector<std::string> m_render_system_context_errors;
 
-	//Instance buffer
-	std::vector<glm::vec4> m_instance_buffer;
+	//Rendering
+	struct Border
+	{
+		float left;
+		float right;
+		float top;
+		float bottom;
+	};
 
-	//Parallel instance buffer, for each entity type
-	std::array<job::ThreadData<std::vector<glm::vec4>>, 3> m_parallel_instance_buffer;
+	//Thread data will the pointer inside the GPU memory and the size already used
+	struct InstanceBuffer
+	{
+		uint8_t* data = nullptr;
+		size_t size = 0;
+	};
+
+	//Generate task for culling for each instance type
+	struct CullingJobData
+	{
+		ECSGame* game;
+		Border borders;
+		render::PointOfView* point_of_view;
+		uint8_t* dynamic_gpu_buffer_base;
+		//For each job, we track the chunk allocated in the GPU memory for each type of instance
+		job::ThreadData<std::array<InstanceBuffer, 3>>* instance_buffer;
+	};
 
 	//Show ecs debug info
 	bool m_show_ecs_stats = false;
@@ -518,13 +539,6 @@ public:
 		constant_buffer_desc.size = 16;
 		m_game_constant_buffer = display::CreateConstantBuffer(m_device, constant_buffer_desc, "GameConstantBuffer");
 
-		//Create instances vertex buffer
-		display::VertexBufferDesc instance_vertex_buffer_desc;
-		instance_vertex_buffer_desc.access = display::Access::Dynamic;
-		instance_vertex_buffer_desc.stride = 16; //4 floats
-		instance_vertex_buffer_desc.size = 1024 * 1024;
-		m_instances_vertex_buffer = display::CreateVertexBuffer(m_device, instance_vertex_buffer_desc, "InstanceVertexBuffer");
-
 		m_display_resources.Load(m_device);
 
 		//Create a command list for rendering the render frame
@@ -537,17 +551,16 @@ public:
 		//Reset the update job allocator
 		m_update_job_allocator.Reset();
 
-		//Reset parallel instance buffer
-		m_parallel_instance_buffer[0].Reset();
-		m_parallel_instance_buffer[1].Reset();
-		m_parallel_instance_buffer[2].Reset();
-
 		//Create render pass system
-		m_render_system = render::CreateRenderSystem(m_device, m_job_system, this);
+		render::SystemDesc render_system_desc;
+		//Needed a lot of memory as around 20k entities, 3 frames, 4 float
+		render_system_desc.dynamic_gpu_memory_size = kDynamicGPUSize;
+		m_render_system = render::CreateRenderSystem(m_device, m_job_system, this, render_system_desc);
 
 		//Add game resources
 		render::AddGameResource(m_render_system, "GameGlobal"_sh32, CreateResourceFromHandle<render::ConstantBufferResource>(display::WeakConstantBufferHandle(m_game_constant_buffer)));
 		render::AddGameResource(m_render_system, "BackBuffer"_sh32, CreateResourceFromHandle<render::RenderTargetResource>(display::GetBackBuffer(m_device)));
+		render::AddGameResource(m_render_system, "DynamicGPUMemory"_sh32, CreateResourceFromHandle<render::ShaderResourceResource>(render::GetDynamicGPUMemoryResource(m_render_system)));
 		render::AddGameResource(m_render_system, "GameRootSignature"_sh32, CreateResourceFromHandle<render::RootSignatureResource>(display::WeakRootSignatureHandle(m_display_resources.m_root_signature)));
 		render::AddGameResource(m_render_system, "ZoomPosition"_sh32, CreateResourceFromHandle<render::ConstantBufferResource>(display::WeakConstantBufferHandle(m_display_resources.m_zoom_position)));
 
@@ -590,7 +603,6 @@ public:
 	{
 		//Destroy handles
 		display::DestroyHandle(m_device, m_game_constant_buffer);
-		display::DestroyHandle(m_device, m_instances_vertex_buffer);
 		display::DestroyHandle(m_device, m_render_command_list);
 		m_display_resources.Unload(m_device);
 
@@ -648,14 +660,6 @@ public:
 			.Init<LionComponent>(top_size, eat_factor, size_distance_rate, attack_recharge)
 			.Init<VelocityComponent>(0.f, 0.f, 0.f);
 	}
-
-	struct Border
-	{
-		float left;
-		float right;
-		float top;
-		float bottom;
-	};
 
 	bool IsInside(const Border& borders, float x, float y, float size)
 	{
@@ -1238,6 +1242,77 @@ public:
 
 	}
 
+	//Adds current allocation for rendering
+	void AddRenderItem(render::PointOfView& point_of_view, uint8_t* dynamic_gpu_buffer_base, InstanceBuffer& buffer, const size_t type)
+	{
+		if (buffer.data && buffer.size > 0)
+		{
+			auto& command_buffer = point_of_view.GetCommandBuffer();
+			//Add a render item for rendering the grass
+			auto commands_offset = command_buffer.Open();
+			constexpr display::SetShaderResourceAsVertexBufferDesc desc = { 16, kDynamicGPUSize};
+
+			command_buffer.SetVertexBuffers(0, 1, &m_display_resources.m_quad_vertex_buffer);
+			command_buffer.SetIndexBuffer(m_display_resources.m_quad_index_buffer);
+			command_buffer.SetShaderResourceAsVertexBuffer(1, render::GetDynamicGPUMemoryResource(m_render_system), desc);
+
+			switch (type)
+			{
+			case 0:
+				command_buffer.SetPipelineState(m_display_resources.m_grass_pipeline_state);
+				break;
+			case 1:
+				command_buffer.SetPipelineState(m_display_resources.m_gazelle_pipeline_state);
+				break;
+			case 2:
+				command_buffer.SetPipelineState(m_display_resources.m_lion_pipeline_state);
+				break;
+			}
+			
+			display::DrawIndexedInstancedDesc draw_desc;
+			draw_desc.index_count = 6;
+			//Calculate instance count and the offset inside the dynamic GPU memory buffer
+			draw_desc.instance_count = static_cast<uint32_t>(buffer.size / 16);
+			draw_desc.start_instance = static_cast<uint32_t>((buffer.data - dynamic_gpu_buffer_base)) / 16;
+
+
+			command_buffer.DrawIndexedInstanced(draw_desc);
+			command_buffer.Close();
+
+			point_of_view.PushRenderItem(m_solid_render_priority, static_cast<render::SortKey>(type), commands_offset);
+		}
+	};
+
+	void AddForRendering(CullingJobData* job_data, const size_t type, const float x, const float y, const float angle, const float size)
+	{
+		auto& buffer = job_data->instance_buffer->Get()[type];
+		//Check if sufficient memory
+		if (buffer.data == nullptr || ((buffer.size + sizeof(float)) * 4 >= kChunkAllocationSize))
+		{
+			//Needs to send it to render and allocate another chunk of memory inside the system
+
+			if (buffer.data)
+			{
+				//Send to render
+				AddRenderItem(*job_data->point_of_view, job_data->dynamic_gpu_buffer_base, buffer, type);
+			}
+
+			//Allocate another chunk
+			buffer.data = reinterpret_cast<uint8_t*>(render::AllocDynamicGPUMemory(m_render_system, kChunkAllocationSize, render::GetGameFrameIndex(m_render_system)));
+			buffer.size = 0;
+		}
+
+		//Copy the data
+		*reinterpret_cast<float*>(&buffer.data[buffer.size]) = x;
+		buffer.size += sizeof(float);
+		*reinterpret_cast<float*>(&buffer.data[buffer.size]) = y;
+		buffer.size += sizeof(float);
+		*reinterpret_cast<float*>(&buffer.data[buffer.size]) = angle;
+		buffer.size += sizeof(float);
+		*reinterpret_cast<float*>(&buffer.data[buffer.size]) = size;
+		buffer.size += sizeof(float);
+	};
+
 	void OnTick(double total_time, float elapsed_time) override
 	{
 		//UPDATE GAME
@@ -1385,159 +1460,59 @@ public:
 			pass_info.height = m_height;
 
 			auto& point_of_view = render_frame.AllocPointOfView("Main"_sh32, 0, 0, pass_info, m_init_map_resource_map);
-			auto& command_buffer = point_of_view.GetCommandBuffer();
-
-			//Clear parallel instance buffer
-			//Fill the buffer
-			m_parallel_instance_buffer[0].Visit([&](auto& data)
-			{
-				data.clear();
-			});
-
-			m_parallel_instance_buffer[1].Visit([&](auto& data)
-			{
-				data.clear();
-			});
-
-			m_parallel_instance_buffer[2].Visit([&](auto& data)
-			{
-				data.clear();
-			});
-
-			//Generate task for culling for each instance type
-			struct JobData
-			{
-				ECSGame* game;
-				Border borders;
-			};
+			job::ThreadData<std::array<InstanceBuffer, 3>> instance_buffer;
 
 			//Create JobData
-			auto job_data = m_update_job_allocator.Alloc<JobData>();
+			auto job_data = m_update_job_allocator.Alloc<CullingJobData>();
 			job_data->game = this;
 			job_data->borders = borders;
+			job_data->point_of_view = &point_of_view;
+			//Get base ptr for the dynamic gpu memory
+			job_data->dynamic_gpu_buffer_base = reinterpret_cast<uint8_t*>(display::GetResourceMemoryBuffer(m_device, render::GetDynamicGPUMemoryResource(m_render_system)));
+			job_data->instance_buffer = &instance_buffer;
 
 			ecs::AddJobs<GameDatabase, const PositionComponent, const GrassStateComponent>(m_job_system, g_InstanceBufferFinishedFence, m_update_job_allocator, 64,
-				[](JobData* job_data, const auto& instance_iterator, const PositionComponent& position, const GrassStateComponent& grass)
+				[](CullingJobData* job_data, const auto& instance_iterator, const PositionComponent& position, const GrassStateComponent& grass)
 			{
-				auto& buffer = job_data->game->m_parallel_instance_buffer[0].Get();
 				const float size = grass.size.GetSize();
 				if (job_data->game->IsInside(job_data->borders, position.position.x, position.position.y, size))
 				{
-					buffer.emplace_back(position.position.x, position.position.y, position.angle, size);
+					job_data->game->AddForRendering(job_data, 0, position.position.x, position.position.y, position.angle, size);
 				}
-			}, job_data, zone_bitset, & g_profile_marker_PrepareRenderToken);
+			}, job_data, zone_bitset, &g_profile_marker_PrepareRenderToken);
 
 			ecs::AddJobs<GameDatabase, const PositionComponent, const GazelleStateComponent>(m_job_system, g_InstanceBufferFinishedFence, m_update_job_allocator, 64,
-				[](JobData* job_data, const auto& instance_iterator, const PositionComponent& position, const GazelleStateComponent& gazelle)
+				[](CullingJobData* job_data, const auto& instance_iterator, const PositionComponent& position, const GazelleStateComponent& gazelle)
 			{
-				auto& buffer = job_data->game->m_parallel_instance_buffer[1].Get();
 				const float size = gazelle.size.GetSize();
 				//Add to the instance buffer the instance
 				if (job_data->game->IsInside(job_data->borders, position.position.x, position.position.y, size))
 				{
-					buffer.emplace_back(position.position.x, position.position.y, position.angle, size);
+					job_data->game->AddForRendering(job_data, 1, position.position.x, position.position.y, position.angle, size);
 				}
-			}, job_data, zone_bitset, & g_profile_marker_PrepareRenderToken);
+			}, job_data, zone_bitset, &g_profile_marker_PrepareRenderToken);
 
 			ecs::AddJobs<GameDatabase, const PositionComponent, const LionStateComponent>(m_job_system, g_InstanceBufferFinishedFence, m_update_job_allocator, 64,
-				[](JobData* job_data, const auto& instance_iterator, const PositionComponent& position, const LionStateComponent& lion)
+				[](CullingJobData* job_data, const auto& instance_iterator, const PositionComponent& position, const LionStateComponent& lion)
 			{
-				auto& buffer = job_data->game->m_parallel_instance_buffer[2].Get();
 				//Add to the instance buffer the instance
 				if (job_data->game->IsInside(job_data->borders, position.position.x, position.position.y, lion.size))
 				{
-					buffer.emplace_back(position.position.x, position.position.y, position.angle, lion.size);
+					job_data->game->AddForRendering(job_data, 2, position.position.x, position.position.y, position.angle, lion.size);
 				}
-			}, job_data, zone_bitset, & g_profile_marker_PrepareRenderToken);
+			}, job_data, zone_bitset, &g_profile_marker_PrepareRenderToken);
 
 			//Wait for the fence
 			job::Wait(m_job_system, g_InstanceBufferFinishedFence);
 
-			//Culling and draw per type
-			m_instance_buffer.clear();
-
-			//Fill the buffer
-			m_parallel_instance_buffer[0].Visit([&](auto& data)
+			//Flush open job buffers
+			job_data->instance_buffer->Visit([&](auto& job_buffer)
 			{
-				m_instance_buffer.insert(m_instance_buffer.end(), data.begin(), data.end());
+				for (size_t type = 0; type < 3; ++type)
+				{
+					AddRenderItem(point_of_view, job_data->dynamic_gpu_buffer_base,job_buffer[type], type);
+				}
 			});
-
-			if (m_instance_buffer.size() > 0)
-			{
-				//Add a render item for rendering the grass
-				auto commands_offset = command_buffer.Open();
-				command_buffer.SetVertexBuffers(0, 1, &m_display_resources.m_quad_vertex_buffer);
-				command_buffer.SetVertexBuffers(1, 1, &m_instances_vertex_buffer);
-				command_buffer.SetIndexBuffer(m_display_resources.m_quad_index_buffer);
-				command_buffer.SetPipelineState(m_display_resources.m_grass_pipeline_state);
-				display::DrawIndexedInstancedDesc draw_desc;
-				draw_desc.index_count = 6;
-				draw_desc.instance_count = static_cast<uint32_t>(m_instance_buffer.size());
-				command_buffer.DrawIndexedInstanced(draw_desc);
-				command_buffer.Close();
-
-				point_of_view.PushRenderItem(m_solid_render_priority, 0, commands_offset);
-			}
-
-			size_t instance_offset = m_instance_buffer.size();
-
-			//Fill the buffer
-			m_parallel_instance_buffer[1].Visit([&](auto& data)
-			{
-				m_instance_buffer.insert(m_instance_buffer.end(), data.begin(), data.end());
-			});
-
-			if ((m_instance_buffer.size() - instance_offset) > 0)
-			{
-				//Add a render item for rendering the gazelle
-				auto commands_offset = command_buffer.Open();
-				command_buffer.SetVertexBuffers(0, 1, &m_display_resources.m_quad_vertex_buffer);
-				command_buffer.SetVertexBuffers(1, 1, &m_instances_vertex_buffer);
-				command_buffer.SetIndexBuffer(m_display_resources.m_quad_index_buffer);
-				command_buffer.SetPipelineState(m_display_resources.m_gazelle_pipeline_state);
-				display::DrawIndexedInstancedDesc draw_desc;
-				draw_desc.index_count = 6;
-				draw_desc.instance_count = static_cast<uint32_t>(m_instance_buffer.size() - instance_offset);
-				draw_desc.start_instance = static_cast<uint32_t>(instance_offset);
-				command_buffer.DrawIndexedInstanced(draw_desc);
-				command_buffer.Close();
-
-				point_of_view.PushRenderItem(m_solid_render_priority, 1, commands_offset);
-			}
-
-			instance_offset = m_instance_buffer.size();
-	
-			//Fill the buffer
-			m_parallel_instance_buffer[2].Visit([&](auto& data)
-			{
-				m_instance_buffer.insert(m_instance_buffer.end(), data.begin(), data.end());
-			});
-
-			if ((m_instance_buffer.size() - instance_offset) > 0)
-			{
-				//Add a render item for rendering the lion
-				auto commands_offset = command_buffer.Open();
-				command_buffer.SetVertexBuffers(0, 1, &m_display_resources.m_quad_vertex_buffer);
-				command_buffer.SetVertexBuffers(1, 1, &m_instances_vertex_buffer);
-				command_buffer.SetIndexBuffer(m_display_resources.m_quad_index_buffer);
-				command_buffer.SetPipelineState(m_display_resources.m_lion_pipeline_state);
-				display::DrawIndexedInstancedDesc draw_desc;
-				draw_desc.index_count = 6;
-				draw_desc.instance_count = static_cast<uint32_t>(m_instance_buffer.size() - instance_offset);
-				draw_desc.start_instance = static_cast<uint32_t>(instance_offset);
-				command_buffer.DrawIndexedInstanced(draw_desc);
-				command_buffer.Close();
-
-				point_of_view.PushRenderItem(m_solid_render_priority, 2, commands_offset);
-			}
-
-			if (m_instance_buffer.size() > 0)
-			{
-				//Send the buffer for updating the vertex constant
-				auto command_offset = render_frame.GetBeginFrameComamndbuffer().Open();
-				render_frame.GetBeginFrameComamndbuffer().UploadResourceBuffer(m_instances_vertex_buffer, &m_instance_buffer[0], m_instance_buffer.size() * sizeof(glm::vec4));
-				render_frame.GetBeginFrameComamndbuffer().Close();
-			}
 
 			//Render
 			render::EndPrepareRenderAndSubmit(m_render_system);
