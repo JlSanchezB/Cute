@@ -697,7 +697,7 @@ namespace render
 	{
 		//Render frame has all the information
 
-		//Submit render
+		//Submit render if the job system is activated
 		if (system->m_job_system)
 		{
 			assert(system->m_game);
@@ -706,7 +706,7 @@ namespace render
 		}
 		else
 		{
-			//Submit (current implementation is single thread
+			//Submit
 			system->SubmitRender();
 		}
 
@@ -767,7 +767,7 @@ namespace render
 		size_t offset = system->m_gpu_memory.m_dynamic_gpu_memory_allocator.Alloc(size, frame_index);
 
 		//Return the memory address inside the resource
-		return static_cast<uint8_t*>(display::GetResourceMemoryBuffer(system->m_device, system->m_gpu_memory.m_dynamic_gpu_memory_buffer)) + offset;
+		return reinterpret_cast<uint8_t*>(display::GetResourceMemoryBuffer(system->m_device, system->m_gpu_memory.m_dynamic_gpu_memory_buffer)) + offset;
 	}
 
 	display::WeakUnorderedAccessBufferHandle GetStaticGPUMemoryResource(System* system)

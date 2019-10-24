@@ -108,10 +108,10 @@ namespace render
 		//GPU memory systems for syncing memory CPU-GPU
 		RenderGPUMemory m_gpu_memory;
 
-		//Game thread frame
+		//Game thread frame, starts with 0 to sync with the display frame index
 		uint64_t m_game_frame_index = 0;
 
-		//Render thread frame
+		//Render thread frame, starts with 0 to sync with the display frame index
 		uint64_t m_render_frame_index = 0;
 
 		//List of activated render contexts, they get resused between frames using the pass name and id

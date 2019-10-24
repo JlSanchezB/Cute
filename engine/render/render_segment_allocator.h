@@ -33,7 +33,7 @@ namespace render
 			//Init the free list
 			for (size_t i = 0; i < init_allocated_segments; ++i)
 			{
-				m_free_allocations.push_back(i);
+				m_free_allocations.push_back(init_allocated_segments - i - 1);
 			}
 
 			OnResize(m_segment_count);
@@ -131,7 +131,7 @@ namespace render
 		auto& current_allocation = frame.active_allocations.Get();
 
 		const bool first_allocation = current_allocation.segment_index == kInvalidSegment;
-		const bool non_sufficient_memory = (current_allocation.segment_index != kInvalidSegment && (current_allocation.current_size + size >= m_segment_size));
+		const bool non_sufficient_memory = (current_allocation.segment_index != kInvalidSegment && ((current_allocation.current_size + size) >= m_segment_size));
 		if (first_allocation || non_sufficient_memory)
 		{
 			//Check if there is an segment already active and send it to live allocations
@@ -141,6 +141,7 @@ namespace render
 
 				//We need to register the current allocation
 				frame.live_segments.emplace_back(current_allocation.segment_index);
+				current_allocation.segment_index = kInvalidSegment;
 			}
 
 			//Alloc a new segment
@@ -162,7 +163,7 @@ namespace render
 					}
 
 					size_t old_count = m_segment_count;
-					m_segment_count = std::max(old_count * 2, m_resource_size / m_segment_size);
+					m_segment_count = std::min(old_count * 2, m_resource_size / m_segment_size);
 
 					//Use the first new segment for the allocation
 					current_allocation.segment_index = old_count;
@@ -170,7 +171,7 @@ namespace render
 					//Add the rest as free
 					for (size_t i = old_count + 1; i < m_segment_count; ++i)
 					{
-						m_free_allocations.push_back(i);
+						m_free_allocations.push_back(m_segment_count - i + old_count);
 					}
 
 					OnResize(m_segment_count);
