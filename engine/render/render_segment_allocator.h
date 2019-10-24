@@ -31,9 +31,9 @@ namespace render
 			m_segment_count = init_allocated_segments;
 
 			//Init the free list
-			for (size_t i = 0; i < init_allocated_segments; ++i)
+			for (size_t i = init_allocated_segments; i > 0; --i)
 			{
-				m_free_allocations.push_back(init_allocated_segments - i - 1);
+				m_free_allocations.push_back(i - 1);
 			}
 
 			OnResize(m_segment_count);
@@ -169,7 +169,7 @@ namespace render
 					current_allocation.segment_index = old_count;
 
 					//Add the rest as free
-					for (size_t i = old_count + 1; i < m_segment_count; ++i)
+					for (size_t i = m_segment_count - 1; i > old_count; --i)
 					{
 						m_free_allocations.push_back(m_segment_count - i + old_count);
 					}
