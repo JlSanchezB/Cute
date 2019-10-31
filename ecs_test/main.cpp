@@ -1164,7 +1164,7 @@ public:
 		job_data->game = this;
 
 		//Move entities
-		ecs::AddJobs<GameDatabase, PositionComponent, VelocityComponent>(m_job_system, g_MovedFinishedFence, m_update_job_allocator, 64,
+		ecs::AddJobs<GameDatabase, PositionComponent, VelocityComponent>(m_job_system, g_MovedFinishedFence, m_update_job_allocator, 256,
 			[](MovesJobData* job_data, const auto& instance_iterator, PositionComponent& position, VelocityComponent& velocity)
 		{
 			const float elapsed_time = job_data->elapsed_time;
@@ -1471,7 +1471,7 @@ public:
 			job_data->dynamic_gpu_buffer_base = reinterpret_cast<uint8_t*>(display::GetResourceMemoryBuffer(m_device, render::GetDynamicGPUMemoryResource(m_render_system)));
 			job_data->instance_buffer = &instance_buffer;
 
-			ecs::AddJobs<GameDatabase, const PositionComponent, const GrassStateComponent>(m_job_system, g_InstanceBufferFinishedFence, m_update_job_allocator, 64,
+			ecs::AddJobs<GameDatabase, const PositionComponent, const GrassStateComponent>(m_job_system, g_InstanceBufferFinishedFence, m_update_job_allocator, 256,
 				[](CullingJobData* job_data, const auto& instance_iterator, const PositionComponent& position, const GrassStateComponent& grass)
 			{
 				const float size = grass.size.GetSize();
@@ -1481,7 +1481,7 @@ public:
 				}
 			}, job_data, zone_bitset, &g_profile_marker_PrepareRenderToken);
 
-			ecs::AddJobs<GameDatabase, const PositionComponent, const GazelleStateComponent>(m_job_system, g_InstanceBufferFinishedFence, m_update_job_allocator, 64,
+			ecs::AddJobs<GameDatabase, const PositionComponent, const GazelleStateComponent>(m_job_system, g_InstanceBufferFinishedFence, m_update_job_allocator, 256,
 				[](CullingJobData* job_data, const auto& instance_iterator, const PositionComponent& position, const GazelleStateComponent& gazelle)
 			{
 				const float size = gazelle.size.GetSize();
@@ -1492,7 +1492,7 @@ public:
 				}
 			}, job_data, zone_bitset, &g_profile_marker_PrepareRenderToken);
 
-			ecs::AddJobs<GameDatabase, const PositionComponent, const LionStateComponent>(m_job_system, g_InstanceBufferFinishedFence, m_update_job_allocator, 64,
+			ecs::AddJobs<GameDatabase, const PositionComponent, const LionStateComponent>(m_job_system, g_InstanceBufferFinishedFence, m_update_job_allocator, 256,
 				[](CullingJobData* job_data, const auto& instance_iterator, const PositionComponent& position, const LionStateComponent& lion)
 			{
 				//Add to the instance buffer the instance
