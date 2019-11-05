@@ -16,7 +16,7 @@ namespace display
 
 namespace platform
 {
-	enum class InputSlot : uint8_t
+	enum class InputSlotState : uint8_t
 	{
 		Back,
 		Tab,
@@ -33,6 +33,20 @@ namespace platform
 		Down,
 		PageUp,
 		PageDown,
+		LeftMouseButton,
+		RightMouseButton,
+		MiddleMouseButton,
+
+		Count,
+		Invalid = 255
+	};
+
+	enum class InputSlotValue : uint8_t
+	{
+		MouseWheel,
+		MouseHWheel,
+		MousePositionX,
+		MousePositionY,
 
 		Count,
 		Invalid = 255
@@ -41,13 +55,23 @@ namespace platform
 	enum class EventType : uint8_t
 	{
 		KeyUp,
-		KeyDown
+		KeyDown,
+		MouseWheel,
+		MouseHWheel
 	};
 
 	struct InputEvent
 	{
 		EventType type;
-		InputSlot slot;
+		InputSlotState slot;
+		float value;
+
+		InputEvent(EventType _type, InputSlotState _slot) : type(_type), slot(_slot)
+		{
+		}
+		InputEvent(EventType _type, float _value) : type(_type), value(_value)
+		{
+		}
 	};
 
 	//Virtual interface that implements a game
@@ -57,7 +81,8 @@ namespace platform
 		void SetDevice(display::Device* device);
 
 		//Input
-		bool GetInputSlotState(InputSlot input_slot) const;
+		bool GetInputSlotState(InputSlotState input_slot) const;
+		float GetInputSlotValue(InputSlotValue input_slot) const;
 		const std::vector<InputEvent> GetInputEvents() const;
 
 	public:

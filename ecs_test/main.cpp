@@ -372,6 +372,7 @@ public:
 	float m_camera_zoom = 1.f;
 	float m_camera_move_speed = 2.5f;
 	float m_camera_zoom_speed = 2.5f;
+	float m_camera_zoom_wheel_speed = 50.f;
 	float m_camera_zoom_velocity = 0.f;
 	float m_camera_position_velocity[2] = { 0.f };
 	float m_camera_friction = 3.0f;
@@ -1378,7 +1379,7 @@ public:
 				//Reset camera
 				for (auto& input_event : GetInputEvents())
 				{
-					if (input_event.type == platform::EventType::KeyDown && input_event.slot == platform::InputSlot::Escape)
+					if (input_event.type == platform::EventType::KeyDown && input_event.slot == platform::InputSlotState::Escape)
 					{
 						m_camera_zoom = 1.f;
 						m_camera_position[0] = m_camera_position[1] = 0.f;
@@ -1388,27 +1389,33 @@ public:
 				}
 
 				//New camera parameters
-				if (GetInputSlotState(platform::InputSlot::PageDown))
+				if (GetInputSlotState(platform::InputSlotState::PageDown))
 				{
 					m_camera_zoom_velocity += m_camera_zoom_speed * elapsed_time;
 				}
-				if (GetInputSlotState(platform::InputSlot::PageUp))
+				else
+				if (GetInputSlotState(platform::InputSlotState::PageUp))
 				{
 					m_camera_zoom_velocity -= m_camera_zoom_speed * elapsed_time;
 				}
-				if (GetInputSlotState(platform::InputSlot::Right))
+				else
+				if (GetInputSlotValue(platform::InputSlotValue::MouseWheel) != 0.f)
+				{
+					m_camera_zoom_velocity += m_camera_zoom_wheel_speed * elapsed_time * GetInputSlotValue(platform::InputSlotValue::MouseWheel);
+				}
+				if (GetInputSlotState(platform::InputSlotState::Right))
 				{
 					m_camera_position_velocity[0] += m_camera_move_speed * elapsed_time / m_camera_zoom;
 				}
-				if (GetInputSlotState(platform::InputSlot::Left))
+				if (GetInputSlotState(platform::InputSlotState::Left))
 				{
 					m_camera_position_velocity[0] -= m_camera_move_speed * elapsed_time / m_camera_zoom;
 				}
-				if (GetInputSlotState(platform::InputSlot::Down))
+				if (GetInputSlotState(platform::InputSlotState::Down))
 				{
 					m_camera_position_velocity[1] -= m_camera_move_speed * elapsed_time / m_camera_zoom;
 				}
-				if (GetInputSlotState(platform::InputSlot::Up))
+				if (GetInputSlotState(platform::InputSlotState::Up))
 				{
 					m_camera_position_velocity[1] += m_camera_move_speed * elapsed_time / m_camera_zoom;
 				}

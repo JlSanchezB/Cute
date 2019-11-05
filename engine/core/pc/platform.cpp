@@ -117,34 +117,37 @@ namespace
 		//Imgui render log
 		bool m_imgui_log_enable = false;
 
-		constexpr std::array<platform::InputSlot, 256> build_keyboard_conversion()
+		constexpr std::array<platform::InputSlotState, 256> build_keyboard_conversion()
 		{
-			std::array<platform::InputSlot, 256> table = { platform::InputSlot::Invalid };
+			std::array<platform::InputSlotState, 256> table = { platform::InputSlotState::Invalid };
 
-			table[VK_BACK] = platform::InputSlot::Back;
-			table[VK_TAB] = platform::InputSlot::Tab;
-			table[VK_RETURN] = platform::InputSlot::Return;
-			table[VK_LSHIFT] = platform::InputSlot::LShift;
-			table[VK_LCONTROL] = platform::InputSlot::LControl;
-			table[VK_RSHIFT] = platform::InputSlot::RShift;
-			table[VK_RCONTROL] = platform::InputSlot::RControl;
-			table[VK_ESCAPE] = platform::InputSlot::Escape;
-			table[VK_SPACE] = platform::InputSlot::Space;
-			table[VK_LEFT] = platform::InputSlot::Left;
-			table[VK_UP] = platform::InputSlot::Up;
-			table[VK_DOWN] = platform::InputSlot::Down;
-			table[VK_RIGHT] = platform::InputSlot::Right;
-			table[VK_PRIOR] = platform::InputSlot::PageUp;
-			table[VK_NEXT] = platform::InputSlot::PageDown;
+			table[VK_BACK] = platform::InputSlotState::Back;
+			table[VK_TAB] = platform::InputSlotState::Tab;
+			table[VK_RETURN] = platform::InputSlotState::Return;
+			table[VK_LSHIFT] = platform::InputSlotState::LShift;
+			table[VK_LCONTROL] = platform::InputSlotState::LControl;
+			table[VK_RSHIFT] = platform::InputSlotState::RShift;
+			table[VK_RCONTROL] = platform::InputSlotState::RControl;
+			table[VK_ESCAPE] = platform::InputSlotState::Escape;
+			table[VK_SPACE] = platform::InputSlotState::Space;
+			table[VK_LEFT] = platform::InputSlotState::Left;
+			table[VK_UP] = platform::InputSlotState::Up;
+			table[VK_DOWN] = platform::InputSlotState::Down;
+			table[VK_RIGHT] = platform::InputSlotState::Right;
+			table[VK_PRIOR] = platform::InputSlotState::PageUp;
+			table[VK_NEXT] = platform::InputSlotState::PageDown;
 
 			return table;
 		}
 
 		//Table for converting from VK values to platform enum
-		std::array<platform::InputSlot, 256> m_keyboard_conversion = build_keyboard_conversion();
+		std::array<platform::InputSlotState, 256> m_keyboard_conversion = build_keyboard_conversion();
 
 		//Input state
-		std::array<bool, static_cast<size_t>(platform::InputSlot::Count)> m_input_slot_state = { false };
+		std::array<bool, static_cast<size_t>(platform::InputSlotState::Count)> m_input_slot_state = { false };
+
+		//Input values
+		std::array<float, static_cast<size_t>(platform::InputSlotValue::Count)> m_input_slot_values = { 0.f };
 
 		//Input events
 		std::vector<platform::InputEvent> m_input_events;
@@ -212,7 +215,7 @@ namespace
 			}
 			else
 			{
-				if (g_Platform->m_keyboard_conversion[wParam] != platform::InputSlot::Invalid)
+				if (g_Platform->m_keyboard_conversion[wParam] != platform::InputSlotState::Invalid)
 				{
 					g_Platform->m_input_slot_state[static_cast<size_t>(g_Platform->m_keyboard_conversion[wParam])] = true;
 					g_Platform->m_input_events.push_back({ platform::EventType::KeyDown, g_Platform->m_keyboard_conversion[wParam] });
@@ -222,11 +225,61 @@ namespace
 		}
 		case WM_KEYUP:
 		{
-			if (g_Platform->m_keyboard_conversion[wParam] != platform::InputSlot::Invalid)
+			if (g_Platform->m_keyboard_conversion[wParam] != platform::InputSlotState::Invalid)
 			{
 				g_Platform->m_input_slot_state[static_cast<size_t>(g_Platform->m_keyboard_conversion[wParam])] = false;
 				g_Platform->m_input_events.push_back({ platform::EventType::KeyUp, g_Platform->m_keyboard_conversion[wParam] });
 			}
+			break;
+		}
+		case WM_LBUTTONUP:
+		{
+			g_Platform->m_input_slot_state[static_cast<size_t>(platform::InputSlotState::LeftMouseButton)] = false;
+			g_Platform->m_input_events.push_back({ platform::EventType::KeyUp, platform::InputSlotState::LeftMouseButton });
+			break;
+		}
+		case WM_LBUTTONDOWN:
+		{
+			g_Platform->m_input_slot_state[static_cast<size_t>(platform::InputSlotState::LeftMouseButton)] = true;
+			g_Platform->m_input_events.push_back({ platform::EventType::KeyDown, platform::InputSlotState::LeftMouseButton });
+			break;
+		}
+		case WM_MBUTTONUP:
+		{
+			g_Platform->m_input_slot_state[static_cast<size_t>(platform::InputSlotState::MiddleMouseButton)] = false;
+			g_Platform->m_input_events.push_back({ platform::EventType::KeyUp, platform::InputSlotState::MiddleMouseButton });
+			break;
+		}
+		case WM_MBUTTONDOWN:
+		{
+			g_Platform->m_input_slot_state[static_cast<size_t>(platform::InputSlotState::MiddleMouseButton)] = true;
+			g_Platform->m_input_events.push_back({ platform::EventType::KeyDown, platform::InputSlotState::MiddleMouseButton });
+			break;
+		}
+		case WM_RBUTTONUP:
+		{
+			g_Platform->m_input_slot_state[static_cast<size_t>(platform::InputSlotState::RightMouseButton)] = false;
+			g_Platform->m_input_events.push_back({ platform::EventType::KeyUp, platform::InputSlotState::RightMouseButton });
+			break;
+		}
+		case WM_RBUTTONDOWN:
+		{
+			g_Platform->m_input_slot_state[static_cast<size_t>(platform::InputSlotState::RightMouseButton)] = true;
+			g_Platform->m_input_events.push_back({ platform::EventType::KeyDown, platform::InputSlotState::RightMouseButton });
+			break;
+		}
+		case WM_MOUSEWHEEL:
+		{
+			float delta = static_cast<float>(GET_WHEEL_DELTA_WPARAM(wParam)) / static_cast<float>(WHEEL_DELTA);
+			g_Platform->m_input_slot_values[static_cast<size_t>(platform::InputSlotValue::MouseWheel)] += delta;
+			g_Platform->m_input_events.push_back({ platform::EventType::MouseWheel, delta });
+			break;
+		}
+		case WM_MOUSEHWHEEL:
+		{
+			float delta = static_cast<float>(GET_WHEEL_DELTA_WPARAM(wParam));
+			g_Platform->m_input_slot_values[static_cast<size_t>(platform::InputSlotValue::MouseHWheel)] += delta;
+			g_Platform->m_input_events.push_back({ platform::EventType::MouseHWheel, delta });
 			break;
 		}
 		case WM_SYSKEYDOWN:
@@ -412,9 +465,14 @@ namespace platform
 		imgui_render::CreateResources(device);
 	}
 
-	bool Game::GetInputSlotState(InputSlot input_slot) const
+	bool Game::GetInputSlotState(InputSlotState input_slot) const
 	{
 		return g_Platform->m_input_slot_state[static_cast<size_t>(input_slot)];
+	}
+
+	float Game::GetInputSlotValue(InputSlotValue input_slot) const
+	{
+		return g_Platform->m_input_slot_values[static_cast<size_t>(input_slot)];
 	}
 
 	const std::vector<InputEvent> Game::GetInputEvents() const
@@ -526,6 +584,10 @@ namespace platform
 			{
 				//Clear input events
 				g_Platform->m_input_events.clear();
+
+				//Clear input values
+				for (auto& value : g_Platform->m_input_slot_values)
+					value = 0.f;
 			}
 
 			{
