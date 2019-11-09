@@ -11,6 +11,8 @@
 #include <core/string_hash.h>
 #include <core/profile.h>
 
+typedef unsigned __int64 QWORD;
+
 namespace display
 {
 	//Size change
@@ -119,7 +121,9 @@ namespace
 
 		constexpr std::array<platform::InputSlotState, 256> build_keyboard_conversion()
 		{
-			std::array<platform::InputSlotState, 256> table = { platform::InputSlotState::Invalid };
+			std::array<platform::InputSlotState, 256> table{};
+			
+			for (auto& value : table) value = platform::InputSlotState::Invalid;
 
 			table[VK_BACK] = platform::InputSlotState::Back;
 			table[VK_TAB] = platform::InputSlotState::Tab;
@@ -207,81 +211,7 @@ namespace
 				game->OnSizeChange(clientRect.right - clientRect.left, clientRect.bottom - clientRect.top, wParam == SIZE_MINIMIZED);
 			}
 			return 0;
-		case WM_KEYDOWN:
-		{
-			if (wParam == VK_OEM_8)
-			{
-				g_Platform->m_imgui_menu_enable = !g_Platform->m_imgui_menu_enable;
-			}
-			else
-			{
-				if (g_Platform->m_keyboard_conversion[wParam] != platform::InputSlotState::Invalid)
-				{
-					g_Platform->m_input_slot_state[static_cast<size_t>(g_Platform->m_keyboard_conversion[wParam])] = true;
-					g_Platform->m_input_events.push_back({ platform::EventType::KeyDown, g_Platform->m_keyboard_conversion[wParam] });
-				}
-			}
-			break;
-		}
-		case WM_KEYUP:
-		{
-			if (g_Platform->m_keyboard_conversion[wParam] != platform::InputSlotState::Invalid)
-			{
-				g_Platform->m_input_slot_state[static_cast<size_t>(g_Platform->m_keyboard_conversion[wParam])] = false;
-				g_Platform->m_input_events.push_back({ platform::EventType::KeyUp, g_Platform->m_keyboard_conversion[wParam] });
-			}
-			break;
-		}
-		case WM_LBUTTONUP:
-		{
-			g_Platform->m_input_slot_state[static_cast<size_t>(platform::InputSlotState::LeftMouseButton)] = false;
-			g_Platform->m_input_events.push_back({ platform::EventType::KeyUp, platform::InputSlotState::LeftMouseButton });
-			break;
-		}
-		case WM_LBUTTONDOWN:
-		{
-			g_Platform->m_input_slot_state[static_cast<size_t>(platform::InputSlotState::LeftMouseButton)] = true;
-			g_Platform->m_input_events.push_back({ platform::EventType::KeyDown, platform::InputSlotState::LeftMouseButton });
-			break;
-		}
-		case WM_MBUTTONUP:
-		{
-			g_Platform->m_input_slot_state[static_cast<size_t>(platform::InputSlotState::MiddleMouseButton)] = false;
-			g_Platform->m_input_events.push_back({ platform::EventType::KeyUp, platform::InputSlotState::MiddleMouseButton });
-			break;
-		}
-		case WM_MBUTTONDOWN:
-		{
-			g_Platform->m_input_slot_state[static_cast<size_t>(platform::InputSlotState::MiddleMouseButton)] = true;
-			g_Platform->m_input_events.push_back({ platform::EventType::KeyDown, platform::InputSlotState::MiddleMouseButton });
-			break;
-		}
-		case WM_RBUTTONUP:
-		{
-			g_Platform->m_input_slot_state[static_cast<size_t>(platform::InputSlotState::RightMouseButton)] = false;
-			g_Platform->m_input_events.push_back({ platform::EventType::KeyUp, platform::InputSlotState::RightMouseButton });
-			break;
-		}
-		case WM_RBUTTONDOWN:
-		{
-			g_Platform->m_input_slot_state[static_cast<size_t>(platform::InputSlotState::RightMouseButton)] = true;
-			g_Platform->m_input_events.push_back({ platform::EventType::KeyDown, platform::InputSlotState::RightMouseButton });
-			break;
-		}
-		case WM_MOUSEWHEEL:
-		{
-			float delta = static_cast<float>(GET_WHEEL_DELTA_WPARAM(wParam)) / static_cast<float>(WHEEL_DELTA);
-			g_Platform->m_input_slot_values[static_cast<size_t>(platform::InputSlotValue::MouseWheel)] += delta;
-			g_Platform->m_input_events.push_back({ platform::EventType::MouseWheel, delta });
-			break;
-		}
-		case WM_MOUSEHWHEEL:
-		{
-			float delta = static_cast<float>(GET_WHEEL_DELTA_WPARAM(wParam));
-			g_Platform->m_input_slot_values[static_cast<size_t>(platform::InputSlotValue::MouseHWheel)] += delta;
-			g_Platform->m_input_events.push_back({ platform::EventType::MouseHWheel, delta });
-			break;
-		}
+		
 		case WM_SYSKEYDOWN:
 			// Handle ALT+ENTER:
 			if ((wParam == VK_RETURN) && (lParam & (1 << 29)))
@@ -434,6 +364,125 @@ namespace
 		//Render game imgui
 		game->OnImguiRender();
 	}
+
+	void InitInput()
+	{
+		//UINT nDevices;
+		//PRAWINPUTDEVICELIST pRawInputDeviceList;
+		//GetRawInputDeviceList(NULL, &nDevices, sizeof(RAWINPUTDEVICELIST));
+		//pRawInputDeviceList = (PRAWINPUTDEVICELIST)alloca(sizeof(RAWINPUTDEVICELIST) * nDevices);
+		//GetRawInputDeviceList(pRawInputDeviceList, &nDevices, sizeof(RAWINPUTDEVICELIST));
+
+		RAWINPUTDEVICE* devices = (RAWINPUTDEVICE*)alloca(sizeof(RAWINPUTDEVICE) * 2);
+		devices[0].usUsagePage = 1;
+		devices[0].usUsage = 6;
+		devices[0].dwFlags = 0x00000100;
+		devices[0].hwndTarget = g_Platform->m_current_hwnd;
+		devices[1].usUsagePage = 1;
+		devices[1].usUsage = 2;
+		devices[1].dwFlags = 0;
+		devices[1].hwndTarget = g_Platform->m_current_hwnd;
+		RegisterRawInputDevices(devices, 2, sizeof(RAWINPUTDEVICE));
+	}
+
+	void CaptureInput()
+	{
+		//Clear input events
+		g_Platform->m_input_events.clear();
+
+		//Get number of blocks
+		UINT block_size = 0;
+		GetRawInputBuffer(NULL, &block_size, sizeof(RAWINPUTHEADER));
+		block_size *= 8;
+
+		if (block_size > 0)
+		{
+			PRAWINPUT raw_input_blocks = (PRAWINPUT)alloca(block_size);
+
+			//Capture blocks
+			UINT block_size_2 = block_size;
+			UINT block_count = GetRawInputBuffer(raw_input_blocks, &block_size_2, sizeof(RAWINPUTHEADER));
+
+			if (block_count != -1)
+			{
+				//Process blocks
+				for (UINT i = 0; i < block_count; ++i)
+				{
+					if (raw_input_blocks->header.dwType == RIM_TYPEKEYBOARD)
+					{
+						auto& keyboard = raw_input_blocks->data.keyboard;
+
+						if (keyboard.VKey == VK_OEM_8 && keyboard.Message == WM_KEYDOWN)
+						{
+							g_Platform->m_imgui_menu_enable = !g_Platform->m_imgui_menu_enable;
+						}
+						else
+						{
+							auto key = g_Platform->m_keyboard_conversion[keyboard.VKey];
+							if ( key != platform::InputSlotState::Invalid)
+							{
+								if (keyboard.Message == WM_KEYUP)
+								{
+									g_Platform->m_input_slot_state[static_cast<size_t>(key)] = false;
+									g_Platform->m_input_events.push_back({ platform::EventType::KeyUp, key });
+								}
+								if (keyboard.Message == WM_KEYDOWN)
+								{
+									g_Platform->m_input_slot_state[static_cast<size_t>(key)] = true;
+									g_Platform->m_input_events.push_back({ platform::EventType::KeyDown, key });
+								}
+							}
+						}
+					}
+					else if (raw_input_blocks->header.dwType == RIM_TYPEMOUSE)
+					{
+						auto& mouse = raw_input_blocks->data.mouse;
+
+						if (mouse.usButtonFlags & RI_MOUSE_LEFT_BUTTON_DOWN)
+						{
+							g_Platform->m_input_slot_state[static_cast<size_t>(platform::InputSlotState::LeftMouseButton)] = true;
+							g_Platform->m_input_events.push_back({ platform::EventType::KeyDown, platform::InputSlotState::LeftMouseButton });
+						}
+						if (mouse.usButtonFlags & RI_MOUSE_LEFT_BUTTON_UP)
+						{
+							g_Platform->m_input_slot_state[static_cast<size_t>(platform::InputSlotState::LeftMouseButton)] = false;
+							g_Platform->m_input_events.push_back({ platform::EventType::KeyUp, platform::InputSlotState::LeftMouseButton });
+						}
+						if (mouse.usButtonFlags & RI_MOUSE_MIDDLE_BUTTON_DOWN)
+						{
+							g_Platform->m_input_slot_state[static_cast<size_t>(platform::InputSlotState::MiddleMouseButton)] = true;
+							g_Platform->m_input_events.push_back({ platform::EventType::KeyDown, platform::InputSlotState::MiddleMouseButton });
+						}
+						if (mouse.usButtonFlags & RI_MOUSE_MIDDLE_BUTTON_UP)
+						{
+							g_Platform->m_input_slot_state[static_cast<size_t>(platform::InputSlotState::MiddleMouseButton)] = false;
+							g_Platform->m_input_events.push_back({ platform::EventType::KeyUp, platform::InputSlotState::MiddleMouseButton });
+						}
+						if (mouse.usButtonFlags & RI_MOUSE_RIGHT_BUTTON_DOWN)
+						{
+							g_Platform->m_input_slot_state[static_cast<size_t>(platform::InputSlotState::RightMouseButton)] = true;
+							g_Platform->m_input_events.push_back({ platform::EventType::KeyDown, platform::InputSlotState::RightMouseButton });
+						}
+						if (mouse.usButtonFlags & RI_MOUSE_RIGHT_BUTTON_UP)
+						{
+							g_Platform->m_input_slot_state[static_cast<size_t>(platform::InputSlotState::RightMouseButton)] = false;
+							g_Platform->m_input_events.push_back({ platform::EventType::KeyUp, platform::InputSlotState::RightMouseButton });
+						}
+						if (mouse.usButtonFlags & RI_MOUSE_WHEEL)
+						{
+							float delta = static_cast<float>((short)(mouse.usButtonData)) / static_cast<float>(WHEEL_DELTA);
+							g_Platform->m_input_events.push_back({ platform::EventType::MouseWheel, delta });
+						}
+
+						g_Platform->m_input_slot_values[static_cast<size_t>(platform::InputSlotValue::MousePositionX)] = static_cast<float>(mouse.lLastX);
+						g_Platform->m_input_slot_values[static_cast<size_t>(platform::InputSlotValue::MousePositionY)] = static_cast<float>(mouse.lLastY);
+					}
+
+					NEXTRAWINPUTBLOCK(raw_input_blocks);
+				}
+			}
+		}
+	}
 }
 
 namespace platform
@@ -531,6 +580,9 @@ namespace platform
 
 		ShowWindow(g_Platform->m_current_hwnd, true);
 
+		//Init input
+		InitInput();
+
 		//Init profiler system
 		core::InitProfiler();
 		
@@ -582,12 +634,7 @@ namespace platform
 			}
 
 			{
-				//Clear input events
-				g_Platform->m_input_events.clear();
-
-				//Clear input values
-				for (auto& value : g_Platform->m_input_slot_values)
-					value = 0.f;
+				CaptureInput();
 			}
 
 			{

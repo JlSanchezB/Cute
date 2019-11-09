@@ -1386,6 +1386,11 @@ public:
 						m_camera_zoom_velocity = 0.f;
 						m_camera_position_velocity[0] = m_camera_position_velocity[1] = 0.f;
 					}
+
+					if (input_event.type == platform::EventType::MouseWheel)
+					{
+						m_camera_zoom_velocity += m_camera_zoom_wheel_speed * elapsed_time * input_event.value;
+					}
 				}
 
 				//New camera parameters
@@ -1393,15 +1398,9 @@ public:
 				{
 					m_camera_zoom_velocity += m_camera_zoom_speed * elapsed_time;
 				}
-				else
 				if (GetInputSlotState(platform::InputSlotState::PageUp))
 				{
 					m_camera_zoom_velocity -= m_camera_zoom_speed * elapsed_time;
-				}
-				else
-				if (GetInputSlotValue(platform::InputSlotValue::MouseWheel) != 0.f)
-				{
-					m_camera_zoom_velocity += m_camera_zoom_wheel_speed * elapsed_time * GetInputSlotValue(platform::InputSlotValue::MouseWheel);
 				}
 				if (GetInputSlotState(platform::InputSlotState::Right))
 				{

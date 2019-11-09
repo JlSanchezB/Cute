@@ -43,8 +43,6 @@ namespace platform
 
 	enum class InputSlotValue : uint8_t
 	{
-		MouseWheel,
-		MouseHWheel,
 		MousePositionX,
 		MousePositionY,
 
@@ -56,8 +54,7 @@ namespace platform
 	{
 		KeyUp,
 		KeyDown,
-		MouseWheel,
-		MouseHWheel
+		MouseWheel
 	};
 
 	struct InputEvent
