@@ -45,6 +45,8 @@ namespace platform
 	{
 		MousePositionX,
 		MousePositionY,
+		MouseRelativePositionX,
+		MouseRelativePositionY,
 
 		Count,
 		Invalid = 255
@@ -81,6 +83,9 @@ namespace platform
 		bool GetInputSlotState(InputSlotState input_slot) const;
 		float GetInputSlotValue(InputSlotValue input_slot) const;
 		const std::vector<InputEvent> GetInputEvents() const;
+
+		//Focus
+		bool IsFocus() const;
 
 	public:
 		//Present 

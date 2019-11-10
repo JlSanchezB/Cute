@@ -1376,68 +1376,77 @@ public:
 
 			//UPDATE CAMERA
 			{
-				//Reset camera
-				for (auto& input_event : GetInputEvents())
+				if (IsFocus())
 				{
-					if (input_event.type == platform::EventType::KeyDown && input_event.slot == platform::InputSlotState::Escape)
+					//Reset camera
+					for (auto& input_event : GetInputEvents())
 					{
-						m_camera_zoom = 1.f;
-						m_camera_position[0] = m_camera_position[1] = 0.f;
-						m_camera_zoom_velocity = 0.f;
-						m_camera_position_velocity[0] = m_camera_position_velocity[1] = 0.f;
+						if (input_event.type == platform::EventType::KeyDown && input_event.slot == platform::InputSlotState::Escape)
+						{
+							m_camera_zoom = 1.f;
+							m_camera_position[0] = m_camera_position[1] = 0.f;
+							m_camera_zoom_velocity = 0.f;
+							m_camera_position_velocity[0] = m_camera_position_velocity[1] = 0.f;
+						}
+
+						if (input_event.type == platform::EventType::MouseWheel)
+						{
+							m_camera_zoom_velocity += m_camera_zoom_wheel_speed * elapsed_time * input_event.value;
+						}
 					}
 
-					if (input_event.type == platform::EventType::MouseWheel)
+					//New camera parameters
+					if (GetInputSlotState(platform::InputSlotState::PageDown))
 					{
-						m_camera_zoom_velocity += m_camera_zoom_wheel_speed * elapsed_time * input_event.value;
+						m_camera_zoom_velocity += m_camera_zoom_speed * elapsed_time;
 					}
-				}
+					if (GetInputSlotState(platform::InputSlotState::PageUp))
+					{
+						m_camera_zoom_velocity -= m_camera_zoom_speed * elapsed_time;
+					}
+					if (GetInputSlotState(platform::InputSlotState::Right))
+					{
+						m_camera_position_velocity[0] += m_camera_move_speed * elapsed_time / m_camera_zoom;
+					}
+					if (GetInputSlotState(platform::InputSlotState::Left))
+					{
+						m_camera_position_velocity[0] -= m_camera_move_speed * elapsed_time / m_camera_zoom;
+					}
+					if (GetInputSlotState(platform::InputSlotState::Down))
+					{
+						m_camera_position_velocity[1] -= m_camera_move_speed * elapsed_time / m_camera_zoom;
+					}
+					if (GetInputSlotState(platform::InputSlotState::Up))
+					{
+						m_camera_position_velocity[1] += m_camera_move_speed * elapsed_time / m_camera_zoom;
+					}
 
-				//New camera parameters
-				if (GetInputSlotState(platform::InputSlotState::PageDown))
-				{
-					m_camera_zoom_velocity += m_camera_zoom_speed * elapsed_time;
-				}
-				if (GetInputSlotState(platform::InputSlotState::PageUp))
-				{
-					m_camera_zoom_velocity -= m_camera_zoom_speed * elapsed_time;
-				}
-				if (GetInputSlotState(platform::InputSlotState::Right))
-				{
-					m_camera_position_velocity[0] += m_camera_move_speed * elapsed_time / m_camera_zoom;
-				}
-				if (GetInputSlotState(platform::InputSlotState::Left))
-				{
-					m_camera_position_velocity[0] -= m_camera_move_speed * elapsed_time / m_camera_zoom;
-				}
-				if (GetInputSlotState(platform::InputSlotState::Down))
-				{
-					m_camera_position_velocity[1] -= m_camera_move_speed * elapsed_time / m_camera_zoom;
-				}
-				if (GetInputSlotState(platform::InputSlotState::Up))
-				{
-					m_camera_position_velocity[1] += m_camera_move_speed * elapsed_time / m_camera_zoom;
+					if (GetInputSlotState(platform::InputSlotState::LeftMouseButton))
+					{
+						m_camera_position_velocity[0] -= GetInputSlotValue(platform::InputSlotValue::MouseRelativePositionX) * m_camera_move_speed * elapsed_time / m_camera_zoom;
+						m_camera_position_velocity[1] += GetInputSlotValue(platform::InputSlotValue::MouseRelativePositionY) * m_camera_move_speed * elapsed_time / m_camera_zoom;
+					}
+
+					//Calculate new positions
+					m_camera_zoom += m_camera_zoom_velocity * elapsed_time;
+					m_camera_position[0] += m_camera_position_velocity[0] * elapsed_time;
+					m_camera_position[1] += m_camera_position_velocity[1] * elapsed_time;
+
+					if (m_camera_zoom < 0.1f)
+					{
+						m_camera_zoom = 0.1f;
+					}
+
+					//Friction
+					m_camera_zoom_velocity -= m_camera_zoom_velocity * glm::clamp(m_camera_friction * elapsed_time, 0.f, 1.f);
+					m_camera_position_velocity[0] -= m_camera_position_velocity[0] * glm::clamp(m_camera_friction * elapsed_time, 0.f, 1.f);
+					m_camera_position_velocity[1] -= m_camera_position_velocity[1] * glm::clamp(m_camera_friction * elapsed_time, 0.f, 1.f);
 				}
 
 				//Adjust aspect ratio
 				float max_size = static_cast<float>(std::max(m_width, m_height));
 				float aspect_ratio_x = static_cast<float>(m_height) / max_size;
 				float aspect_ratio_y = static_cast<float>(m_width) / max_size;
-
-				//Calculate new positions
-				m_camera_zoom += m_camera_zoom_velocity * elapsed_time;
-				m_camera_position[0] += m_camera_position_velocity[0] * elapsed_time;
-				m_camera_position[1] += m_camera_position_velocity[1] * elapsed_time;
-
-				if (m_camera_zoom < 0.1f)
-				{
-					m_camera_zoom = 0.1f;
-				}
-
-				//Friction
-				m_camera_zoom_velocity -= m_camera_zoom_velocity * glm::clamp(m_camera_friction * elapsed_time, 0.f, 1.f);
-				m_camera_position_velocity[0] -= m_camera_position_velocity[0] * glm::clamp(m_camera_friction * elapsed_time, 0.f, 1.f);
-				m_camera_position_velocity[1] -= m_camera_position_velocity[1] * glm::clamp(m_camera_friction * elapsed_time, 0.f, 1.f);
 
 				float position_zoom_buffer[4];
 				position_zoom_buffer[0] = aspect_ratio_x * m_camera_zoom;

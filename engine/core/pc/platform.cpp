@@ -170,6 +170,9 @@ namespace
 	//Global platform access
 	Platform* g_Platform;
 
+	//Forward declared clear input
+	void ClearInput();
+
 	//Windows message handle
 	LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	{
@@ -212,6 +215,12 @@ namespace
 			}
 			return 0;
 		
+		case WM_MOVE:
+		case WM_ACTIVATE:
+		{
+			ClearInput();
+			break;
+		}
 		case WM_SYSKEYDOWN:
 			// Handle ALT+ENTER:
 			if ((wParam == VK_RETURN) && (lParam & (1 << 29)))
@@ -376,19 +385,33 @@ namespace
 		RAWINPUTDEVICE* devices = (RAWINPUTDEVICE*)alloca(sizeof(RAWINPUTDEVICE) * 2);
 		devices[0].usUsagePage = 1;
 		devices[0].usUsage = 6;
-		devices[0].dwFlags = 0x00000100;
+		devices[0].dwFlags = RIDEV_INPUTSINK;
 		devices[0].hwndTarget = g_Platform->m_current_hwnd;
 		devices[1].usUsagePage = 1;
 		devices[1].usUsage = 2;
-		devices[1].dwFlags = 0;
+		devices[1].dwFlags = RIDEV_INPUTSINK;
 		devices[1].hwndTarget = g_Platform->m_current_hwnd;
 		RegisterRawInputDevices(devices, 2, sizeof(RAWINPUTDEVICE));
 	}
+
+	void ClearInput()
+	{
+		//Clear input as the window has been deactivated
+
+		for (auto& key : g_Platform->m_input_slot_state)
+		{
+			key = false;
+		}
+	}
+
 
 	void CaptureInput()
 	{
 		//Clear input events
 		g_Platform->m_input_events.clear();
+
+		g_Platform->m_input_slot_values[static_cast<size_t>(platform::InputSlotValue::MouseRelativePositionX)] = 0.f;
+		g_Platform->m_input_slot_values[static_cast<size_t>(platform::InputSlotValue::MouseRelativePositionY)] = 0.f;
 
 		//Get number of blocks
 		UINT block_size = 0;
@@ -474,8 +497,16 @@ namespace
 							g_Platform->m_input_events.push_back({ platform::EventType::MouseWheel, delta });
 						}
 
-						g_Platform->m_input_slot_values[static_cast<size_t>(platform::InputSlotValue::MousePositionX)] = static_cast<float>(mouse.lLastX);
-						g_Platform->m_input_slot_values[static_cast<size_t>(platform::InputSlotValue::MousePositionY)] = static_cast<float>(mouse.lLastY);
+						if (mouse.usFlags & MOUSE_MOVE_ABSOLUTE)
+						{
+							g_Platform->m_input_slot_values[static_cast<size_t>(platform::InputSlotValue::MousePositionX)] = static_cast<float>(mouse.lLastX);
+							g_Platform->m_input_slot_values[static_cast<size_t>(platform::InputSlotValue::MousePositionY)] = static_cast<float>(mouse.lLastY);
+						}
+						else
+						{
+							g_Platform->m_input_slot_values[static_cast<size_t>(platform::InputSlotValue::MouseRelativePositionX)] += static_cast<float>(mouse.lLastX);
+							g_Platform->m_input_slot_values[static_cast<size_t>(platform::InputSlotValue::MouseRelativePositionY)] += static_cast<float>(mouse.lLastY);
+						}
 					}
 
 					NEXTRAWINPUTBLOCK(raw_input_blocks);
@@ -527,6 +558,11 @@ namespace platform
 	const std::vector<InputEvent> Game::GetInputEvents() const
 	{
 		return g_Platform->m_input_events;
+	}
+
+	bool Game::IsFocus() const
+	{
+		return GetForegroundWindow() == g_Platform->m_current_hwnd;
 	}
 
 	void Game::Present()
