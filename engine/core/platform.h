@@ -80,6 +80,7 @@ namespace platform
 		void SetDevice(display::Device* device);
 
 		//Input
+		void CaptureInput(); //Recapture the input in the midle of the frame if needed
 		bool GetInputSlotState(InputSlotState input_slot) const;
 		float GetInputSlotValue(InputSlotValue input_slot) const;
 		const std::vector<InputEvent> GetInputEvents() const;
