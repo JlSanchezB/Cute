@@ -36,7 +36,22 @@ namespace platform
 		LeftMouseButton,
 		RightMouseButton,
 		MiddleMouseButton,
-
+		ControllerButtonA,
+		ControllerButtonB,
+		ControllerButtonX,
+		ControllerButtonY,
+		ControllerDpadUp,
+		ControllerDpadDown,
+		ControllerDpadLeft,
+		ControllerDpadRight,
+		ControllerStart,
+		ControllerBack,
+		ControllerLeftThumb,
+		ControllerRightThumb,
+		ControllerLeftShoulder,
+		ControllerRightShoulder,
+		ControllerLeftTrigger,
+		ControllerRightTrigger,
 		Count,
 		Invalid = 255
 	};
@@ -47,7 +62,12 @@ namespace platform
 		MousePositionY,
 		MouseRelativePositionX,
 		MouseRelativePositionY,
-
+		ControllerLeftTrigger,
+		ControllerRightTrigger,
+		ControllerThumbLeftX,
+		ControllerThumbLeftY,
+		ControllerThumbRightX,
+		ControllerThumbRightY,
 		Count,
 		Invalid = 255
 	};

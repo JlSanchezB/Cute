@@ -6,6 +6,7 @@
 #endif
 
 #include <windows.h>
+#include <Xinput.h>
 #include <chrono>
 #include <core/imgui_render.h>
 #include <core/string_hash.h>
@@ -290,8 +291,36 @@ namespace
 		g_Platform->m_input_slot_values[static_cast<size_t>(platform::InputSlotValue::MouseRelativePositionY)] = 0.f;
 	}
 
+	void ProcessControllerButton(bool key, platform::InputSlotState controller_button)
+	{
+		auto& state = g_Platform->m_input_slot_state[static_cast<size_t>(controller_button)];
+		if (state != key)
+		{
+			state = key;
+			g_Platform->m_input_events.push_back({ (state) ? platform::EventType::KeyUp : platform::EventType::KeyDown, controller_button });
+		}
+	}
+
+	void ProcessControllerThumb(SHORT value, SHORT deadzone, platform::InputSlotValue slot)
+	{
+		if (value > deadzone)
+		{
+			g_Platform->m_input_slot_values[static_cast<size_t>(slot)] = static_cast<float>(value) / 32767.f;
+		}
+		else if (value < deadzone)
+		{
+			g_Platform->m_input_slot_values[static_cast<size_t>(slot)] = static_cast<float>(value) / -32768.f;
+		}
+		else
+		{
+			g_Platform->m_input_slot_values[static_cast<size_t>(slot)] = 0.f;
+		}
+	}
+
 	void CaptureInput()
 	{
+		//Capture Raw Input
+
 		//Get number of blocks
 		UINT block_size = 0;
 		GetRawInputBuffer(NULL, &block_size, sizeof(RAWINPUTHEADER));
@@ -315,6 +344,41 @@ namespace
 					NEXTRAWINPUTBLOCK(raw_input_blocks);
 				}
 			}
+		}
+
+		//Capture XInput
+		XINPUT_STATE xinput_state;
+		if (XInputGetState(0, &xinput_state) == ERROR_SUCCESS)
+		{
+			ProcessControllerThumb(xinput_state.Gamepad.sThumbLX, XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE, platform::InputSlotValue::ControllerThumbLeftX);
+			ProcessControllerThumb(xinput_state.Gamepad.sThumbLY, XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE, platform::InputSlotValue::ControllerThumbLeftY);
+			ProcessControllerThumb(xinput_state.Gamepad.sThumbRX, XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE, platform::InputSlotValue::ControllerThumbRightX);
+			ProcessControllerThumb(xinput_state.Gamepad.sThumbRY, XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE, platform::InputSlotValue::ControllerThumbRightY);
+
+			g_Platform->m_input_slot_values[static_cast<size_t>(platform::InputSlotValue::ControllerLeftTrigger)] = static_cast<float>(xinput_state.Gamepad.bLeftTrigger) / 255.f;
+			g_Platform->m_input_slot_values[static_cast<size_t>(platform::InputSlotValue::ControllerRightTrigger)] = static_cast<float>(xinput_state.Gamepad.bRightTrigger) / 255.f;
+
+			ProcessControllerButton(xinput_state.Gamepad.bLeftTrigger > XINPUT_GAMEPAD_TRIGGER_THRESHOLD, platform::InputSlotState::ControllerLeftTrigger);
+			ProcessControllerButton(xinput_state.Gamepad.bRightTrigger > XINPUT_GAMEPAD_TRIGGER_THRESHOLD, platform::InputSlotState::ControllerRightTrigger);
+
+			ProcessControllerButton(xinput_state.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_UP, platform::InputSlotState::ControllerDpadUp);
+			ProcessControllerButton(xinput_state.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_DOWN, platform::InputSlotState::ControllerDpadDown);
+			ProcessControllerButton(xinput_state.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_LEFT, platform::InputSlotState::ControllerDpadLeft);
+			ProcessControllerButton(xinput_state.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_RIGHT, platform::InputSlotState::ControllerDpadRight);
+																  
+			ProcessControllerButton(xinput_state.Gamepad.wButtons & XINPUT_GAMEPAD_START, platform::InputSlotState::ControllerStart);
+			ProcessControllerButton(xinput_state.Gamepad.wButtons & XINPUT_GAMEPAD_BACK, platform::InputSlotState::ControllerBack);
+																  
+			ProcessControllerButton(xinput_state.Gamepad.wButtons & XINPUT_GAMEPAD_LEFT_THUMB, platform::InputSlotState::ControllerLeftThumb);
+			ProcessControllerButton(xinput_state.Gamepad.wButtons & XINPUT_GAMEPAD_RIGHT_THUMB, platform::InputSlotState::ControllerRightThumb);
+																  
+			ProcessControllerButton(xinput_state.Gamepad.wButtons & XINPUT_GAMEPAD_LEFT_SHOULDER, platform::InputSlotState::ControllerLeftShoulder);
+			ProcessControllerButton(xinput_state.Gamepad.wButtons & XINPUT_GAMEPAD_RIGHT_SHOULDER, platform::InputSlotState::ControllerRightShoulder);
+																  
+			ProcessControllerButton(xinput_state.Gamepad.wButtons & XINPUT_GAMEPAD_A, platform::InputSlotState::ControllerButtonA);
+			ProcessControllerButton(xinput_state.Gamepad.wButtons & XINPUT_GAMEPAD_B, platform::InputSlotState::ControllerButtonB);
+			ProcessControllerButton(xinput_state.Gamepad.wButtons & XINPUT_GAMEPAD_X, platform::InputSlotState::ControllerButtonX);
+			ProcessControllerButton(xinput_state.Gamepad.wButtons & XINPUT_GAMEPAD_Y, platform::InputSlotState::ControllerButtonY);
 		}
 	}
 
@@ -676,6 +740,11 @@ namespace platform
 			}
 			g_Platform->m_total_time += elapsed_time;
 			g_Platform->m_last_elapsed_time = elapsed_time;
+
+			{
+				//Capture Controller input and check if it has been more input events
+				CaptureInput();
+			}
 
 			//New frame for imgui
 			imgui_render::NextFrame(g_Platform->m_current_hwnd, elapsed_time);
