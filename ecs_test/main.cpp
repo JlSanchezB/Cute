@@ -1381,7 +1381,8 @@ public:
 					//Reset camera
 					for (auto& input_event : GetInputEvents())
 					{
-						if (input_event.type == platform::EventType::KeyDown && input_event.slot == platform::InputSlotState::Escape)
+						if (input_event.type == platform::EventType::KeyDown &&
+							(input_event.slot == platform::InputSlotState::Escape || input_event.slot == platform::InputSlotState::ControllerBack))
 						{
 							m_camera_zoom = 1.f;
 							m_camera_position[0] = m_camera_position[1] = 0.f;
@@ -1426,6 +1427,12 @@ public:
 						m_camera_position_velocity[0] -= GetInputSlotValue(platform::InputSlotValue::MouseRelativePositionX) * m_camera_move_speed * elapsed_time / m_camera_zoom;
 						m_camera_position_velocity[1] += GetInputSlotValue(platform::InputSlotValue::MouseRelativePositionY) * m_camera_move_speed * elapsed_time / m_camera_zoom;
 					}
+
+					//Controller
+					m_camera_position_velocity[0] += GetInputSlotValue(platform::InputSlotValue::ControllerThumbLeftX) * m_camera_move_speed * elapsed_time / m_camera_zoom;
+					m_camera_position_velocity[1] += GetInputSlotValue(platform::InputSlotValue::ControllerThumbLeftY) * m_camera_move_speed * elapsed_time / m_camera_zoom;
+					m_camera_zoom_velocity += m_camera_zoom_speed * elapsed_time * GetInputSlotValue(platform::InputSlotValue::ControllerLeftTrigger);
+					m_camera_zoom_velocity -= m_camera_zoom_speed * elapsed_time * GetInputSlotValue(platform::InputSlotValue::ControllerRightTrigger);
 
 					//Calculate new positions
 					m_camera_zoom += m_camera_zoom_velocity * elapsed_time;

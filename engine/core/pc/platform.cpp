@@ -307,9 +307,9 @@ namespace
 		{
 			g_Platform->m_input_slot_values[static_cast<size_t>(slot)] = static_cast<float>(value) / 32767.f;
 		}
-		else if (value < deadzone)
+		else if (value < -deadzone)
 		{
-			g_Platform->m_input_slot_values[static_cast<size_t>(slot)] = static_cast<float>(value) / -32768.f;
+			g_Platform->m_input_slot_values[static_cast<size_t>(slot)] = static_cast<float>(value) / 32768.f;
 		}
 		else
 		{
