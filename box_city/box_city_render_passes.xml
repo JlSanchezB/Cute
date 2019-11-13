@@ -1,0 +1,15 @@
+<Root>
+<Global>
+</Global>
+<Passes>
+  <Pass name="Main">
+	  <SetRenderTarget>
+		  <RenderTarget>BackBuffer</RenderTarget>
+	  </SetRenderTarget>
+	  <ClearRenderTarget colour="0,0,0,0">BackBuffer</ClearRenderTarget>
+    <SetRootSignature>GameRootSignature</SetRootSignature>
+    <SetRootConstantBuffer root_param="0">ZoomPosition</SetRootConstantBuffer>
+    <DrawRenderItems priority="Solid"/>
+  </Pass>
+</Passes>
+</Root>
