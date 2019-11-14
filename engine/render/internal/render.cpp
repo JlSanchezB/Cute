@@ -426,6 +426,14 @@ namespace render
 
 	bool LoadPassDescriptorFile(System* system, display::Device* device, const char* descriptor_file_buffer, size_t descriptor_file_buffer_size, std::vector<std::string>& errors)
 	{
+		//Destroy all cached contexts
+		for (auto& render_context : system->m_cached_render_context)
+		{
+			render::RenderContext* render_contest = render_context.render_context;
+			DestroyRenderContext(system, render_contest);
+		}
+		system->m_cached_render_context.clear();
+
 		//Only can be loaded if there are not context related to it
 		if (system->m_render_context_pool.Size() > 0)
 		{

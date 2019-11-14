@@ -13,6 +13,7 @@
 #include <job/job.h>
 #include <job/job_helper.h>
 #include <ecs/entity_component_job_helper.h>
+#include <render/render_passes_loader.h>
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include <ext/glm/gtx/vector_angle.hpp>
@@ -303,28 +304,6 @@ using GameEntityTypes = ecs::EntityTypeList<GrassEntityType, GazelleEntityType, 
 using GameDatabase = ecs::DatabaseDeclaration<GameComponents, GameEntityTypes>;
 using Instance = ecs::Instance<GameDatabase>;
 
-namespace
-{
-	std::vector<uint8_t> ReadFileToBuffer(const char* file)
-	{
-		std::ifstream root_signature_file(file, std::ios::binary | std::ios::ate);
-		if (root_signature_file.good())
-		{
-			std::streamsize size = root_signature_file.tellg();
-			root_signature_file.seekg(0, std::ios::beg);
-
-			std::vector<uint8_t> buffer(size);
-			root_signature_file.read(reinterpret_cast<char*>(buffer.data()), size);
-
-			return buffer;
-		}
-		else
-		{
-			return std::vector<uint8_t>(0);
-		}
-	}
-}
-
 class ECSGame : public platform::Game
 {
 public:
@@ -355,18 +334,6 @@ public:
 	//Main point of view resources
 	render::ResourceMap m_init_map_resource_map;
 
-	//Last valid descriptor file
-	std::vector<uint8_t> m_render_passes_descriptor_buffer;
-
-	//Buffer used for the render passes text editor
-	std::array<char, 1024 * 128> m_text_buffer = { 0 };
-
-	//Display imgui edit descriptor file
-	bool m_show_edit_descriptor_file = false;
-
-	//Reload render passes file from the text editor
-	bool m_render_system_descriptor_load_requested = false;
-
 	//Camera info
 	float m_camera_position[2] = { 0.f };
 	float m_camera_zoom = 1.f;
@@ -380,10 +347,8 @@ public:
 	//Solid render priority
 	render::Priority m_solid_render_priority;
 
-	//Show errors in imguid modal window
-	bool m_show_errors = false;
-	std::vector<std::string> m_render_system_errors;
-	std::vector<std::string> m_render_system_context_errors;
+	//Render passes loader
+	render::RenderPassesLoader m_render_passes_loader;
 
 	//Rendering
 	struct Border
@@ -567,16 +532,8 @@ public:
 		//Get render priorities
 		m_solid_render_priority = render::GetRenderItemPriority(m_render_system, "Solid"_sh32);
 
-		//Read file
-		m_render_passes_descriptor_buffer = ReadFileToBuffer("ecs_render_passes.xml");
-
-		if (m_render_passes_descriptor_buffer.size() > 0)
-		{
-			//Copy to the text editor buffer
-			memcpy(m_text_buffer.data(), m_render_passes_descriptor_buffer.data(), m_render_passes_descriptor_buffer.size());
-		}
-
-		m_render_system_descriptor_load_requested = true;
+		//Load render passes descriptor
+		m_render_passes_loader.Load("ecs_render_passes.xml", m_render_system, m_device);
 
 		//Create ecs database
 		ecs::DatabaseDesc database_desc;
@@ -1343,24 +1300,6 @@ public:
 			job::Wait(m_job_system, g_MovedFinishedFence);	
 		}
 
-		//Recreate the descriptor file and context if requested
-		if (m_render_system_descriptor_load_requested)
-		{
-			//Reset errors
-			m_render_system_errors.clear();
-
-			//Load render pass sample
-			size_t buffer_size = strlen(m_text_buffer.data()) + 1;
-
-			if (!render::LoadPassDescriptorFile(m_render_system, m_device, m_text_buffer.data(), buffer_size, m_render_system_errors))
-			{
-				core::LogError("Failed to load the new descriptor file, reverting changes");
-				m_show_errors = true;
-			}
-
-			m_render_system_descriptor_load_requested = false;
-		}
-
 		//PREPARE RENDERING
 		{
 			PROFILE_SCOPE("ECSTest", "PrepareRendering", 0xFFFF77FF);
@@ -1368,6 +1307,11 @@ public:
 			{
 				PROFILE_SCOPE("ECSTest", "BeginPrepareRendering", 0xFFFF77FF);
 				render::BeginPrepareRender(m_render_system);
+			}
+
+			{
+				//Check if the render passes loader needs to load
+				m_render_passes_loader.Update();
 			}
 
 			render::Frame& render_frame = render::GetGameRenderFrame(m_render_system);
@@ -1557,7 +1501,7 @@ public:
 		//Add menu for modifying the render system descriptor file
 		if (ImGui::BeginMenu("ECS"))
 		{
-			m_show_edit_descriptor_file = ImGui::MenuItem("Edit descriptor file");
+			m_render_passes_loader.GetShowEditDescriptorFile() = ImGui::MenuItem("Edit descriptor file");
 			m_show_ecs_stats = ImGui::MenuItem("Show ECS stats");
 			m_show_word_settings = ImGui::MenuItem("Show world settings");
 			bool single_frame_mode = job::GetSingleThreadMode(m_job_system);
@@ -1571,53 +1515,8 @@ public:
 
 	void OnImguiRender() override
 	{
-		if (m_show_edit_descriptor_file)
-		{
-			if (!ImGui::Begin("Render System Descriptor File", &m_show_edit_descriptor_file))
-			{
-				ImGui::End();
-				return;
-			}
-
-			ImGui::InputTextMultiline("file", m_text_buffer.data(), m_text_buffer.size(), ImVec2(-1.0f, ImGui::GetTextLineHeight() * 32), ImGuiInputTextFlags_AllowTabInput);
-			if (ImGui::Button("Reset"))
-			{
-				memcpy(m_text_buffer.data(), m_render_passes_descriptor_buffer.data(), m_render_passes_descriptor_buffer.size());
-			}
-			if (ImGui::Button("Load"))
-			{
-				//Request a load from the text buffer 
-				m_render_system_descriptor_load_requested = true;
-			}
-
-			ImGui::End();
-		}
-
-		if (m_show_errors)
-		{
-			//Show modal window with the errors
-			ImGui::OpenPopup("Errors loading the render pass descriptors");
-			if (ImGui::BeginPopupModal("Errors loading the render pass descriptors", NULL, ImGuiWindowFlags_AlwaysAutoResize))
-			{
-				for (auto& error : m_render_system_errors)
-				{
-					ImGui::Text(error.c_str());
-				}
-				for (auto& error : m_render_system_context_errors)
-				{
-					ImGui::Text(error.c_str());
-				}
-				ImGui::Separator();
-
-				if (ImGui::Button("OK", ImVec2(120, 0)))
-				{
-					ImGui::CloseCurrentPopup();
-					m_show_errors = false;
-				}
-				ImGui::EndPopup();
-			}
-		}
-
+		m_render_passes_loader.RenderImgui();
+		
 		if (m_show_ecs_stats)
 		{
 			if (!ImGui::Begin("Show ECS stats", &m_show_ecs_stats))

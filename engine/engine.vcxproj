@@ -417,6 +417,7 @@
     <ClInclude Include="render\render_frame.h" />
     <ClInclude Include="render\render_freelist_allocator.h" />
     <ClInclude Include="render\render_helper.h" />
+    <ClInclude Include="render\render_passes_loader.h" />
     <ClInclude Include="render\render_resource.h" />
     <ClInclude Include="render\render_segment_allocator.h" />
   </ItemGroup>
@@ -444,6 +445,7 @@
     <ClCompile Include="render\internal\render_command_buffer.cpp" />
     <ClCompile Include="render\internal\render_gpu_memory.cpp" />
     <ClCompile Include="render\internal\render_pass.cpp" />
+    <ClCompile Include="render\internal\render_passes_loader.cpp" />
     <ClCompile Include="render\internal\render_resource.cpp" />
   </ItemGroup>
   <ItemGroup>

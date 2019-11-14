@@ -920,6 +920,9 @@
     <ClInclude Include="render\render_freelist_allocator.h">
       <Filter>render</Filter>
     </ClInclude>
+    <ClInclude Include="render\render_passes_loader.h">
+      <Filter>render</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="display\pc_dx12\display.cpp">
@@ -992,6 +995,9 @@
       <Filter>core</Filter>
     </ClCompile>
     <ClCompile Include="render\internal\render_gpu_memory.cpp">
+      <Filter>render\internal</Filter>
+    </ClCompile>
+    <ClCompile Include="render\internal\render_passes_loader.cpp">
       <Filter>render\internal</Filter>
     </ClCompile>
   </ItemGroup>
