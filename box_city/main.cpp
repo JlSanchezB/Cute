@@ -30,6 +30,56 @@
 
 #include "resources.h"
 
+class Camera
+{
+public:
+	//Process input and update the position
+	void Update(platform::Game* game, float ellapsed)
+	{
+		//Apply damp
+		m_move_speed *= (m_damp_factor * ellapsed);
+		m_rotation_speed *= (m_damp_factor * ellapsed);
+
+		//Calculate position movement
+		glm::vec3 move_speed;
+
+		move_speed.x = game->GetInputSlotValue(platform::InputSlotValue::ControllerThumbRightX) * m_move_factor * ellapsed;
+		move_speed.z = game->GetInputSlotValue(platform::InputSlotValue::ControllerThumbRightY) * m_move_factor * ellapsed;
+
+		m_move_speed += (m_rotation * move_speed);
+
+		//Calculate direction movement
+		glm::vec3 euler_angles;
+		euler_angles.y = game->GetInputSlotValue(platform::InputSlotValue::ControllerThumbLeftY) * m_move_factor * ellapsed;
+		euler_angles.z = game->GetInputSlotValue(platform::InputSlotValue::ControllerThumbLeftX) * m_move_factor * ellapsed;
+
+		glm::quat rotation_speed(euler_angles);
+
+		m_rotation_speed += rotation_speed;
+
+		//Apply
+		m_position += m_move_speed * ellapsed;
+		m_rotation += m_rotation_speed * ellapsed;
+	}
+
+
+private:
+
+	//Position
+	glm::vec3 m_position;
+	glm::quat m_rotation;
+	glm::vec3 m_move_speed;
+	glm::quat m_rotation_speed;
+
+
+	//Setup
+	float m_damp_factor = 0.1f;
+	float m_move_factor = 0.1f;
+	float m_rotation_factor = 0.1f;
+	float m_fov;
+	float m_aspect_ratio;
+};
+
 //Components
 
 

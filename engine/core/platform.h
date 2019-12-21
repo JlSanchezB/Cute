@@ -99,6 +99,7 @@ namespace platform
 	protected:
 		void SetDevice(display::Device* device);
 
+	public:
 		//Input
 		void CaptureInput(); //Recapture the input in the midle of the frame if needed
 		bool GetInputSlotState(InputSlotState input_slot) const;
@@ -108,7 +109,6 @@ namespace platform
 		//Focus
 		bool IsFocus() const;
 
-	public:
 		//Present 
 		//Needs to be called at the end of each tick
 		//or from the render thread (if any)
