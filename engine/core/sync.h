@@ -1,4 +1,4 @@
-//////////////////////////////////////////////////////////////////////////
+﻿//////////////////////////////////////////////////////////////////////////
 // Cute engine - Sync primitives
 //////////////////////////////////////////////////////////////////////////
 
@@ -6,6 +6,8 @@
 #define SYNC_H_
 
 #include <atomic>
+#include <thread>
+#include <immintrin.h>
 
 namespace core
 {
@@ -14,15 +16,29 @@ namespace core
 	public:
 		void lock()
 		{
-			while (m_atomic.test_and_set(std::memory_order_acquire)) { ; }; //spin
+			for (int spin_count = 0; !try_lock(); ++spin_count)
+			{
+				if (spin_count < 16)
+					_mm_pause();
+				else
+				{
+					std::this_thread::yield();
+					spin_count = 0;
+				}
+			}
 		}
+
+		bool try_lock()
+		{
+			return !locked.load(std::memory_order_relaxed) && !locked.exchange(true, std::memory_order_acquire);
+		}	
 
 		void unlock()
 		{
-			m_atomic.clear(std::memory_order_release);
+			locked.store(false, std::memory_order_release);
 		}
 	private:
-		std::atomic_flag m_atomic = ATOMIC_FLAG_INIT;
+		std::atomic<bool> locked{ false };
 	};
 
 	class SpinLockMutexGuard
