@@ -3,6 +3,7 @@
 #include <core/sync.h>
 #include <memory>
 #include <core/profile.h>
+#include <job/job_helper.h>
 
 namespace ecs
 {
@@ -76,17 +77,11 @@ namespace ecs
 		//Index to the first free slot avaliable in the indirection instance table
 		InstanceIndexType m_first_free_slot_indirection_instance_table = -1;
 
-		//Spinlock mutex for deferred deletes
-		core::SpinLockMutex m_deferred_deletes_spinlock_mutex;
-
-		//Spinlock mutex for deferred moves
-		core::SpinLockMutex m_deferred_moves_spinlock_mutex;
-
 		//List of deferred instance deletes
-		std::vector<InstanceIndexType> m_deferred_instance_deletes;
+		job::ThreadData<std::vector<InstanceIndexType>> m_deferred_instance_deletes;
 
 		//List of deferred instance moves
-		std::vector< InstanceMove> m_deferred_instance_moves;
+		job::ThreadData <std::vector<InstanceMove>> m_deferred_instance_moves;
 
 		//Looked, used for detecting bad access patters
 		bool m_locked = false;
@@ -127,8 +122,6 @@ namespace ecs
 		//Can be called outside the tick database
 		InstanceIndexType GetNumInstances(ZoneType zone_index, EntityTypeType entity_type_index) const
 		{
-			core::SpinLockMutexGuard component_access(m_components_spinlock_mutex[entity_type_index + zone_index * m_num_entity_types]);
-
 			const size_t index = entity_type_index + zone_index * m_num_entity_types;
 
 			return static_cast<InstanceIndexType>(m_num_instances[index].count);
@@ -424,10 +417,8 @@ namespace ecs
 		{
 			assert(!database->m_locked);
 
-			core::SpinLockMutexGuard deferred_deletes_guard(database->m_deferred_deletes_spinlock_mutex);
-
 			//Add to the deferred list
-			database->m_deferred_instance_deletes.push_back(indirection_index);
+			database->m_deferred_instance_deletes.Get().push_back(indirection_index);
 
 		}
 
@@ -444,10 +435,8 @@ namespace ecs
 			auto internal_index = database->m_indirection_instance_table[index];
 			if (internal_index.zone_index != new_zone_index)
 			{
-				core::SpinLockMutexGuard deferred_moves_guard(database->m_deferred_moves_spinlock_mutex);
-
 				//Add to the deferred moves
-				database->m_deferred_instance_moves.emplace_back(InstanceMove{ index , new_zone_index });
+				database->m_deferred_instance_moves.Get().emplace_back(InstanceMove{ index , new_zone_index });
 			}
 		}
 
@@ -486,40 +475,48 @@ namespace ecs
 			database->m_locked = true;
 
 			//Process deletes
-			for (auto& deferred_deleted_indirection_index : database->m_deferred_instance_deletes)
-			{
-				//Get internal instance index and check if it is already deleted
-				auto& internal_instance_index = database->m_indirection_instance_table[deferred_deleted_indirection_index];
-				if (internal_instance_index.zone_index != InternalInstanceIndex::kFreeSlot)
+			database->m_stats.num_deferred_deletions = 0;
+			database->m_deferred_instance_deletes.Visit([&](std::vector<InstanceIndexType>& deferred_instance_deletes)
 				{
-					//Destroy components associated to this instance
-					database->DestroyInstance(internal_instance_index);
+					for (auto& deferred_deleted_indirection_index : deferred_instance_deletes)
+					{
+						//Get internal instance index and check if it is already deleted
+						auto& internal_instance_index = database->m_indirection_instance_table[deferred_deleted_indirection_index];
+						if (internal_instance_index.zone_index != InternalInstanceIndex::kFreeSlot)
+						{
+							//Destroy components associated to this instance
+							database->DestroyInstance(internal_instance_index);
 
-					//Deallocate indirection index
-					database->DeallocIndirectionIndex(deferred_deleted_indirection_index);
-				}
-			}
-			database->m_stats.num_deferred_deletions = database->m_deferred_instance_deletes.size();
-			database->m_deferred_instance_deletes.clear();
+							//Deallocate indirection index
+							database->DeallocIndirectionIndex(deferred_deleted_indirection_index);
+						}
+					}
+					database->m_stats.num_deferred_deletions += deferred_instance_deletes.size();
+					deferred_instance_deletes.clear();
+				});
 
 			//Process moves
-			for (auto& deferred_move_instance : database->m_deferred_instance_moves)
-			{
-				//Get internal instance index and check if it is already deleted
-				auto& internal_instance_index = database->m_indirection_instance_table[deferred_move_instance.indirection_index];
-				if (internal_instance_index.zone_index != InternalInstanceIndex::kFreeSlot)
+			database->m_stats.num_deferred_moves = 0;
+			database->m_deferred_instance_moves.Visit([&](std::vector<InstanceMove>& deferred_instance_moves)
 				{
-					//Move components associated to the instance
-					if (internal_instance_index.zone_index != deferred_move_instance.new_zone)
+					for (auto& deferred_move_instance : deferred_instance_moves)
 					{
-						database->MoveInstance(internal_instance_index, deferred_move_instance.new_zone);
+						//Get internal instance index and check if it is already deleted
+						auto& internal_instance_index = database->m_indirection_instance_table[deferred_move_instance.indirection_index];
+						if (internal_instance_index.zone_index != InternalInstanceIndex::kFreeSlot)
+						{
+							//Move components associated to the instance
+							if (internal_instance_index.zone_index != deferred_move_instance.new_zone)
+							{
+								database->MoveInstance(internal_instance_index, deferred_move_instance.new_zone);
+							}
+						}
 					}
-				}
-			}
+					database->m_stats.num_deferred_moves = deferred_instance_moves.size();
+					deferred_instance_moves.clear();
+				});
 
-			database->m_stats.num_deferred_moves = database->m_deferred_instance_moves.size();
-			database->m_deferred_instance_moves.clear();
-
+	
 			//Moves and deleted are using the count_created as well as entities created during the last frame, update count 
 			for (auto& instance_count : database->m_num_instances)
 			{
