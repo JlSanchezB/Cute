@@ -68,9 +68,6 @@ namespace ecs
 		//Alloc indirection index spin lock mutex
 		core::SpinLockMutex m_indirection_instance_spinlock_mutex;
 
-		//Spinlock mutex for alloc instances, they need to be serialize
-		core::SpinLockMutex m_alloc_instance_spinlock_mutex;
-
 		//List of indirection instance indexes
 		std::vector<InternalInstanceIndex> m_indirection_instance_table;
 
@@ -399,8 +396,6 @@ namespace ecs
 
 		InstanceIndirectionIndexType AllocInstance(Database * database, ZoneType zone_index, EntityTypeType entity_type_index)
 		{
-			core::SpinLockMutexGuard alloc_instance_guard(database->m_alloc_instance_spinlock_mutex);
-
 			//Alloc component data for this instance and create internal_instance_index
 			InternalInstanceIndex internal_index { zone_index, entity_type_index, database->AllocInstance(zone_index, entity_type_index)};
 
