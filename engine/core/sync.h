@@ -8,10 +8,14 @@
 #include <atomic>
 #include <thread>
 #include <immintrin.h>
+#include <mutex>
 
 namespace core
 {
-	class SpinLockMutex
+	//Keep a specific mutex class for testing differences between different mutex implementations
+
+	using Mutex = std::mutex;
+	/*class Mutex
 	{
 	public:
 		void lock()
@@ -39,22 +43,22 @@ namespace core
 		}
 	private:
 		std::atomic<bool> locked{ false };
-	};
+	};*/
 
-	class SpinLockMutexGuard
+	class MutexGuard
 	{
 	public:
-		SpinLockMutexGuard(SpinLockMutex& spin_lock) : m_spin_lock(spin_lock)
+		MutexGuard(Mutex& spin_lock) : m_spin_lock(spin_lock)
 		{
 			m_spin_lock.lock();
 		}
-		~SpinLockMutexGuard()
+		~MutexGuard()
 		{
 			m_spin_lock.unlock();
 		}
 
 	private:
-		SpinLockMutex& m_spin_lock;
+		Mutex& m_spin_lock;
 	};
 }
 

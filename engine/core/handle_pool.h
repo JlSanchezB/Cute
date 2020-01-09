@@ -29,20 +29,20 @@ namespace core
 	{
 		void AddWeakReference(size_t index)
 		{
-			core::SpinLockMutexGuard guard(m_spin_lock_mutex);
+			core::MutexGuard guard(m_spin_lock_mutex);
 			m_weak_handle_tracking[index]++;
 		}
 
 		void RemoveWeakReference(size_t index)
 		{
-			core::SpinLockMutexGuard guard(m_spin_lock_mutex);
+			core::MutexGuard guard(m_spin_lock_mutex);
 			m_weak_handle_tracking[index]--;
 		}
 
 		//Number of weak handles for each index
 		std::vector<size_t> m_weak_handle_tracking;
 		//Spin lock
-		core::SpinLockMutex m_spin_lock_mutex;
+		core::Mutex m_spin_lock_mutex;
 	};
 #endif
 
@@ -474,7 +474,7 @@ namespace core
 
 #ifdef WEAKHANDLE_TRACKING
 		{
-			core::SpinLockMutexGuard guard(m_spin_lock_mutex);
+			core::MutexGuard guard(m_spin_lock_mutex);
 			m_weak_handle_tracking.resize(new_size);
 		}
 #endif

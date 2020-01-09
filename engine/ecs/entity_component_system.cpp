@@ -59,14 +59,14 @@ namespace ecs
 
 		//Flat list of spin locks to control access to the components
 		//Dimensions are <Zone, EntityType>
-		std::unique_ptr<core::SpinLockMutex[]> m_components_spinlock_mutex;
+		std::unique_ptr<core::Mutex[]> m_components_spinlock_mutex;
 
 		//Flat list with the number of instances for each Zone/EntityType
 		//Dimensions are <Zone, EntityType>
 		std::vector<InstanceCount> m_num_instances;
 
 		//Alloc indirection index spin lock mutex
-		core::SpinLockMutex m_indirection_instance_spinlock_mutex;
+		core::Mutex m_indirection_instance_spinlock_mutex;
 
 		//List of indirection instance indexes
 		std::vector<InternalInstanceIndex> m_indirection_instance_table;
@@ -141,7 +141,7 @@ namespace ecs
 
 		InstanceIndexType AllocInstance(ZoneType zone_index, EntityTypeType entity_type_index)
 		{
-			core::SpinLockMutexGuard component_access(m_components_spinlock_mutex[entity_type_index + zone_index * m_num_entity_types]);
+			core::MutexGuard component_access(m_components_spinlock_mutex[entity_type_index + zone_index * m_num_entity_types]);
 
 			const InstanceIndexType instance_index = AddInstanceCount(zone_index, entity_type_index);
 
@@ -268,7 +268,7 @@ namespace ecs
 
 		InstanceIndirectionIndexType AllocIndirectionIndex(const InternalInstanceIndex& internal_instance_index)
 		{
-			core::SpinLockMutexGuard alloc_indirection_instance(m_indirection_instance_spinlock_mutex);
+			core::MutexGuard alloc_indirection_instance(m_indirection_instance_spinlock_mutex);
 
 			if (m_first_free_slot_indirection_instance_table == -1)
 			{
@@ -378,7 +378,7 @@ namespace ecs
 		
 
 			//Init mutex for access to each instance components
-			database->m_components_spinlock_mutex = std::make_unique<core::SpinLockMutex[]>(database->m_num_zones * database->m_num_entity_types);
+			database->m_components_spinlock_mutex = std::make_unique<core::Mutex[]>(database->m_num_zones * database->m_num_entity_types);
 
 
 			//Reserve memory for the indirection indexes

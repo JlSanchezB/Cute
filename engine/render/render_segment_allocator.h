@@ -93,7 +93,7 @@ namespace render
 		size_t m_segment_size;
 
 		//Access mutex
-		core::SpinLockMutex m_access_mutex;
+		core::Mutex m_access_mutex;
 
 		Frame& GetFrame(uint64_t frame_index)
 		{
@@ -137,7 +137,7 @@ namespace render
 			//Check if there is an segment already active and send it to live allocations
 			if (non_sufficient_memory)
 			{
-				core::SpinLockMutexGuard guard(m_access_mutex);
+				core::MutexGuard guard(m_access_mutex);
 
 				//We need to register the current allocation
 				frame.live_segments.emplace_back(current_allocation.segment_index);
@@ -146,7 +146,7 @@ namespace render
 
 			//Alloc a new segment
 			{
-				core::SpinLockMutexGuard guard(m_access_mutex);
+				core::MutexGuard guard(m_access_mutex);
 				if (m_free_allocations.size() > 0)
 				{
 					current_allocation.segment_index = m_free_allocations.back();
@@ -194,7 +194,7 @@ namespace render
 
 	inline void SegmentAllocator::Sync(uint64_t cpu_frame_index, uint64_t freed_frame_index)
 	{
-		core::SpinLockMutexGuard guard(m_access_mutex);
+		core::MutexGuard guard(m_access_mutex);
 
 		for (size_t i = 0; i < kMaxFrames; ++i)
 		{

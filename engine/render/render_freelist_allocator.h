@@ -85,7 +85,7 @@ namespace render
 		core::HandlePool<AllocHandle> m_handle_pool;
 
 		//Access mutex
-		core::SpinLockMutex m_access_mutex;
+		core::Mutex m_access_mutex;
 
 		LiveDeallocation& GetLiveDeallocationsFrame(uint64_t frame_index)
 		{
@@ -115,7 +115,7 @@ namespace render
 		//Always align the size to 16
 		size = ((size << 4) + 1) >> 4;
 
-		core::SpinLockMutexGuard guard(m_access_mutex);
+		core::MutexGuard guard(m_access_mutex);
 
 		//Get a allocation for our free list
 		//Find first free block in the list
@@ -158,7 +158,7 @@ namespace render
 	{
 		assert(handle.IsValid());
 
-		core::SpinLockMutexGuard guard(m_access_mutex);
+		core::MutexGuard guard(m_access_mutex);
 
 		auto& frame = GetLiveDeallocationsFrame(last_used_frame_index);
 
@@ -168,7 +168,7 @@ namespace render
 
 	inline void FreeListAllocator::Sync(uint64_t freed_frame_index)
 	{
-		core::SpinLockMutexGuard guard(m_access_mutex);
+		core::MutexGuard guard(m_access_mutex);
 
 		//Check if the deallocations are not used in the gpu
 
