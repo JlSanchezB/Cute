@@ -55,6 +55,8 @@ namespace job
 		//Called if the jobsystem has been created after the ThreadData
 		void Reset()
 		{
+			m_thread_data.clear();
+
 			m_thread_data.resize(GetNumWorkers());;
 		}
 	private:

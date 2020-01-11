@@ -67,7 +67,8 @@ namespace ecs
 
 		struct IndirectionInstanceTable
 		{
-			std::vector<InternalInstanceIndex> table;
+			//Using virtual memory here will avoid the sync needed in case the table gets reallocated
+			core::VirtualBufferTypedInitied<InternalInstanceIndex, 8 * 100 * 1024> table;
 			InstanceIndexType first_free_slot_indirection_instance; //We use the same type that the instance index, as we create the chain with it
 		};
 
@@ -284,10 +285,10 @@ namespace ecs
 			if (first_free_slot_indirection_instance_table == -1)
 			{
 				//The pool is full, just push and index and return
-				indirection_instance_table.push_back(internal_instance_index);
-				assert(indirection_instance_table.size() <= (1 << 24));
+				assert(indirection_instance_table.GetSize() <= (1 << 24));
+				indirection_instance_table.PushBack(internal_instance_index);
 
-				return InstanceIndirectionIndexType{ static_cast<uint32_t>(job::GetWorkerIndex()), static_cast<uint32_t>((indirection_instance_table.size() - 1)) };
+				return InstanceIndirectionIndexType{ static_cast<uint32_t>(job::GetWorkerIndex()), static_cast<uint32_t>((indirection_instance_table.GetSize() - 1)) };
 			}
 			else
 			{
@@ -404,7 +405,6 @@ namespace ecs
 			//Reserve memory for the indirection indexes
 			database->m_indirection_instance_table.Visit([](auto& data)
 				{
-					data.table.reserve(1024 * 100);
 					data.first_free_slot_indirection_instance = -1;
 				});
 
