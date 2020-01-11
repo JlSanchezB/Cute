@@ -9,7 +9,13 @@ namespace ecs
 	struct Database;
 
 	using EntityTypeMask = uint64_t;
-	using InstanceIndirectionIndexType = uint32_t;
+
+	struct InstanceIndirectionIndexType
+	{
+		uint32_t thread_id : 8;
+		uint32_t index : 24;
+	};
+
 
 	using ComponentType = uint8_t;
 	using ZoneType = uint16_t;

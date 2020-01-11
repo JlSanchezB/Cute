@@ -65,17 +65,17 @@ namespace ecs
 		//Dimensions are <Zone, EntityType>
 		std::vector<InstanceCount> m_num_instances;
 
-		//Alloc indirection index spin lock mutex
-		core::Mutex m_indirection_instance_spinlock_mutex;
+		struct IndirectionInstanceTable
+		{
+			std::vector<InternalInstanceIndex> table;
+			InstanceIndexType first_free_slot_indirection_instance; //We use the same type that the instance index, as we create the chain with it
+		};
 
-		//List of indirection instance indexes
-		std::vector<InternalInstanceIndex> m_indirection_instance_table;
-
-		//Index to the first free slot avaliable in the indirection instance table
-		InstanceIndexType m_first_free_slot_indirection_instance_table = -1;
+		//List of indirection instance indexes and Index to the first free slot avaliable in the indirection instance table for each job
+		job::ThreadData<IndirectionInstanceTable> m_indirection_instance_table;
 
 		//List of deferred instance deletes
-		job::ThreadData<std::vector<InstanceIndexType>> m_deferred_instance_deletes;
+		job::ThreadData<std::vector<InstanceIndirectionIndexType>> m_deferred_instance_deletes;
 
 		//List of deferred instance moves
 		job::ThreadData <std::vector<InstanceMove>> m_deferred_instance_moves;
@@ -85,6 +85,12 @@ namespace ecs
 
 		//Stats from last frames
 		DatabaseStats m_stats;
+
+		//Get indirection index
+		InternalInstanceIndex& AccessInternalInstanceIndex(const InstanceIndirectionIndexType& indirection_index)
+		{
+			return m_indirection_instance_table.AccessThreadData(indirection_index.thread_id).table[indirection_index.index];
+		}
 
 		//Get container index
 		size_t GetContainerIndex(ZoneType zone_index, EntityTypeType entity_type_index, ComponentType component_index) const
@@ -205,10 +211,11 @@ namespace ecs
 						//The internal index of the indirection index table needs to be fixup
 						//In this moment the to_delete_instance_data has the correct index moved
 						auto& indirection_index_component = *(reinterpret_cast<InstanceIndirectionIndexType*>(to_delete_instance_data));
+						auto& destroy_internal_instance_index = AccessInternalInstanceIndex(indirection_index_component);
 
-						assert(m_indirection_instance_table[indirection_index_component].instance_index == last_instance_index);
+						assert(destroy_internal_instance_index.instance_index == last_instance_index);
 
-						m_indirection_instance_table[indirection_index_component] = internal_instance_index;
+						destroy_internal_instance_index = internal_instance_index;
 					}
 				}
 			}
@@ -253,11 +260,13 @@ namespace ecs
 						//The internal index of the indirection index table needs to be fixup
 						auto& indirection_index_component = *(reinterpret_cast<InstanceIndirectionIndexType*>(old_zone_component_instance_data));
 						
-						assert(m_indirection_instance_table[indirection_index_component].zone_index == internal_instance_index.zone_index);
-						assert(m_indirection_instance_table[indirection_index_component].entity_type_index == internal_instance_index.entity_type_index);
-						assert(m_indirection_instance_table[indirection_index_component].instance_index == internal_instance_index.instance_index);
+						auto& new_internal_instance_index = AccessInternalInstanceIndex(indirection_index_component);
 
-						m_indirection_instance_table[indirection_index_component] = new_zone_internal_instance_index;
+						assert(new_internal_instance_index.zone_index == internal_instance_index.zone_index);
+						assert(new_internal_instance_index.entity_type_index == internal_instance_index.entity_type_index);
+						assert(new_internal_instance_index.instance_index == internal_instance_index.instance_index);
+
+						new_internal_instance_index = new_zone_internal_instance_index;
 					}
 				}
 			}
@@ -268,35 +277,46 @@ namespace ecs
 
 		InstanceIndirectionIndexType AllocIndirectionIndex(const InternalInstanceIndex& internal_instance_index)
 		{
-			core::MutexGuard alloc_indirection_instance(m_indirection_instance_spinlock_mutex);
+			//Allocate the index in the thread data table
+			auto& first_free_slot_indirection_instance_table = m_indirection_instance_table.Get().first_free_slot_indirection_instance;
+			auto& indirection_instance_table = m_indirection_instance_table.Get().table;
 
-			if (m_first_free_slot_indirection_instance_table == -1)
+			if (first_free_slot_indirection_instance_table == -1)
 			{
 				//The pool is full, just push and index and return
-				m_indirection_instance_table.push_back(internal_instance_index);
-				assert(m_indirection_instance_table.size() < std::numeric_limits<InstanceIndirectionIndexType>::max());
-				return static_cast<InstanceIndirectionIndexType>(m_indirection_instance_table.size()-1);
+				indirection_instance_table.push_back(internal_instance_index);
+				assert(indirection_instance_table.size() <= (1 << 24));
+
+				return InstanceIndirectionIndexType{ static_cast<uint32_t>(job::GetWorkerIndex()), static_cast<uint32_t>((indirection_instance_table.size() - 1)) };
 			}
 			else
 			{
 				//Use the free slot
-				assert(m_indirection_instance_table[m_first_free_slot_indirection_instance_table].zone_index == InternalInstanceIndex::kFreeSlot);
-				InstanceIndexType next_free_slot = m_indirection_instance_table[m_first_free_slot_indirection_instance_table].instance_index;
-				InstanceIndirectionIndexType allocated_indirection_index = m_first_free_slot_indirection_instance_table;
-				m_indirection_instance_table[m_first_free_slot_indirection_instance_table] = internal_instance_index;
-				m_first_free_slot_indirection_instance_table = next_free_slot;
+				assert(indirection_instance_table[first_free_slot_indirection_instance_table].zone_index == InternalInstanceIndex::kFreeSlot);
 
-				return allocated_indirection_index;
+				InstanceIndexType next_free_slot = indirection_instance_table[first_free_slot_indirection_instance_table].instance_index;
+				auto allocated_indirection_index = first_free_slot_indirection_instance_table;
+				indirection_instance_table[first_free_slot_indirection_instance_table] = internal_instance_index;
+				first_free_slot_indirection_instance_table = next_free_slot;
+
+				return InstanceIndirectionIndexType{ static_cast<uint32_t>(job::GetWorkerIndex()), static_cast<uint32_t>(allocated_indirection_index) }; ;
 			}
 		}
 
 		void DeallocIndirectionIndex(const InstanceIndirectionIndexType& indirection_index)
 		{
+			assert(m_locked);
+
+			//Deallocate the index in the thread data table
+			auto& first_free_slot_indirection_instance_table = m_indirection_instance_table.AccessThreadData(indirection_index.thread_id).first_free_slot_indirection_instance;
+			auto& indirection_instance_table = m_indirection_instance_table.AccessThreadData(indirection_index.thread_id).table;
+
 			//Mark as free and redirect the first free slot to it and update the chain
-			auto& internal_instance_index = m_indirection_instance_table[indirection_index];
+			auto& internal_instance_index = indirection_instance_table[indirection_index.index];
 			internal_instance_index.zone_index = InternalInstanceIndex::kFreeSlot;
-			internal_instance_index.instance_index = m_first_free_slot_indirection_instance_table;
-			m_first_free_slot_indirection_instance_table = indirection_index;
+			internal_instance_index.instance_index = first_free_slot_indirection_instance_table;
+
+			first_free_slot_indirection_instance_table = indirection_index.index;
 		}
 
 		InstanceIndirectionIndexType& GetIndirectionIndex(ZoneType zone_index, EntityTypeType entity_type_index, InstanceIndexType instance_index)
@@ -309,9 +329,11 @@ namespace ecs
 			//Get indirection index
 			auto& indirection_index = *reinterpret_cast<InstanceIndirectionIndexType*>(GetComponentData(internal_index, m_indirection_index_component_index));
 
-			assert(m_indirection_instance_table[indirection_index].zone_index == internal_index.zone_index);
-			assert(m_indirection_instance_table[indirection_index].entity_type_index == internal_index.entity_type_index);
-			assert(m_indirection_instance_table[indirection_index].instance_index == internal_index.instance_index);
+			auto& internal_instance_index = AccessInternalInstanceIndex(indirection_index);
+
+			assert(internal_instance_index.zone_index == internal_index.zone_index);
+			assert(internal_instance_index.entity_type_index == internal_index.entity_type_index);
+			assert(internal_instance_index.instance_index == internal_index.instance_index);
 
 			return indirection_index;
 		}
@@ -376,13 +398,15 @@ namespace ecs
 			//Init all num of instances to zero, default constructor
 			database->m_num_instances.resize(database->m_num_zones * database->m_num_entity_types);
 		
-
 			//Init mutex for access to each instance components
 			database->m_components_spinlock_mutex = std::make_unique<core::Mutex[]>(database->m_num_zones * database->m_num_entity_types);
 
-
 			//Reserve memory for the indirection indexes
-			database->m_indirection_instance_table.reserve(1024);
+			database->m_indirection_instance_table.Visit([](auto& data)
+				{
+					data.table.reserve(1024 * 100);
+					data.first_free_slot_indirection_instance = -1;
+				});
 
 			return database;
 		}
@@ -427,7 +451,7 @@ namespace ecs
 		{
 			assert(!database->m_locked);
 
-			auto internal_index = database->m_indirection_instance_table[index];
+			auto& internal_index = database->AccessInternalInstanceIndex(index);
 			if (internal_index.zone_index != new_zone_index)
 			{
 				//Add to the deferred moves
@@ -442,20 +466,20 @@ namespace ecs
 
 		void* GetComponentData(Database * database, InstanceIndirectionIndexType indirection_index, ComponentType component_index)
 		{
-			auto internal_index = database->m_indirection_instance_table[indirection_index];
+			auto& internal_index = database->AccessInternalInstanceIndex(indirection_index);
 
 			return database->GetComponentData(internal_index, component_index);
 		}
 
 		size_t GetInstanceType(Database * database, InstanceIndirectionIndexType indirection_index)
 		{
-			auto instance = database->m_indirection_instance_table[indirection_index];
+			auto instance = database->AccessInternalInstanceIndex(indirection_index);
 			return instance.entity_type_index;
 		}
 
 		EntityTypeMask GetInstanceTypeMask(Database * database, InstanceIndirectionIndexType indirection_index)
 		{
-			auto instance = database->m_indirection_instance_table[indirection_index];
+			auto instance = database->AccessInternalInstanceIndex(indirection_index);
 			return database->m_entity_types[instance.entity_type_index];
 		}
 
@@ -471,12 +495,12 @@ namespace ecs
 
 			//Process deletes
 			database->m_stats.num_deferred_deletions = 0;
-			database->m_deferred_instance_deletes.Visit([&](std::vector<InstanceIndexType>& deferred_instance_deletes)
+			database->m_deferred_instance_deletes.Visit([&](std::vector<InstanceIndirectionIndexType>& deferred_instance_deletes)
 				{
 					for (auto& deferred_deleted_indirection_index : deferred_instance_deletes)
 					{
 						//Get internal instance index and check if it is already deleted
-						auto& internal_instance_index = database->m_indirection_instance_table[deferred_deleted_indirection_index];
+						auto& internal_instance_index = database->AccessInternalInstanceIndex(deferred_deleted_indirection_index);
 						if (internal_instance_index.zone_index != InternalInstanceIndex::kFreeSlot)
 						{
 							//Destroy components associated to this instance
@@ -497,7 +521,7 @@ namespace ecs
 					for (auto& deferred_move_instance : deferred_instance_moves)
 					{
 						//Get internal instance index and check if it is already deleted
-						auto& internal_instance_index = database->m_indirection_instance_table[deferred_move_instance.indirection_index];
+						auto& internal_instance_index = database->AccessInternalInstanceIndex(deferred_move_instance.indirection_index);
 						if (internal_instance_index.zone_index != InternalInstanceIndex::kFreeSlot)
 						{
 							//Move components associated to the instance

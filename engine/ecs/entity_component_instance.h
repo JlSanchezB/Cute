@@ -4,10 +4,10 @@
 #ifndef ENTITY_COMPONENT_INSTANCE_H_
 #define ENTITY_COMPONENT_INSTANCE_H_
 
+#include <ecs/entity_component_common.h>
+
 namespace ecs
 {
-	using InstanceIndirectionIndexType = uint32_t;
-
 	//Templated instance class, needs to be specialized in the client
 	template<typename DATABASE_DECLARATION>
 	class Instance
