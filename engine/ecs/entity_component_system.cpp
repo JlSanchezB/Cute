@@ -55,7 +55,7 @@ namespace ecs
 
 		//Flat list of all component containers (one virtual buffer for each)
 		//Dimensions are <Zone, EntityType, Component>
-		std::vector<core::VirtualBuffer> m_component_containers;
+		std::unique_ptr< std::unique_ptr<core::VirtualBuffer>[]> m_component_containers;
 
 		//Flat list of spin locks to control access to the components
 		//Dimensions are <Zone, EntityType>
@@ -110,7 +110,7 @@ namespace ecs
 		{
 			const size_t index = GetContainerIndex(zone_index, entity_type_index, component_index);
 
-			return m_component_containers[index];
+			return *m_component_containers[index];
 		}
 
 		//Access to component data
@@ -158,10 +158,10 @@ namespace ecs
 			{
 				auto& component_container = m_component_containers[component_begin_index + i];
 
-				if (component_container.GetPtr())
+				if (component_container->GetPtr())
 				{
 					//Grow the size, instance_index is the index of the last instance in the container
-					component_container.SetCommitedSize((instance_index + 1) * m_components[i].size);
+					component_container->SetCommitedSize((instance_index + 1) * m_components[i].size);
 				}
 			}
 
@@ -187,10 +187,10 @@ namespace ecs
 			{
 				auto& component_container = m_component_containers[component_begin_index + i];
 				const size_t component_size = m_components[i].size;
-				if (component_container.GetPtr())
+				if (component_container->GetPtr())
 				{
-					uint8_t* last_instance_data = reinterpret_cast<uint8_t*>(component_container.GetPtr()) + last_instance_index * component_size;
-					uint8_t* to_delete_instance_data = reinterpret_cast<uint8_t*>(component_container.GetPtr()) + internal_instance_index.instance_index * component_size;
+					uint8_t* last_instance_data = reinterpret_cast<uint8_t*>(component_container->GetPtr()) + last_instance_index * component_size;
+					uint8_t* to_delete_instance_data = reinterpret_cast<uint8_t*>(component_container->GetPtr()) + internal_instance_index.instance_index * component_size;
 
 					if (needs_destructor_call)
 					{
@@ -205,7 +205,7 @@ namespace ecs
 					}
 
 					//Reduce the size of the component storage
-					component_container.SetCommitedSize(last_instance_index * component_size);
+					component_container->SetCommitedSize(last_instance_index * component_size);
 
 					if (needs_to_move && (i == m_indirection_index_component_index))
 					{
@@ -246,11 +246,11 @@ namespace ecs
 			{
 				auto& old_zonecomponent_container = m_component_containers[component_begin_index_old_zone + i];
 				const size_t component_size = m_components[i].size;
-				if (old_zonecomponent_container.GetPtr())
+				if (old_zonecomponent_container->GetPtr())
 				{
 					auto& new_zonecomponent_container = m_component_containers[component_begin_index_new_zone + i];
-					uint8_t* old_zone_component_instance_data = reinterpret_cast<uint8_t*>(old_zonecomponent_container.GetPtr()) + internal_instance_index.instance_index * component_size;
-					uint8_t* new_zone_component_instance_data = reinterpret_cast<uint8_t*>(new_zonecomponent_container.GetPtr()) + new_zone_internal_instance_index.instance_index * component_size;
+					uint8_t* old_zone_component_instance_data = reinterpret_cast<uint8_t*>(old_zonecomponent_container->GetPtr()) + internal_instance_index.instance_index * component_size;
+					uint8_t* new_zone_component_instance_data = reinterpret_cast<uint8_t*>(new_zonecomponent_container->GetPtr()) + new_zone_internal_instance_index.instance_index * component_size;
 
 					
 					//Move components (the indirection will move as well, as the last component is the indirection index
@@ -377,8 +377,9 @@ namespace ecs
 
 			//Create all the components
 			const size_t num_components = database->m_num_zones * database->m_num_entity_types * database->m_num_components;
-			database->m_component_containers.reserve(num_components);
+			database->m_component_containers = std::make_unique<std::unique_ptr<core::VirtualBuffer>[]>(num_components);
 
+			size_t component_array_index = 0;
 			//For each zone add the entity types
 			for (size_t zone_index = 0; zone_index < database->m_num_zones; ++zone_index)
 			{
@@ -391,7 +392,7 @@ namespace ecs
 					for (size_t component_index = 0; component_index < database->m_num_components; ++component_index)
 					{
 						const size_t compoment_buffer_size = database_desc.num_max_entities_zone * database->m_components[component_index].size;
-						database->m_component_containers.emplace_back((((1ULL << component_index) & entity_type_mask) != 0 ) ? compoment_buffer_size : 0);
+						database->m_component_containers[component_array_index++] = std::make_unique<core::VirtualBuffer>((((1ULL << component_index) & entity_type_mask) != 0 ) ? compoment_buffer_size : 0);
 					}
 				}
 			}

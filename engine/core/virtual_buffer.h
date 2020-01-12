@@ -17,16 +17,8 @@ namespace core
 		explicit VirtualBuffer(size_t reserved_memory);
 		~VirtualBuffer();
 
-		VirtualBuffer(const VirtualBuffer&)
-		{
-			//Copy constructor can not be use, TODO fix this, that buffers can not be use with vectors containers
-			assert(false);
-		};
-		VirtualBuffer& operator= (const VirtualBuffer&)
-		{
-			//Copy constructor can not be use
-			assert(false);
-		};
+		VirtualBuffer(const VirtualBuffer&) = delete;
+		VirtualBuffer& operator= (const VirtualBuffer&) = delete;
 
 		//Set the memory that needs to be commited
 		void SetCommitedSize(size_t new_size, bool free_memory = true);

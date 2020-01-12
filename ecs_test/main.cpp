@@ -319,8 +319,8 @@ public:
 
 	job::System* m_job_system = nullptr;
 
-	//Job allocator
-	job::JobAllocator<1024 * 1024> m_update_job_allocator;
+	//Job allocator, it needs to be created in the onInit, that means that the job system is not created during the GameConstructor
+	std::unique_ptr<job::JobAllocator<1024 * 1024>> m_update_job_allocator;
 
 	//Game constant buffer
 	display::ConstantBufferHandle m_game_constant_buffer;
@@ -514,8 +514,8 @@ public:
 		job::SystemDesc job_system_desc;
 		m_job_system = job::CreateSystem(job_system_desc);
 
-		//Reset the update job allocator
-		m_update_job_allocator.Reset();
+		//Create Job allocator now that the job system is enabled
+		m_update_job_allocator = std::make_unique<job::JobAllocator<1024 * 1024>>();
 
 		//Create render pass system
 		render::SystemDesc render_system_desc;
@@ -640,7 +640,7 @@ public:
 		};
 
 		//Create JobData
-		auto job_data = m_update_job_allocator.Alloc<GrassJobData>();
+		auto job_data = m_update_job_allocator->Alloc<GrassJobData>();
 		job_data->elapsed_time = elapsed_time;
 
 		//Grow grass
@@ -693,7 +693,7 @@ public:
 		};
 
 		//Create JobData
-		auto job_data = m_update_job_allocator.Alloc<GazelleJobData>();
+		auto job_data = m_update_job_allocator->Alloc<GazelleJobData>();
 		job_data->elapsed_time = elapsed_time;
 		job_data->total_time = total_time;
 		job_data->game = this;
@@ -870,7 +870,7 @@ public:
 		};
 
 		//Create JobData
-		auto job_data = m_update_job_allocator.Alloc<LionJobData>();
+		auto job_data = m_update_job_allocator->Alloc<LionJobData>();
 		job_data->elapsed_time = elapsed_time;
 		job_data->game = this;
 
@@ -1116,7 +1116,7 @@ public:
 		};
 
 		//Create JobData
-		auto job_data = m_update_job_allocator.Alloc<MovesJobData>();
+		auto job_data = m_update_job_allocator->Alloc<MovesJobData>();
 		job_data->elapsed_time = elapsed_time;
 		job_data->game = this;
 
@@ -1277,7 +1277,7 @@ public:
 			PROFILE_SCOPE("ECSTest", "Update", 0xFFFF77FF);
 
 			//Reset job allocators
-			m_update_job_allocator.Clear();
+			m_update_job_allocator->Clear();
 
 			//Data for update jobs
 			JobData job_data = { this, total_time, elapsed_time };
@@ -1428,7 +1428,7 @@ public:
 			job::ThreadData<std::array<InstanceBuffer, 3>> instance_buffer;
 
 			//Create JobData
-			auto job_data = m_update_job_allocator.Alloc<CullingJobData>();
+			auto job_data = m_update_job_allocator->Alloc<CullingJobData>();
 			job_data->game = this;
 			job_data->borders = borders;
 			job_data->point_of_view = &point_of_view;

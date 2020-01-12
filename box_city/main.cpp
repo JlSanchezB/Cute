@@ -101,8 +101,8 @@ public:
 
 	job::System* m_job_system = nullptr;
 
-	//Job allocator
-	job::JobAllocator<1024 * 1024> m_update_job_allocator;
+	//Job allocator, it needs to be created in the onInit, that means that the job system is not created during the GameConstructor
+	std::unique_ptr<job::JobAllocator<1024 * 1024>> m_update_job_allocator;
 
 	//Display resources
 	DisplayResource m_display_resources;
@@ -141,9 +141,9 @@ public:
 		//Create job system
 		job::SystemDesc job_system_desc;
 		m_job_system = job::CreateSystem(job_system_desc);
-
-		//Reset the update job allocator
-		m_update_job_allocator.Reset();
+		
+		//Create Job allocator now that the job system is enabled
+		m_update_job_allocator = std::make_unique<job::JobAllocator<1024 * 1024>>();
 
 		//Create render pass system
 		render::SystemDesc render_system_desc;

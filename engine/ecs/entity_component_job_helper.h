@@ -99,7 +99,7 @@ namespace ecs
 								//Create job data
 								using JobBucketDataT = JobBucketData<DATABASE_DECLARATION, FUNCTION, JOB_DATA, COMPONENTS...>;
 								
-								JobBucketDataT* job_bucket_data = job_allocator.Alloc<JobBucketDataT>();
+								JobBucketDataT* job_bucket_data = job_allocator->Alloc<JobBucketDataT>();
 
 								job_bucket_data->components = argument_component_buffers;
 								job_bucket_data->begin_instance = bucket_index * static_cast<InstanceIndexType>(num_instances_per_job);

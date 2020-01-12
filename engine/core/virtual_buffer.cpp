@@ -42,8 +42,11 @@ namespace core
 
 	VirtualBuffer::~VirtualBuffer()
 	{
-		//Deallocate all commited/reserved memory
-		VirtualFree(m_memory_base, 0, FreeFlags::Release);
+		if (m_memory_base)
+		{
+			//Deallocate all commited/reserved memory
+			VirtualFree(m_memory_base, 0, FreeFlags::Release);
+		}
 	}
 
 	void VirtualBuffer::SetCommitedSize(size_t new_size, bool free_memory)

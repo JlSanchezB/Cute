@@ -23,42 +23,41 @@ namespace job
 	class ThreadData
 	{
 	public:
+		ThreadData()
+		{
+			assert(GetNumWorkers() > 0); //It can only work if the job system is inited
+
+			m_thread_data = std::make_unique<AlignedData<DATA>[]>(GetNumWorkers());
+		}
+
+		ThreadData(const ThreadData&) = delete;
+		ThreadData& operator= (const ThreadData&) = delete;
+
 		//Access current worker data
 		//Used during working of the data
 		DATA& Get()
 		{
-			return m_thread_data[GetWorkerIndex()];
+			return m_thread_data.get()[GetWorkerIndex()];
 		}
 
 		//Access any worker data
 		//Used once the jobs are finish and collecting the data
 		DATA& AccessThreadData(size_t worker_index)
 		{
-			return m_thread_data[worker_index];
+			return m_thread_data.get()[worker_index];
 		}
 
 		//Visit all data
 		template<typename VISITOR>
 		void Visit(VISITOR&& visitor)
 		{
-			for (auto& data : m_thread_data)
+			const size_t size = GetNumWorkers();
+			for (size_t i = 0; i < size; ++i)
 			{
-				visitor(data);
+				visitor(m_thread_data.get()[i]);
 			}
 		}
 
-		ThreadData()
-		{
-			Reset();
-		}
-
-		//Called if the jobsystem has been created after the ThreadData
-		void Reset()
-		{
-			m_thread_data.clear();
-
-			m_thread_data.resize(GetNumWorkers());;
-		}
 	private:
 		
 		//Data needs to be aligned to cache lines, so we don't false shared between the workers
@@ -68,7 +67,7 @@ namespace job
 		};
 
 		//Vector of DATA for each worker
-		std::vector<AlignedData<DATA>> m_thread_data;
+		std::unique_ptr<AlignedData<DATA>[]> m_thread_data;
 	};
 
 	template<size_t RESERVED_MEMORY>
