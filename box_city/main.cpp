@@ -86,6 +86,31 @@ private:
 //ECS definition
 
 
+//Render pass definition for our custon box instance pass render
+class DrawCityBoxItemsPass : public render::Pass
+{
+	uint8_t m_priority;
+public:
+	DECLARE_RENDER_CLASS("DrawCityBoxItems");
+
+	void Load(render::LoadContext& load_context) override
+	{
+		const char* value;
+		if (load_context.current_xml_element->QueryStringAttribute("priority", &value) == tinyxml2::XML_SUCCESS)
+		{
+			m_priority = GetRenderItemPriority(load_context.render_system, render::PriorityName(value));
+		}
+		else
+		{
+			AddError(load_context, "Attribute priority expected inside DrawCityBoxItems pass");
+		}
+	}
+	void Render(render::RenderContext& render_context) const override
+	{
+		//Collect all render items in the render
+	}
+};
+
 class BoxCityGame : public platform::Game
 {
 public:
@@ -148,6 +173,9 @@ public:
 		//Create render pass system
 		render::SystemDesc render_system_desc;
 		m_render_system = render::CreateRenderSystem(m_device, m_job_system, this, render_system_desc);
+
+		//Register custom passes for box city renderer
+		render::RegisterPassFactory<DrawCityBoxItemsPass>(m_render_system);
 
 		m_render_passes_loader.Load("box_city_render_passes.xml", m_render_system, m_device);
 	}

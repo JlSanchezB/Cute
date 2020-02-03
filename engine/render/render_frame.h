@@ -29,10 +29,21 @@ namespace render
 			//Fast access to the 32bits sort key used for sorting items
 			uint32_t full_32bit_sort_key;
 		};
-		//Command buffer for rendering this item
-		uint32_t command_offset : 24;
-		//Worker that built the commands
-		uint32_t command_worker : 8;
+		union
+		{
+			//Command buffer access
+			struct
+			{
+				//Command buffer for rendering this item
+				uint32_t command_offset : 24;
+				//Worker that built the commands
+				uint32_t command_worker : 8;
+			};
+
+			//Generic 32 bits data associated to the render item
+			uint32_t data;
+		};
+		
 
 		Item(Priority _priority, SortKey _sort_key, const CommandBuffer::CommandOffset& _command_offset) :
 			priority(_priority), sort_key(_sort_key), command_offset(_command_offset), command_worker(static_cast<uint32_t>(job::GetWorkerIndex()))

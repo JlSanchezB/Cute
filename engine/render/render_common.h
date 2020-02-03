@@ -23,11 +23,11 @@ namespace tinyxml2
 }
 
 #define DECLARE_RENDER_CLASS(name) \
-	const RenderClassType Type() const override\
+	const ::render::RenderClassType Type() const override\
 	{ \
-		return RenderClassType(name); \
+		return ::render::RenderClassType(name); \
 	}; \
-	inline static const RenderClassType kClassName = RenderClassType(name);
+	inline static const ::render::RenderClassType kClassName = ::render::RenderClassType(name);
 
 namespace render
 {
