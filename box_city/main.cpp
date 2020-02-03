@@ -81,10 +81,36 @@ private:
 };
 
 //Components
+struct AABoundingBox
+{
+	glm::vec3 min;
+	glm::vec3 max;
+};
 
+struct Box
+{
+	//Local matrix, center of the city
+	glm::mat3x4 local_matrix;
+	//Dimensions -X to X, -Y to Y, -Z to Z
+	glm::vec3 dimensions;
+};
+
+struct BoxRender
+{
+	//Index in the material array
+	uint32_t material;
+	//Access to gpu buffer memory
+	render::AllocHandle gpu_memory;
+};
 
 //ECS definition
+using BoxType = ecs::EntityType<Box, BoxRender, AABoundingBox>;
 
+using GameComponents = ecs::ComponentList<Box, BoxRender, AABoundingBox>;
+using GameEntityTypes = ecs::EntityTypeList<BoxType>;
+
+using GameDatabase = ecs::DatabaseDeclaration<GameComponents, GameEntityTypes>;
+using Instance = ecs::Instance<GameDatabase>;
 
 //Render pass definition for our custon box instance pass render
 class DrawCityBoxItemsPass : public render::Pass
@@ -178,6 +204,12 @@ public:
 		render::RegisterPassFactory<DrawCityBoxItemsPass>(m_render_system);
 
 		m_render_passes_loader.Load("box_city_render_passes.xml", m_render_system, m_device);
+
+		//Create ecs database
+		ecs::DatabaseDesc database_desc;
+		database_desc.num_max_entities_zone = 1024;
+		database_desc.num_zones = 1;
+		ecs::CreateDatabase<GameDatabase>(database_desc);
 	}
 
 	void OnPrepareDestroy() override
