@@ -90,7 +90,7 @@ struct AABoundingBox
 struct Box
 {
 	//Local matrix, center of the city
-	glm::mat3x4 local_matrix;
+	glm::mat4x4 local_matrix;
 	//Dimensions -X to X, -Y to Y, -Z to Z
 	glm::vec3 dimensions;
 };
@@ -161,6 +161,20 @@ public:
 	//Render passes loader
 	render::RenderPassesLoader m_render_passes_loader;
 
+	//Random generators
+	std::random_device m_random_device;
+	std::mt19937 m_random_generator;
+
+	std::uniform_real_distribution<float> m_random_position_x;
+	std::uniform_real_distribution<float> m_random_position_y;
+	std::uniform_real_distribution<float> m_random_position_z;
+
+	BoxCityGame() : m_random_generator(m_random_device()),
+		m_random_position_x(-100.f, 100.f),
+		m_random_position_y(-100.f, 100.f),
+		m_random_position_z(-100.f, 100.f)
+	{
+	}
 
 	void OnInit() override
 	{
@@ -210,6 +224,17 @@ public:
 		database_desc.num_max_entities_zone = 1024;
 		database_desc.num_zones = 1;
 		ecs::CreateDatabase<GameDatabase>(database_desc);
+
+		//Create boxes
+		for (size_t i = 0; i < 100; ++i)
+		{
+			glm::mat4x4 local_matrix;
+			glm::translate(local_matrix, glm::vec3(m_random_position_x(m_random_generator), m_random_position_y(m_random_generator), m_random_position_z(m_random_generator)));
+			glm::vec3 dimensions(1.f, 1.f, 1.f);
+			
+			ecs::AllocInstance<GameDatabase, BoxType>(0)
+				.Init(Box{ local_matrix, dimensions });
+		}
 	}
 
 	void OnPrepareDestroy() override
