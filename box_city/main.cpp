@@ -80,6 +80,15 @@ private:
 	float m_aspect_ratio;
 };
 
+//GPU memory structs
+struct GPUBoxInstance
+{
+	glm::vec4 bounding_box_min;
+	glm::vec4 bounding_box_max;
+	glm::mat4x3 local_matrix;
+	glm::vec4 dimensions;
+};
+
 //Components
 struct AABoundingBox
 {
@@ -93,6 +102,11 @@ struct Box
 	glm::mat4x4 local_matrix;
 	//Dimensions -X to X, -Y to Y, -Z to Z
 	glm::vec3 dimensions;
+
+	Box(const glm::mat4x4& _local_matrix, const glm::vec3& _dimensions):
+		local_matrix(_local_matrix), dimensions(_dimensions)
+	{
+	}
 };
 
 struct BoxRender
@@ -101,6 +115,11 @@ struct BoxRender
 	uint32_t material;
 	//Access to gpu buffer memory
 	render::AllocHandle gpu_memory;
+
+	BoxRender(uint32_t _material, render::AllocHandle& _gpu_memory)
+		: material(_material), gpu_memory(std::move(_gpu_memory))
+	{
+	}
 };
 
 //ECS definition
@@ -232,8 +251,17 @@ public:
 			glm::translate(local_matrix, glm::vec3(m_random_position_x(m_random_generator), m_random_position_y(m_random_generator), m_random_position_z(m_random_generator)));
 			glm::vec3 dimensions(1.f, 1.f, 1.f);
 			
+			//GPU memory
+			GPUBoxInstance gpu_box_instance;
+			gpu_box_instance.local_matrix = local_matrix;
+			gpu_box_instance.dimensions = glm::vec4(dimensions, 0.f);
+
+			//Allocate the GPU memory
+			render::AllocHandle gpu_memory = render::AllocStaticGPUMemory(m_render_system, sizeof(GPUBoxInstance), &gpu_box_instance, render::GetGameFrameIndex(m_render_system));
+
 			ecs::AllocInstance<GameDatabase, BoxType>(0)
-				.Init(Box{ local_matrix, dimensions });
+				.Init<Box>(local_matrix, dimensions)
+				.Init<BoxRender>(0, gpu_memory);
 		}
 	}
 
