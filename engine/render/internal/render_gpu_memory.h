@@ -8,6 +8,7 @@
 #include <render/render_segment_allocator.h>
 #include <render/render_freelist_allocator.h>
 #include <display/display_handle.h>
+#include <job/job_helper.h>
 
 namespace display
 {
@@ -16,6 +17,18 @@ namespace display
 
 namespace render
 {
+	struct CopyDataCommand
+	{
+		uint32_t source_offset;		//In dynamic gpu memory
+		uint32_t dest_offset;		//In static gpu memory
+		uint32_t size;			
+
+		CopyDataCommand(const uint32_t _source_offset, const uint32_t _dest_offset, const uint32_t _size) :
+			source_offset(_source_offset), dest_offset(_dest_offset), size(_size)
+		{
+		}
+	};
+
 	//Render GPU memory offers the user a gpu memory for uploading data from the cpu
 	
 	//Static data is GPU only memory, only need to be sended once and the user can allocate a piece of it
@@ -31,7 +44,7 @@ namespace render
 		void Sync(uint64_t cpu_frame_index, uint64_t freed_frame_index);
 
 		//Static buffer resource in the GPU
-		display::UnorderedAccessBufferHandle m_static_gpu_memory_buffer;
+		display::ShaderResourceHandle m_static_gpu_memory_buffer;
 		//Static gpu allocator
 		FreeListAllocator m_static_gpu_memory_allocator;
 
@@ -39,6 +52,20 @@ namespace render
 		display::ShaderResourceHandle m_dynamic_gpu_memory_buffer;
 		//Dynamic buffer resource in the GPU
 		SegmentAllocator m_dynamic_gpu_memory_allocator;
+
+
+		//An over approximation of max distance between CPU and GPU
+		//That is from the GAME thread to the GPU
+		static constexpr size_t kMaxFrames = 8;
+		
+		//Copy data commands per frame and worker
+		std::array<job::ThreadData<std::vector<CopyDataCommand>>, kMaxFrames> m_copy_data_commands;
+
+		template<typename ...Args>
+		void AddCopyDataCommand(const uint64_t frame_index, Args&& ...args)
+		{
+			m_copy_data_commands[frame_index % RenderGPUMemory::kMaxFrames].Get().emplace_back(std::forward<Args>(args)...);
+		}
 
 	};
 }

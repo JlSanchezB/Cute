@@ -19,8 +19,8 @@ namespace platform
 
 namespace render
 {
-	using AllocHandle = core::Handle<class FreeListAllocation, uint16_t>;
-	using WeakAllocHandle = core::WeakHandle<class FreeListAllocation, uint16_t>;
+	using AllocHandle = core::Handle<struct FreeListAllocation, uint16_t>;
+	using WeakAllocHandle = core::WeakHandle<struct FreeListAllocation, uint16_t>;
 
 	struct SystemDesc
 	{
@@ -163,13 +163,13 @@ namespace render
 	void DeallocStaticGPUMemory(System* system, AllocHandle&& handle, const uint64_t frame_index);
 
 	//Update Static GPU memory
-	void UpdateStaticGPUMemory(System* system, const void* data, const uint64_t frame_index);
+	void UpdateStaticGPUMemory(System* system, const AllocHandle& handle, const void* data, const size_t size, const uint64_t frame_index);
 
 	//Alloc dynamic gpu memory
 	void* AllocDynamicGPUMemory(System* system, const size_t size, const uint64_t frame_index);
 
 	//Get static gpu memory resource
-	display::WeakUnorderedAccessBufferHandle GetStaticGPUMemoryResource(System* system);
+	display::WeakShaderResourceHandle GetStaticGPUMemoryResource(System* system);
 
 	//Get dynamic gpu memory resource
 	display::WeakShaderResourceHandle GetDynamicGPUMemoryResource(System* system);

@@ -14,12 +14,10 @@
 
 namespace render
 {
-	class FreeListAllocation
+	struct FreeListAllocation
 	{
 		size_t offset;
 		size_t size;
-
-		friend class FreeListAllocator;
 	};
 
 	using AllocHandle = core::Handle<FreeListAllocation, uint16_t>;
@@ -57,6 +55,13 @@ namespace render
 
 		//Deallocate memory with last frame used
 		void Dealloc(AllocHandle&& handle, uint64_t last_used_frame_index);
+
+		//Access to the handle data
+		FreeListAllocation& Get(const WeakAllocHandle& handle)
+		{
+			return m_handle_pool[handle];
+		}
+
 
 	private:
 

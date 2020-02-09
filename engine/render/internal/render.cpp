@@ -394,7 +394,7 @@ namespace render
 
 		//Register render gpu memory resources
 		render::AddGameResource(system, "DynamicGPUMemory"_sh32, CreateResourceFromHandle<render::ShaderResourceResource>(display::WeakShaderResourceHandle(system->m_gpu_memory.m_dynamic_gpu_memory_buffer)));
-		render::AddGameResource(system, "StaticGPUMemory"_sh32, CreateResourceFromHandle<render::UnorderedAccessBufferResource>(display::WeakUnorderedAccessBufferHandle(system->m_gpu_memory.m_static_gpu_memory_buffer)));
+		render::AddGameResource(system, "StaticGPUMemory"_sh32, CreateResourceFromHandle<render::ShaderResourceResource>(display::WeakShaderResourceHandle(system->m_gpu_memory.m_static_gpu_memory_buffer)));
 
 		return system;
 	}
@@ -759,7 +759,10 @@ namespace render
 	{
 		AllocHandle handle = system->m_gpu_memory.m_static_gpu_memory_allocator.Alloc(size);
 
-		//TODO: Create copy command
+		if (data)
+		{
+			UpdateStaticGPUMemory(system, handle, data, size, frame_index);
+		}
 
 		return std::move(handle);
 	}
@@ -769,9 +772,28 @@ namespace render
 		system->m_gpu_memory.m_static_gpu_memory_allocator.Dealloc(std::move(handle), frame_index);
 	}
 
-	void UpdateStaticGPUMemory(System* system, const void* data, const uint64_t frame_index)
+	void UpdateStaticGPUMemory(System* system, const AllocHandle& handle, const void* data, const size_t size, const uint64_t frame_index)
 	{
-		//TODO: Create copy command
+		//Destination size needs to be aligned to float4
+		constexpr size_t size_float4 = sizeof(float) * 4;
+		assert(size > 0);
+
+		size_t dest_size = (((size - 1) % size_float4) + 1) * size_float4;
+
+		//Data gets copied in the dynamic gpu memory
+		void* gpu_memory = AllocDynamicGPUMemory(system, dest_size, frame_index);
+		memcpy(gpu_memory, data, size);
+
+		//Calculate offsets
+		uint8_t* dynamic_memory_base = reinterpret_cast<uint8_t*>(display::GetResourceMemoryBuffer(system->m_device, system->m_gpu_memory.m_dynamic_gpu_memory_buffer));
+		uint8_t* static_memory_base = reinterpret_cast<uint8_t*>(display::GetResourceMemoryBuffer(system->m_device, system->m_gpu_memory.m_static_gpu_memory_buffer));
+
+		uint32_t source_offset = static_cast<uint32_t>(reinterpret_cast<uint8_t*>(gpu_memory) - dynamic_memory_base);
+		const FreeListAllocation& destination_allocation = system->m_gpu_memory.m_static_gpu_memory_allocator.Get(handle);
+
+		//Add copy command
+		system->m_gpu_memory.AddCopyDataCommand(frame_index, source_offset, static_cast<uint32_t>(destination_allocation.offset), static_cast<uint32_t>(size));
+
 	}
 
 	void* AllocDynamicGPUMemory(System* system, const size_t size, const uint64_t frame_index)
@@ -782,7 +804,7 @@ namespace render
 		return reinterpret_cast<uint8_t*>(display::GetResourceMemoryBuffer(system->m_device, system->m_gpu_memory.m_dynamic_gpu_memory_buffer)) + offset;
 	}
 
-	display::WeakUnorderedAccessBufferHandle GetStaticGPUMemoryResource(System* system)
+	display::WeakShaderResourceHandle GetStaticGPUMemoryResource(System* system)
 	{
 		return system->m_gpu_memory.m_static_gpu_memory_buffer;
 	}

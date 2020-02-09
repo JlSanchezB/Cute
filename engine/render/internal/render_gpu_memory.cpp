@@ -10,10 +10,14 @@ namespace render
 		assert(dynamic_gpu_memory_size % 16 == 0);
 
 		//Init static buffer
-		display::UnorderedAccessBufferDesc static_buffer_desc;
-		static_buffer_desc.element_size = 16; //float4
-		static_buffer_desc.element_count = static_gpu_memory_size / 16;
-		m_static_gpu_memory_buffer = display::CreateUnorderedAccessBuffer(device, static_buffer_desc, "StaticGpuMemoryBuffer");
+		display::ShaderResourceDesc static_buffer_desc;
+		static_buffer_desc.access = display::Access::Static;
+		static_buffer_desc.type = display::ShaderResourceType::Buffer;
+		static_buffer_desc.size = static_gpu_memory_size;
+		static_buffer_desc.num_elements = static_gpu_memory_size / 16;
+		static_buffer_desc.structure_stride = 16;
+
+		m_static_gpu_memory_buffer = display::CreateShaderResource(device, static_buffer_desc, "StaticGpuMemoryBuffer");
 
 		//Init static allocator
 		m_static_gpu_memory_allocator.Init(static_gpu_memory_size);
@@ -34,7 +38,7 @@ namespace render
 
 	void RenderGPUMemory::Destroy(display::Device* device)
 	{
-		display::DestroyUnorderedAccessBuffer(device, m_static_gpu_memory_buffer);
+		display::DestroyShaderResource(device, m_static_gpu_memory_buffer);
 		display::DestroyShaderResource(device, m_dynamic_gpu_memory_buffer);
 	}
 	void RenderGPUMemory::Sync(uint64_t cpu_frame_index, uint64_t freed_frame_index)
