@@ -13,6 +13,7 @@
 namespace display
 {
 	struct Device;
+	struct Context;
 }
 
 namespace render
@@ -42,6 +43,9 @@ namespace render
 		void Init(display::Device* device, uint32_t static_gpu_memory_size, uint32_t dynamic_gpu_memory_size, uint32_t dynamic_gpu_memory_segment_size);
 		void Destroy(display::Device* device);
 		void Sync(uint64_t cpu_frame_index, uint64_t freed_frame_index);
+
+		//Capture all copies for this frame and execute the command list
+		void ExecuteGPUCopy(uint64_t frame_index, display::Context* display_context);
 
 		//Static buffer resource in the GPU
 		display::ShaderResourceHandle m_static_gpu_memory_buffer;

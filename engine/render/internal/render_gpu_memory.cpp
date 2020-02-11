@@ -46,4 +46,42 @@ namespace render
 		m_dynamic_gpu_memory_allocator.Sync(cpu_frame_index, freed_frame_index);
 		m_static_gpu_memory_allocator.Sync(freed_frame_index);
 	}
+
+	void RenderGPUMemory::ExecuteGPUCopy(uint64_t frame_index, display::Context* display_context)
+	{
+		std::vector<CopyDataCommand> copy_commands;
+
+		m_copy_data_commands[frame_index].Visit([&](std::vector<CopyDataCommand>& data)
+			{
+				copy_commands.insert(copy_commands.end(), data.begin(), data.end());
+			});
+
+		if (copy_commands.size() > 0)
+		{
+			//Sort all commands by size
+			//We want the waves to have the most similar sizes posible, so we don't diverge a lot
+			std::sort(copy_commands.begin(), copy_commands.end(), [](const CopyDataCommand& a, const CopyDataCommand& b)
+				{
+					return a.size < b.size;
+				});
+
+			//Send all the the data commands to the GPU, format int4
+			size_t offset = m_dynamic_gpu_memory_allocator.Alloc(copy_commands.size() * sizeof(uint32_t) * 4, frame_index);
+			uint32_t* gpu_data = reinterpret_cast<uint32_t*>(display::GetResourceMemoryBuffer(display_context->GetDevice(), m_dynamic_gpu_memory_buffer)) + offset;
+
+			for (auto& copy_command : copy_commands)
+			{
+				*gpu_data = copy_command.source_offset;
+				gpu_data++;
+				*gpu_data = copy_command.dest_offset;
+				gpu_data++;
+				*gpu_data = copy_command.size;
+				gpu_data++;
+				//Add padding for int4
+				gpu_data++;
+			}
+
+
+		}
+	}
 }
