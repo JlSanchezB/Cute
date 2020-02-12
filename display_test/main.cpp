@@ -121,7 +121,7 @@ public:
 
 		m_device = display::CreateDevice(device_init_params);
 
-		if (m_device != nullptr)
+		if (m_device == nullptr)
 		{
 			throw std::runtime_error::exception("Error creating the display device");
 		}
@@ -451,7 +451,7 @@ public:
 			root_signature_desc.num_root_parameters = 1;
 			root_signature_desc.root_parameters[0].type = display::RootSignatureParameterType::ShaderResource;
 			root_signature_desc.root_parameters[0].root_param.shader_register = 0;
-			root_signature_desc.root_parameters[0].visibility = display::ShaderVisibility::All;
+			root_signature_desc.root_parameters[0].visibility = display::ShaderVisibility::Vertex;
 
 			root_signature_desc.num_static_samplers = 0;
 
@@ -593,9 +593,6 @@ public:
 
 			m_test_4.m_compute_unordered_access_buffer = display::CreateUnorderedAccessBuffer(m_device, unodered_access_buffer_desc, "Unordered access buffer por positions");
 		}
-
-		//Present render
-		Present();
 	}
 	void OnDestroy() override
 	{
@@ -851,6 +848,9 @@ public:
 
 			//Set compute pipeline
 			context->SetPipelineState(m_test_4.m_compute_pipeline_state);
+			
+			//Resource barrier
+			context->AddResourceBarriers({ display::ResourceBarrier(m_test_4.m_compute_unordered_access_buffer, display::TranstitionState::AllShaderResource, display::TranstitionState::UnorderedAccess) });
 
 			//Execute compute
 			display::ExecuteComputeDesc execute_compute_desc;
@@ -860,12 +860,14 @@ public:
 			context->ExecuteCompute(execute_compute_desc);
 
 		
-
 			//Set graphic root signature
 			context->SetRootSignature(display::Pipe::Graphics, m_test_4.m_root_signature);
 
 			//Set pipeline state
 			context->SetPipelineState(m_test_4.m_pipeline_state);
+
+			//Resource barrier
+			context->AddResourceBarriers({ display::ResourceBarrier(m_test_4.m_compute_unordered_access_buffer, display::TranstitionState::UnorderedAccess, display::TranstitionState::AllShaderResource)});
 
 			//Set unordered access buffer
 			context->SetShaderResource(display::Pipe::Graphics, 0, m_test_4.m_compute_unordered_access_buffer);
@@ -893,6 +895,9 @@ public:
 		display::ExecuteCommandList(m_device, m_test_4.m_command_list);
 
 		display::EndFrame(m_device);
+
+		//Present render
+		Present();
 	}
 
 	void OnSizeChange(uint32_t width, uint32_t height, bool minimized) override

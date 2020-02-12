@@ -1,5 +1,6 @@
 #include "display_common.h"
-
+#include <vector>
+#include <variant>
 
 namespace display
 {
@@ -360,5 +361,40 @@ namespace display
 		const auto& command_list = dx12_context->command_list;
 
 		command_list->Dispatch(execute_compute_desc.group_count_x, execute_compute_desc.group_count_y, execute_compute_desc.group_count_z);
+	}
+	void Context::AddResourceBarriers(const std::vector<ResourceBarrier>& resource_barriers)
+	{
+		auto dx12_context = reinterpret_cast<DX12Context*>(this);
+		Device* device = dx12_context->device;
+		const auto& command_list = dx12_context->command_list;
+
+		const size_t num_barriers = resource_barriers.size();
+		assert(num_barriers > 0);
+
+		std::unique_ptr<D3D12_RESOURCE_BARRIER[]> dx12_resource_barriers = std::make_unique<D3D12_RESOURCE_BARRIER[]>(num_barriers);
+
+		for (size_t i = 0; i < num_barriers; ++i)
+		{
+			auto& resource_barrier = resource_barriers[i];
+
+			//Set resource
+			auto& uav = device->Get(std::get<WeakUnorderedAccessBufferHandle>(resource_barrier.resource));
+
+			if (resource_barrier.type == ResourceBarrierType::UnorderAccess)
+			{
+				dx12_resource_barriers[i].Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
+				dx12_resource_barriers[i].UAV.pResource = uav.resource.Get();
+			}
+			else if (resource_barrier.type == ResourceBarrierType::Transition)
+			{
+				dx12_resource_barriers[i].Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+				dx12_resource_barriers[i].Transition.pResource = uav.resource.Get();
+
+				dx12_resource_barriers[i].Transition.StateBefore = Convert(resource_barrier.state_before);
+				dx12_resource_barriers[i].Transition.StateAfter = Convert(resource_barrier.state_after);	
+			}
+		}
+
+		command_list->ResourceBarrier(static_cast<UINT>(num_barriers), dx12_resource_barriers.get());
 	}
 }

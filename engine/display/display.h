@@ -138,6 +138,32 @@ namespace display
 		Compute
 	};
 
+	//Resource barrier
+	struct ResourceBarrier
+	{
+		ResourceBarrierType type;
+
+		using ResourceHandle = std::variant<WeakUnorderedAccessBufferHandle>;
+		ResourceHandle resource;
+
+		TranstitionState state_before;
+		TranstitionState state_after;
+
+		ResourceBarrier(const WeakUnorderedAccessBufferHandle& handle)
+		{
+			type = ResourceBarrierType::UnorderAccess;
+			resource = handle;
+		}
+
+		ResourceBarrier(const WeakUnorderedAccessBufferHandle& handle, const TranstitionState& _state_before, const TranstitionState& _state_after)
+		{
+			type = ResourceBarrierType::Transition;
+			resource = handle;
+			state_before = _state_before;
+			state_after = _state_after;
+		}
+	};
+
 	//Context
 	struct Context
 	{
@@ -204,6 +230,9 @@ namespace display
 
 		//Execute compute
 		void ExecuteCompute(const ExecuteComputeDesc& execute_compute_desc);
+
+		//Resource barriers
+		void AddResourceBarriers(const std::vector<ResourceBarrier>& resource_barriers);
 	};
 
 	template<typename HANDLE>

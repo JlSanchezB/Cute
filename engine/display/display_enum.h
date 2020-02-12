@@ -138,6 +138,24 @@ namespace display
 		PixelShaderResource,
 		NonPixelShaderResource
 	};
+
+	//Type of resource barrier
+	enum class ResourceBarrierType : uint8_t
+	{
+		Transition,
+		UnorderAccess
+	};
+
+	enum class TranstitionState : uint8_t
+	{
+		Common,
+		VertexAndConstantBuffer,
+		UnorderedAccess,
+		RenderTarget,
+		PixelShaderResource,
+		NonPixelShaderResource,
+		AllShaderResource
+	};
 }
 
 #endif

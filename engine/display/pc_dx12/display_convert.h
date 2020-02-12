@@ -245,5 +245,30 @@ namespace display
 		case ResourceState::NonPixelShaderResource: return D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
 		}
 	}
+
+	inline D3D12_RESOURCE_BARRIER_TYPE Convert(ResourceBarrierType resource_barrier_type)
+	{
+		switch (resource_barrier_type)
+		{
+		default:
+		case ResourceBarrierType::Transition: return D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+		case ResourceBarrierType::UnorderAccess: return D3D12_RESOURCE_BARRIER_TYPE_UAV;
+		}
+	}
+
+	inline D3D12_RESOURCE_STATES Convert(TranstitionState transition_state)
+	{
+		switch (transition_state)
+		{
+		default:
+		case TranstitionState::Common: return D3D12_RESOURCE_STATE_COMMON;
+		case TranstitionState::UnorderedAccess: return D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+		case TranstitionState::VertexAndConstantBuffer: return D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
+		case TranstitionState::RenderTarget: return D3D12_RESOURCE_STATE_RENDER_TARGET;
+		case TranstitionState::PixelShaderResource: return D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+		case TranstitionState::NonPixelShaderResource: return D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+		case TranstitionState::AllShaderResource: return D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+		}
+	}
 }
 #endif //DISPLAY_CONVERT_H_
