@@ -394,7 +394,7 @@ namespace render
 
 		//Register render gpu memory resources
 		render::AddGameResource(system, "DynamicGPUMemory"_sh32, CreateResourceFromHandle<render::ShaderResourceResource>(display::WeakShaderResourceHandle(system->m_gpu_memory.m_dynamic_gpu_memory_buffer)));
-		render::AddGameResource(system, "StaticGPUMemory"_sh32, CreateResourceFromHandle<render::ShaderResourceResource>(display::WeakShaderResourceHandle(system->m_gpu_memory.m_static_gpu_memory_buffer)));
+		render::AddGameResource(system, "StaticGPUMemory"_sh32, CreateResourceFromHandle<render::UnorderedAccessBufferResource>(display::WeakUnorderedAccessBufferHandle(system->m_gpu_memory.m_static_gpu_memory_buffer)));
 
 		return system;
 	}
@@ -786,7 +786,6 @@ namespace render
 
 		//Calculate offsets
 		uint8_t* dynamic_memory_base = reinterpret_cast<uint8_t*>(display::GetResourceMemoryBuffer(system->m_device, system->m_gpu_memory.m_dynamic_gpu_memory_buffer));
-		uint8_t* static_memory_base = reinterpret_cast<uint8_t*>(display::GetResourceMemoryBuffer(system->m_device, system->m_gpu_memory.m_static_gpu_memory_buffer));
 
 		uint32_t source_offset = static_cast<uint32_t>(reinterpret_cast<uint8_t*>(gpu_memory) - dynamic_memory_base);
 		const FreeListAllocation& destination_allocation = system->m_gpu_memory.m_static_gpu_memory_allocator.Get(handle);
@@ -804,7 +803,7 @@ namespace render
 		return reinterpret_cast<uint8_t*>(display::GetResourceMemoryBuffer(system->m_device, system->m_gpu_memory.m_dynamic_gpu_memory_buffer)) + offset;
 	}
 
-	display::WeakShaderResourceHandle GetStaticGPUMemoryResource(System* system)
+	display::WeakUnorderedAccessBufferHandle GetStaticGPUMemoryResource(System* system)
 	{
 		return system->m_gpu_memory.m_static_gpu_memory_buffer;
 	}

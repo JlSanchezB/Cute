@@ -48,7 +48,7 @@ namespace render
 		void ExecuteGPUCopy(uint64_t frame_index, display::Context* display_context);
 
 		//Static buffer resource in the GPU
-		display::ShaderResourceHandle m_static_gpu_memory_buffer;
+		display::UnorderedAccessBufferHandle m_static_gpu_memory_buffer;
 		//Static gpu allocator
 		FreeListAllocator m_static_gpu_memory_allocator;
 
@@ -56,6 +56,10 @@ namespace render
 		display::ShaderResourceHandle m_dynamic_gpu_memory_buffer;
 		//Dynamic buffer resource in the GPU
 		SegmentAllocator m_dynamic_gpu_memory_allocator;
+
+		//Copy compute shader
+		display::RootSignatureHandle m_copy_data_compute_root_signature;
+		display::PipelineStateHandle m_copy_data_compute_pipeline_state;
 
 
 		//An over approximation of max distance between CPU and GPU

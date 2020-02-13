@@ -10,14 +10,11 @@ namespace render
 		assert(dynamic_gpu_memory_size % 16 == 0);
 
 		//Init static buffer
-		display::ShaderResourceDesc static_buffer_desc;
-		static_buffer_desc.access = display::Access::Static;
-		static_buffer_desc.type = display::ShaderResourceType::Buffer;
-		static_buffer_desc.size = static_gpu_memory_size;
-		static_buffer_desc.num_elements = static_gpu_memory_size / 16;
-		static_buffer_desc.structure_stride = 16;
+		display::UnorderedAccessBufferDesc static_buffer_desc;
+		static_buffer_desc.element_size = 16;
+		static_buffer_desc.element_count = static_gpu_memory_size / 16;
 
-		m_static_gpu_memory_buffer = display::CreateShaderResource(device, static_buffer_desc, "StaticGpuMemoryBuffer");
+		m_static_gpu_memory_buffer = display::CreateUnorderedAccessBuffer(device, static_buffer_desc, "StaticGpuMemoryBuffer");
 
 		//Init static allocator
 		m_static_gpu_memory_allocator.Init(static_gpu_memory_size);
@@ -34,12 +31,80 @@ namespace render
 
 		//Init dynamic allocator
 		m_dynamic_gpu_memory_allocator.Init(dynamic_gpu_memory_size, dynamic_gpu_memory_segment_size);
+
+
+		//Copy data compute
+		{
+			//Create compute root signature
+			display::RootSignatureDesc root_signature_desc;
+			root_signature_desc.num_root_parameters = 3;
+			root_signature_desc.root_parameters[0].type = display::RootSignatureParameterType::UnorderAccessBuffer;
+			root_signature_desc.root_parameters[0].root_param.shader_register = 0;
+			root_signature_desc.root_parameters[0].visibility = display::ShaderVisibility::All;
+			
+			root_signature_desc.root_parameters[1].type = display::RootSignatureParameterType::ShaderResource;
+			root_signature_desc.root_parameters[1].root_param.shader_register = 0;
+			root_signature_desc.root_parameters[1].visibility = display::ShaderVisibility::All;
+
+			root_signature_desc.root_parameters[2].type = display::RootSignatureParameterType::Constants;
+			root_signature_desc.root_parameters[2].visibility = display::ShaderVisibility::All;
+			root_signature_desc.root_parameters[2].root_param.num_constants = 2;
+			root_signature_desc.root_parameters[2].root_param.shader_register = 0;
+
+			root_signature_desc.num_static_samplers = 0;
+
+			//Create the root signature
+			m_copy_data_compute_root_signature = display::CreateRootSignature(device, root_signature_desc, "Copy Data Compute");
+		}
+
+		{
+			//Compute pipeline, compile shader for testing
+			const char* shader_code =
+					"RWStructuredBuffer<uint4> destination_buffer : u0; \
+					 StructuredBuffer<uint4> source_buffer : t0; \
+					 uint4 parameters : b0; \
+					 \
+					[numthreads(64, 1, 1)]\
+					void copy_data(uint3 thread : SV_DispatchThreadID)\
+					{\
+						if (thread.x < parameters.y)\
+						{ \
+							uint4 copy_data = source_buffer[parameters.x + thread.x];\
+							for (uint i = 0; i < copy_data.z; ++i)\
+							{\
+								destination_buffer[copy_data.y + i] = source_buffer[copy_data.x + i];\
+							}\
+						}\
+					};";
+
+			std::vector<char> compute_shader;
+
+			display::CompileShaderDesc compile_shader_desc;
+			compile_shader_desc.code = shader_code;
+			compile_shader_desc.entry_point = "copy_data";
+			compile_shader_desc.target = "cs_5_0";
+
+			display::CompileShader(device, compile_shader_desc, compute_shader);
+
+			//Create pipeline state
+			display::ComputePipelineStateDesc pipeline_state_desc;
+			pipeline_state_desc.root_signature = m_copy_data_compute_root_signature;
+
+			//Add shaders
+			pipeline_state_desc.compute_shader.data = reinterpret_cast<void*>(compute_shader.data());
+			pipeline_state_desc.compute_shader.size = compute_shader.size();
+
+			//Create
+			m_copy_data_compute_pipeline_state = display::CreateComputePipelineState(device, pipeline_state_desc, "Copy Data Compute");
+		}
 	}
 
 	void RenderGPUMemory::Destroy(display::Device* device)
 	{
-		display::DestroyShaderResource(device, m_static_gpu_memory_buffer);
-		display::DestroyShaderResource(device, m_dynamic_gpu_memory_buffer);
+		display::DestroyHandle(device, m_static_gpu_memory_buffer);
+		display::DestroyHandle(device, m_dynamic_gpu_memory_buffer);
+		display::DestroyHandle(device, m_copy_data_compute_root_signature);
+		display::DestroyHandle(device, m_copy_data_compute_pipeline_state);
 	}
 	void RenderGPUMemory::Sync(uint64_t cpu_frame_index, uint64_t freed_frame_index)
 	{
@@ -81,7 +146,13 @@ namespace render
 				gpu_data++;
 			}
 
+			//Resource barrier to writable uav
+			display_context->AddResourceBarriers({ display::ResourceBarrier(m_static_gpu_memory_buffer, display::TranstitionState::AllShaderResource, display::TranstitionState::UnorderedAccess) });
 
+			//Execute copy
+
+			//Resource barrier to shader resource
+			display_context->AddResourceBarriers({ display::ResourceBarrier(m_static_gpu_memory_buffer, display::TranstitionState::UnorderedAccess, display::TranstitionState::AllShaderResource) });
 		}
 	}
 }

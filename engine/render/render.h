@@ -169,7 +169,7 @@ namespace render
 	void* AllocDynamicGPUMemory(System* system, const size_t size, const uint64_t frame_index);
 
 	//Get static gpu memory resource
-	display::WeakShaderResourceHandle GetStaticGPUMemoryResource(System* system);
+	display::WeakUnorderedAccessBufferHandle GetStaticGPUMemoryResource(System* system);
 
 	//Get dynamic gpu memory resource
 	display::WeakShaderResourceHandle GetDynamicGPUMemoryResource(System* system);

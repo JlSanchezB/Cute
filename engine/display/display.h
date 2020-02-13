@@ -236,64 +236,77 @@ namespace display
 	};
 
 	template<typename HANDLE>
-	void DestroyHandle(Device* device, HANDLE& handle);
+	void DestroyHandle(Device* device, HANDLE& handle)
+	{
+		if (handle.IsValid())
+		{
+			DestroyHandleInternal(device, handle);
+		}
+		else
+		{
+			core::LogWarning("Trying to destroy a invalid display handle");
+		}
+	}
+
+	template<typename HANDLE>
+	void DestroyHandleInternal(Device* device, HANDLE& handle);
 
 	template<>
-	inline void DestroyHandle(Device* device, RootSignatureHandle& handle)
+	inline void DestroyHandleInternal(Device* device, RootSignatureHandle& handle)
 	{
 		DestroyRootSignature(device, handle);
 	}
 
 	template<>
-	inline void DestroyHandle(Device* device, PipelineStateHandle& handle)
+	inline void DestroyHandleInternal(Device* device, PipelineStateHandle& handle)
 	{
 		DestroyPipelineState(device, handle);
 	}
 
 	template<>
-	inline void DestroyHandle(Device* device, UnorderedAccessBufferHandle& handle)
+	inline void DestroyHandleInternal(Device* device, UnorderedAccessBufferHandle& handle)
 	{
 		DestroyUnorderedAccessBuffer(device, handle);
 	}
 
 	template<>
-	inline void DestroyHandle(Device* device, ConstantBufferHandle& handle)
+	inline void DestroyHandleInternal(Device* device, ConstantBufferHandle& handle)
 	{
 		DestroyConstantBuffer(device, handle);
 	}
 
 	template<>
-	inline void DestroyHandle(Device* device, RenderTargetHandle& handle)
+	inline void DestroyHandleInternal(Device* device, RenderTargetHandle& handle)
 	{
 		DestroyRenderTarget(device, handle);
 	}
 
 	template<>
-	inline void DestroyHandle(Device* device, ShaderResourceHandle& handle)
+	inline void DestroyHandleInternal(Device* device, ShaderResourceHandle& handle)
 	{
 		DestroyShaderResource(device, handle);
 	}
 
 	template<>
-	inline void DestroyHandle(Device* device, DescriptorTableHandle& handle)
+	inline void DestroyHandleInternal(Device* device, DescriptorTableHandle& handle)
 	{
 		DestroyDescriptorTable(device, handle);
 	}
 
 	template<>
-	inline void DestroyHandle(Device* device, VertexBufferHandle& handle)
+	inline void DestroyHandleInternal(Device* device, VertexBufferHandle& handle)
 	{
 		DestroyVertexBuffer(device, handle);
 	}
 
 	template<>
-	inline void DestroyHandle(Device* device, IndexBufferHandle& handle)
+	inline void DestroyHandleInternal(Device* device, IndexBufferHandle& handle)
 	{
 		DestroyIndexBuffer(device, handle);
 	}
 
 	template<>
-	inline void DestroyHandle(Device* device, CommandListHandle& handle)
+	inline void DestroyHandleInternal(Device* device, CommandListHandle& handle)
 	{
 		DestroyCommandList(device, handle);
 	}
