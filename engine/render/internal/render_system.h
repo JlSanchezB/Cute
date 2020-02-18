@@ -17,6 +17,13 @@ namespace render
 {
 	struct System;
 
+	//Source of a resource
+	enum class ResourceSource : uint8_t
+	{
+		Game,
+		PassDescriptor
+	};
+
 	//Sorted render items
 	struct SortedRenderItems
 	{
@@ -29,18 +36,13 @@ namespace render
 	class RenderContextInternal : public RenderContext
 	{
 	public:
-		RenderContextInternal(System* system, display::Device* device, const PassInfo& pass_info, ResourceMap& init_resources, Pass* _root_pass) :
+		RenderContextInternal(System* system, display::Device* device, const PassInfo& pass_info, Pass* _root_pass) :
 			m_render_pass_system(system),
 			m_display_device(device),
 			m_pass_info(pass_info)
 		{
 			m_root_pass = _root_pass;
-			m_game_resources_map = std::move(init_resources);
 		}
-		//Game resources associated to this pass
-		ResourceMap m_game_resources_map;
-		//Pass resources associated to this pass
-		ResourceMap m_pass_resources_map;
 		//Render pass system
 		System* m_render_pass_system;
 		//Root pass for the cotnext
@@ -89,14 +91,23 @@ namespace render
 		//Pass factories
 		PassFactoryMap m_pass_factories_map;
 
-		using ResourceMap = core::FastMap<ResourceName, std::unique_ptr<Resource>>;
+		//Info for each resource
+		struct ResourceInfo
+		{
+			std::unique_ptr<Resource> resource;
+			ResourceSource source;
+
+			ResourceInfo(std::unique_ptr<Resource>& _resource, const ResourceSource& _source):
+				resource(std::move(_resource)), source(_source)
+			{
+			}
+		};
+
+		using ResourceMap = core::FastMap<ResourceName, ResourceInfo>;
 		using PassMap =core::FastMap<PassName, std::unique_ptr<Pass>>;
 
-		//Gobal resources defined in the passes declaration
-		ResourceMap m_global_resources_map;
-
-		//Game resource added by the game
-		ResourceMap m_game_resources_map;
+		//Gobal resources
+		ResourceMap m_resources_map;
 
 		//Passes defined in the passes declaration
 		PassMap m_passes_map;
@@ -127,13 +138,16 @@ namespace render
 		display::CommandListHandle m_render_command_list;
 
 		//Create render context
-		RenderContextInternal * CreateRenderContext(display::Device * device, const PassName& pass, const PassInfo& pass_info, ResourceMap& init_resources, std::vector<std::string>& errors);
+		RenderContextInternal * CreateRenderContext(display::Device * device, const PassName& pass, const PassInfo& pass_info, std::vector<std::string>& errors);
 
 		//Destroy render context
 		void DestroyRenderContext(RenderContextInternal*& render_context);
 
 		//Load from passes declaration file
 		bool Load(LoadContext& load_context, const char* descriptor_file_buffer, size_t descriptor_file_buffer_size);
+
+		//Add Resource
+		bool AddResource(const ResourceName& name, std::unique_ptr<Resource>& resource, ResourceSource source);
 
 		//Load resource
 		ResourceName LoadResource(LoadContext& load_context, const char* prefix = nullptr);
@@ -142,7 +156,7 @@ namespace render
 		Pass* LoadPass(LoadContext& load_context);
 
 		//Get Between frames cached render context
-		RenderContextInternal* GetCachedRenderContext(const PassName& pass_name, uint16_t id, const PassInfo& pass_info, ResourceMap& init_resource_map);
+		RenderContextInternal* GetCachedRenderContext(const PassName& pass_name, uint16_t id, const PassInfo& pass_info);
 
 		//Submit render
 		void SubmitRender();

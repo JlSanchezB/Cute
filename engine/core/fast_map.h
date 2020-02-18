@@ -80,6 +80,19 @@ namespace core
 			}
 		}
 
+		template<typename VISITOR>
+		void VisitNamed(VISITOR&& visitor)
+		{
+			for (auto& bucket : m_buckets)
+			{
+				size_t count = bucket.m_data.size();
+				for (size_t i = 0; i < count; ++i)
+				{
+					visitor(bucket.m_key[i], bucket.m_data[i]);
+				}
+			}
+		}
+
 		//Clear
 		void clear()
 		{

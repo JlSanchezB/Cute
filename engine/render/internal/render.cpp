@@ -18,8 +18,22 @@ namespace
 	{
 		container.Visit([&](auto& item)
 		{
-			item->Destroy(device);
+			if (item.resource)
+			{
+				item.resource->Destroy(device);
+			}
 		});
+
+		container.clear();
+	}
+
+	template<class CONTAINER>
+	void DestroyPasses(display::Device* device, CONTAINER& container)
+	{
+		container.Visit([&](auto& item)
+			{
+				item->Destroy(device);
+			});
 
 		container.clear();
 	}
@@ -32,33 +46,9 @@ namespace
 
 namespace render
 {
-	void RenderContext::AddPassResource(const ResourceName& name, std::unique_ptr<Resource>&& resource)
-	{
-		auto render_context = reinterpret_cast<RenderContextInternal*>(this);
-		render_context->m_game_resources_map.Set(name, std::move(resource));
-	}
-
-	Resource * RenderContext::GetRenderResource(const ResourceName& name) const
+	Resource * RenderContext::GetResource(const ResourceName& name) const
 	{
 		auto render_context = reinterpret_cast<const RenderContextInternal*>(this);
-
-		//First check pass context resources
-		{
-			auto& it = render_context->m_game_resources_map[name];
-			if (it)
-			{
-				return it->get();
-			}
-		}
-
-		//Second check pass context resources
-		{
-			auto& it = render_context->m_pass_resources_map[name];
-			if (it)
-			{
-				return it->get();
-			}
-		}
 
 		//Then check system resources
 		return render::GetResource(render_context->m_render_pass_system, name);
@@ -125,8 +115,8 @@ namespace render
 			auto& resource_factory_it = m_resource_factories_map[resource_type];
 			if (resource_factory_it)
 			{
-				auto& global_resources_it = m_global_resources_map[resource_name];
-				if (!global_resources_it)
+				auto& resources_it = m_resources_map[resource_name];
+				if (!resources_it)
 				{
 					auto& factory = *resource_factory_it;
 
@@ -145,8 +135,8 @@ namespace render
 
 					core::LogInfo("Created Resource <%s> type <%s>", resource_name_string, resource_type_string);
 
-					//Add to the globals	
-					m_global_resources_map.Set(resource_name, std::unique_ptr<render::Resource>(resource_instance));
+					AddResource(resource_name, std::unique_ptr<render::Resource>(resource_instance), ResourceSource::PassDescriptor);
+					
 					return resource_name;
 
 				}
@@ -202,14 +192,14 @@ namespace render
 		}
 	}
 
-	RenderContextInternal * System::CreateRenderContext(display::Device * device, const PassName & pass, const PassInfo & pass_info, ResourceMap & init_resources, std::vector<std::string>& errors)
+	RenderContextInternal * System::CreateRenderContext(display::Device * device, const PassName & pass, const PassInfo & pass_info, std::vector<std::string>& errors)
 	{
 		//Get pass
 		auto render_pass = GetPass(this, pass);
 		if (render_pass)
 		{
 			//Create Render Context
-			RenderContextInternal* render_context = m_render_context_pool.Alloc(this, device, pass_info, init_resources, render_pass);
+			RenderContextInternal* render_context = m_render_context_pool.Alloc(this, device, pass_info, render_pass);
 
 			ErrorContext errors_context;
 
@@ -247,9 +237,6 @@ namespace render
 	void System::DestroyRenderContext(RenderContextInternal *& render_context)
 	{
 		//Destroy context resources
-		DestroyResources(render_context->m_display_device, render_context->m_game_resources_map);
-		DestroyResources(render_context->m_display_device, render_context->m_pass_resources_map);
-
 		m_render_context_pool.Free(render_context);
 
 		render_context = nullptr;
@@ -350,6 +337,22 @@ namespace render
 		return (load_context.errors.size() == 0);
 	}
 
+	bool System::AddResource(const ResourceName& name, std::unique_ptr<Resource>& resource, ResourceSource source)
+	{
+		auto& resource_it = m_resources_map[name];
+		if (!resource_it)
+		{
+			m_resources_map.Set(name, System::ResourceInfo(std::move(resource), source));
+			return true;
+		}
+		else
+		{
+			resource.release();
+			core::LogWarning("Game Resource <%s> has been already added, discarting the new resource", name.GetValue());
+			return false;
+		}
+	}
+
 
 	System * CreateRenderSystem(display::Device* device, job::System* job_system, platform::Game* game, const SystemDesc& desc)
 	{
@@ -393,8 +396,8 @@ namespace render
 		system->m_gpu_memory.Init(system->m_device, desc.static_gpu_memory_size, desc.dynamic_gpu_memory_size, desc.dynamic_gpu_memory_segment_size);
 
 		//Register render gpu memory resources
-		render::AddGameResource(system, "DynamicGPUMemory"_sh32, CreateResourceFromHandle<render::ShaderResourceResource>(display::WeakShaderResourceHandle(system->m_gpu_memory.m_dynamic_gpu_memory_buffer)));
-		render::AddGameResource(system, "StaticGPUMemory"_sh32, CreateResourceFromHandle<render::UnorderedAccessBufferResource>(display::WeakUnorderedAccessBufferHandle(system->m_gpu_memory.m_static_gpu_memory_buffer)));
+		render::AddResource(system, "DynamicGPUMemory"_sh32, CreateResourceFromHandle<render::ShaderResourceResource>(display::WeakShaderResourceHandle(system->m_gpu_memory.m_dynamic_gpu_memory_buffer)));
+		render::AddResource(system, "StaticGPUMemory"_sh32, CreateResourceFromHandle<render::UnorderedAccessBufferResource>(display::WeakUnorderedAccessBufferHandle(system->m_gpu_memory.m_static_gpu_memory_buffer)));
 
 		return system;
 	}
@@ -411,9 +414,8 @@ namespace render
 		system->m_gpu_memory.Destroy(system->m_device);
 
 		//Destroy resources and passes
-		DestroyResources(device, system->m_game_resources_map);
-		DestroyResources(device, system->m_global_resources_map);
-		DestroyResources(device, system->m_passes_map);
+		DestroyResources(device, system->m_resources_map);
+		DestroyPasses(device, system->m_passes_map);
 
 		//Destroy command list
 		display::DestroyHandle(device, system->m_render_command_list);
@@ -442,8 +444,8 @@ namespace render
 			return false;
 		}
 
-		//Save the resources and passes map
-		System::ResourceMap global_resources_map_old = std::move(system->m_global_resources_map);
+		//Save old resources in case the pass descriptor can not be load
+		System::ResourceMap resources_map_old = std::move(system->m_resources_map);
 		System::PassMap passes_map_old = std::move(system->m_passes_map);
 
 		LoadContext load_context;
@@ -465,18 +467,28 @@ namespace render
 			errors = std::move(load_context.errors);
 
 			//Clear all resources created from the file
-			DestroyResources(device, system->m_global_resources_map);
-			DestroyResources(device, system->m_passes_map);
+			DestroyResources(device, system->m_resources_map);
+			DestroyPasses(device, system->m_passes_map);
 
 			//Reset all values
-			system->m_global_resources_map = std::move(global_resources_map_old);
+			system->m_resources_map = std::move(resources_map_old);
 			system->m_passes_map = std::move(passes_map_old);
 		}
 		else
 		{
+			//We still needs to get all resources that were defined by the game
+			resources_map_old.VisitNamed([&](const ResourceName& name, auto& item)
+			{
+				if (item.source == ResourceSource::Game)
+				{
+					//Transfer resource to new resource map
+					system->m_resources_map.Set(name, item);
+				}
+			});
+
 			//We can delete old resources and passes
-			DestroyResources(device, global_resources_map_old);
-			DestroyResources(device, passes_map_old);
+			DestroyResources(device, resources_map_old);
+			DestroyPasses(device, passes_map_old);
 
 			core::LogInfo("Render pass descriptor file loaded");
 		}
@@ -486,7 +498,7 @@ namespace render
 
 	RenderContext * CreateRenderContext(System * system, display::Device * device, const PassName& pass, const PassInfo& pass_info, ResourceMap& init_resources, std::vector<std::string>& errors)
 	{
-		return system->CreateRenderContext(device, pass, pass_info, init_resources, errors);
+		return system->CreateRenderContext(device, pass, pass_info, errors);
 	}
 
 	void DestroyRenderContext(System * system, RenderContext*& render_context)
@@ -514,7 +526,7 @@ namespace render
 		render_context_internal->m_root_pass->Execute(*render_context);
 	}
 
-	RenderContextInternal * System::GetCachedRenderContext(const PassName & pass_name, uint16_t id, const PassInfo& pass_info, ResourceMap& init_resource_map)
+	RenderContextInternal * System::GetCachedRenderContext(const PassName & pass_name, uint16_t id, const PassInfo& pass_info)
 	{
 		for (auto& render_context : m_cached_render_context)
 		{
@@ -528,7 +540,7 @@ namespace render
 		//Init resource map gets moved only here
 
 		std::vector<std::string> errors;
-		auto render_context = CreateRenderContext(m_device, pass_name, pass_info, init_resource_map, errors);
+		auto render_context = CreateRenderContext(m_device, pass_name, pass_info, errors);
 
 		if (render_context)
 		{
@@ -582,7 +594,7 @@ namespace render
 			PROFILE_SCOPE("Render", "SubmitPointOfView", kRenderProfileColour);
 
 			//Find the render_context associated to it
-			RenderContextInternal* render_context = GetCachedRenderContext(point_of_view.m_pass_name, point_of_view.m_id, point_of_view.m_pass_info, point_of_view.m_init_resources);
+			RenderContextInternal* render_context = GetCachedRenderContext(point_of_view.m_pass_name, point_of_view.m_id, point_of_view.m_pass_info);
 			
 			if (render_context)
 			{
@@ -813,21 +825,9 @@ namespace render
 		return system->m_gpu_memory.m_dynamic_gpu_memory_buffer;
 	}
 
-	bool AddGameResource(System * system, const ResourceName& name, std::unique_ptr<Resource>&& resource)
+	bool AddResource(System * system, const ResourceName& name, std::unique_ptr<Resource>&& resource)
 	{
-		auto& global_resource_it = system->m_global_resources_map[name];
-		auto& game_resource_it = system->m_game_resources_map[name];
-		if (!global_resource_it && !game_resource_it)
-		{
-			system->m_game_resources_map.Set(name, std::move(resource));
-			return true;
-		}
-		else
-		{
-			resource.release();
-			core::LogWarning("Game Resource <%s> has been already added, discarting the new resource", name.GetValue());
-			return false;
-		}
+		return system->AddResource(name, resource, ResourceSource::Game);
 	}
 
 	bool RegisterResourceFactory(System * system, const RenderClassType& resource_type, std::unique_ptr<FactoryInterface<Resource>>& resource_factory)
@@ -857,16 +857,10 @@ namespace render
 
 	Resource * GetResource(System* system, const ResourceName& name)
 	{
-		auto& it_game = system->m_game_resources_map[name];
-		if (it_game)
+		auto& it = system->m_resources_map[name];
+		if (it)
 		{
-			return it_game->get();
-		}
-
-		auto& it_global = system->m_global_resources_map[name];
-		if (it_global)
-		{
-			return it_global->get();
+			return it->resource.get();
 		}
 		return nullptr;
 	}
@@ -899,18 +893,6 @@ namespace render
 
 	bool LoadContext::AddResource(const ResourceName& name, std::unique_ptr<Resource>& resource)
 	{
-		auto& global_resource_it = render_system->m_global_resources_map[name];
-		auto& game_resource_it = render_system->m_game_resources_map[name];
-		if (!global_resource_it && !global_resource_it)
-		{
-			render_system->m_global_resources_map.Set(name, std::move(resource));
-			return true;
-		}
-		else
-		{
-			resource.release();
-			core::LogWarning("Global Resource has been already added, discarting the new resource");
-			return false;
-		}
+		return render_system->AddResource(name, resource, ResourceSource::PassDescriptor);
 	}
 }

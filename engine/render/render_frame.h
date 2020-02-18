@@ -56,10 +56,9 @@ namespace render
 	class PointOfView
 	{
 	public:
-		PointOfView(PassName pass_name, uint16_t id, uint16_t priority, const PassInfo& pass_info, ResourceMap& init_resources) :
+		PointOfView(PassName pass_name, uint16_t id, uint16_t priority, const PassInfo& pass_info) :
 			m_pass_name(pass_name), m_id(id), m_priority(priority), m_allocated(true), m_pass_info(pass_info)
 		{
-			m_init_resources = std::move(init_resources);
 		}
 
 		void PushRenderItem(Priority priority, SortKey sort_key, const CommandBuffer::CommandOffset& command_offset)
@@ -90,8 +89,6 @@ namespace render
 		uint16_t m_priority;
 		//Pass info
 		PassInfo m_pass_info;
-		//Init resources (they are going to get move the first time that are used)
-		ResourceMap m_init_resources;
 
 		//Command buffer with commands that will run during the start of the point of view
 		job::ThreadData <CommandBuffer> m_begin_render_command_buffer;
@@ -117,7 +114,7 @@ namespace render
 		void Reset();
 
 		//Alloc point of view
-		PointOfView& AllocPointOfView(PassName pass_name, uint16_t id, uint16_t priority, const PassInfo& pass_info, ResourceMap& init_resources);
+		PointOfView& AllocPointOfView(PassName pass_name, uint16_t id, uint16_t priority, const PassInfo& pass_info);
 
 		//Get begin frame command buffer
 		CommandBuffer& GetBeginFrameComamndbuffer()
@@ -151,7 +148,7 @@ namespace render
 		m_allocated = false;
 	}
 
-	inline PointOfView& Frame::AllocPointOfView(PassName pass_name, uint16_t id, uint16_t priority, const PassInfo& pass_info, ResourceMap& init_resources)
+	inline PointOfView& Frame::AllocPointOfView(PassName pass_name, uint16_t id, uint16_t priority, const PassInfo& pass_info)
 	{
 		//Check it is already one that match from other frame
 		for (auto& point_of_view : m_point_of_views)
@@ -167,7 +164,7 @@ namespace render
 			}
 		}
 		//Add to the vector
-		m_point_of_views.emplace_back(pass_name, id, priority, pass_info, init_resources);
+		m_point_of_views.emplace_back(pass_name, id, priority, pass_info);
 
 		return m_point_of_views.back();
 	}

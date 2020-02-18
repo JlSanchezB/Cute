@@ -260,7 +260,7 @@ namespace render
 
 		for (auto& descriptor : m_descriptor_table_names)
 		{
-			Resource* resource = render_context.GetRenderResource(ResourceName(descriptor.c_str()));
+			Resource* resource = render_context.GetResource(ResourceName(descriptor.c_str()));
 
 			if (resource)
 			{
@@ -288,16 +288,10 @@ namespace render
 
 		display::DescriptorTableHandle descriptor_table_handle = display::CreateDescriptorTable(device, descriptor_table_desc);
 
-		if (descriptor_table_handle.IsValid())
-		{
-			//Create resource handle
-			render_context.AddPassResource(m_descriptor_table.GetResourceName(), CreateResourceFromHandle<DescriptorTableResource>(descriptor_table_handle));
-		}
-		else
+		if (!descriptor_table_handle.IsValid())
 		{
 			AddError(errors, "Error creation descritpor table, display errors:", display::GetLastErrorMessage(device));
 		}
-
 	}
 	void SetDescriptorTablePass::Render(RenderContext & render_context) const
 	{

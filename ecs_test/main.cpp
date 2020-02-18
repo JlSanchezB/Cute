@@ -331,9 +331,6 @@ public:
 	//Display resources
 	DisplayResource m_display_resources;
 
-	//Main point of view resources
-	render::ResourceMap m_init_map_resource_map;
-
 	//Camera info
 	float m_camera_position[2] = { 0.f };
 	float m_camera_zoom = 1.f;
@@ -524,10 +521,10 @@ public:
 		m_render_system = render::CreateRenderSystem(m_device, m_job_system, this, render_system_desc);
 
 		//Add game resources
-		render::AddGameResource(m_render_system, "GameGlobal"_sh32, CreateResourceFromHandle<render::ConstantBufferResource>(display::WeakConstantBufferHandle(m_game_constant_buffer)));
-		render::AddGameResource(m_render_system, "BackBuffer"_sh32, CreateResourceFromHandle<render::RenderTargetResource>(display::GetBackBuffer(m_device)));
-		render::AddGameResource(m_render_system, "GameRootSignature"_sh32, CreateResourceFromHandle<render::RootSignatureResource>(display::WeakRootSignatureHandle(m_display_resources.m_root_signature)));
-		render::AddGameResource(m_render_system, "ZoomPosition"_sh32, CreateResourceFromHandle<render::ConstantBufferResource>(display::WeakConstantBufferHandle(m_display_resources.m_zoom_position)));
+		render::AddResource(m_render_system, "GameGlobal"_sh32, CreateResourceFromHandle<render::ConstantBufferResource>(display::WeakConstantBufferHandle(m_game_constant_buffer)));
+		render::AddResource(m_render_system, "BackBuffer"_sh32, CreateResourceFromHandle<render::RenderTargetResource>(display::GetBackBuffer(m_device)));
+		render::AddResource(m_render_system, "GameRootSignature"_sh32, CreateResourceFromHandle<render::RootSignatureResource>(display::WeakRootSignatureHandle(m_display_resources.m_root_signature)));
+		render::AddResource(m_render_system, "ZoomPosition"_sh32, CreateResourceFromHandle<render::ConstantBufferResource>(display::WeakConstantBufferHandle(m_display_resources.m_zoom_position)));
 
 		//Get render priorities
 		m_solid_render_priority = render::GetRenderItemPriority(m_render_system, "Solid"_sh32);
@@ -1424,7 +1421,7 @@ public:
 			pass_info.width = m_width;
 			pass_info.height = m_height;
 
-			auto& point_of_view = render_frame.AllocPointOfView("Main"_sh32, 0, 0, pass_info, m_init_map_resource_map);
+			auto& point_of_view = render_frame.AllocPointOfView("Main"_sh32, 0, 0, pass_info);
 			job::ThreadData<std::array<InstanceBuffer, 3>> instance_buffer;
 
 			//Create JobData

@@ -34,15 +34,13 @@ namespace render
 	class RenderContext
 	{
 	public:
-		//Add pass resource to this pass instance
-		void AddPassResource(const ResourceName& name , std::unique_ptr<Resource>&& resource);
-		//Resource associated to this pass instance
-		Resource* GetRenderResource(const ResourceName& name) const;
+		//Resource
+		Resource* GetResource(const ResourceName& name) const;
 
 		template<typename RESOURCE>
 		inline RESOURCE* GetResource(const ResourceName& name) const
 		{
-			Resource* resource = GetRenderResource(name);
+			Resource* resource = GetResource(name);
 			if (resource && resource->Type() == RESOURCE::kClassName)
 			{
 				return dynamic_cast<RESOURCE*>(resource);
@@ -82,7 +80,7 @@ namespace render
 	bool LoadPassDescriptorFile(System* system, display::Device* device, const char* descriptor_file_buffer, size_t descriptor_file_buffer_size, std::vector<std::string>& errors);
 
 	//Add game resource, allows the game to add global resources that the pass system can access them
-	bool AddGameResource(System* system, const ResourceName& name, std::unique_ptr<Resource>&& resource);
+	bool AddResource(System* system, const ResourceName& name, std::unique_ptr<Resource>&& resource);
 
 	//Register resource factory
 	bool RegisterResourceFactory(System* system, const RenderClassType& resource_type, std::unique_ptr<FactoryInterface<Resource>>& resource_factory);
