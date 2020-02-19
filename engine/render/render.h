@@ -34,6 +34,9 @@ namespace render
 	class RenderContext
 	{
 	public:
+		//Add resource
+		bool AddPassResource(const ResourceName& name, std::unique_ptr<Resource>&& resource);
+
 		//Resource
 		Resource* GetResource(const ResourceName& name) const;
 
@@ -120,18 +123,6 @@ namespace render
 
 	//Get Pass by name
 	Pass* GetPass(System* system, const PassName& name);
-
-	//Create a render context for rendering a pass
-	RenderContext* CreateRenderContext(System* system, display::Device* device, const PassName& pass, const PassInfo& pass_info, ResourceMap& init_resources, std::vector<std::string>& errors);
-
-	//Destroy render context for rendering a pass
-	void DestroyRenderContext(System* system, RenderContext*& render_context);
-
-	//Capture render context
-	void CaptureRenderContext(System* system, RenderContext* render_context);
-
-	//Execute render context
-	void ExecuteRenderContext(System* system, RenderContext* render_context);
 
 	//Begin prepare render, the game thread can start to summit all the point of views and render items
 	//Thread can be locked if there is not sufficient frame buffers

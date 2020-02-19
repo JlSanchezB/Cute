@@ -21,16 +21,8 @@ namespace render
 	enum class ResourceSource : uint8_t
 	{
 		Game,
-		PassDescriptor
-	};
-
-	//Sorted render items
-	struct SortedRenderItems
-	{
-		//Sorted render items list
-		std::vector<Item> m_sorted_render_items;
-		//Index access to the sorted render items by priority (begin item and end item)
-		std::vector<std::pair<size_t, size_t>> m_priority_table;
+		PassDescriptor,
+		Pass
 	};
 
 	class RenderContextInternal : public RenderContext
@@ -54,9 +46,6 @@ namespace render
 
 		//Windows size
 		PassInfo m_pass_info;
-
-		//Sorted render items associated to this context
-		SortedRenderItems m_render_items;
 
 		//Point of view associated to this context
 		PointOfView* m_point_of_view;

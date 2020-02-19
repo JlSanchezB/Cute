@@ -8,10 +8,10 @@
 namespace
 {
 	//Number of workers
-	size_t g_num_workers = 0;
+	size_t g_num_workers = 1;
 
 	//Each thread has it correct worker id using thread local storage variable
-	thread_local size_t g_worker_id = static_cast<size_t>(-1);
+	thread_local size_t g_worker_id = 0;
 }
 
 namespace job

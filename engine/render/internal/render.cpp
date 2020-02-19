@@ -54,6 +54,13 @@ namespace render
 		return render::GetResource(render_context->m_render_pass_system, name);
 	}
 
+	bool RenderContext::AddPassResource(const ResourceName& name, std::unique_ptr<Resource>&& resource)
+	{
+		auto render_context = reinterpret_cast<const RenderContextInternal*>(this);
+
+		return render_context->m_render_pass_system->AddResource(name, resource, ResourceSource::Pass);
+	}
+
 	Frame & RenderContext::GetRenderFrame()
 	{
 		auto render_context = reinterpret_cast<const RenderContextInternal*>(this);
@@ -431,8 +438,8 @@ namespace render
 		//Destroy all cached contexts
 		for (auto& render_context : system->m_cached_render_context)
 		{
-			render::RenderContext* render_contest = render_context.render_context;
-			DestroyRenderContext(system, render_contest);
+			auto& render_context_internal = render_context.render_context;
+			system->DestroyRenderContext(render_context_internal);
 		}
 		system->m_cached_render_context.clear();
 
@@ -496,35 +503,6 @@ namespace render
 		return success;
 	}
 
-	RenderContext * CreateRenderContext(System * system, display::Device * device, const PassName& pass, const PassInfo& pass_info, ResourceMap& init_resources, std::vector<std::string>& errors)
-	{
-		return system->CreateRenderContext(device, pass, pass_info, errors);
-	}
-
-	void DestroyRenderContext(System * system, RenderContext*& render_context)
-	{
-		auto render_context_internal = reinterpret_cast<RenderContextInternal*>(render_context);
-		
-		system->DestroyRenderContext(render_context_internal);
-		
-		render_context = nullptr;
-	}
-
-	void CaptureRenderContext(System * system, RenderContext * render_context)
-	{
-		auto render_context_internal = reinterpret_cast<RenderContextInternal*>(render_context);
-
-		//Open and capture all command list in the render context
-		render_context_internal->m_root_pass->Render(*render_context);
-	}
-
-	void ExecuteRenderContext(System * system, RenderContext * render_context)
-	{
-		auto render_context_internal = reinterpret_cast<RenderContextInternal*>(render_context);
-		//Open and capture all command list in the render context
-
-		render_context_internal->m_root_pass->Execute(*render_context);
-	}
 
 	RenderContextInternal * System::GetCachedRenderContext(const PassName & pass_name, uint16_t id, const PassInfo& pass_info)
 	{
@@ -582,106 +560,114 @@ namespace render
 			display::ExecuteCommandList(m_device, m_render_command_list);
 		}
 
-		//Sort point of view by priority
-		render_frame.m_point_of_views.sort([](const PointOfView& a, const PointOfView& b)
-		{
-			return a.m_priority < b.m_priority;
-		});
-
-		//For each point of view, we could run it in parallel
+		//Sort all render items for each point of view, it can run in parallel
 		for (auto& point_of_view : render_frame.m_point_of_views)
 		{
-			PROFILE_SCOPE("Render", "SubmitPointOfView", kRenderProfileColour);
+			PROFILE_SCOPE("Render", "SortRenderItems", kRenderProfileColour);
+
+			auto& render_items = point_of_view.m_render_items;
+			auto& sorted_render_items = point_of_view.m_sorted_render_items;
+
+			//Clear sort render items
+			sorted_render_items.m_sorted_render_items.clear();
+
+			//Copy render items from the point of view for each worker to the render context
+			render_items.Visit([&](auto& data)
+				{
+					sorted_render_items.m_sorted_render_items.insert(sorted_render_items.m_sorted_render_items.end(), data.begin(), data.end());
+				});
+
+			//Sort render items
+			std::sort(sorted_render_items.m_sorted_render_items.begin(), sorted_render_items.m_sorted_render_items.end(),
+				[](const Item& a, const Item& b)
+				{
+					return a.full_32bit_sort_key < b.full_32bit_sort_key;
+				});
+
+			//Calculate begin/end for each render priority	
+			sorted_render_items.m_priority_table.resize(m_render_priorities.size());
+			size_t render_item_index = 0;
+			const size_t num_sorted_render_items = sorted_render_items.m_sorted_render_items.size();
+
+			for (size_t priority = 0; priority < m_render_priorities.size(); ++priority)
+			{
+				if (num_sorted_render_items > 0 && sorted_render_items.m_sorted_render_items[render_item_index].priority == priority)
+				{
+					//First item found
+					sorted_render_items.m_priority_table[priority].first = render_item_index;
+
+					//Look for the last one or the last 
+					while (render_item_index < num_sorted_render_items && sorted_render_items.m_sorted_render_items[render_item_index].priority == priority)
+					{
+						render_item_index++;
+					}
+
+					//Last item found
+					sorted_render_items.m_priority_table[priority].second = std::min(render_item_index, num_sorted_render_items - 1);
+				}
+				else
+				{
+					//We don't have any item of priority in the sort items
+					sorted_render_items.m_priority_table[priority].first = sorted_render_items.m_priority_table[priority].second = -1;
+				}
+			}
+		}
+
+		//Sort all the render passes, it can be run in parallel and data is not needed until execution TODO
+
+		//For each render pass, we could run it in parallel
+		for (auto& render_pass : render_frame.m_render_passes)
+		{
+			PROFILE_SCOPE("Render", "SubmitRenderPasses", kRenderProfileColour);
 
 			//Find the render_context associated to it
-			RenderContextInternal* render_context = GetCachedRenderContext(point_of_view.m_pass_name, point_of_view.m_id, point_of_view.m_pass_info);
+			RenderContextInternal* render_context = GetCachedRenderContext(render_pass.pass_name, 0, render_pass.pass_info);
 			
 			if (render_context)
 			{
-				//Execute begin point of view command buffer
+				
+				if (render_pass.associated_point_of_view_name != PointOfViewName("None"))
 				{
-					PROFILE_SCOPE("Render", "ExecuteBeginPointOfViewCommands", kRenderProfileColour);
-
-					auto render_context = display::OpenCommandList(m_device, m_render_command_list);
-
-					point_of_view.m_begin_render_command_buffer.Visit([&](auto& data)
+					//Find associated point of view
+					for (auto& point_of_view : render_frame.m_point_of_views)
 					{
-						render::CommandBuffer::CommandOffset command_offset = 0;
-						while (command_offset != render::CommandBuffer::InvalidCommandOffset)
+						if (point_of_view.m_name == render_pass.associated_point_of_view_name &&
+							point_of_view.m_id == render_pass.associated_point_of_view_id)
 						{
-							command_offset = data.Execute(*render_context, command_offset);
-						}
-					});
-					
-					display::CloseCommandList(m_device, render_context);
-					display::ExecuteCommandList(m_device, m_render_command_list);
-				}
-
-				//Set point to view to the context
-				render_context->m_point_of_view = &point_of_view;
-
-				//Set pass info
-				render_context->m_pass_info = point_of_view.m_pass_info;
-
-				{
-					PROFILE_SCOPE("Render", "SortRenderItems", kRenderProfileColour);
-
-					auto& render_items = render_context->m_render_items;
-
-					//Clear sort render items
-					render_items.m_sorted_render_items.clear();
-
-					//Copy render items from the point of view for each worker to the render context
-					point_of_view.m_render_items.Visit([&](auto& data)
-					{
-						render_items.m_sorted_render_items.insert(render_items.m_sorted_render_items.end(), data.begin(), data.end());
-					});
-					 
-					//Sort render items
-					std::sort(render_items.m_sorted_render_items.begin(), render_items.m_sorted_render_items.end(),
-						[](const Item& a, const Item& b)
-					{
-						return a.full_32bit_sort_key < b.full_32bit_sort_key;
-					});
-
-					//Calculate begin/end for each render priority	
-					render_items.m_priority_table.resize(m_render_priorities.size());
-					size_t render_item_index = 0;
-					const size_t num_sorted_render_items = render_items.m_sorted_render_items.size();
-
-					for (size_t priority = 0; priority < m_render_priorities.size(); ++priority)
-					{
-						if (num_sorted_render_items > 0 && render_items.m_sorted_render_items[render_item_index].priority == priority)
-						{
-							//First item found
-							render_items.m_priority_table[priority].first = render_item_index;
-
-							//Look for the last one or the last 
-							while (render_item_index < num_sorted_render_items && render_items.m_sorted_render_items[render_item_index].priority == priority)
-							{
-								render_item_index++;
-							}
-
-							//Last item found
-							render_items.m_priority_table[priority].second = std::min(render_item_index, num_sorted_render_items - 1);
-						}
-						else
-						{
-							//We don't have any item of priority in the sort items
-							render_items.m_priority_table[priority].first = render_items.m_priority_table[priority].second = -1;
+							//Set point to view to the context
+							render_context->m_point_of_view = &point_of_view;
+							break;
 						}
 					}
+
+					if (render_context->m_point_of_view == nullptr)
+					{
+						//Point of view was not found, as the render pass is removed I expect the graph to fail to be build
+						core::LogWarning("Render pass <%s><%i> can not find associated point of view <%s><%i>, render pass removed",
+							render_pass.pass_name, render_pass.id,
+							render_pass.associated_point_of_view_name, render_pass.associated_point_of_view_id);
+
+						continue;
+					}
+					
 				}
+				else
+				{
+					render_context->m_point_of_view = nullptr;
+				}
+
+				//Set pass info
+				render_context->m_pass_info = render_pass.pass_info;
 
 				{
 					PROFILE_SCOPE("Render", "CapturePass", kRenderProfileColour);
 					//Capture pass
-					render::CaptureRenderContext(this, render_context);
+					render_context->m_root_pass->Render(*render_context);
 				}
 				{
 					PROFILE_SCOPE("Render", "RenderPass", kRenderProfileColour);
 					//Execute pass
-					render::ExecuteRenderContext(this, render_context);
+					render_context->m_root_pass->Execute(*render_context);
 				}
 			}
 		}

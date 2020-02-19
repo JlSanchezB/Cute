@@ -3,34 +3,13 @@
 #include <render/render.h>
 #include <render/render_resource.h>
 #include <render/render_helper.h>
+#include <render/render_passes_loader.h>
 
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN             // Exclude rarely-used stuff from Windows headers.
 #endif
 #include <windows.h>
 #include <fstream>
-
-namespace
-{
-	std::vector<uint8_t> ReadFileToBuffer(const char* file)
-	{
-		std::ifstream root_signature_file(file, std::ios::binary | std::ios::ate);
-		if (root_signature_file.good())
-		{
-			std::streamsize size = root_signature_file.tellg();
-			root_signature_file.seekg(0, std::ios::beg);
-
-			std::vector<uint8_t> buffer(size);
-			root_signature_file.read(reinterpret_cast<char*>(buffer.data()), size);
-
-			return buffer;
-		}
-		else
-		{
-			return std::vector<uint8_t>(0);
-		}
-	}
-}
 
 class RenderPassesGame : public platform::Game
 {
@@ -45,7 +24,8 @@ public:
 
 	render::System* m_render_pass_system = nullptr;
 
-	render::RenderContext* m_render_context = nullptr;
+	//Render passes loader
+	render::RenderPassesLoader m_render_passes_loader;
 
 	//Game constant buffer
 	display::ConstantBufferHandle m_game_constant_buffer;
@@ -94,28 +74,19 @@ public:
 		m_game_constant_buffer = display::CreateConstantBuffer(m_device, constant_buffer_desc, "GameConstantBuffer");
 
 		//Create render pass system
-		m_render_pass_system = render::CreateRenderSystem(m_device);
+		m_render_pass_system = render::CreateRenderSystem(m_device, nullptr, this);
 
-		//Read file
-		m_render_system_descriptor_buffer =  ReadFileToBuffer("render_pass_sample.xml");
+		render::AddResource(m_render_pass_system, "GameGlobal"_sh32, CreateResourceFromHandle<render::ConstantBufferResource>(display::WeakConstantBufferHandle(m_game_constant_buffer)));
+		render::AddResource(m_render_pass_system, "BackBuffer"_sh32, CreateResourceFromHandle<render::RenderTargetResource>(display::GetBackBuffer(m_device)));
 
-		if (m_render_system_descriptor_buffer.size() > 0)
-		{
-			//Copy to the text editor buffer
-			memcpy(m_text_buffer.data(), m_render_system_descriptor_buffer.data(), m_render_system_descriptor_buffer.size());
-		}
+		//Load render passes descriptor
+		m_render_passes_loader.Load("render_pass_sample.xml", m_render_pass_system, m_device);
 
-		m_render_system_descriptor_load_requested = true;
 	}
 	void OnDestroy() override
 	{
 		if (m_render_pass_system)
 		{
-			if (m_render_context)
-			{
-				render::DestroyRenderContext(m_render_pass_system, m_render_context);
-			}
-
 			render::DestroyRenderSystem(m_render_pass_system, m_device);
 		}
 		
@@ -126,47 +97,11 @@ public:
 	}
 	void OnTick(double total_time, float elapsed_time) override
 	{
-		display::BeginFrame(m_device);
+		render::BeginPrepareRender(m_render_pass_system);
 
-		//Recreate the descriptor file and context if requested
-		if (m_render_system_descriptor_load_requested)
 		{
-			//Remove the render context
-			if (m_render_context)
-			{
-				render::DestroyRenderContext(m_render_pass_system, m_render_context);
-			}
-
-			//Reset errors
-			m_render_system_errors.clear();
-
-			//Load render pass sample
-			size_t buffer_size = strlen(m_text_buffer.data()) + 1;
-			
-			if (!render::LoadPassDescriptorFile(m_render_pass_system, m_device, m_text_buffer.data(), buffer_size, m_render_system_errors))
-			{
-				core::LogError("Failed to load the new descriptor file, reverting changes");
-				m_show_errors = true;
-			}
-
-
-			//Create pass
-			render::ResourceMap init_resource_map;
-			init_resource_map.Set("GameGlobal"_sh32, CreateResourceFromHandle<render::ConstantBufferResource>(display::WeakConstantBufferHandle(m_game_constant_buffer)));
-			init_resource_map.Set("BackBuffer"_sh32, CreateResourceFromHandle<render::RenderTargetResource>(display::GetBackBuffer(m_device)));
-
-			render::PassInfo pass_info;
-			pass_info.width = m_width;
-			pass_info.height = m_height;
-
-			//Still load it if it fail, as it will use the last valid one
-			m_render_context = render::CreateRenderContext(m_render_pass_system, m_device, "Main"_sh32, pass_info, init_resource_map, m_render_system_context_errors);
-			if (m_render_context == nullptr)
-			{
-				m_show_errors = true;
-			}
-
-			m_render_system_descriptor_load_requested = false;
+			//Check if the render passes loader needs to load
+			m_render_passes_loader.Update();
 		}
 
 		//Update time
@@ -179,32 +114,21 @@ public:
 		//Update game constant buffer
 		display::UpdateResourceBuffer(m_device, m_game_constant_buffer, &game_constant_buffer, sizeof(game_constant_buffer));
 
-		if (m_render_context)
-		{
-			//Capture pass
-			render::CaptureRenderContext(m_render_pass_system, m_render_context);
-			//Execute pass
-			render::ExecuteRenderContext(m_render_pass_system, m_render_context);
-		}
+		render::PassInfo pass_info;
+		pass_info.width = m_width;
+		pass_info.height = m_height;
 
-		display::EndFrame(m_device);
+		auto& render_frame = render::GetGameRenderFrame(m_render_pass_system);
 
-		//Present render
-		Present();
+		render_frame.AddRenderPass("Main"_sh32, 0, pass_info);
+
+		render::EndPrepareRenderAndSubmit(m_render_pass_system);
 	}
 
 	void OnSizeChange(uint32_t width, uint32_t height, bool minimized) override
 	{
 		m_width = width;
 		m_height = height;
-
-		if (m_render_context)
-		{
-			render::PassInfo pass_info = m_render_context->GetPassInfo();
-			pass_info.width = m_width;
-			pass_info.height = m_height;
-			m_render_context->UpdatePassInfo(pass_info);
-		}
 	}
 
 	void OnAddImguiMenu() override

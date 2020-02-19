@@ -1421,7 +1421,11 @@ public:
 			pass_info.width = m_width;
 			pass_info.height = m_height;
 
-			auto& point_of_view = render_frame.AllocPointOfView("Main"_sh32, 0, 0, pass_info);
+			//Add render pass
+			render_frame.AddRenderPass("Main"_sh32, 0, pass_info, "Main"_sh32, 0);
+
+			//Add point of view
+			auto& point_of_view = render_frame.AllocPointOfView("Main"_sh32, 0);
 			job::ThreadData<std::array<InstanceBuffer, 3>> instance_buffer;
 
 			//Create JobData

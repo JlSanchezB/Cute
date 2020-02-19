@@ -165,6 +165,16 @@ namespace core
 			return m_hash == b.GetHash();
 		}
 
+		bool operator!=(const StringHashT<NAMESPACE, TYPE>& b) const
+		{
+			return m_hash != b.m_hash;
+		}
+
+		bool operator!=(const HashConst<TYPE>& b) const
+		{
+			return m_hash != b.GetHash();
+		}
+
 		const char* GetValue() const
 		{
 #ifdef _STRING_HASH_MAP_ENABLED_

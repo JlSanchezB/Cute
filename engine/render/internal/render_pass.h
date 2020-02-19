@@ -132,7 +132,9 @@ namespace render
 
 		//Static resource used
 		ResourceReference<DescriptorTableResource> m_descriptor_table;
-		
+	
+		//Just a global count to handle unique names for the resources
+		inline static uint32_t m_resource_id_count = 0;
 	
 	public:
 		DECLARE_RENDER_CLASS("SetDescriptorTable");

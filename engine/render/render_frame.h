@@ -11,6 +11,8 @@
 
 namespace render
 {
+	using PointOfViewName = StringHash32<"PointOfViewName"_namespace>;
+
 	//Minimal unit of render for cute
 	//A render item represent a sorting key with a list of command for rendering
 	//The meaning of priority is defined outside of rendering (a classic sample will be solid, lighting, alpha, ui, ...)
@@ -51,13 +53,22 @@ namespace render
 		}
 	};
 
+	//Sorted render items
+	struct SortedRenderItems
+	{
+		//Sorted render items list
+		std::vector<Item> m_sorted_render_items;
+		//Index access to the sorted render items by priority (begin item and end item)
+		std::vector<std::pair<size_t, size_t>> m_priority_table;
+	};
+
 	//Point of view, represent a list of render items
 	//Each point of view has a priority and the render pass used for rendering it
 	class PointOfView
 	{
 	public:
-		PointOfView(PassName pass_name, uint16_t id, uint16_t priority, const PassInfo& pass_info) :
-			m_pass_name(pass_name), m_id(id), m_priority(priority), m_allocated(true), m_pass_info(pass_info)
+		PointOfView(PointOfViewName point_of_view_name, uint16_t id) :
+			m_name(point_of_view_name), m_id(id), m_allocated(true)
 		{
 		}
 
@@ -71,27 +82,15 @@ namespace render
 			return m_command_buffer.Get();
 		}
 
-		CommandBuffer& GetBeginRenderCommandBuffer()
-		{
-			return m_begin_render_command_buffer.Get();
-		}
-
 		//Reset memory for next frame
 		void Reset();
 
 	private:
 		
-		//Render pass that needs to be use for this point of view
-		PassName m_pass_name;
-		//ID, use for handling between frames data of the point of view
+		//Point of view name, used for identification
+		PointOfViewName m_name;
+		//ID, used for identification
 		uint16_t m_id;
-		//Priority, used to sort the render between different point of views
-		uint16_t m_priority;
-		//Pass info
-		PassInfo m_pass_info;
-
-		//Command buffer with commands that will run during the start of the point of view
-		job::ThreadData <CommandBuffer> m_begin_render_command_buffer;
 
 		//List of render items
 		job::ThreadData<std::vector<Item>> m_render_items;
@@ -100,9 +99,22 @@ namespace render
 		//Allocated
 		bool m_allocated;
 
+		//Sorted render items associated (updated by the render system)
+		SortedRenderItems m_sorted_render_items;
+
 		friend class Frame;
 		friend struct System;
 		friend class DrawRenderItemsPass;
+	};
+
+	//Render pass that the render needs to execute
+	struct RenderPass
+	{
+		PassName pass_name;
+		uint16_t id; //Used for split screens or shadows
+		PassInfo pass_info;
+		PointOfViewName associated_point_of_view_name;
+		uint16_t associated_point_of_view_id;
 	};
 
 	//Render frame will keep memory between frames to avoid reallocations
@@ -113,8 +125,14 @@ namespace render
 		//Reset the frame, it will not deallocate the memory, just clear the frame
 		void Reset();
 
-		//Alloc point of view
-		PointOfView& AllocPointOfView(PassName pass_name, uint16_t id, uint16_t priority, const PassInfo& pass_info);
+		//Alloc point of view with name and id to identify it
+		PointOfView& AllocPointOfView(PointOfViewName point_of_view_name, uint16_t id);
+
+		//Add render pass to execute
+		void AddRenderPass(PassName pass_name, uint16_t id, const PassInfo& pass_info, PointOfViewName associated_point_of_view_name = PointOfViewName("None"), uint16_t associated_point_of_view_id = 0)
+		{
+			m_render_passes.emplace_back(RenderPass{ pass_name, id, pass_info, associated_point_of_view_name, associated_point_of_view_id });
+		}
 
 		//Get begin frame command buffer
 		CommandBuffer& GetBeginFrameComamndbuffer()
@@ -124,6 +142,8 @@ namespace render
 	private:
 		//List of all point of views in the frame
 		std::list<PointOfView> m_point_of_views;
+		//List of all the render passes that the renderer needs to execute
+		std::vector<RenderPass> m_render_passes;
 		//Command buffer with commands that will run during the start of the frame
 		job::ThreadData<CommandBuffer> m_begin_frame_command_buffer;
 
@@ -141,30 +161,25 @@ namespace render
 		{
 			data.Reset();
 		});
-		m_begin_render_command_buffer.Visit([](auto& data)
-		{
-			data.Reset();
-		});
+		
 		m_allocated = false;
 	}
 
-	inline PointOfView& Frame::AllocPointOfView(PassName pass_name, uint16_t id, uint16_t priority, const PassInfo& pass_info)
+	inline PointOfView& Frame::AllocPointOfView(PointOfViewName point_of_view_name, uint16_t id)
 	{
 		//Check it is already one that match from other frame
 		for (auto& point_of_view : m_point_of_views)
 		{
 			if (!point_of_view.m_allocated &&
-				point_of_view.m_pass_name == pass_name
+				point_of_view.m_name == point_of_view_name
 				&& point_of_view.m_id == id)
 			{
-				point_of_view.m_priority = priority;
-				point_of_view.m_pass_info = pass_info;
 				point_of_view.m_allocated = true;
 				return point_of_view;
 			}
 		}
 		//Add to the vector
-		m_point_of_views.emplace_back(pass_name, id, priority, pass_info);
+		m_point_of_views.emplace_back(point_of_view_name, id);
 
 		return m_point_of_views.back();
 	}
@@ -179,6 +194,7 @@ namespace render
 		{
 			data.Reset();
 		});
+		m_render_passes.clear();
 	}
 }
 #endif //RENDER_FRAME_H

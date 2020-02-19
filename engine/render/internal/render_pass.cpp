@@ -236,7 +236,7 @@ namespace render
 		if (xml_element_descriptor)
 		{
 			//It is a descriptor that has to be created during init pass
-			m_descriptor_table.Set(ResourceName((std::string("DescriptorTable_") + std::to_string(rand())).c_str()));
+			m_descriptor_table.Set(ResourceName((std::string("DescriptorTable_") + std::to_string(m_resource_id_count++)).c_str()));
 
 			while (xml_element_descriptor)
 			{
@@ -292,6 +292,8 @@ namespace render
 		{
 			AddError(errors, "Error creation descritpor table, display errors:", display::GetLastErrorMessage(device));
 		}
+
+		render_context.AddPassResource(m_descriptor_table.GetResourceName(), CreateResourceFromHandle<render::DescriptorTableResource>(descriptor_table_handle));
 	}
 	void SetDescriptorTablePass::Render(RenderContext & render_context) const
 	{
@@ -358,16 +360,18 @@ namespace render
 	{
 		auto& render_context_internal = *reinterpret_cast<const RenderContextInternal*>(&render_context);
 
+		assert(render_context_internal.m_point_of_view);
+
 		auto& context = render_context_internal.m_display_context;
-		auto& render_items = render_context_internal.m_render_items.m_sorted_render_items;
-		const size_t begin_render_item = render_context_internal.m_render_items.m_priority_table[m_priority].first;
-		const size_t end_render_item = render_context_internal.m_render_items.m_priority_table[m_priority].second;
+		auto& render_items = render_context_internal.m_point_of_view->m_sorted_render_items;
+		const size_t begin_render_item = render_context_internal.m_point_of_view->m_sorted_render_items.m_priority_table[m_priority].first;
+		const size_t end_render_item = render_context_internal.m_point_of_view->m_sorted_render_items.m_priority_table[m_priority].second;
 		if (begin_render_item != -1)
 		{
 			//It has something to render
 			for (size_t render_item_index = begin_render_item; render_item_index <= end_render_item; ++render_item_index)
 			{
-				auto& render_item = render_items[render_item_index];
+				auto& render_item = render_items.m_sorted_render_items[render_item_index];
 
 				auto& command_buffer = render_context_internal.m_point_of_view->m_command_buffer.AccessThreadData(render_item.command_worker);
 
