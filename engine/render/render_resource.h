@@ -14,6 +14,9 @@ namespace render
 	class ResourceReference
 	{
 		ResourceName m_resource;
+
+		//Cached pointer to fast access
+		mutable RESOURCE* m_resource_ptr = nullptr;
 	public:
 		void Set(const ResourceName& resource_name)
 		{
@@ -25,7 +28,11 @@ namespace render
 		}
 		RESOURCE* Get(RenderContext& render_context) const
 		{
-			return render_context.GetResource<RESOURCE>(m_resource);
+			if (m_resource_ptr == nullptr)
+			{
+				m_resource_ptr = render_context.GetResource<RESOURCE>(m_resource);
+			}
+			return m_resource_ptr;
 		}
 	};
 
