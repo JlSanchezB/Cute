@@ -867,7 +867,7 @@ namespace display
 		if (FAILED(device->m_native_device->CreateCommittedResource(
 			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
 			D3D12_HEAP_FLAG_NONE,
-			&CD3DX12_RESOURCE_DESC::Tex2D(Convert(render_target_desc.format), static_cast<UINT>(render_target_desc.width), static_cast<UINT>(render_target_desc.heigth), 1, 0, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET),
+			&CD3DX12_RESOURCE_DESC::Tex2D(Convert(render_target_desc.format), static_cast<UINT>(render_target_desc.width), static_cast<UINT>(render_target_desc.height), 1, 0, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET),
 			D3D12_RESOURCE_STATE_RENDER_TARGET,
 			&clear_value,
 			IID_PPV_ARGS(&render_target.resource))))
@@ -919,7 +919,7 @@ namespace display
 		if (FAILED(device->m_native_device->CreateCommittedResource(
 			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
 			D3D12_HEAP_FLAG_NONE,
-			&CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_D32_FLOAT, static_cast<UINT>(depth_buffer_desc.width), static_cast<UINT>(depth_buffer_desc.heigth), 1, 0, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL),
+			&CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_D32_FLOAT, static_cast<UINT>(depth_buffer_desc.width), static_cast<UINT>(depth_buffer_desc.height), 1, 0, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL),
 			D3D12_RESOURCE_STATE_DEPTH_WRITE,
 			&clear_value,
 			IID_PPV_ARGS(&depth_buffer.resource))))

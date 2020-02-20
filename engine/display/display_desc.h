@@ -249,13 +249,13 @@ namespace display
 		Format format;
 		RenderTargetType render_target_type = RenderTargetType::Texture2D;
 		uint32_t width = 0;
-		uint32_t heigth = 0;
+		uint32_t height = 0;
 	};
 
 	struct DepthBufferDesc
 	{
 		uint32_t width = 0;
-		uint32_t heigth = 0;
+		uint32_t height = 0;
 	};
 
 	struct DescriptorTableDesc

@@ -365,6 +365,21 @@ namespace render
 
 	void RenderTargetResource::Load(LoadContext & load_context)
 	{
+		uint32_t width;
+		uint32_t height;
+		display::Format format;
+
+		QueryTableAttribute(load_context, load_context.current_xml_element, "format", format, AttributeType::NonOptional);
+		QueryAttribute(load_context, load_context.current_xml_element, "width", width, AttributeType::NonOptional);
+		QueryAttribute(load_context, load_context.current_xml_element, "height", height, AttributeType::NonOptional);
+
+		display::RenderTargetDesc render_target_desc;
+		render_target_desc.width = width;
+		render_target_desc.height = height;
+		render_target_desc.format = format;
+
+		//Create render target
+		Init(display::CreateRenderTarget(load_context.device, render_target_desc, load_context.name));
 	}
 
 	void DepthBufferResource::Load(LoadContext & load_context)

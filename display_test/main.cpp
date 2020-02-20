@@ -257,13 +257,13 @@ public:
 			display::RenderTargetDesc render_target_desc;
 			render_target_desc.format = display::Format::R8G8B8A8_UNORM;
 			render_target_desc.width = 512;
-			render_target_desc.heigth = 512;
+			render_target_desc.height = 512;
 			
 			m_test_1.m_render_target = display::CreateRenderTarget(m_device, render_target_desc, "render target test");
 
 			display::DepthBufferDesc depth_buffer_desc;
 			depth_buffer_desc.width = 512;
-			depth_buffer_desc.heigth = 512;
+			depth_buffer_desc.height = 512;
 
 			m_test_1.m_depth_buffer = display::CreateDepthBuffer(m_device, depth_buffer_desc);
 		}
