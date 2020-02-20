@@ -10,6 +10,8 @@ It is a renderer, using data driven pass system, multithreaded for building rend
 
 It is a Entity Component System; heavily data orientented based, cache friendly and multi processor ready.
 
+And it has a blog, https://middlelifegraphicsprogrammercrisis.blogspot.com/
+
 # Current projects working in Cute:
 
 ### display_test
