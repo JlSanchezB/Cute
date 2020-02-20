@@ -43,11 +43,87 @@ namespace render
 
 		while (xml_element)
 		{
-			load_context.current_xml_element = xml_element;
-			load_context.name = xml_element->Name();
+			if (strcmp(xml_element->Name(), "PreConditions") == 0)
+			{
+				//Read all pre conditions
+				auto preconditions_xml_element = xml_element->FirstChildElement();
+				while (preconditions_xml_element)
+				{
+					if (strcmp(preconditions_xml_element->Name(), "Resource") == 0)
+					{
+						ResourceStateSync resource_state_sync;
+						const char* string_value;
+						if (preconditions_xml_element->QueryStringAttribute("name", &string_value) == tinyxml2::XML_SUCCESS)
+						{
+							resource_state_sync.resource = ResourceName(string_value);
+						}
+						else
+						{
+							AddError(load_context, "Error reading a resource state attribute <%s> in node <%s>", "name", load_context.name);
+						}
+						if (preconditions_xml_element->QueryStringAttribute("state", &string_value) == tinyxml2::XML_SUCCESS)
+						{
+							resource_state_sync.state = ResourceState(string_value);
+						}
+						else
+						{
+							AddError(load_context, "Error reading a resource state attribute <%s> in node <%s>", "state", load_context.name);
+						}
 
-			//Load each of the passes and add them in the vector
-			m_passes.emplace_back(load_context.render_system->LoadPass(load_context));
+						m_pre_resource_conditions.push_back(resource_state_sync);
+					}
+
+					preconditions_xml_element = preconditions_xml_element->NextSiblingElement();
+				}
+			}
+			else if (strcmp(xml_element->Name(), "PostUpdates") == 0)
+			{
+				//Read all post updates
+				auto post_updates_xml_element = xml_element->FirstChildElement();
+				while (post_updates_xml_element)
+				{
+					if (strcmp(post_updates_xml_element->Name(), "Resource") == 0)
+					{
+						ResourceStateSync resource_state_sync;
+						const char* string_value;
+						if (post_updates_xml_element->QueryStringAttribute("name", &string_value) == tinyxml2::XML_SUCCESS)
+						{
+							resource_state_sync.resource = ResourceName(string_value);
+						}
+						else
+						{
+							AddError(load_context, "Error reading a resource state attribute <%s> in node <%s>", "name", load_context.name);
+						}
+						if (post_updates_xml_element->QueryStringAttribute("state", &string_value) == tinyxml2::XML_SUCCESS)
+						{
+							resource_state_sync.state = ResourceState(string_value);
+						}
+						else
+						{
+							AddError(load_context, "Error reading a resource state attribute <%s> in node <%s>", "state", load_context.name);
+						}
+
+						m_post_resource_updates.push_back(resource_state_sync);
+					}
+
+					post_updates_xml_element = post_updates_xml_element->NextSiblingElement();
+				}
+			}
+			else if (strcmp(xml_element->Name(), "Commands") == 0)
+			{
+				//Read all commands associated to this pass
+				auto commands_xml_element = xml_element->FirstChildElement();
+				while (commands_xml_element)
+				{
+					load_context.current_xml_element = commands_xml_element;
+					load_context.name = commands_xml_element->Name();
+
+					//Load each of the passes and add them in the vector
+					m_passes.emplace_back(load_context.render_system->LoadPass(load_context));
+
+					commands_xml_element = commands_xml_element->NextSiblingElement();
+				}
+			}
 			
 			xml_element = xml_element->NextSiblingElement();
 		}

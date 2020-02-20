@@ -16,6 +16,18 @@ namespace render
 		display::CommandListHandle m_command_list_handle;
 		std::vector<std::unique_ptr<Pass>> m_passes;
 
+		struct ResourceStateSync
+		{
+			ResourceName resource;
+			ResourceState state;
+		};
+
+		//Conditions for the pass to run
+		std::vector<ResourceStateSync> m_pre_resource_conditions;
+
+		//State updates after the pass execution
+		std::vector<ResourceStateSync> m_post_resource_updates;
+
 	public:
 		DECLARE_RENDER_CLASS("Pass");
 

@@ -83,11 +83,17 @@ namespace render
 		//Info for each resource
 		struct ResourceInfo
 		{
+			//Resource
 			std::unique_ptr<Resource> resource;
+
+			//Source of the resource
 			ResourceSource source;
+			
+			//State of the resource, used for syncing passes
+			ResourceState state;
 
 			ResourceInfo(std::unique_ptr<Resource>& _resource, const ResourceSource& _source):
-				resource(std::move(_resource)), source(_source)
+				resource(std::move(_resource)), source(_source), state("Init"_sh32)
 			{
 			}
 		};
