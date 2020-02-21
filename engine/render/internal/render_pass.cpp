@@ -18,6 +18,20 @@ namespace
 			{"Compute", display::Pipe::Compute}
 		};
 	};
+
+	template<>
+	struct ConversionTable<display::TranstitionState>
+	{
+		constexpr static std::pair<const char*, display::TranstitionState> table[] =
+		{
+			{"Common", display::TranstitionState::Common},
+			{"VertexAndConstantBuffer", display::TranstitionState::VertexAndConstantBuffer},
+			{"RenderTarget", display::TranstitionState::RenderTarget},
+			{"PixelShaderResource", display::TranstitionState::PixelShaderResource},
+			{"NonPixelShaderResource", display::TranstitionState::NonPixelShaderResource},
+			{"AllShaderResource", display::TranstitionState::AllShaderResource}
+		};
+	};
 }
 
 namespace render
@@ -107,6 +121,32 @@ namespace render
 					}
 
 					post_updates_xml_element = post_updates_xml_element->NextSiblingElement();
+				}
+			}
+			else if (strcmp(xml_element->Name(), "Barriers") == 0)
+			{
+				//Read all post updates
+				auto barriers_xml_element = xml_element->FirstChildElement();
+				while (barriers_xml_element)
+				{
+					if (strcmp(barriers_xml_element->Name(), "Resource") == 0)
+					{
+						ResourceBarrier resource_barriers;
+						const char* string_value;
+						if (barriers_xml_element->QueryStringAttribute("name", &string_value) == tinyxml2::XML_SUCCESS)
+						{
+							resource_barriers.resource = ResourceName(string_value);
+						}
+						else
+						{
+							AddError(load_context, "Error reading a resource state attribute <%s> in node <%s>", "name", load_context.name);
+						}
+						QueryTableAttribute(load_context, barriers_xml_element, "access", resource_barriers.access, AttributeType::NonOptional);
+
+						m_resource_barriers.push_back(resource_barriers);
+					}
+
+					barriers_xml_element = barriers_xml_element->NextSiblingElement();
 				}
 			}
 			else if (strcmp(xml_element->Name(), "Commands") == 0)

@@ -46,7 +46,7 @@ namespace
 			//Only add error if it was non optional
 			if (attribute_type == AttributeType::NonOptional)
 			{
-				AddError(load_context, "Error reading non optional attribute <%s> in node <%s>", name, load_context.name);
+				AddError(load_context, "Error reading non optional attribute <%s> in node <%s>, line <%i>", name, load_context.name, xml_element->GetLineNum());
 				return false;
 			}
 		}
@@ -62,7 +62,7 @@ namespace
 			//Only add error if it was non optional
 			if (attribute_type == AttributeType::NonOptional)
 			{
-				AddError(load_context, "Error reading non optional attribute <%s> in node <%s>", name, load_context.name);
+				AddError(load_context, "Error reading non optional attribute <%s> in node <%s>, line <%i>", name, load_context.name, xml_element->GetLineNum());
 				return false;
 			}
 		}
@@ -82,7 +82,7 @@ namespace
 			//Only add error if it was non optional
 			if (attribute_type == AttributeType::NonOptional)
 			{
-				AddError(load_context, "Error reading non optional attribute <%s> in node <%s>", name, load_context.name);
+				AddError(load_context, "Error reading non optional attribute <%s> in node <%s>, line <%i>", name, load_context.name, xml_element->GetLineNum());
 				return false;
 			}
 		}
@@ -102,7 +102,7 @@ namespace
 			//Only add error if it was non optional
 			if (attribute_type == AttributeType::NonOptional)
 			{
-				AddError(load_context, "Error reading non optional attribute <%s> in node <%s>", name, load_context.name);
+				AddError(load_context, "Error reading non optional attribute <%s> in node <%s>, line <%i>", name, load_context.name, xml_element->GetLineNum());
 				return false;
 			}
 		}
@@ -123,7 +123,7 @@ namespace
 			//Only add error if it was non optional
 			if (attribute_type == AttributeType::NonOptional)
 			{
-				AddError(load_context, "Error reading non optional attribute <%s> in node <%s>", name, load_context.name);
+				AddError(load_context, "Error reading non optional attribute <%s> in node <%s>, line <%i>", name, load_context.name, xml_element->GetLineNum());
 				return false;
 			}
 		}
@@ -142,7 +142,7 @@ namespace
 					return true;
 				}
 			}
-			AddError(load_context, "Error converting value <%s> in attribute <%s> in node <%s>", string_value, name, load_context.name);
+			AddError(load_context, "Error converting value <%s> in attribute <%s> in node <%s>, line <%i>", string_value, name, load_context.name, xml_element->GetLineNum());
 			return false;
 		}
 		return true;

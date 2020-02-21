@@ -22,11 +22,20 @@ namespace render
 			ResourceState state;
 		};
 
+		struct ResourceBarrier
+		{
+			ResourceName resource;
+			display::TranstitionState access;
+		};
+
 		//Conditions for the pass to run
 		std::vector<ResourceStateSync> m_pre_resource_conditions;
 
 		//State updates after the pass execution
 		std::vector<ResourceStateSync> m_post_resource_updates;
+
+		//Barrier needed to be ready for this pass
+		std::vector<ResourceBarrier> m_resource_barriers;
 
 	public:
 		DECLARE_RENDER_CLASS("Pass");
