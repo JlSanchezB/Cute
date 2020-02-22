@@ -18,7 +18,7 @@ namespace render
 
 		struct ResourceStateSync
 		{
-			ResourceName resource;
+			ResourceReference<Resource> resource;
 			ResourceState state;
 
 			ResourceStateSync(ResourceName _resource, ResourceState _state) :
@@ -29,7 +29,7 @@ namespace render
 
 		struct ResourceBarrier
 		{
-			ResourceName resource;
+			ResourceReference<Resource> resource;
 			display::TranstitionState access;
 
 			ResourceBarrier(ResourceName _resource, display::TranstitionState _access) :

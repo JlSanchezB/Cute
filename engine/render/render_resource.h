@@ -18,9 +18,19 @@ namespace render
 		//Cached pointer to fast access
 		mutable RESOURCE* m_resource_ptr = nullptr;
 	public:
+		ResourceReference()
+		{
+		}
+
+		ResourceReference(ResourceName resource_name)
+		{
+			m_resource = resource_name;
+		}
+
 		void Set(const ResourceName& resource_name)
 		{
 			m_resource = resource_name;
+			m_resource_ptr = nullptr;
 		}
 		ResourceName GetResourceName() const
 		{
