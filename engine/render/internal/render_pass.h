@@ -20,12 +20,22 @@ namespace render
 		{
 			ResourceName resource;
 			ResourceState state;
+
+			ResourceStateSync(ResourceName _resource, ResourceState _state) :
+				resource(_resource), state(_state)
+			{
+			}
 		};
 
 		struct ResourceBarrier
 		{
 			ResourceName resource;
 			display::TranstitionState access;
+
+			ResourceBarrier(ResourceName _resource, display::TranstitionState _access) :
+				resource(_resource), access(_access)
+			{
+			}
 		};
 
 		//Conditions for the pass to run

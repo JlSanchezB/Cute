@@ -57,98 +57,48 @@ namespace render
 
 		while (xml_element)
 		{
-			if (strcmp(xml_element->Name(), "PreConditions") == 0)
+			if (strcmp(xml_element->Name(), "Dependencies") == 0)
 			{
 				//Read all pre conditions
-				auto preconditions_xml_element = xml_element->FirstChildElement();
-				while (preconditions_xml_element)
+				auto dependencies_xml_element = xml_element->FirstChildElement();
+				while (dependencies_xml_element)
 				{
-					if (strcmp(preconditions_xml_element->Name(), "Resource") == 0)
+					if (strcmp(dependencies_xml_element->Name(), "Resource") == 0)
 					{
-						ResourceStateSync resource_state_sync;
 						const char* string_value;
-						if (preconditions_xml_element->QueryStringAttribute("name", &string_value) == tinyxml2::XML_SUCCESS)
+						ResourceName resource_name;
+						if (dependencies_xml_element->QueryStringAttribute("name", &string_value) == tinyxml2::XML_SUCCESS)
 						{
-							resource_state_sync.resource = ResourceName(string_value);
+							resource_name = ResourceName(string_value);
 						}
 						else
 						{
 							AddError(load_context, "Error reading a resource state attribute <%s> in node <%s>", "name", load_context.name);
 						}
-						if (preconditions_xml_element->QueryStringAttribute("state", &string_value) == tinyxml2::XML_SUCCESS)
+
+						if (dependencies_xml_element->QueryStringAttribute("pre_condition_state", &string_value) == tinyxml2::XML_SUCCESS)
 						{
-							resource_state_sync.state = ResourceState(string_value);
-						}
-						else
-						{
-							AddError(load_context, "Error reading a resource state attribute <%s> in node <%s>", "state", load_context.name);
+							//Add a pre condition state
+							m_pre_resource_conditions.emplace_back(resource_name, ResourceState(string_value));
 						}
 
-						m_pre_resource_conditions.push_back(resource_state_sync);
+						if (dependencies_xml_element->QueryStringAttribute("post_update_state", &string_value) == tinyxml2::XML_SUCCESS)
+						{
+							//Add a post update state
+							m_post_resource_updates.emplace_back(resource_name, ResourceState(string_value));
+						}
+
+						display::TranstitionState access;
+						if (QueryTableAttribute(load_context, dependencies_xml_element, "access", access, AttributeType::Optional))
+						{
+							m_resource_barriers.emplace_back(resource_name, access);
+						}
 					}
 
-					preconditions_xml_element = preconditions_xml_element->NextSiblingElement();
+					dependencies_xml_element = dependencies_xml_element->NextSiblingElement();
 				}
 			}
-			else if (strcmp(xml_element->Name(), "PostUpdates") == 0)
-			{
-				//Read all post updates
-				auto post_updates_xml_element = xml_element->FirstChildElement();
-				while (post_updates_xml_element)
-				{
-					if (strcmp(post_updates_xml_element->Name(), "Resource") == 0)
-					{
-						ResourceStateSync resource_state_sync;
-						const char* string_value;
-						if (post_updates_xml_element->QueryStringAttribute("name", &string_value) == tinyxml2::XML_SUCCESS)
-						{
-							resource_state_sync.resource = ResourceName(string_value);
-						}
-						else
-						{
-							AddError(load_context, "Error reading a resource state attribute <%s> in node <%s>", "name", load_context.name);
-						}
-						if (post_updates_xml_element->QueryStringAttribute("state", &string_value) == tinyxml2::XML_SUCCESS)
-						{
-							resource_state_sync.state = ResourceState(string_value);
-						}
-						else
-						{
-							AddError(load_context, "Error reading a resource state attribute <%s> in node <%s>", "state", load_context.name);
-						}
-
-						m_post_resource_updates.push_back(resource_state_sync);
-					}
-
-					post_updates_xml_element = post_updates_xml_element->NextSiblingElement();
-				}
-			}
-			else if (strcmp(xml_element->Name(), "Barriers") == 0)
-			{
-				//Read all post updates
-				auto barriers_xml_element = xml_element->FirstChildElement();
-				while (barriers_xml_element)
-				{
-					if (strcmp(barriers_xml_element->Name(), "Resource") == 0)
-					{
-						ResourceBarrier resource_barriers;
-						const char* string_value;
-						if (barriers_xml_element->QueryStringAttribute("name", &string_value) == tinyxml2::XML_SUCCESS)
-						{
-							resource_barriers.resource = ResourceName(string_value);
-						}
-						else
-						{
-							AddError(load_context, "Error reading a resource state attribute <%s> in node <%s>", "name", load_context.name);
-						}
-						QueryTableAttribute(load_context, barriers_xml_element, "access", resource_barriers.access, AttributeType::NonOptional);
-
-						m_resource_barriers.push_back(resource_barriers);
-					}
-
-					barriers_xml_element = barriers_xml_element->NextSiblingElement();
-				}
-			}
+			
 			else if (strcmp(xml_element->Name(), "Commands") == 0)
 			{
 				//Read all commands associated to this pass

@@ -14,12 +14,9 @@
 </Global>
 <Passes>
   <Pass name="RenderToRenderTarget">
-    <Barriers>
-      <Resource name="RenderTarget" access="RenderTarget"/>
-    </Barriers>
-    <PostStates>
-      <Resource name="RenderTarget" state="Ready"/>
-    </PostStates>
+    <Dependencies>
+      <Resource name="RenderTarget" pre_condition_state="Init" post_update_state ="Ready" access="RenderTarget"/>
+    </Dependencies>
     <Commands>
       <SetRenderTarget>
         <RenderTarget>RenderTarget</RenderTarget>
@@ -79,12 +76,9 @@
     </Commands>
   </Pass>
   <Pass name="Main">
-    <PreConditions>
-      <Resource name="RenderTarget" state="Ready"/>
-    </PreConditions>
-    <Barriers>
-      <Resource name="RenderTarget" access="PixelShaderResource"/>
-    </Barriers>
+    <Dependencies>
+      <Resource name="RenderTarget" pre_condition_state="Ready" access="PixelShaderResource"/>
+    </Dependencies>
     <Commands>
 	    <SetRenderTarget>
 		    <RenderTarget>BackBuffer</RenderTarget>
@@ -142,6 +136,7 @@
       </SetDescriptorTable>
       <DrawFullScreenQuad/>
     </Commands>
-  </Pass>
+  
+</Pass>
 </Passes>
 </Root>
