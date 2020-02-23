@@ -63,10 +63,10 @@ namespace core
 	{
 		if (g_namespaces_string_hash_table)
 		{
-			auto& namespace_find = g_namespaces_string_hash_table->Get(namespace_hash);
+			auto& namespace_find = g_namespaces_string_hash_table->Find(namespace_hash);
 			if (namespace_find)
 			{
-				auto string_hash_find = namespace_find->GetStringHashMap<TYPE>().Get(string_hash);
+				auto string_hash_find = namespace_find->GetStringHashMap<TYPE>().Find(string_hash);
 				if (string_hash_find)
 				{
 					return *string_hash_find;
@@ -107,15 +107,15 @@ namespace core
 	{
 		if (g_namespaces_string_hash_table)
 		{
-			auto namespace_string_hash_map = g_namespaces_string_hash_table->Get(namespace_hash);
+			auto namespace_string_hash_map = g_namespaces_string_hash_table->Find(namespace_hash);
 
 			if (!namespace_string_hash_map)
 			{
 				//Create namespace
-				namespace_string_hash_map = g_namespaces_string_hash_table->Set(namespace_hash, NamespaceStringHashMap());
+				namespace_string_hash_map = g_namespaces_string_hash_table->Insert(namespace_hash, NamespaceStringHashMap());
 			}
 
-			auto string_hash_find = namespace_string_hash_map->GetStringHashMap<TYPE>().Get(string_hash);
+			auto string_hash_find = namespace_string_hash_map->GetStringHashMap<TYPE>().Find(string_hash);
 			if (string_hash_find)
 			{
 				//Check if the hash is the same
@@ -137,7 +137,7 @@ namespace core
 
 
 				//Add the hash, all correct
-				namespace_string_hash_map->GetStringHashMap<TYPE>().Set(string_hash, AddString(string));
+				namespace_string_hash_map->GetStringHashMap<TYPE>().Insert(string_hash, AddString(string));
 			}
 		}
 	}

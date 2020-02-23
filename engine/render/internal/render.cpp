@@ -16,13 +16,13 @@ namespace
 	template<class CONTAINER>
 	void DestroyResources(display::Device* device, CONTAINER& container)
 	{
-		container.Visit([&](auto& item)
+		for (auto& item : container)
 		{
 			if (item.resource)
 			{
 				item.resource->Destroy(device);
 			}
-		});
+		}
 
 		container.clear();
 	}
@@ -30,10 +30,10 @@ namespace
 	template<class CONTAINER>
 	void DestroyPasses(display::Device* device, CONTAINER& container)
 	{
-		container.Visit([&](auto& item)
-			{
-				item->Destroy(device);
-			});
+		for (auto& item : container)
+		{
+			item->Destroy(device);
+		}
 
 		container.clear();
 	}
@@ -319,7 +319,7 @@ namespace render
 							Pass* pass = LoadPass(load_context);
 
 							//Add it to the pass map
-							m_passes_map.Set(pass_name, std::unique_ptr<Pass>(pass));
+							m_passes_map.Insert(pass_name, std::unique_ptr<Pass>(pass));
 
 							core::LogInfo("Created Pass <%s>", pass_name_string);
 						}
@@ -349,7 +349,7 @@ namespace render
 		auto& resource_it = m_resources_map[name];
 		if (!resource_it)
 		{
-			m_resources_map.Set(name, System::ResourceInfo(std::move(resource), source));
+			m_resources_map.Insert(name, System::ResourceInfo(std::move(resource), source));
 			return true;
 		}
 		else
@@ -489,7 +489,7 @@ namespace render
 				if (item.source == ResourceSource::Game)
 				{
 					//Transfer resource to new resource map
-					system->m_resources_map.Set(name, item);
+					system->m_resources_map.Insert(name, item);
 				}
 			});
 
@@ -824,7 +824,7 @@ namespace render
 			core::LogWarning("Resource <%s> has been already added, discarting new resource type", resource_type.GetValue());
 			return false;
 		}
-		system->m_resource_factories_map.Set(resource_type, std::move(resource_factory));
+		system->m_resource_factories_map.Insert(resource_type, std::move(resource_factory));
 		return true;
 	}
 
@@ -837,7 +837,7 @@ namespace render
 			return false;
 		}
 
-		system->m_pass_factories_map.Set(pass_type, std::move(pass_factory));
+		system->m_pass_factories_map.Insert(pass_type, std::move(pass_factory));
 		return true;
 	}
 

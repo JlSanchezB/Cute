@@ -49,22 +49,97 @@ namespace core
 			DATA* m_data;
 		};
 
-		//Set data
+		template<typename KEY, typename DATA, size_t NUM_BUCKETS>
+		class Iterator
+		{
+		public:
+			Iterator(FastMap* fast_map, size_t bucket, size_t index) :
+				m_fast_map(fast_map), m_bucket(bucket), m_index(index)
+			{
+			}
+
+			DATA& operator*()
+			{
+				return m_fast_map->m_buckets[m_bucket].m_data[m_index];
+			}
+
+			bool operator!= (Iterator const& other) const
+			{
+				return m_fast_map != other.m_fast_map || m_bucket != other.m_bucket || m_index != other.m_index;
+			}
+
+			const Iterator& operator++ ()
+			{
+				if (m_index + 1 == m_fast_map->m_buckets[m_bucket].m_data.size())
+				{
+					//No more elemets in this bucket
+					//Check next ones
+					m_bucket++;
+
+					while (m_bucket < m_fast_map->m_buckets.size())
+					{
+						if (m_fast_map->m_buckets[m_bucket].m_data.size() > 0)
+						{
+							//Found
+							m_index = 0;
+							return *this;
+						}
+						m_bucket++;
+					}
+
+					//End of the map
+					m_index = static_cast<size_t>(-1);
+					m_bucket = static_cast<size_t>(-1);
+					return *this;
+				}
+				else
+				{
+					m_index++;
+					return *this;
+				}
+			}
+
+		private:
+			FastMap* m_fast_map;
+			size_t m_bucket;
+			size_t m_index;
+		};
+
+		//Insert data
 		template<typename SOURCE_DATA>
-		Accesor<DATA> Set(const KEY& key, SOURCE_DATA&& data);
+		Accesor<DATA> Insert(const KEY& key, SOURCE_DATA&& data);
 
 		//Access data
-		Accesor<DATA> Get(const KEY& key);
-		Accesor<const DATA> Get(const KEY& key) const;
+		Accesor<DATA> Find(const KEY& key);
+		Accesor<const DATA> Find(const KEY& key) const;
 
 		Accesor<const DATA> operator[](const KEY& key) const
 		{
-			return Get(key);
+			return Find(key);
 		}
 
 		Accesor<DATA> operator[](const KEY& key)
 		{
-			return Get(key);
+			return Find(key);
+		}
+
+		Iterator<KEY,DATA,NUM_BUCKETS> begin()
+		{
+			//Look for the first item
+			for (size_t bucket = 0; bucket < m_buckets.size(); ++bucket)
+			{
+				if (m_buckets[bucket].m_data.size() > 0)
+				{
+					return Iterator<KEY, DATA, NUM_BUCKETS>(this, bucket, 0);
+				}
+			}
+
+			return Iterator<KEY, DATA, NUM_BUCKETS>(this, static_cast<size_t>(-1), static_cast<size_t>(-1));
+		}
+
+		Iterator<KEY, DATA, NUM_BUCKETS> end()
+		{
+			return Iterator<KEY, DATA, NUM_BUCKETS>(this, static_cast<size_t>(-1), static_cast<size_t>(-1));
 		}
 
 		//Visit
@@ -146,7 +221,7 @@ namespace core
 
 	template<typename KEY, typename DATA, size_t NUM_BUCKETS>
 	template<typename SOURCE_DATA>
-	inline FastMap<KEY, DATA, NUM_BUCKETS>::Accesor<DATA> FastMap<KEY, DATA, NUM_BUCKETS>::Set(const KEY& key, SOURCE_DATA&& data)
+	inline FastMap<KEY, DATA, NUM_BUCKETS>::Accesor<DATA> FastMap<KEY, DATA, NUM_BUCKETS>::Insert(const KEY& key, SOURCE_DATA&& data)
 	{
 		auto index = GetIndex(key);
 
@@ -166,7 +241,7 @@ namespace core
 	}
 
 	template<typename KEY, typename DATA, size_t NUM_BUCKETS>
-	inline FastMap<KEY, DATA, NUM_BUCKETS>::Accesor<const DATA> FastMap<KEY, DATA, NUM_BUCKETS>::Get(const KEY& key) const
+	inline FastMap<KEY, DATA, NUM_BUCKETS>::Accesor<const DATA> FastMap<KEY, DATA, NUM_BUCKETS>::Find(const KEY& key) const
 	{
 		auto index = GetIndex(key);
 
@@ -182,7 +257,7 @@ namespace core
 	}
 
 	template<typename KEY, typename DATA, size_t NUM_BUCKETS>
-	inline FastMap<KEY, DATA, NUM_BUCKETS>::Accesor<DATA> FastMap<KEY, DATA, NUM_BUCKETS>::Get(const KEY& key)
+	inline FastMap<KEY, DATA, NUM_BUCKETS>::Accesor<DATA> FastMap<KEY, DATA, NUM_BUCKETS>::Find(const KEY& key)
 	{
 		auto index = GetIndex(key);
 
