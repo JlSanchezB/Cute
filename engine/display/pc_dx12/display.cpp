@@ -594,6 +594,20 @@ namespace display
 		device->m_command_queue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
 	}
 
+	void ExecuteCommandLists(Device* device, const std::vector<WeakCommandListHandle>& handles)
+	{
+		std::vector<ID3D12CommandList*> command_lists;
+		command_lists.resize(handles.size());
+
+		for (size_t i = 0; i < handles.size(); ++i)
+		{
+			command_lists[i] = device->Get(handles[i]).resource.Get();
+		}
+
+		// Execute the command lists
+		device->m_command_queue->ExecuteCommandLists(static_cast<UINT>(command_lists.size()), command_lists.data());
+	}
+
 	//Get back buffer (ring resource)
 	WeakRenderTargetHandle GetBackBuffer(Device* device)
 	{

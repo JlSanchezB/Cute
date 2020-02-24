@@ -55,6 +55,9 @@ namespace display
 	//Execute command list
 	void ExecuteCommandList(Device* device, const WeakCommandListHandle& handle);
 
+	//Execute command lists
+	void ExecuteCommandLists(Device* device, const std::vector<WeakCommandListHandle>& handles);
+	
 	//Back buffer access
 	WeakRenderTargetHandle GetBackBuffer(Device* device);
 
