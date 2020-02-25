@@ -157,7 +157,7 @@ namespace render
 		while (xml_element_render_target)
 		{
 			load_context.current_xml_element = xml_element_render_target;
-			m_render_target[m_num_render_targets].Set(load_context.GetResourceReference(load_context));
+			m_render_target[m_num_render_targets].UpdateName(load_context.GetResourceReference(load_context));
 
 			m_num_render_targets++;
 			xml_element_render_target = xml_element_render_target->NextSiblingElement();
@@ -207,7 +207,7 @@ namespace render
 				AddError(load_context, "Colour can not be read from <%s>", colour_text);
 			}
 		}
-		m_render_target.Set(load_context.GetResourceReference(load_context));
+		m_render_target.UpdateName(load_context.GetResourceReference(load_context));
 	}
 	void ClearRenderTargetPass::Render(RenderContext & render_context) const
 	{
@@ -221,7 +221,7 @@ namespace render
 	void SetRootSignaturePass::Load(LoadContext & load_context)
 	{
 		QueryTableAttribute(load_context, load_context.current_xml_element, "pipe", m_pipe, AttributeType::Optional);
-		m_rootsignature.Set(load_context.GetResourceReference(load_context));
+		m_rootsignature.UpdateName(load_context.GetResourceReference(load_context));
 	}
 	void SetRootSignaturePass::Render(RenderContext & render_context) const
 	{
@@ -235,7 +235,7 @@ namespace render
 	{
 		QueryTableAttribute(load_context, load_context.current_xml_element, "pipe", m_pipe, AttributeType::Optional);
 		QueryAttribute(load_context, load_context.current_xml_element, "root_param", m_root_parameter, AttributeType::NonOptional);
-		m_constant_buffer.Set(load_context.GetResourceReference(load_context));
+		m_constant_buffer.UpdateName(load_context.GetResourceReference(load_context));
 	}
 	void SetRootConstantBufferPass::Render(RenderContext & render_context) const
 	{
@@ -249,7 +249,7 @@ namespace render
 	{
 		QueryTableAttribute(load_context, load_context.current_xml_element, "pipe", m_pipe, AttributeType::Optional);
 		QueryAttribute(load_context, load_context.current_xml_element, "root_param", m_root_parameter, AttributeType::NonOptional);
-		m_unordered_access_buffer.Set(load_context.GetResourceReference(load_context));
+		m_unordered_access_buffer.UpdateName(load_context.GetResourceReference(load_context));
 	}
 	void SetRootUnorderedAccessBufferPass::Render(RenderContext& render_context) const
 	{
@@ -263,7 +263,7 @@ namespace render
 	{
 		QueryTableAttribute(load_context, load_context.current_xml_element, "pipe", m_pipe, AttributeType::Optional);
 		QueryAttribute(load_context, load_context.current_xml_element, "root_param", m_root_parameter, AttributeType::NonOptional);
-		m_shader_resource.Set(load_context.GetResourceReference(load_context));
+		m_shader_resource.UpdateName(load_context.GetResourceReference(load_context));
 	}
 	void SetRootShaderResourcePass::Render(RenderContext& render_context) const
 	{
@@ -275,7 +275,7 @@ namespace render
 	}
 	void SetPipelineStatePass::Load(LoadContext & load_context)
 	{
-		m_pipeline_state.Set(load_context.GetResourceReference(load_context));
+		m_pipeline_state.UpdateName(load_context.GetResourceReference(load_context));
 	}
 	void SetPipelineStatePass::Render(RenderContext & render_context) const
 	{
@@ -294,7 +294,7 @@ namespace render
 		if (xml_element_resource)
 		{
 			//It is a resource
-			m_descriptor_table.Set(load_context.GetResourceReference(load_context));
+			m_descriptor_table.UpdateName(load_context.GetResourceReference(load_context));
 			return;
 		}
 
@@ -302,7 +302,7 @@ namespace render
 		if (xml_element_descriptor)
 		{
 			//It is a descriptor that has to be created during init pass
-			m_descriptor_table.Set(ResourceName((std::string("DescriptorTable_") + std::to_string(m_resource_id_count++)).c_str()));
+			m_descriptor_table.UpdateName(ResourceName((std::string("DescriptorTable_") + std::to_string(m_resource_id_count++)).c_str()));
 
 			while (xml_element_descriptor)
 			{

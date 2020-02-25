@@ -27,7 +27,7 @@ namespace render
 			m_resource = resource_name;
 		}
 
-		void Set(const ResourceName& resource_name)
+		void UpdateName(const ResourceName& resource_name)
 		{
 			m_resource = resource_name;
 			m_resource_ptr = nullptr;
