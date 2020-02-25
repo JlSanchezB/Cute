@@ -76,8 +76,8 @@ public:
 		//Create render pass system
 		m_render_pass_system = render::CreateRenderSystem(m_device, nullptr, this);
 
-		render::AddResource(m_render_pass_system, "GameGlobal"_sh32, CreateResourceFromHandle<render::ConstantBufferResource>(display::WeakConstantBufferHandle(m_game_constant_buffer)));
-		render::AddResource(m_render_pass_system, "BackBuffer"_sh32, CreateResourceFromHandle<render::RenderTargetResource>(display::GetBackBuffer(m_device)));
+		render::AddGameResource(m_render_pass_system, "GameGlobal"_sh32, CreateResourceFromHandle<render::ConstantBufferResource>(display::WeakConstantBufferHandle(m_game_constant_buffer)));
+		render::AddGameResource(m_render_pass_system, "BackBuffer"_sh32, CreateResourceFromHandle<render::RenderTargetResource>(display::GetBackBuffer(m_device)));
 
 		//Load render passes descriptor
 		m_render_passes_loader.Load("render_pass_sample.xml", m_render_pass_system, m_device);

@@ -83,7 +83,7 @@ namespace render
 	bool LoadPassDescriptorFile(System* system, display::Device* device, const char* descriptor_file_buffer, size_t descriptor_file_buffer_size, std::vector<std::string>& errors);
 
 	//Add game resource, allows the game to add global resources that the pass system can access them
-	bool AddResource(System* system, const ResourceName& name, std::unique_ptr<Resource>&& resource);
+	bool AddGameResource(System* system, const ResourceName& name, std::unique_ptr<Resource>&& resource);
 
 	//Register resource factory
 	bool RegisterResourceFactory(System* system, const RenderClassType& resource_type, std::unique_ptr<FactoryInterface<Resource>>& resource_factory);

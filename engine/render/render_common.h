@@ -123,8 +123,6 @@ namespace render
 			return dynamic_cast<TYPE*> (new SPECIALISED());
 		}
 	};
-
-	using ResourceMap = core::FastMap<ResourceName, std::unique_ptr<Resource>>;
 }
 
 

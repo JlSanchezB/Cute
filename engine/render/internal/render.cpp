@@ -403,8 +403,8 @@ namespace render
 		system->m_gpu_memory.Init(system->m_device, desc.static_gpu_memory_size, desc.dynamic_gpu_memory_size, desc.dynamic_gpu_memory_segment_size);
 
 		//Register render gpu memory resources
-		render::AddResource(system, "DynamicGPUMemory"_sh32, CreateResourceFromHandle<render::ShaderResourceResource>(display::WeakShaderResourceHandle(system->m_gpu_memory.m_dynamic_gpu_memory_buffer)));
-		render::AddResource(system, "StaticGPUMemory"_sh32, CreateResourceFromHandle<render::UnorderedAccessBufferResource>(display::WeakUnorderedAccessBufferHandle(system->m_gpu_memory.m_static_gpu_memory_buffer)));
+		render::AddGameResource(system, "DynamicGPUMemory"_sh32, CreateResourceFromHandle<render::ShaderResourceResource>(display::WeakShaderResourceHandle(system->m_gpu_memory.m_dynamic_gpu_memory_buffer)));
+		render::AddGameResource(system, "StaticGPUMemory"_sh32, CreateResourceFromHandle<render::UnorderedAccessBufferResource>(display::WeakUnorderedAccessBufferHandle(system->m_gpu_memory.m_static_gpu_memory_buffer)));
 
 		return system;
 	}
@@ -811,7 +811,7 @@ namespace render
 		return system->m_gpu_memory.m_dynamic_gpu_memory_buffer;
 	}
 
-	bool AddResource(System * system, const ResourceName& name, std::unique_ptr<Resource>&& resource)
+	bool AddGameResource(System * system, const ResourceName& name, std::unique_ptr<Resource>&& resource)
 	{
 		return system->AddResource(name, resource, ResourceSource::Game);
 	}
