@@ -49,6 +49,7 @@ namespace core
 			DATA* m_data;
 		};
 
+
 		template<typename KEY, typename DATA, size_t NUM_BUCKETS>
 		class Iterator
 		{
@@ -58,12 +59,12 @@ namespace core
 			{
 			}
 
-			DATA& operator*()
+			std::pair<KEY&, DATA&> operator*()
 			{
-				return m_fast_map->m_buckets[m_bucket].m_data[m_index];
+				return std::pair<KEY&, DATA&>(m_fast_map->m_buckets[m_bucket].m_key[m_index], m_fast_map->m_buckets[m_bucket].m_data[m_index]);
 			}
 
-			bool operator!= (Iterator const& other) const
+			bool operator!= (const Iterator & other) const
 			{
 				return m_fast_map != other.m_fast_map || m_bucket != other.m_bucket || m_index != other.m_index;
 			}
@@ -88,8 +89,8 @@ namespace core
 					}
 
 					//End of the map
-					m_index = static_cast<size_t>(-1);
-					m_bucket = static_cast<size_t>(-1);
+					m_index = kInvalid;
+					m_bucket = kInvalid;
 					return *this;
 				}
 				else
@@ -134,12 +135,12 @@ namespace core
 				}
 			}
 
-			return Iterator<KEY, DATA, NUM_BUCKETS>(this, static_cast<size_t>(-1), static_cast<size_t>(-1));
+			return Iterator<KEY, DATA, NUM_BUCKETS>(this, kInvalid, kInvalid);
 		}
 
 		Iterator<KEY, DATA, NUM_BUCKETS> end()
 		{
-			return Iterator<KEY, DATA, NUM_BUCKETS>(this, static_cast<size_t>(-1), static_cast<size_t>(-1));
+			return Iterator<KEY, DATA, NUM_BUCKETS>(this, kInvalid, kInvalid);
 		}
 
 		//Visit

@@ -16,7 +16,7 @@ namespace
 	template<class CONTAINER>
 	void DestroyResources(display::Device* device, CONTAINER& container)
 	{
-		for (auto& item : container)
+		for (auto& [key, item] : container)
 		{
 			if (item.resource)
 			{
@@ -30,7 +30,7 @@ namespace
 	template<class CONTAINER>
 	void DestroyPasses(display::Device* device, CONTAINER& container)
 	{
-		for (auto& item : container)
+		for (auto& [key, item] : container)
 		{
 			item->Destroy(device);
 		}
