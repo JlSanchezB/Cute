@@ -7,6 +7,7 @@
 #include <render/render.h>
 #include <render/render_resource.h>
 #include <display/display.h>
+#include "render_system.h"
 
 namespace render
 {
@@ -18,7 +19,7 @@ namespace render
 
 		struct ResourceStateSync
 		{
-			ResourceReference<Resource> resource;
+			System::ResourceInfoReference resource;
 			ResourceState state;
 
 			ResourceStateSync(ResourceName _resource, ResourceState _state) :
@@ -29,7 +30,7 @@ namespace render
 
 		struct ResourceBarrier
 		{
-			ResourceReference<Resource> resource;
+			System::ResourceInfoReference resource;
 			display::TranstitionState access;
 
 			ResourceBarrier(ResourceName _resource, display::TranstitionState _access) :

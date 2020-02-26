@@ -18,9 +18,9 @@ namespace
 	{
 		for (auto& [key, item] : container)
 		{
-			if (item.resource)
+			if (item && item->resource)
 			{
-				item.resource->Destroy(device);
+				item->resource->Destroy(device);
 			}
 		}
 
@@ -349,7 +349,7 @@ namespace render
 		auto& resource_it = m_resources_map[name];
 		if (!resource_it)
 		{
-			m_resources_map.Insert(name, System::ResourceInfo(std::move(resource), source));
+			m_resources_map.Insert(name, std::make_unique<System::ResourceInfo>(resource, source));
 			return true;
 		}
 		else
@@ -486,7 +486,7 @@ namespace render
 			//We still needs to get all resources that were defined by the game
 			resources_map_old.VisitNamed([&](const ResourceName& name, auto& item)
 			{
-				if (item.source == ResourceSource::Game)
+				if (item->source == ResourceSource::Game)
 				{
 					//Transfer resource to new resource map
 					system->m_resources_map.Insert(name, item);
@@ -846,7 +846,7 @@ namespace render
 		auto& it = system->m_resources_map[name];
 		if (it)
 		{
-			return it->resource.get();
+			return (*it)->resource.get();
 		}
 		return nullptr;
 	}

@@ -88,17 +88,48 @@ namespace render
 
 			//Source of the resource
 			ResourceSource source;
-			
+
 			//State of the resource, used for syncing passes
 			ResourceState state;
 
-			ResourceInfo(std::unique_ptr<Resource>& _resource, const ResourceSource& _source):
+			ResourceInfo(std::unique_ptr<Resource>&_resource, const ResourceSource& _source) :
 				resource(std::move(_resource)), source(_source), state("Init"_sh32)
 			{
 			}
 		};
 
-		using ResourceMap = core::FastMap<ResourceName, ResourceInfo>;
+		//Resource info reference
+		class ResourceInfoReference
+		{
+			ResourceName m_resource;
+
+			//Cached pointer to fast access
+			mutable ResourceInfo* m_resource_ptr = nullptr;
+		public:
+			ResourceInfoReference(ResourceName resource_name)
+			{
+				m_resource = resource_name;
+			}
+			void UpdateName(const ResourceName& resource_name)
+			{
+				m_resource = resource_name;
+				m_resource_ptr = nullptr;
+			}
+			ResourceName GetResourceName() const
+			{
+				return m_resource;
+			}
+			ResourceInfo* Get(System* system) const
+			{
+				if (m_resource_ptr == nullptr)
+				{
+					m_resource_ptr = system->m_resources_map.Find(m_resource)->get();
+				}
+				return m_resource_ptr;
+			}
+		};
+
+		using ResourceMap = core::FastMap<ResourceName, std::unique_ptr<ResourceInfo>>;
 		using PassMap =core::FastMap<PassName, std::unique_ptr<Pass>>;
 
 		//Gobal resources
