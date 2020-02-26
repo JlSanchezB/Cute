@@ -175,7 +175,7 @@ namespace core
 		{
 			//The destination handle needs to be invalid
 			assert(Accessor::m_index == Accessor::kInvalid);
-			HandleAccessor::m_index = index;
+			Accessor::m_index = index;
 		}
 
 		template<typename HANDLE>

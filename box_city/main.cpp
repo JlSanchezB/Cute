@@ -14,6 +14,7 @@
 #include <job/job_helper.h>
 #include <ecs/entity_component_job_helper.h>
 #include <render/render_passes_loader.h>
+#include <render_module/render_module_gpu_memory.h>
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include <ext/glm/gtx/vector_angle.hpp>
@@ -180,6 +181,9 @@ public:
 	//Render passes loader
 	render::RenderPassesLoader m_render_passes_loader;
 
+	//GPU Memory render module
+	render::GPUMemoryRenderModule* m_GPU_memory_render_module = nullptr;
+
 	//Random generators
 	std::random_device m_random_device;
 	std::mt19937 m_random_generator;
@@ -257,7 +261,7 @@ public:
 			gpu_box_instance.dimensions = glm::vec4(dimensions, 0.f);
 
 			//Allocate the GPU memory
-			render::AllocHandle gpu_memory = render::AllocStaticGPUMemory(m_render_system, sizeof(GPUBoxInstance), &gpu_box_instance, render::GetGameFrameIndex(m_render_system));
+			render::AllocHandle gpu_memory = m_GPU_memory_render_module->AllocStaticGPUMemory(m_device, sizeof(GPUBoxInstance), &gpu_box_instance, render::GetGameFrameIndex(m_render_system));
 
 			ecs::AllocInstance<GameDatabase, BoxType>(0)
 				.Init<Box>(local_matrix, dimensions)

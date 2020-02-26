@@ -49,7 +49,7 @@ namespace render
 		}
 
 		//Allocs memory in the allocation for the frame index
-		size_t SegmentAllocator::Alloc(size_t size, uint64_t allocation_frame_index);
+		size_t Alloc(size_t size, uint64_t allocation_frame_index);
 
 	private:
 

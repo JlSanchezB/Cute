@@ -36,6 +36,7 @@ namespace render
 	using ResourceState = StringHash32<"ResourceState"_namespace>;
 	using PassName = StringHash32<"PassName"_namespace>;
 	using PriorityName = StringHash32<"PriorityName"_namespace>;
+	using ModuleName = StringHash32<"ModuleName"_namespace>;
 	using Priority = uint8_t;
 	using SortKey = uint32_t;
 

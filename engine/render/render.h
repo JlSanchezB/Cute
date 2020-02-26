@@ -19,14 +19,19 @@ namespace platform
 
 namespace render
 {
-	using AllocHandle = core::Handle<struct FreeListAllocation, uint16_t>;
-	using WeakAllocHandle = core::WeakHandle<struct FreeListAllocation, uint16_t>;
-
 	struct SystemDesc
 	{
-		uint32_t static_gpu_memory_size = 128 * 1024;
-		uint32_t dynamic_gpu_memory_size = 128 * 1024;
-		uint32_t dynamic_gpu_memory_segment_size =  4 * 1024;
+	};
+
+	//Renderer allows to add modules that can register new passes and resources
+	class Module
+	{
+	public:
+		virtual ~Module() {};
+		virtual void Init(display::Device* device, System* system) {};
+		virtual void Shutdown(display::Device* device, System* system) {};
+		virtual void BeginFrame(display::Device* device, System* system, uint64_t cpu_frame_index, uint64_t freed_frame_index) {};
+		virtual void EndFrame(display::Device* device, System* system) {};
 	};
 
 	//Context used for rendering a pass
@@ -143,25 +148,27 @@ namespace render
 	Frame& GetGameRenderFrame(System* system);
 
 	//Get the index of the priority for a priority name
-	Priority GetRenderItemPriority(System* system, PriorityName priority_name);
+	Priority GetRenderItemPriority(System* system, const PriorityName priority_name);
 
-	//Allocate a buffer in the static gpu memory
-	AllocHandle AllocStaticGPUMemory(System* system, const size_t size, const void* data, const uint64_t frame_index);
+	//Get module
+	Module* GetModule(System* system, const ModuleName name);
 
-	//Deallocate static gpu memory
-	void DeallocStaticGPUMemory(System* system, AllocHandle&& handle, const uint64_t frame_index);
+	template<typename MODULE>
+	MODULE* GetModule(System* system, const ModuleName name)
+	{
+		return dynamic_cast<MODULE*>(GetModule(system, name));
+	}
 
-	//Update Static GPU memory
-	void UpdateStaticGPUMemory(System* system, const AllocHandle& handle, const void* data, const size_t size, const uint64_t frame_index);
+	//Register render module
+	void RegisterModule(System* system, const ModuleName name, std::unique_ptr<Module>&& module);
 
-	//Alloc dynamic gpu memory
-	void* AllocDynamicGPUMemory(System* system, const size_t size, const uint64_t frame_index);
+	template<typename MODULE, typename ...ARGS>
+	MODULE* RegisterModule(System* system, const ModuleName name, ARGS&& ...args)
+	{
+		RegisterModule(system, name, std::make_unique<MODULE>(std::forward<ARGS>(args)...));
 
-	//Get static gpu memory resource
-	display::WeakUnorderedAccessBufferHandle GetStaticGPUMemoryResource(System* system);
-
-	//Get dynamic gpu memory resource
-	display::WeakShaderResourceHandle GetDynamicGPUMemoryResource(System* system);
+		return dynamic_cast<MODULE*>(GetModule(system, name));
+	}
 }
 
 #endif //RENDER_H_

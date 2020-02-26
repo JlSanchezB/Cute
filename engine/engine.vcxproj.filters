@@ -42,6 +42,9 @@
     <Filter Include="job">
       <UniqueIdentifier>{3e768d30-2166-4dd6-83a7-1a3000a3e8f0}</UniqueIdentifier>
     </Filter>
+    <Filter Include="render_module">
+      <UniqueIdentifier>{53a5adfb-ed01-4c94-82ae-9013dcb5c893}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="display\display.h">
@@ -911,17 +914,17 @@
     <ClInclude Include="core\fast_map.h">
       <Filter>core</Filter>
     </ClInclude>
-    <ClInclude Include="render\internal\render_gpu_memory.h">
-      <Filter>render\internal</Filter>
-    </ClInclude>
-    <ClInclude Include="render\render_segment_allocator.h">
-      <Filter>render</Filter>
-    </ClInclude>
-    <ClInclude Include="render\render_freelist_allocator.h">
-      <Filter>render</Filter>
-    </ClInclude>
     <ClInclude Include="render\render_passes_loader.h">
       <Filter>render</Filter>
+    </ClInclude>
+    <ClInclude Include="render_module\render_module_gpu_memory.h">
+      <Filter>render_module</Filter>
+    </ClInclude>
+    <ClInclude Include="render_module\render_freelist_allocator.h">
+      <Filter>render_module</Filter>
+    </ClInclude>
+    <ClInclude Include="render_module\render_segment_allocator.h">
+      <Filter>render_module</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -994,11 +997,11 @@
     <ClCompile Include="core\pc\profile.cpp">
       <Filter>core</Filter>
     </ClCompile>
-    <ClCompile Include="render\internal\render_gpu_memory.cpp">
-      <Filter>render\internal</Filter>
-    </ClCompile>
     <ClCompile Include="render\internal\render_passes_loader.cpp">
       <Filter>render\internal</Filter>
+    </ClCompile>
+    <ClCompile Include="render_module\render_module_gpu_memory.cpp">
+      <Filter>render_module</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

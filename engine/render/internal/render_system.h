@@ -8,7 +8,6 @@
 #include <unordered_map>
 #include <core/simple_pool.h>
 #include <render/render_frame.h>
-#include <render/internal/render_gpu_memory.h>
 #include <job/job.h>
 #include <core/platform.h>
 #include <core/fast_map.h>
@@ -138,12 +137,12 @@ namespace render
 		//Passes defined in the passes declaration
 		PassMap m_passes_map;
 
+		//List of modules
+		core::FastMap<ModuleName, std::unique_ptr<Module>> m_modules;
+
 		//Buffer of all the render frame data
 		//At the moment just one
 		Frame m_frame_data;
-
-		//GPU memory systems for syncing memory CPU-GPU
-		RenderGPUMemory m_gpu_memory;
 
 		//Game thread frame, starts with 0 to sync with the display frame index
 		uint64_t m_game_frame_index = 0;

@@ -408,18 +408,18 @@
     <ClInclude Include="job\job.h" />
     <ClInclude Include="job\job_queue.h" />
     <ClInclude Include="job\job_helper.h" />
-    <ClInclude Include="render\internal\render_gpu_memory.h" />
     <ClInclude Include="render\internal\render_pass.h" />
     <ClInclude Include="render\internal\render_system.h" />
     <ClInclude Include="render\render.h" />
     <ClInclude Include="render\render_command_buffer.h" />
     <ClInclude Include="render\render_common.h" />
     <ClInclude Include="render\render_frame.h" />
-    <ClInclude Include="render\render_freelist_allocator.h" />
     <ClInclude Include="render\render_helper.h" />
     <ClInclude Include="render\render_passes_loader.h" />
     <ClInclude Include="render\render_resource.h" />
-    <ClInclude Include="render\render_segment_allocator.h" />
+    <ClInclude Include="render_module\render_freelist_allocator.h" />
+    <ClInclude Include="render_module\render_module_gpu_memory.h" />
+    <ClInclude Include="render_module\render_segment_allocator.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="core\imgui_render.cpp" />
@@ -443,10 +443,10 @@
     <ClCompile Include="job\job.cpp" />
     <ClCompile Include="render\internal\render.cpp" />
     <ClCompile Include="render\internal\render_command_buffer.cpp" />
-    <ClCompile Include="render\internal\render_gpu_memory.cpp" />
     <ClCompile Include="render\internal\render_pass.cpp" />
     <ClCompile Include="render\internal\render_passes_loader.cpp" />
     <ClCompile Include="render\internal\render_resource.cpp" />
+    <ClCompile Include="render_module\render_module_gpu_memory.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="ext\glm\detail\func_common.inl" />

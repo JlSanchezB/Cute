@@ -1,36 +1,41 @@
-#include "render_gpu_memory.h"
+#include "render_module_gpu_memory.h"
 #include "display/display.h"
 
 namespace render
 {
 
-	void RenderGPUMemory::Init(display::Device* device, uint32_t static_gpu_memory_size, uint32_t dynamic_gpu_memory_size, uint32_t dynamic_gpu_memory_segment_size)
+	GPUMemoryRenderModule::GPUMemoryRenderModule(const GPUMemoryDesc& desc) :
+		m_static_gpu_memory_size(desc.static_gpu_memory_size), m_dynamic_gpu_memory_size(desc.dynamic_gpu_memory_size), m_dynamic_gpu_memory_segment_size(desc.dynamic_gpu_memory_segment_size)
 	{
-		assert(static_gpu_memory_size % 16 == 0);
-		assert(dynamic_gpu_memory_size % 16 == 0);
+	}
+
+	void GPUMemoryRenderModule::Init(display::Device* device, System* system)
+	{
+		assert(m_static_gpu_memory_size % 16 == 0);
+		assert(m_dynamic_gpu_memory_size % 16 == 0);
 
 		//Init static buffer
 		display::UnorderedAccessBufferDesc static_buffer_desc;
 		static_buffer_desc.element_size = 16;
-		static_buffer_desc.element_count = static_gpu_memory_size / 16;
+		static_buffer_desc.element_count = m_static_gpu_memory_size / 16;
 
 		m_static_gpu_memory_buffer = display::CreateUnorderedAccessBuffer(device, static_buffer_desc, "StaticGpuMemoryBuffer");
 
 		//Init static allocator
-		m_static_gpu_memory_allocator.Init(static_gpu_memory_size);
+		m_static_gpu_memory_allocator.Init(m_static_gpu_memory_size);
 
 		//Init dynamic buffer
 		display::ShaderResourceDesc dynamic_buffer_desc;
 		dynamic_buffer_desc.access = display::Access::Upload;
 		dynamic_buffer_desc.type = display::ShaderResourceType::Buffer;
-		dynamic_buffer_desc.size = dynamic_gpu_memory_size;
-		dynamic_buffer_desc.num_elements = dynamic_gpu_memory_size / 16;
+		dynamic_buffer_desc.size = m_dynamic_gpu_memory_size;
+		dynamic_buffer_desc.num_elements = m_dynamic_gpu_memory_size / 16;
 		dynamic_buffer_desc.structure_stride = 16;
-		
+
 		m_dynamic_gpu_memory_buffer = display::CreateShaderResource(device, dynamic_buffer_desc, "DynamicGpuMemoryBuffer");
 
 		//Init dynamic allocator
-		m_dynamic_gpu_memory_allocator.Init(dynamic_gpu_memory_size, dynamic_gpu_memory_segment_size);
+		m_dynamic_gpu_memory_allocator.Init(m_dynamic_gpu_memory_size, m_dynamic_gpu_memory_segment_size);
 
 
 		//Copy data compute
@@ -41,7 +46,7 @@ namespace render
 			root_signature_desc.root_parameters[0].type = display::RootSignatureParameterType::UnorderAccessBuffer;
 			root_signature_desc.root_parameters[0].root_param.shader_register = 0;
 			root_signature_desc.root_parameters[0].visibility = display::ShaderVisibility::All;
-			
+
 			root_signature_desc.root_parameters[1].type = display::RootSignatureParameterType::ShaderResource;
 			root_signature_desc.root_parameters[1].root_param.shader_register = 0;
 			root_signature_desc.root_parameters[1].visibility = display::ShaderVisibility::All;
@@ -60,7 +65,7 @@ namespace render
 		{
 			//Compute pipeline, compile shader for testing
 			const char* shader_code =
-					"RWStructuredBuffer<uint4> destination_buffer : u0; \
+				"RWStructuredBuffer<uint4> destination_buffer : u0; \
 					 StructuredBuffer<uint4> source_buffer : t0; \
 					 uint4 parameters : b0; \
 					 \
@@ -99,20 +104,79 @@ namespace render
 		}
 	}
 
-	void RenderGPUMemory::Destroy(display::Device* device)
+	void GPUMemoryRenderModule::Shutdown(display::Device* device, System* system)
 	{
 		display::DestroyHandle(device, m_static_gpu_memory_buffer);
 		display::DestroyHandle(device, m_dynamic_gpu_memory_buffer);
 		display::DestroyHandle(device, m_copy_data_compute_root_signature);
 		display::DestroyHandle(device, m_copy_data_compute_pipeline_state);
 	}
-	void RenderGPUMemory::Sync(uint64_t cpu_frame_index, uint64_t freed_frame_index)
+
+	void GPUMemoryRenderModule::BeginFrame(display::Device* device, System* system, uint64_t cpu_frame_index, uint64_t freed_frame_index)
 	{
 		m_dynamic_gpu_memory_allocator.Sync(cpu_frame_index, freed_frame_index);
 		m_static_gpu_memory_allocator.Sync(freed_frame_index);
 	}
 
-	void RenderGPUMemory::ExecuteGPUCopy(uint64_t frame_index, display::Context* display_context)
+	void* GPUMemoryRenderModule::AllocDynamicGPUMemory(display::Device* device, const size_t size, const uint64_t frame_index)
+	{
+		size_t offset = m_dynamic_gpu_memory_allocator.Alloc(size, frame_index);
+
+		//Return the memory address inside the resource
+		return reinterpret_cast<uint8_t*>(display::GetResourceMemoryBuffer(device, m_dynamic_gpu_memory_buffer)) + offset;
+	}
+
+	AllocHandle GPUMemoryRenderModule::AllocStaticGPUMemory(display::Device* device, const size_t size, const void* data, const uint64_t frame_index)
+	{
+		AllocHandle handle = m_static_gpu_memory_allocator.Alloc(size);
+
+		if (data)
+		{
+			UpdateStaticGPUMemory(device, handle, data, size, frame_index);
+		}
+
+		return std::move(handle);
+	}
+
+	void GPUMemoryRenderModule::DeallocStaticGPUMemory(display::Device* device, AllocHandle&& handle, const uint64_t frame_index)
+	{
+		m_static_gpu_memory_allocator.Dealloc(std::move(handle), frame_index);
+	}
+
+	void GPUMemoryRenderModule::UpdateStaticGPUMemory(display::Device* device, const AllocHandle& handle, const void* data, const size_t size, const uint64_t frame_index)
+	{
+		//Destination size needs to be aligned to float4
+		constexpr size_t size_float4 = sizeof(float) * 4;
+		assert(size > 0);
+
+		size_t dest_size = (((size - 1) % size_float4) + 1) * size_float4;
+
+		//Data gets copied in the dynamic gpu memory
+		void* gpu_memory = AllocDynamicGPUMemory(device, dest_size, frame_index);
+		memcpy(gpu_memory, data, size);
+
+		//Calculate offsets
+		uint8_t* dynamic_memory_base = reinterpret_cast<uint8_t*>(display::GetResourceMemoryBuffer(device, m_dynamic_gpu_memory_buffer));
+
+		uint32_t source_offset = static_cast<uint32_t>(reinterpret_cast<uint8_t*>(gpu_memory) - dynamic_memory_base);
+		const FreeListAllocation& destination_allocation = m_static_gpu_memory_allocator.Get(handle);
+
+		//Add copy command
+		AddCopyDataCommand(frame_index, source_offset, static_cast<uint32_t>(destination_allocation.offset), static_cast<uint32_t>(size));
+
+	}
+
+	display::WeakUnorderedAccessBufferHandle GPUMemoryRenderModule::GetStaticGPUMemoryResource()
+	{
+		return m_static_gpu_memory_buffer;
+	}
+
+	display::WeakShaderResourceHandle GPUMemoryRenderModule::GetDynamicGPUMemoryResource()
+	{
+		return m_dynamic_gpu_memory_buffer;
+	}
+
+	void GPUMemoryRenderModule::ExecuteGPUCopy(uint64_t frame_index, display::Context* display_context)
 	{
 		std::vector<CopyDataCommand> copy_commands;
 

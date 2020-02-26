@@ -399,13 +399,6 @@ namespace render
 		//Create render command list
 		system->m_render_command_list = display::CreateCommandList(device, "RenderSystem");
 
-		//Init gpu memory
-		system->m_gpu_memory.Init(system->m_device, desc.static_gpu_memory_size, desc.dynamic_gpu_memory_size, desc.dynamic_gpu_memory_segment_size);
-
-		//Register render gpu memory resources
-		render::AddGameResource(system, "DynamicGPUMemory"_sh32, CreateResourceFromHandle<render::ShaderResourceResource>(display::WeakShaderResourceHandle(system->m_gpu_memory.m_dynamic_gpu_memory_buffer)));
-		render::AddGameResource(system, "StaticGPUMemory"_sh32, CreateResourceFromHandle<render::UnorderedAccessBufferResource>(display::WeakUnorderedAccessBufferHandle(system->m_gpu_memory.m_static_gpu_memory_buffer)));
-
 		return system;
 	}
 
@@ -417,9 +410,6 @@ namespace render
 			job::Wait(system->m_job_system, g_render_fence);
 		}
 
-		//Destroy gpu memory
-		system->m_gpu_memory.Destroy(system->m_device);
-
 		//Destroy resources and passes
 		DestroyResources(device, system->m_resources_map);
 		DestroyPasses(device, system->m_passes_map);
@@ -427,6 +417,11 @@ namespace render
 		//Destroy command list
 		display::DestroyHandle(device, system->m_render_command_list);
 
+		//Destroy modules
+		for (auto& [key, module] : system->m_modules)
+		{
+			module->Shutdown(device, system);
+		}
 
 		delete system;
 
@@ -532,11 +527,13 @@ namespace render
 	{
 		PROFILE_SCOPE("Render", "Submit", kRenderProfileColour);
 
-		//Sync GPU memory resources
-		m_gpu_memory.Sync(m_render_frame_index, display::GetLastCompletedGPUFrame(m_device));
-
 		//Render thread
 		display::BeginFrame(m_device);
+
+		for (auto& [key, module] : m_modules)
+		{
+			module->BeginFrame(m_device, this, m_render_frame_index, display::GetLastCompletedGPUFrame(m_device));
+		}
 
 		//Get render frame
 		Frame& render_frame = m_frame_data;
@@ -672,6 +669,11 @@ namespace render
 			}
 		}
 
+		for (auto& [key, module] : m_modules)
+		{
+			module->EndFrame(m_device, this);
+		}
+
 		display::EndFrame(m_device);
 
 		render_frame.Reset();
@@ -739,7 +741,7 @@ namespace render
 		return system->m_frame_data;
 	}
 
-	Priority GetRenderItemPriority(System * system, PriorityName priority_name)
+	Priority GetRenderItemPriority(System * system, const PriorityName priority_name)
 	{
 		const size_t priorities_size = system->m_render_priorities.size();
 		for (size_t i = 0; i < priorities_size; ++i)
@@ -753,62 +755,17 @@ namespace render
 		return static_cast<Priority>(priorities_size);
 	}
 
-	AllocHandle AllocStaticGPUMemory(System* system, const size_t size, const void* data, const uint64_t frame_index)
+	Module* GetModule(System* system, const ModuleName name)
 	{
-		AllocHandle handle = system->m_gpu_memory.m_static_gpu_memory_allocator.Alloc(size);
-
-		if (data)
-		{
-			UpdateStaticGPUMemory(system, handle, data, size, frame_index);
-		}
-
-		return std::move(handle);
+		return system->m_modules[name]->get();
 	}
 
-	void DeallocStaticGPUMemory(System* system, AllocHandle&& handle, const uint64_t frame_index)
+	void RegisterModule(System* system, const ModuleName name, std::unique_ptr<Module>&& module)
 	{
-		system->m_gpu_memory.m_static_gpu_memory_allocator.Dealloc(std::move(handle), frame_index);
-	}
+		//Init module
+		module->Init(system->m_device, system);
 
-	void UpdateStaticGPUMemory(System* system, const AllocHandle& handle, const void* data, const size_t size, const uint64_t frame_index)
-	{
-		//Destination size needs to be aligned to float4
-		constexpr size_t size_float4 = sizeof(float) * 4;
-		assert(size > 0);
-
-		size_t dest_size = (((size - 1) % size_float4) + 1) * size_float4;
-
-		//Data gets copied in the dynamic gpu memory
-		void* gpu_memory = AllocDynamicGPUMemory(system, dest_size, frame_index);
-		memcpy(gpu_memory, data, size);
-
-		//Calculate offsets
-		uint8_t* dynamic_memory_base = reinterpret_cast<uint8_t*>(display::GetResourceMemoryBuffer(system->m_device, system->m_gpu_memory.m_dynamic_gpu_memory_buffer));
-
-		uint32_t source_offset = static_cast<uint32_t>(reinterpret_cast<uint8_t*>(gpu_memory) - dynamic_memory_base);
-		const FreeListAllocation& destination_allocation = system->m_gpu_memory.m_static_gpu_memory_allocator.Get(handle);
-
-		//Add copy command
-		system->m_gpu_memory.AddCopyDataCommand(frame_index, source_offset, static_cast<uint32_t>(destination_allocation.offset), static_cast<uint32_t>(size));
-
-	}
-
-	void* AllocDynamicGPUMemory(System* system, const size_t size, const uint64_t frame_index)
-	{
-		size_t offset = system->m_gpu_memory.m_dynamic_gpu_memory_allocator.Alloc(size, frame_index);
-
-		//Return the memory address inside the resource
-		return reinterpret_cast<uint8_t*>(display::GetResourceMemoryBuffer(system->m_device, system->m_gpu_memory.m_dynamic_gpu_memory_buffer)) + offset;
-	}
-
-	display::WeakUnorderedAccessBufferHandle GetStaticGPUMemoryResource(System* system)
-	{
-		return system->m_gpu_memory.m_static_gpu_memory_buffer;
-	}
-
-	display::WeakShaderResourceHandle GetDynamicGPUMemoryResource(System* system)
-	{
-		return system->m_gpu_memory.m_dynamic_gpu_memory_buffer;
+		system->m_modules.Insert(name, std::move(module));
 	}
 
 	bool AddGameResource(System * system, const ResourceName& name, std::unique_ptr<Resource>&& resource)

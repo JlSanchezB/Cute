@@ -14,6 +14,7 @@
 #include <job/job_helper.h>
 #include <ecs/entity_component_job_helper.h>
 #include <render/render_passes_loader.h>
+#include <render_module/render_module_gpu_memory.h>
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include <ext/glm/gtx/vector_angle.hpp>
@@ -331,6 +332,9 @@ public:
 	//Display resources
 	DisplayResource m_display_resources;
 
+	//GPUMemory render module
+	render::GPUMemoryRenderModule* m_gpu_memory_render_module = nullptr;
+
 	//Camera info
 	float m_camera_position[2] = { 0.f };
 	float m_camera_zoom = 1.f;
@@ -516,9 +520,14 @@ public:
 
 		//Create render pass system
 		render::SystemDesc render_system_desc;
-		//Needed a lot of memory as around 20k entities, 3 frames, 4 float
-		render_system_desc.dynamic_gpu_memory_size = kDynamicGPUSize;
 		m_render_system = render::CreateRenderSystem(m_device, m_job_system, this, render_system_desc);
+
+		//Register gpu memory render module
+		//Needed a lot of memory as around 20k entities, 3 frames, 4 float
+		render::GPUMemoryRenderModule::GPUMemoryDesc gpu_memory_desc;
+		gpu_memory_desc.dynamic_gpu_memory_size = kDynamicGPUSize;
+
+		m_gpu_memory_render_module = render::RegisterModule<render::GPUMemoryRenderModule>(m_render_system, "GPUMemory"_sh32, gpu_memory_desc);
 
 		//Add game resources
 		render::AddGameResource(m_render_system, "GameGlobal"_sh32, CreateResourceFromHandle<render::ConstantBufferResource>(display::WeakConstantBufferHandle(m_game_constant_buffer)));
@@ -1208,7 +1217,7 @@ public:
 
 			command_buffer.SetVertexBuffers(0, 1, &m_display_resources.m_quad_vertex_buffer);
 			command_buffer.SetIndexBuffer(m_display_resources.m_quad_index_buffer);
-			command_buffer.SetShaderResourceAsVertexBuffer(1, render::GetDynamicGPUMemoryResource(m_render_system), desc);
+			command_buffer.SetShaderResourceAsVertexBuffer(1, m_gpu_memory_render_module->GetDynamicGPUMemoryResource(), desc);
 
 			switch (type)
 			{
@@ -1252,7 +1261,7 @@ public:
 			}
 
 			//Allocate another chunk
-			buffer.data = reinterpret_cast<uint8_t*>(render::AllocDynamicGPUMemory(m_render_system, kChunkAllocationSize, render::GetGameFrameIndex(m_render_system)));
+			buffer.data = reinterpret_cast<uint8_t*>(m_gpu_memory_render_module->AllocDynamicGPUMemory(m_device, kChunkAllocationSize, render::GetGameFrameIndex(m_render_system)));
 			buffer.size = 0;
 		}
 
@@ -1434,7 +1443,7 @@ public:
 			job_data->borders = borders;
 			job_data->point_of_view = &point_of_view;
 			//Get base ptr for the dynamic gpu memory
-			job_data->dynamic_gpu_buffer_base = reinterpret_cast<uint8_t*>(display::GetResourceMemoryBuffer(m_device, render::GetDynamicGPUMemoryResource(m_render_system)));
+			job_data->dynamic_gpu_buffer_base = reinterpret_cast<uint8_t*>(display::GetResourceMemoryBuffer(m_device, m_gpu_memory_render_module->GetDynamicGPUMemoryResource()));
 			job_data->instance_buffer = &instance_buffer;
 
 			ecs::AddJobs<GameDatabase, const PositionComponent, const GrassStateComponent>(m_job_system, g_InstanceBufferFinishedFence, m_update_job_allocator, 256,

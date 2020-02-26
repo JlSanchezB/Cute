@@ -4,7 +4,6 @@
 #ifndef RENDER_FREELIST_ALLOCATOR_H_
 #define RENDER_FREELIST_ALLOCATOR_H_
 
-#include <core/handle_pool.h>
 #include <core/ring_buffer.h>
 #include <core/log.h>
 #include <job/job_helper.h>
