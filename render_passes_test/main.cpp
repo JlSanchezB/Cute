@@ -121,6 +121,7 @@ public:
 		auto& render_frame = render::GetGameRenderFrame(m_render_pass_system);
 
 		render_frame.AddRenderPass("Main"_sh32, 0, pass_info);
+		render_frame.AddRenderPass("RenderToRenderTarget"_sh32, 0, pass_info);
 
 		render::EndPrepareRenderAndSubmit(m_render_pass_system);
 	}

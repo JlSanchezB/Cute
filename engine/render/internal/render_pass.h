@@ -56,6 +56,21 @@ namespace render
 		void InitPass(RenderContext& render_context, display::Device* device, ErrorContext& errors) override;
 		void Render(RenderContext& render_context) const override;
 		void Execute(RenderContext& render_context) const override;
+
+		const std::vector<ResourceStateSync>& GetPreResourceCondition() const
+		{
+			return m_pre_resource_conditions;
+		}
+
+		const std::vector<ResourceStateSync>& GetPostUpdateCondition() const
+		{
+			return m_post_resource_updates;
+		}
+
+		const std::vector<ResourceBarrier>& GetResourceBarriers() const
+		{
+			return m_resource_barriers;
+		}
 	};
 
 	class SetRenderTargetPass : public Pass

@@ -27,17 +27,17 @@ namespace render
 	class RenderContextInternal : public RenderContext
 	{
 	public:
-		RenderContextInternal(System* system, display::Device* device, const PassInfo& pass_info, Pass* _root_pass) :
+		RenderContextInternal(System* system, display::Device* device, const PassInfo& pass_info, ContextPass* _context_root_pass) :
 			m_render_pass_system(system),
 			m_display_device(device),
-			m_pass_info(pass_info)
+			m_pass_info(pass_info),
+			m_context_root_pass(_context_root_pass)
 		{
-			m_root_pass = _root_pass;
 		}
 		//Render pass system
 		System* m_render_pass_system;
-		//Root pass for the cotnext
-		Pass* m_root_pass = nullptr;
+		//Root pass for the context
+		ContextPass* m_context_root_pass = nullptr;
 		//display context
 		display::Context* m_display_context = nullptr;
 		//device

@@ -19,6 +19,8 @@ namespace platform
 
 namespace render
 {
+	class ContextPass;
+
 	struct SystemDesc
 	{
 	};
@@ -60,7 +62,7 @@ namespace render
 		Frame& GetRenderFrame();
 
 		//Get root pass been rendering
-		Pass* GetRootPass() const;
+		ContextPass* GetContextRootPass() const;
 
 		//Get display device
 		display::Device* GetDevice() const;

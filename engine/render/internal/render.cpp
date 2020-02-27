@@ -10,6 +10,7 @@
 #include <cassert>
 #include <stdarg.h>
 #include <utility>
+#include <numeric>
 
 namespace
 {
@@ -67,10 +68,10 @@ namespace render
 		return render_context->m_render_pass_system->m_frame_data;
 	}
 
-	Pass * RenderContext::GetRootPass() const
+	ContextPass* RenderContext::GetContextRootPass() const
 	{
 		auto render_context = reinterpret_cast<const RenderContextInternal*>(this);
-		return render_context->m_root_pass;
+		return render_context->m_context_root_pass;
 	}
 
 	display::Device * RenderContext::GetDevice() const
@@ -203,10 +204,10 @@ namespace render
 	{
 		//Get pass
 		auto render_pass = GetPass(this, pass);
-		if (render_pass)
+		if (render_pass && render_pass->Type() == RenderClassType("Pass"_sh32))
 		{
 			//Create Render Context
-			RenderContextInternal* render_context = m_render_context_pool.Alloc(this, device, pass_info, render_pass);
+			RenderContextInternal* render_context = m_render_context_pool.Alloc(this, device, pass_info, dynamic_cast<ContextPass*>(render_pass));
 
 			ErrorContext errors_context;
 
@@ -236,7 +237,7 @@ namespace render
 		else
 		{
 			errors.push_back(std::string("Pass not found"));
-			core::LogError("Errors creating a render pass <%s>, definition pass doesn't exist", pass.GetValue());
+			core::LogError("Errors creating a render pass <%s>, definition pass doesn't exist or it is not a context pass", pass.GetValue());
 			return nullptr;
 		}
 	}
@@ -610,19 +611,89 @@ namespace render
 			}
 		}
 
-		//Sort all the render passes, it can be run in parallel and data is not needed until execution TODO
+		//Cached render contexts
+		std::vector<RenderContextInternal*> render_pass_contexts(render_frame.m_render_passes.size());
+		for (size_t i = 0; i < render_frame.m_render_passes.size(); ++i)
+		{
+			auto& render_pass = render_frame.m_render_passes[i];
+			render_pass_contexts[i] = GetCachedRenderContext(render_pass.pass_name, 0, render_pass.pass_info);
+		}
 
-		//For each render pass, we could run it in parallel
-		for (auto& render_pass : render_frame.m_render_passes)
+		//Sort all the render passes, it can be run in parallel and data is not needed until execution
+		std::vector<size_t> render_passes_sorted;
+		bool render_graph_built = true;
+		{
+			render_passes_sorted.reserve(render_frame.m_render_passes.size());
+			//All resources are state "Init"
+			for (auto& [key, resource_info] : m_resources_map)
+			{
+				resource_info->state = "Init"_sh32;
+			}
+
+			std::vector<size_t> render_passes_to_process(render_frame.m_render_passes.size());
+			std::iota(render_passes_to_process.begin(), render_passes_to_process.end(), 0);
+
+			//Add passes into the sorted array solving all dependencies
+			while (render_graph_built && render_passes_to_process.size() > 0)
+			{
+				size_t num_render_passes_left = render_passes_to_process.size();
+
+				//Check if any pass is able to run
+				for (auto& pass_index : render_passes_to_process)
+				{
+					auto& render_pass = render_frame.m_render_passes[pass_index];
+
+					bool all_dependencies_passed = true;
+
+					//Check the dependencies
+					auto& dependencies = render_pass_contexts[pass_index]->GetContextRootPass()->GetPreResourceCondition();
+					for (auto& dependency : dependencies)
+					{
+						if (dependency.resource.Get(this)->state != dependency.state)
+						{
+							all_dependencies_passed = false;
+							break;
+						}
+					}
+
+					if (all_dependencies_passed)
+					{
+						//This pass can be run as all the dependencies are in a correct state
+						render_passes_sorted.push_back(pass_index);
+						render_passes_to_process.erase(render_passes_to_process.begin() + pass_index);
+
+						//Update all new states
+						auto& update_states = render_pass_contexts[pass_index]->GetContextRootPass()->GetPostUpdateCondition();
+						for (auto& update_state : update_states)
+						{
+							update_state.resource.Get(this)->state = update_state.state;
+						}
+					}
+
+				}
+
+				if (num_render_passes_left == render_passes_to_process.size())
+				{
+					//The depedency graph can not be built, no render
+					core::LogError("The render graph can not be built because the depedencies can not be match. Render is cancel.");
+					render_graph_built = false;
+					break;
+				}
+			}
+		}
+
+		if (render_graph_built)
 		{
 			PROFILE_SCOPE("Render", "SubmitRenderPasses", kRenderProfileColour);
 
-			//Find the render_context associated to it
-			RenderContextInternal* render_context = GetCachedRenderContext(render_pass.pass_name, 0, render_pass.pass_info);
-			
-			if (render_context)
+			//For each render pass, we could run it in parallel
+			for (auto& sorted_render_pass_index : render_passes_sorted)
 			{
-				
+				auto& render_pass = render_frame.m_render_passes[sorted_render_pass_index];
+
+				//Find the render_context associated to it
+				RenderContextInternal* render_context = render_pass_contexts[sorted_render_pass_index];
+
 				if (render_pass.associated_point_of_view_name != PointOfViewName("None"))
 				{
 					//Find associated point of view
@@ -646,7 +717,7 @@ namespace render
 
 						continue;
 					}
-					
+
 				}
 				else
 				{
@@ -659,12 +730,12 @@ namespace render
 				{
 					PROFILE_SCOPE("Render", "CapturePass", kRenderProfileColour);
 					//Capture pass
-					render_context->m_root_pass->Render(*render_context);
+					render_context->m_context_root_pass->Render(*render_context);
 				}
 				{
 					PROFILE_SCOPE("Render", "RenderPass", kRenderProfileColour);
 					//Execute pass
-					render_context->m_root_pass->Execute(*render_context);
+					render_context->m_context_root_pass->Execute(*render_context);
 				}
 			}
 		}
