@@ -91,8 +91,11 @@ namespace render
 			//State of the resource, used for syncing passes
 			ResourceState state;
 
-			ResourceInfo(std::unique_ptr<Resource>&_resource, const ResourceSource& _source) :
-				resource(std::move(_resource)), source(_source), state("Init"_sh32)
+			//Current access of the resource
+			display::TranstitionState access;
+
+			ResourceInfo(std::unique_ptr<Resource>&_resource, const ResourceSource& _source, const display::TranstitionState& _access) :
+				resource(std::move(_resource)), source(_source), state("Init"_sh32), access(_access)
 			{
 			}
 		};

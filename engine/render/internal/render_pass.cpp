@@ -127,16 +127,8 @@ namespace render
 	}
 	void ContextPass::Render(RenderContext & render_context) const
 	{
-		//Open context
-		render_context.SetContext(display::OpenCommandList(render_context.GetDevice(), m_command_list_handle));
-
-		for (auto& item : m_passes)
-		{
-			item->Render(render_context);
-		}
-
-		//Close context
-		display::CloseCommandList(render_context.GetDevice(), render_context.GetContext());
+		//This call is invalid, calls to render for a ContextPass must be done with the resource_transitions
+		assert(true);
 	}
 	void ContextPass::Execute(RenderContext & render_context) const
 	{
@@ -146,6 +138,25 @@ namespace render
 		}
 
 		display::ExecuteCommandList(render_context.GetDevice(), m_command_list_handle);
+	}
+
+	void ContextPass::RootContextRender(RenderContext& render_context, const std::vector<display::ResourceBarrier>& resource_barriers) const
+	{
+		//Open context
+		render_context.SetContext(display::OpenCommandList(render_context.GetDevice(), m_command_list_handle));
+
+		if (resource_barriers.size() > 0)
+		{
+			render_context.GetContext()->AddResourceBarriers(resource_barriers);
+		}
+
+		for (auto& item : m_passes)
+		{
+			item->Render(render_context);
+		}
+
+		//Close context
+		display::CloseCommandList(render_context.GetDevice(), render_context.GetContext());
 	}
 
 	void SetRenderTargetPass::Load(LoadContext & load_context)

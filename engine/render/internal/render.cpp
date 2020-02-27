@@ -12,6 +12,9 @@
 #include <utility>
 #include <numeric>
 
+template<class... Ts> struct overloaded : Ts... { using Ts::operator()...; };
+template<class... Ts> overloaded(Ts...)->overloaded<Ts...>;
+
 namespace
 {
 	template<class CONTAINER>
@@ -350,7 +353,7 @@ namespace render
 		auto& resource_it = m_resources_map[name];
 		if (!resource_it)
 		{
-			m_resources_map.Insert(name, std::make_unique<System::ResourceInfo>(resource, source));
+			m_resources_map.Insert(name, std::make_unique<System::ResourceInfo>(resource, source, display::TranstitionState::Common));
 			return true;
 		}
 		else
@@ -729,13 +732,47 @@ namespace render
 
 				{
 					PROFILE_SCOPE("Render", "CapturePass", kRenderProfileColour);
+
+					//Add resource barriers if needed
+					std::vector<display::ResourceBarrier> resource_barriers_to_execute;
+					resource_barriers_to_execute.reserve(render_context->GetContextRootPass()->GetResourceBarriers().size());
+					for (auto& resource_barrier : render_context->GetContextRootPass()->GetResourceBarriers())
+					{
+						auto current_access = resource_barrier.resource.Get(this)->access;
+						auto next_access = resource_barrier.access;
+
+						if (current_access != next_access)
+						{
+							const auto& resource_info = resource_barrier.resource.Get(this);
+							auto resource_handle = resource_info->resource->GetDisplayHandle();
+							resource_info->access = next_access;
+
+							std::visit(
+								overloaded
+								{
+									[&](const display::WeakRenderTargetHandle& handle)
+									{
+										resource_barriers_to_execute.emplace_back(handle, current_access, next_access);
+									},
+									[&](const display::WeakUnorderedAccessBufferHandle& handle)
+									{
+										resource_barriers_to_execute.emplace_back(handle, current_access, next_access);
+									},
+									[&](const std::monostate& handle)
+									{
+									}
+								}, resource_handle);	
+						}
+						
+					}
+
 					//Capture pass
-					render_context->m_context_root_pass->Render(*render_context);
+					render_context->GetContextRootPass()->RootContextRender(*render_context, resource_barriers_to_execute);
 				}
 				{
 					PROFILE_SCOPE("Render", "RenderPass", kRenderProfileColour);
 					//Execute pass
-					render_context->m_context_root_pass->Execute(*render_context);
+					render_context->GetContextRootPass()->Execute(*render_context);
 				}
 			}
 		}

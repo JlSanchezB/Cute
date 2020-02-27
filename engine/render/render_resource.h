@@ -75,7 +75,7 @@ namespace render
 				display::DestroyHandle(device, m_handle);
 			}
 		}
-		WEAKHANDLE& GetHandle()
+		WEAKHANDLE GetHandle()
 		{
 			return m_weak_handle;
 		}
@@ -153,6 +153,11 @@ namespace render
 		DECLARE_RENDER_CLASS("RenderTarget");
 
 		void Load(LoadContext& load_context) override;
+
+		DisplayHandle GetDisplayHandle() override
+		{
+			return DisplayHandleResource<display::RenderTargetHandle>::GetHandle();
+		}
 	};
 
 	//Depth buffer

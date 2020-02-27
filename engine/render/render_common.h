@@ -9,6 +9,8 @@
 #include <vector>
 #include <memory>
 #include <unordered_map>
+#include <variant>
+#include <display/display_handle.h>
 
 namespace display
 {
@@ -85,6 +87,10 @@ namespace render
 
 		//Return type, it will be defined with DECLARE_RENDER_CLASS
 		virtual const RenderClassType Type() const = 0;
+		
+		//Fast access to the resource internal handle
+		using DisplayHandle = std::variant<std::monostate, display::WeakRenderTargetHandle, display::WeakUnorderedAccessBufferHandle>;
+		virtual DisplayHandle GetDisplayHandle() { return std::monostate{}; };
 	};
 
 	//Base Pass class

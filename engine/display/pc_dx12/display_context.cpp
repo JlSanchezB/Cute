@@ -377,18 +377,31 @@ namespace display
 		{
 			auto& resource_barrier = resource_barriers[i];
 
-			//Set resource
-			auto& uav = device->Get(std::get<WeakUnorderedAccessBufferHandle>(resource_barrier.resource));
-
 			if (resource_barrier.type == ResourceBarrierType::UnorderAccess)
 			{
+				//Set resource
+				auto& uav = device->Get(std::get<WeakUnorderedAccessBufferHandle>(resource_barrier.resource));
+
 				dx12_resource_barriers[i].Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
 				dx12_resource_barriers[i].UAV.pResource = uav.resource.Get();
 			}
 			else if (resource_barrier.type == ResourceBarrierType::Transition)
 			{
 				dx12_resource_barriers[i].Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-				dx12_resource_barriers[i].Transition.pResource = uav.resource.Get();
+
+				std::visit(
+					overloaded
+					{
+						[&](const WeakRenderTargetHandle& handle)
+						{
+							dx12_resource_barriers[i].Transition.pResource = device->Get(handle).resource.Get();
+						},
+						[&](const WeakUnorderedAccessBufferHandle& handle)
+						{
+							dx12_resource_barriers[i].Transition.pResource = device->Get(handle).resource.Get();
+						}
+					}, resource_barrier.resource);
+				
 
 				dx12_resource_barriers[i].Transition.StateBefore = Convert(resource_barrier.state_before);
 				dx12_resource_barriers[i].Transition.StateAfter = Convert(resource_barrier.state_after);	
