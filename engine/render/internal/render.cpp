@@ -348,12 +348,23 @@ namespace render
 		return (load_context.errors.size() == 0);
 	}
 
-	bool System::AddResource(const ResourceName& name, std::unique_ptr<Resource>& resource, ResourceSource source)
+	bool System::AddResource(const ResourceName& name, std::unique_ptr<Resource>& resource, ResourceSource source, const std::optional<display::TranstitionState>& current_access)
 	{
+		display::TranstitionState init_state;
+		if (current_access.has_value())
+		{
+			init_state = current_access.value();
+		}
+		else
+		{
+			//Use default for the resource type
+			init_state = resource->GetDefaultAccess();
+		}
+
 		auto& resource_it = m_resources_map[name];
 		if (!resource_it)
 		{
-			m_resources_map.Insert(name, std::make_unique<System::ResourceInfo>(resource, source, display::TranstitionState::Common));
+			m_resources_map.Insert(name, std::make_unique<System::ResourceInfo>(resource, source, init_state));
 			return true;
 		}
 		else
@@ -876,9 +887,9 @@ namespace render
 		system->m_modules.Insert(name, std::move(module));
 	}
 
-	bool AddGameResource(System * system, const ResourceName& name, std::unique_ptr<Resource>&& resource)
+	bool AddGameResource(System * system, const ResourceName& name, std::unique_ptr<Resource>&& resource, const std::optional<display::TranstitionState>& current_access)
 	{
-		return system->AddResource(name, resource, ResourceSource::Game);
+		return system->AddResource(name, resource, ResourceSource::Game, current_access);
 	}
 
 	bool RegisterResourceFactory(System * system, const RenderClassType& resource_type, std::unique_ptr<FactoryInterface<Resource>>& resource_factory)

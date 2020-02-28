@@ -98,6 +98,7 @@ namespace render
 		DECLARE_RENDER_CLASS("Texture");
 
 		void Load(LoadContext& load_context) override;
+		display::TranstitionState GetDefaultAccess() const override  { return display::TranstitionState::AllShaderResource; };
 	};
 
 	//Constant buffer resource
@@ -107,6 +108,7 @@ namespace render
 		DECLARE_RENDER_CLASS("ConstantBuffer");
 
 		void Load(LoadContext& load_context) override;
+		display::TranstitionState GetDefaultAccess() const override { return display::TranstitionState::VertexAndConstantBuffer; };
 	};
 
 	//Unordered access buffer resource
@@ -116,6 +118,7 @@ namespace render
 		DECLARE_RENDER_CLASS("UnorderedAccessBuffer");
 
 		void Load(LoadContext& load_context) override;
+		display::TranstitionState GetDefaultAccess() const override { return display::TranstitionState::AllShaderResource; };
 	};
 
 	//Shader Resource resource
@@ -125,6 +128,7 @@ namespace render
 		DECLARE_RENDER_CLASS("ShaderResource");
 
 		void Load(LoadContext& load_context) override;
+		display::TranstitionState GetDefaultAccess() const override { return display::TranstitionState::AllShaderResource; };
 	};
 
 	//Vertex buffer resource
@@ -134,6 +138,7 @@ namespace render
 		DECLARE_RENDER_CLASS("VertexBuffer");
 
 		void Load(LoadContext& load_context) override {};
+		display::TranstitionState GetDefaultAccess() const override { return display::TranstitionState::VertexAndConstantBuffer; };
 	};
 
 
@@ -158,6 +163,7 @@ namespace render
 		{
 			return DisplayHandleResource<display::RenderTargetHandle>::GetHandle();
 		}
+		display::TranstitionState GetDefaultAccess() const override { return display::TranstitionState::RenderTarget; };
 	};
 
 	//Depth buffer

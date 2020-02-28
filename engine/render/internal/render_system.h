@@ -175,7 +175,7 @@ namespace render
 		bool Load(LoadContext& load_context, const char* descriptor_file_buffer, size_t descriptor_file_buffer_size);
 
 		//Add Resource
-		bool AddResource(const ResourceName& name, std::unique_ptr<Resource>& resource, ResourceSource source);
+		bool AddResource(const ResourceName& name, std::unique_ptr<Resource>& resource, ResourceSource source, const std::optional<display::TranstitionState>& current_access = {});
 
 		//Load resource
 		ResourceName LoadResource(LoadContext& load_context, const char* prefix = nullptr);

@@ -10,7 +10,7 @@
 #include <memory>
 #include <unordered_map>
 #include <variant>
-#include <display/display_handle.h>
+#include <display/display.h>
 
 namespace display
 {
@@ -91,6 +91,9 @@ namespace render
 		//Fast access to the resource internal handle
 		using DisplayHandle = std::variant<std::monostate, display::WeakRenderTargetHandle, display::WeakUnorderedAccessBufferHandle>;
 		virtual DisplayHandle GetDisplayHandle() { return std::monostate{}; };
+
+		//Default access for this type of resource
+		virtual display::TranstitionState GetDefaultAccess() const { return display::TranstitionState::Common; };
 	};
 
 	//Base Pass class
