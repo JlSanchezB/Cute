@@ -267,28 +267,9 @@ namespace display
 		std::array<Descritor, kNumMaxDescriptors> descriptors;
 		size_t num_descriptors = 0;
 
-		void AddDescriptor(const WeakConstantBufferHandle& constant_buffer)
+		void AddDescriptor(const Descritor& descriptor)
 		{
-			descriptors[num_descriptors] = constant_buffer;
-			num_descriptors++;
-		}
-
-		void AddDescriptor(const WeakUnorderedAccessBufferHandle& unordered_access_buffer)
-		{
-			descriptors[num_descriptors] = unordered_access_buffer;
-			num_descriptors++;
-		}
-
-		void AddDescriptor(const WeakShaderResourceHandle& shader_resource)
-		{
-			descriptors[num_descriptors] = shader_resource;
-			num_descriptors++;
-		}
-
-		void AddDescriptor(const WeakRenderTargetHandle& render_target)
-		{
-			descriptors[num_descriptors] = render_target;
-			num_descriptors++;
+			descriptors[num_descriptors++] = descriptor;
 		}
 	};
 

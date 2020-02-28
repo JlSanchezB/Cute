@@ -77,7 +77,7 @@
   </Pass>
   <Pass name="Main">
     <Dependencies>
-      <Resource name="RenderTarget" pre_condition_state="Ready" access="PixelShaderResource"/>
+      <Resource name="RenderTarget" pre_condition_state="Ready" access="AllShaderResource"/>
     </Dependencies>
     <Commands>
 	    <SetRenderTarget>
@@ -131,7 +131,7 @@
         </Resource>
       </SetPipelineState>
       <SetDescriptorTable pipe="Graphics" root_param="0">
-        <Descriptor>SampleTexture</Descriptor>
+        <Descriptor>RenderTarget</Descriptor>
         <Descriptor>GameGlobal</Descriptor>
       </SetDescriptorTable>
       <DrawFullScreenQuad/>

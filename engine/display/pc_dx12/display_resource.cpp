@@ -676,7 +676,7 @@ namespace display
 							[&](WeakRenderTargetHandle render_target)
 							{
 								device->m_native_device->CopyDescriptorsSimple(1, device->m_descriptor_table_pool.GetDescriptor(handle_it, i),
-								device->m_render_target_pool.GetDescriptor(render_target), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+								device->m_render_target_pool.GetDescriptor(render_target, 1), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 							}
 						},
 					descriptor_table_item);
