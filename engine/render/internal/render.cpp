@@ -652,6 +652,10 @@ namespace render
 			{
 				size_t num_render_passes_left = render_passes_to_process.size();
 
+				//Deferred update states
+				//All actived passes will add here all the state updates, so all are accumulated until no more passes can be activated
+				std::vector<ResourceStateSync> deferred_update_states;
+
 				//Check if any pass is able to run
 				for (auto& pass_index : render_passes_to_process)
 				{
@@ -676,14 +680,17 @@ namespace render
 						render_passes_sorted.push_back(pass_index);
 						render_passes_to_process.erase(render_passes_to_process.begin() + pass_index);
 
-						//Update all new states
+						//Add update states to the deferred list
 						auto& update_states = render_pass_contexts[pass_index]->GetContextRootPass()->GetPostUpdateCondition();
-						for (auto& update_state : update_states)
-						{
-							update_state.resource.Get(this)->state = update_state.state;
-						}
-					}
 
+						deferred_update_states.insert(deferred_update_states.end(), update_states.begin(), update_states.end());
+					}
+				}
+
+				//Update all deferred states
+				for (auto& update_state : deferred_update_states)
+				{
+					update_state.resource.Get(this)->state = update_state.state;
 				}
 
 				if (num_render_passes_left == render_passes_to_process.size())

@@ -11,33 +11,35 @@
 
 namespace render
 {
+	//A resource state, used for updates or preconditions
+	struct ResourceStateSync
+	{
+		System::ResourceInfoReference resource;
+		ResourceState state;
+
+		ResourceStateSync(ResourceName _resource, ResourceState _state) :
+			resource(_resource), state(_state)
+		{
+		}
+	};
+
+	//Resource barrier description
+	struct ResourceBarrier
+	{
+		System::ResourceInfoReference resource;
+		display::TranstitionState access;
+
+		ResourceBarrier(ResourceName _resource, display::TranstitionState _access) :
+			resource(_resource), access(_access)
+		{
+		}
+	};
+
 	//Context pass, list of commands to send to the GPU, it will use it own command list
 	class ContextPass : public Pass
 	{
 		display::CommandListHandle m_command_list_handle;
 		std::vector<std::unique_ptr<Pass>> m_passes;
-
-		struct ResourceStateSync
-		{
-			System::ResourceInfoReference resource;
-			ResourceState state;
-
-			ResourceStateSync(ResourceName _resource, ResourceState _state) :
-				resource(_resource), state(_state)
-			{
-			}
-		};
-
-		struct ResourceBarrier
-		{
-			System::ResourceInfoReference resource;
-			display::TranstitionState access;
-
-			ResourceBarrier(ResourceName _resource, display::TranstitionState _access) :
-				resource(_resource), access(_access)
-			{
-			}
-		};
 
 		//Conditions for the pass to run
 		std::vector<ResourceStateSync> m_pre_resource_conditions;
