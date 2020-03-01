@@ -30,18 +30,6 @@ public:
 	//Game constant buffer
 	display::ConstantBufferHandle m_game_constant_buffer;
 
-	//Last valid descriptor file
-	std::vector<uint8_t> m_render_system_descriptor_buffer;
-
-	//Buffer used for the render passes text editor
-	std::array<char, 1024 * 128> m_text_buffer = {0};
-
-	//Display imgui edit descriptor file
-	bool m_show_edit_descriptor_file = false;
-
-	//Reload render passes file from the text editor
-	bool m_render_system_descriptor_load_requested = false;
-
 	//Show errors in imguid modal window
 	bool m_show_errors = false;
 	std::vector<std::string> m_render_system_errors;
@@ -140,34 +128,14 @@ public:
 		//Add menu for modifying the render system descriptor file
 		if (ImGui::BeginMenu("RenderSystem"))
 		{
-			m_show_edit_descriptor_file = ImGui::MenuItem("Edit descriptor file");
+			m_render_passes_loader.GetShowEditDescriptorFile() = ImGui::MenuItem("Edit descriptor file");
 			ImGui::EndMenu();
 		}
 	}
 
 	void OnImguiRender() override
 	{
-		if (m_show_edit_descriptor_file)
-		{
-			if (!ImGui::Begin("Render System Descriptor File", &m_show_edit_descriptor_file))
-			{
-				ImGui::End();
-				return;
-			}
-
-			ImGui::InputTextMultiline("file", m_text_buffer.data(), m_text_buffer.size(), ImVec2(-1.0f, ImGui::GetTextLineHeight() * 32), ImGuiInputTextFlags_AllowTabInput);
-			if (ImGui::Button("Reset"))
-			{
-				memcpy(m_text_buffer.data(), m_render_system_descriptor_buffer.data(), m_render_system_descriptor_buffer.size());
-			}
-			if (ImGui::Button("Load"))
-			{
-				//Request a load from the text buffer 
-				m_render_system_descriptor_load_requested = true;
-			}
-
-			ImGui::End();
-		}
+		m_render_passes_loader.RenderImgui();
 
 		if (m_show_errors)
 		{
