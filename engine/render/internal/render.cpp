@@ -553,6 +553,9 @@ namespace render
 		//Get render frame
 		Frame& render_frame = m_frame_data;
 
+		//Vector of all command list to be executed at the end of the render
+		std::vector<display::WeakCommandListHandle> command_list_to_execute;
+
 		//Execute begin commands in the render_frame
 		{
 			PROFILE_SCOPE("Render", "ExecuteBeginCommands", kRenderProfileColour);
@@ -569,7 +572,8 @@ namespace render
 			});
 
 			display::CloseCommandList(m_device, render_context);
-			display::ExecuteCommandList(m_device, m_render_command_list);
+			
+			command_list_to_execute.push_back(m_render_command_list);
 		}
 
 		//Sort all render items for each point of view, it can run in parallel
@@ -786,13 +790,16 @@ namespace render
 
 					//Capture pass
 					render_context->GetContextRootPass()->RootContextRender(*render_context, resource_barriers_to_execute);
-				}
-				{
-					PROFILE_SCOPE("Render", "RenderPass", kRenderProfileColour);
-					//Execute pass
-					render_context->GetContextRootPass()->Execute(*render_context);
+
+					//Add to execute
+					command_list_to_execute.push_back(render_context->GetContextRootPass()->GetCommandList());
 				}
 			}
+		}
+
+		if (command_list_to_execute.size() > 0)
+		{
+			display::ExecuteCommandLists(m_device, command_list_to_execute);
 		}
 
 		for (auto& [key, module] : m_modules)

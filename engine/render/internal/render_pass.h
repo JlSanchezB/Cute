@@ -74,6 +74,11 @@ namespace render
 			return m_resource_barriers;
 		}
 
+		display::WeakCommandListHandle GetCommandList() const
+		{
+			return m_command_list_handle;
+		}
+
 		//The context pass need to be called passing the resource barriers, the normal render is not used
 		void RootContextRender(RenderContext& render_context, const std::vector<display::ResourceBarrier>& resource_barriers) const;
 	};
