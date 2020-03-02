@@ -380,6 +380,8 @@ namespace render
 
 		//Create render target
 		Init(display::CreateRenderTarget(load_context.device, render_target_desc, load_context.name));
+		m_width = width;
+		m_heigth = height;
 	}
 
 	void DepthBufferResource::Load(LoadContext & load_context)

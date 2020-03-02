@@ -45,8 +45,6 @@ namespace render
 	//Information needed for each render pass
 	struct PassInfo
 	{
-		uint32_t width;
-		uint32_t height;
 	};
 
 	//System

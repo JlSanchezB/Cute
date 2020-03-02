@@ -531,7 +531,7 @@ public:
 
 		//Add game resources
 		render::AddGameResource(m_render_system, "GameGlobal"_sh32, CreateResourceFromHandle<render::ConstantBufferResource>(display::WeakConstantBufferHandle(m_game_constant_buffer)));
-		render::AddGameResource(m_render_system, "BackBuffer"_sh32, CreateResourceFromHandle<render::RenderTargetResource>(display::GetBackBuffer(m_device)));
+		render::AddGameResource(m_render_system, "BackBuffer"_sh32, CreateResourceFromHandle<render::RenderTargetResource>(display::GetBackBuffer(m_device), m_width, m_height));
 		render::AddGameResource(m_render_system, "GameRootSignature"_sh32, CreateResourceFromHandle<render::RootSignatureResource>(display::WeakRootSignatureHandle(m_display_resources.m_root_signature)));
 		render::AddGameResource(m_render_system, "ZoomPosition"_sh32, CreateResourceFromHandle<render::ConstantBufferResource>(display::WeakConstantBufferHandle(m_display_resources.m_zoom_position)));
 
@@ -1427,8 +1427,6 @@ public:
 			const auto& zone_bitset = GridZone::CalculateInfluence(borders.left, borders.top, borders.right, borders.bottom);
 
 			render::PassInfo pass_info;
-			pass_info.width = m_width;
-			pass_info.height = m_height;
 
 			//Add render pass
 			render_frame.AddRenderPass("Main"_sh32, 0, pass_info, "Main"_sh32, 0);
@@ -1504,6 +1502,11 @@ public:
 	{
 		m_width = width;
 		m_height = height;
+
+		if (m_render_system)
+		{
+			render::GetResource<render::RenderTargetResource>(m_render_system, "BackBuffer"_sh32)->UpdateInfo(width, height);
+		}
 	}
 
 	void OnAddImguiMenu() override

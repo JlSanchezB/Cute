@@ -154,8 +154,20 @@ namespace render
 	//Render target resource
 	class RenderTargetResource : public DisplayHandleResource<display::RenderTargetHandle>
 	{
+		uint32_t m_width = 0;
+		uint32_t m_heigth = 0;
+
 	public:
 		DECLARE_RENDER_CLASS("RenderTarget");
+
+		RenderTargetResource()
+		{
+		}
+		RenderTargetResource(uint32_t width, uint32_t heigth) :
+			m_width(width),
+			m_heigth(heigth)
+		{
+		}
 
 		void Load(LoadContext& load_context) override;
 
@@ -164,6 +176,18 @@ namespace render
 			return DisplayHandleResource<display::RenderTargetHandle>::GetHandle();
 		}
 		display::TranstitionState GetDefaultAccess() const override { return display::TranstitionState::RenderTarget; };
+
+		void UpdateInfo(uint32_t width, uint32_t heigth)
+		{
+			m_width = width;
+			m_heigth = heigth;
+		}
+
+		void GetInfo(uint32_t& width, uint32_t& heigth) const
+		{
+			width = m_width;
+			heigth = m_heigth;
+		}
 	};
 
 	//Depth buffer

@@ -192,19 +192,24 @@ namespace render
 				render_targets[i] = render_target->GetHandle();
 			}
 		}
-		PassInfo pass_info = render_context.GetPassInfo();
+
+		//Extract resolution
+		RenderTargetResource* render_target_0 = m_render_target[0].Get(render_context);
+		uint32_t width = 0;
+		uint32_t height = 0;
+		render_target_0->GetInfo(width, height);
 
 		render_context.GetContext()->SetRenderTargets(m_num_render_targets, render_targets.data(), display::WeakDepthBufferHandle());
-
+		
 		//Set Viewport and Scissors
 		//Set viewport
-		display::Viewport viewport(static_cast<float>(pass_info.width), static_cast<float>(pass_info.height));
+		display::Viewport viewport(static_cast<float>(width), static_cast<float>(height));
 		viewport.top_left_x = 0;
 		viewport.top_left_y = 0;
 		render_context.GetContext()->SetViewport(viewport);
 
 		//Set Scissor Rect
-		render_context.GetContext()->SetScissorRect(display::Rect(0, 0, pass_info.width, pass_info.height));
+		render_context.GetContext()->SetScissorRect(display::Rect(0, 0, width, height));
 	}
 	void ClearRenderTargetPass::Load(LoadContext & load_context)
 	{

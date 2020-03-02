@@ -13,10 +13,10 @@ namespace
 
 		load_context.errors.push_back(buffer);
 	}
-	template<typename RESOURCE, typename HANDLE>
-	inline std::unique_ptr<render::Resource> CreateResourceFromHandle(HANDLE&& handle)
+	template<typename RESOURCE, typename HANDLE, typename ...ARGS>
+	inline std::unique_ptr<render::Resource> CreateResourceFromHandle(HANDLE&& handle, ARGS&& ...args)
 	{
-		std::unique_ptr<RESOURCE> resource_unique = std::make_unique<RESOURCE>();
+		std::unique_ptr<RESOURCE> resource_unique = std::make_unique<RESOURCE>(std::forward<ARGS>(args)...);
 		resource_unique->Init(handle);
 		return resource_unique;
 	}

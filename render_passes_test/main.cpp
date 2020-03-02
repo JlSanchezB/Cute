@@ -65,7 +65,7 @@ public:
 		m_render_pass_system = render::CreateRenderSystem(m_device, nullptr, this);
 
 		render::AddGameResource(m_render_pass_system, "GameGlobal"_sh32, CreateResourceFromHandle<render::ConstantBufferResource>(display::WeakConstantBufferHandle(m_game_constant_buffer)));
-		render::AddGameResource(m_render_pass_system, "BackBuffer"_sh32, CreateResourceFromHandle<render::RenderTargetResource>(display::GetBackBuffer(m_device)));
+		render::AddGameResource(m_render_pass_system, "BackBuffer"_sh32, CreateResourceFromHandle<render::RenderTargetResource>(display::GetBackBuffer(m_device), m_width, m_height));
 
 		//Load render passes descriptor
 		m_render_passes_loader.Load("render_pass_sample.xml", m_render_pass_system, m_device);
@@ -103,15 +103,10 @@ public:
 		display::UpdateResourceBuffer(m_device, m_game_constant_buffer, &game_constant_buffer, sizeof(game_constant_buffer));
 
 		render::PassInfo pass_info;
-		pass_info.width = m_width;
-		pass_info.height = m_height;
 
 		auto& render_frame = render::GetGameRenderFrame(m_render_pass_system);
 
 		render_frame.AddRenderPass("Main"_sh32, 0, pass_info);
-
-		pass_info.width = 512;
-		pass_info.height = 512;
 		render_frame.AddRenderPass("RenderToRenderTarget"_sh32, 0, pass_info);
 
 		render::EndPrepareRenderAndSubmit(m_render_pass_system);
@@ -121,6 +116,11 @@ public:
 	{
 		m_width = width;
 		m_height = height;
+
+		if (m_render_pass_system)
+		{
+			render::GetResource<render::RenderTargetResource>(m_render_pass_system, "BackBuffer"_sh32)->UpdateInfo(width, height);
+		}
 	}
 
 	void OnAddImguiMenu() override
