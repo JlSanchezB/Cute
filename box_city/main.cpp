@@ -240,6 +240,8 @@ public:
 		//Register custom passes for box city renderer
 		render::RegisterPassFactory<DrawCityBoxItemsPass>(m_render_system);
 
+		render::AddGameResource(m_render_system, "BackBuffer"_sh32, CreateResourceFromHandle<render::RenderTargetResource>(display::GetBackBuffer(m_device), m_width, m_height));
+
 		m_render_passes_loader.Load("box_city_render_passes.xml", m_render_system, m_device);
 
 		//Create ecs database
@@ -302,6 +304,11 @@ public:
 	{
 		m_width = width;
 		m_height = height;
+
+		if (m_render_system)
+		{
+			render::GetResource<render::RenderTargetResource>(m_render_system, "BackBuffer"_sh32)->UpdateInfo(width, height);
+		}
 	}
 
 	void OnAddImguiMenu() override
