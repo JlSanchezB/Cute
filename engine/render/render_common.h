@@ -100,7 +100,7 @@ namespace render
 	public:
 		virtual ~Pass() {};
 		//Load from XML node and returns the Resource
-		virtual void Load(LoadContext& load_context) = 0;
+		virtual void Load(LoadContext& load_context) {};
 		//Destroy device handles
 		virtual void Destroy(display::Device* device) {};
 
@@ -108,7 +108,7 @@ namespace render
 		virtual void InitPass(RenderContext& render_context, display::Device* device, ErrorContext& errors) {};
 
 		//Render the pass, capture all command list
-		virtual void Render(RenderContext& render_context) const {};
+		virtual void Render(RenderContext& render_context) const = 0;
 
 		//Execute all command list
 		virtual void Execute(RenderContext& render_context) const {};

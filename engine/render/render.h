@@ -68,6 +68,9 @@ namespace render
 		//Get display device
 		display::Device* GetDevice() const;
 
+		//Get render system
+		render::System* GetRenderSystem() const;
+
 		//Get display Context
 		display::Context* GetContext() const;
 

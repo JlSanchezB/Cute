@@ -101,6 +101,9 @@ namespace render
 
 			//Create
 			m_copy_data_compute_pipeline_state = display::CreateComputePipelineState(device, pipeline_state_desc, "Copy Data Compute");
+
+			//Register pass
+			render::RegisterPassFactory<SyncStaticGPUMemoryPass>(system);
 		}
 	}
 
@@ -218,5 +221,14 @@ namespace render
 			//Resource barrier to shader resource
 			display_context->AddResourceBarriers({ display::ResourceBarrier(m_static_gpu_memory_buffer, display::TranstitionState::UnorderedAccess, display::TranstitionState::AllShaderResource) });
 		}
+	}
+	void SyncStaticGPUMemoryPass::Render(RenderContext& render_context) const
+	{
+		if (m_gpu_memory_render_module == nullptr)
+		{
+			m_gpu_memory_render_module = render::GetModule<GPUMemoryRenderModule>(render_context.GetRenderSystem(), "GPUMemory"_sh32);
+		}
+
+		m_gpu_memory_render_module->ExecuteGPUCopy(render::GetRenderFrameIndex(render_context.GetRenderSystem()), render_context.GetContext());
 	}
 }

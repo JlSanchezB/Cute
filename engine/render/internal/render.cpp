@@ -83,6 +83,12 @@ namespace render
 		return render_context->m_display_device;
 	}
 
+	render::System* RenderContext::GetRenderSystem() const
+	{
+		auto render_context = reinterpret_cast<const RenderContextInternal*>(this);
+		return render_context->m_render_pass_system;
+	}
+
 	display::Context * RenderContext::GetContext() const
 	{
 		auto render_context = reinterpret_cast<const RenderContextInternal*>(this);

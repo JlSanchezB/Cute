@@ -75,6 +75,8 @@ namespace render
 		//Capture all copies for this frame and execute the command list
 		void ExecuteGPUCopy(uint64_t frame_index, display::Context* display_context);
 
+		friend class SyncStaticGPUMemoryPass;
+
 	public:
 		struct GPUMemoryDesc
 		{
@@ -106,6 +108,15 @@ namespace render
 
 		//Get dynamic gpu memory resource
 		display::WeakShaderResourceHandle GetDynamicGPUMemoryResource();
+	};
+
+	class SyncStaticGPUMemoryPass : public Pass
+	{
+		mutable GPUMemoryRenderModule* m_gpu_memory_render_module = nullptr;
+	public:
+		DECLARE_RENDER_CLASS("SyncStaticGPUMemoryPass");
+	
+		void Render(RenderContext& render_context) const override;
 	};
 }
 
