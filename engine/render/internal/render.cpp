@@ -743,7 +743,7 @@ namespace render
 					{
 						//Point of view was not found, as the render pass is removed I expect the graph to fail to be build
 						core::LogWarning("Render pass <%s><%i> can not find associated point of view <%s><%i>, render pass removed",
-							render_pass.pass_name, render_pass.id,
+							render_pass.pass_name.GetValue(), render_pass.id,
 							render_pass.associated_point_of_view_name, render_pass.associated_point_of_view_id);
 
 						continue;

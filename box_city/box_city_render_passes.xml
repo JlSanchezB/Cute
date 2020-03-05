@@ -2,15 +2,23 @@
 <Global>
 </Global>
 <Passes>
+  <Pass name="SyncStaticGPUMemory">
+    <Dependencies>
+      <Resource name="StaticGPUMemoryBuffer" pre_condition_state="Init" post_update_state="Ready" access="UnorderedAccess"/>
+    </Dependencies>
+    <Commands>
+      <SyncStaticGPUMemoryPass/>
+    </Commands>
+  </Pass>
   <Pass name="Main">
+    <Dependencies>
+      <Resource name="StaticGPUMemoryBuffer" pre_condition_state="Ready" access="AllShaderResource"/>
+    </Dependencies>
     <Commands>
       <SetRenderTarget>
 		    <RenderTarget>BackBuffer</RenderTarget>
 	    </SetRenderTarget>
 	    <ClearRenderTarget colour="0,0,0,0">BackBuffer</ClearRenderTarget>
-      <SetRootSignature>GameRootSignature</SetRootSignature>
-      <SetRootConstantBuffer root_param="0">ZoomPosition</SetRootConstantBuffer>
-      <DrawRenderItems priority="Solid"/>
     </Commands>
   </Pass>
 </Passes>

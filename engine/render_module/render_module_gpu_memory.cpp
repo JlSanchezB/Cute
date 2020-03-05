@@ -1,5 +1,7 @@
 #include "render_module_gpu_memory.h"
 #include "display/display.h"
+#include "render/render_resource.h"
+#include "render/render_helper.h"
 
 namespace render
 {
@@ -102,6 +104,11 @@ namespace render
 			//Create
 			m_copy_data_compute_pipeline_state = display::CreateComputePipelineState(device, pipeline_state_desc, "Copy Data Compute");
 
+			//Register resources
+			AddGameResource(system, "StaticGPUMemoryBuffer"_sh32, CreateResourceFromHandle<render::UnorderedAccessBufferResource>(display::WeakUnorderedAccessBufferHandle(m_static_gpu_memory_buffer)));
+			AddGameResource(system, "DynamicGPUMemoryBuffer"_sh32, CreateResourceFromHandle<render::ShaderResourceResource>(display::WeakShaderResourceHandle(m_dynamic_gpu_memory_buffer)));
+
+
 			//Register pass
 			render::RegisterPassFactory<SyncStaticGPUMemoryPass>(system);
 		}
@@ -183,7 +190,7 @@ namespace render
 	{
 		std::vector<CopyDataCommand> copy_commands;
 
-		m_copy_data_commands[frame_index].Visit([&](std::vector<CopyDataCommand>& data)
+		m_copy_data_commands[frame_index % kMaxFrames].Visit([&](std::vector<CopyDataCommand>& data)
 			{
 				copy_commands.insert(copy_commands.end(), data.begin(), data.end());
 			});
@@ -213,13 +220,8 @@ namespace render
 				gpu_data++;
 			}
 
-			//Resource barrier to writable uav
-			display_context->AddResourceBarriers({ display::ResourceBarrier(m_static_gpu_memory_buffer, display::TranstitionState::AllShaderResource, display::TranstitionState::UnorderedAccess) });
-
 			//Execute copy
 
-			//Resource barrier to shader resource
-			display_context->AddResourceBarriers({ display::ResourceBarrier(m_static_gpu_memory_buffer, display::TranstitionState::UnorderedAccess, display::TranstitionState::AllShaderResource) });
 		}
 	}
 	void SyncStaticGPUMemoryPass::Render(RenderContext& render_context) const

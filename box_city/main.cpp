@@ -237,6 +237,11 @@ public:
 		render::SystemDesc render_system_desc;
 		m_render_system = render::CreateRenderSystem(m_device, m_job_system, this, render_system_desc);
 
+		//Register gpu memory render module
+		render::GPUMemoryRenderModule::GPUMemoryDesc gpu_memory_desc;
+
+		m_GPU_memory_render_module = render::RegisterModule<render::GPUMemoryRenderModule>(m_render_system, "GPUMemory"_sh32, gpu_memory_desc);
+
 		//Register custom passes for box city renderer
 		render::RegisterPassFactory<DrawCityBoxItemsPass>(m_render_system);
 
@@ -298,6 +303,22 @@ public:
 	{
 		//UPDATE GAME
 		
+		render::BeginPrepareRender(m_render_system);
+			
+		//Check if the render passes loader needs to load
+		m_render_passes_loader.Update();
+			
+		render::PassInfo pass_info;
+
+		render::Frame& render_frame = render::GetGameRenderFrame(m_render_system);
+
+		//Add render passes
+		render_frame.AddRenderPass("Main"_sh32, 0, pass_info);
+		render_frame.AddRenderPass("SyncStaticGPUMemory"_sh32, 0, pass_info);
+
+			
+		//Render
+		render::EndPrepareRenderAndSubmit(m_render_system);
 	}
 
 	void OnSizeChange(uint32_t width, uint32_t height, bool minimized) override

@@ -36,6 +36,9 @@ namespace render
 		{
 			m_resource_size = resource_size;
 
+			//Add free block
+			m_free_blocks_pool.emplace_back(FreeListAllocation{ 0, m_resource_size });
+
 			//Init the handle pool
 			m_handle_pool.Init(10000, 100);
 		}
@@ -113,7 +116,7 @@ namespace render
 
 	inline AllocHandle FreeListAllocator::Alloc(size_t size)
 	{
-		assert(size == 0);
+		assert(size > 0);
 		assert(size < m_resource_size);
 
 		//Always align the size to 16

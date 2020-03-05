@@ -27,6 +27,7 @@ namespace
 			{"Common", display::TranstitionState::Common},
 			{"VertexAndConstantBuffer", display::TranstitionState::VertexAndConstantBuffer},
 			{"RenderTarget", display::TranstitionState::RenderTarget},
+			{"UnorderedAccess", display::TranstitionState::UnorderedAccess},
 			{"PixelShaderResource", display::TranstitionState::PixelShaderResource},
 			{"NonPixelShaderResource", display::TranstitionState::NonPixelShaderResource},
 			{"AllShaderResource", display::TranstitionState::AllShaderResource}
@@ -45,7 +46,10 @@ namespace render
 
 		for (auto& item : m_passes)
 		{
-			item->Destroy(device);
+			if (item)
+			{
+				item->Destroy(device);
+			}
 		}
 	}
 	void ContextPass::Load(LoadContext & load_context)
