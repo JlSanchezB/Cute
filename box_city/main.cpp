@@ -302,6 +302,17 @@ public:
 	void OnTick(double total_time, float elapsed_time) override
 	{
 		//UPDATE GAME
+
+		//Update all positions for testing the static gpu memory
+		ecs::Process<GameDatabase, const Box, const BoxRender>([&](const auto& instance_iterator, const Box& box, const BoxRender& box_render)
+		{
+				GPUBoxInstance gpu_box_instance;
+				gpu_box_instance.local_matrix = box.local_matrix;
+				gpu_box_instance.dimensions = glm::vec4(box.dimensions, 0.f);
+
+				//Allocate the GPU memory
+				m_GPU_memory_render_module->UpdateStaticGPUMemory(m_device, box_render.gpu_memory, &gpu_box_instance, sizeof(GPUBoxInstance), render::GetGameFrameIndex(m_render_system));
+		}, std::bitset<1>(true));
 		
 		render::BeginPrepareRender(m_render_system);
 			

@@ -222,6 +222,28 @@ namespace render
 
 			//Execute copy
 
+			//Set root signature
+			display_context->SetRootSignature(display::Pipe::Compute, m_copy_data_compute_root_signature);
+
+			//Set parameters
+			uint32_t parameters[2];
+			//Source offset
+			parameters[0] = static_cast<uint32_t>(offset);
+			//Number of copies
+			parameters[1] = static_cast<uint32_t>(copy_commands.size());
+
+			display_context->SetUnorderedAccessBuffer(display::Pipe::Compute, 0, m_static_gpu_memory_buffer);
+			display_context->SetShaderResource(display::Pipe::Compute, 1, m_dynamic_gpu_memory_buffer);
+			display_context->SetConstants(display::Pipe::Compute, 2, parameters, 2);
+
+			//Set pipeline
+			display_context->SetPipelineState(m_copy_data_compute_pipeline_state);
+
+			//Execute
+			display::ExecuteComputeDesc desc;
+			desc.group_count_y = desc.group_count_z = 0;
+			desc.group_count_x = static_cast<uint32_t>(((copy_commands.size() - 1) / 64) + 1);
+			display_context->ExecuteCompute(desc);
 		}
 	}
 	void SyncStaticGPUMemoryPass::Render(RenderContext& render_context) const

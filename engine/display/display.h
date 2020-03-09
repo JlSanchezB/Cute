@@ -204,7 +204,7 @@ namespace display
 		void RenderTargetTransition(uint8_t num_targets, WeakRenderTargetHandle* render_target_array, const ResourceState& dest_state);
 
 		//Set constants
-		void SetConstants(const Pipe& pipe, uint8_t root_parameter, const void* data, size_t size);
+		void SetConstants(const Pipe& pipe, uint8_t root_parameter, const void* data, size_t num_constants);
 
 		//Set constant buffer
 		void SetConstantBuffer(const Pipe& pipe, uint8_t root_parameter, const WeakConstantBufferHandle& constant_buffer);
