@@ -823,7 +823,7 @@ namespace display
 		if (FAILED(device->m_native_device->CreateComputePipelineState(&DX12_pipeline_state_desc, IID_PPV_ARGS(&device->Get(handle)))))
 		{
 			device->m_pipeline_state_pool.Free(handle);
-			SetLastErrorMessage(device, "Error creating compute pipeline state <%>", name);
+			SetLastErrorMessage(device, "Error creating compute pipeline state <%s>", name);
 			return PipelineStateHandle();
 		}
 
