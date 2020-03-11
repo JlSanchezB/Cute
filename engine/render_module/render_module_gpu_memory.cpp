@@ -193,6 +193,8 @@ namespace render
 		m_copy_data_commands[frame_index % kMaxFrames].Visit([&](std::vector<CopyDataCommand>& data)
 			{
 				copy_commands.insert(copy_commands.end(), data.begin(), data.end());
+
+				data.clear();
 			});
 
 		if (copy_commands.size() > 0)
@@ -206,15 +208,16 @@ namespace render
 
 			//Send all the the data commands to the GPU, format int4
 			size_t offset = m_dynamic_gpu_memory_allocator.Alloc(copy_commands.size() * sizeof(uint32_t) * 4, frame_index);
-			uint32_t* gpu_data = reinterpret_cast<uint32_t*>(display::GetResourceMemoryBuffer(display_context->GetDevice(), m_dynamic_gpu_memory_buffer)) + offset;
+			uint32_t* gpu_data = reinterpret_cast<uint32_t*>(reinterpret_cast<uint8_t*>(display::GetResourceMemoryBuffer(display_context->GetDevice(), m_dynamic_gpu_memory_buffer)) + offset);
 
+			//Send it to the GPU, move from bytes to int4
 			for (auto& copy_command : copy_commands)
 			{
-				*gpu_data = copy_command.source_offset;
+				*gpu_data = copy_command.source_offset / 16;
 				gpu_data++;
-				*gpu_data = copy_command.dest_offset;
+				*gpu_data = copy_command.dest_offset / 16;
 				gpu_data++;
-				*gpu_data = copy_command.size;
+				*gpu_data = copy_command.size / 16;
 				gpu_data++;
 				//Add padding for int4
 				gpu_data++;
@@ -228,7 +231,7 @@ namespace render
 			//Set parameters
 			uint32_t parameters[2];
 			//Source offset
-			parameters[0] = static_cast<uint32_t>(offset);
+			parameters[0] = static_cast<uint32_t>(offset / 16);
 			//Number of copies
 			parameters[1] = static_cast<uint32_t>(copy_commands.size());
 
@@ -241,7 +244,7 @@ namespace render
 
 			//Execute
 			display::ExecuteComputeDesc desc;
-			desc.group_count_y = desc.group_count_z = 0;
+			desc.group_count_y = desc.group_count_z = 1;
 			desc.group_count_x = static_cast<uint32_t>(((copy_commands.size() - 1) / 64) + 1);
 			display_context->ExecuteCompute(desc);
 		}

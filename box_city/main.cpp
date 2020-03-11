@@ -239,6 +239,8 @@ public:
 
 		//Register gpu memory render module
 		render::GPUMemoryRenderModule::GPUMemoryDesc gpu_memory_desc;
+		//gpu_memory_desc.dynamic_gpu_memory_size = 512 * 1024;
+		//gpu_memory_desc.dynamic_gpu_memory_segment_size = 32 * 1024;
 
 		m_GPU_memory_render_module = render::RegisterModule<render::GPUMemoryRenderModule>(m_render_system, "GPUMemory"_sh32, gpu_memory_desc);
 
@@ -303,6 +305,9 @@ public:
 	{
 		//UPDATE GAME
 
+
+		render::BeginPrepareRender(m_render_system);
+
 		//Update all positions for testing the static gpu memory
 		ecs::Process<GameDatabase, const Box, const BoxRender>([&](const auto& instance_iterator, const Box& box, const BoxRender& box_render)
 		{
@@ -313,8 +318,6 @@ public:
 				//Allocate the GPU memory
 				m_GPU_memory_render_module->UpdateStaticGPUMemory(m_device, box_render.gpu_memory, &gpu_box_instance, sizeof(GPUBoxInstance), render::GetGameFrameIndex(m_render_system));
 		}, std::bitset<1>(true));
-		
-		render::BeginPrepareRender(m_render_system);
 			
 		//Check if the render passes loader needs to load
 		m_render_passes_loader.Update();
@@ -326,10 +329,15 @@ public:
 		//Add render passes
 		render_frame.AddRenderPass("Main"_sh32, 0, pass_info);
 		render_frame.AddRenderPass("SyncStaticGPUMemory"_sh32, 0, pass_info);
-
 			
 		//Render
 		render::EndPrepareRenderAndSubmit(m_render_system);
+
+		{
+			PROFILE_SCOPE("ECSTest", "DatabaseTick", 0xFFFF77FF);
+			//Tick database
+			ecs::Tick<GameDatabase>();
+		}
 	}
 
 	void OnSizeChange(uint32_t width, uint32_t height, bool minimized) override
