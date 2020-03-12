@@ -99,13 +99,15 @@ struct AABoundingBox
 
 struct Box
 {
+	//Random id 
+	uint32_t id;
 	//Local matrix, center of the city
 	glm::mat4x4 local_matrix;
 	//Dimensions -X to X, -Y to Y, -Z to Z
 	glm::vec3 dimensions;
 
-	Box(const glm::mat4x4& _local_matrix, const glm::vec3& _dimensions):
-		local_matrix(_local_matrix), dimensions(_dimensions)
+	Box(const uint32_t _id, const glm::mat4x4& _local_matrix, const glm::vec3& _dimensions):
+		id(_id), local_matrix(_local_matrix), dimensions(_dimensions)
 	{
 	}
 };
@@ -260,8 +262,10 @@ public:
 		//Create boxes
 		for (size_t i = 0; i < 100; ++i)
 		{
+			uint32_t id = m_random_generator();
+			float position_z = static_cast<float>(id - m_random_generator.min()) / static_cast<float>(m_random_generator.max() - m_random_generator.min());
 			glm::mat4x4 local_matrix;
-			glm::translate(local_matrix, glm::vec3(m_random_position_x(m_random_generator), m_random_position_y(m_random_generator), m_random_position_z(m_random_generator)));
+			glm::translate(local_matrix, glm::vec3(m_random_position_x(m_random_generator), m_random_position_y(m_random_generator), position_z));
 			glm::vec3 dimensions(1.f, 1.f, 1.f);
 			
 			//GPU memory
@@ -273,7 +277,7 @@ public:
 			render::AllocHandle gpu_memory = m_GPU_memory_render_module->AllocStaticGPUMemory(m_device, sizeof(GPUBoxInstance), &gpu_box_instance, render::GetGameFrameIndex(m_render_system));
 
 			ecs::AllocInstance<GameDatabase, BoxType>(0)
-				.Init<Box>(local_matrix, dimensions)
+				.Init<Box>(id, local_matrix, dimensions)
 				.Init<BoxRender>(0, gpu_memory);
 		}
 	}
@@ -309,8 +313,12 @@ public:
 		render::BeginPrepareRender(m_render_system);
 
 		//Update all positions for testing the static gpu memory
-		ecs::Process<GameDatabase, const Box, const BoxRender>([&](const auto& instance_iterator, const Box& box, const BoxRender& box_render)
+		ecs::Process<GameDatabase, Box, const BoxRender>([&](const auto& instance_iterator, Box& box, const BoxRender& box_render)
 		{
+				//Update local position
+				float position_z = static_cast<float>(cos(total_time)) + static_cast<float>(box.id - m_random_generator.min()) / static_cast<float>(m_random_generator.max() - m_random_generator.min());
+				box.local_matrix[3][2] = position_z;
+
 				GPUBoxInstance gpu_box_instance;
 				gpu_box_instance.local_matrix = box.local_matrix;
 				gpu_box_instance.dimensions = glm::vec4(box.dimensions, 0.f);
