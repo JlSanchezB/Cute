@@ -204,7 +204,7 @@ namespace core
 		}
 		else
 		{
-			bucket_index = key & (NUM_BUCKETS - 1);
+			bucket_index = std::hash<KEY>{}(key) & (NUM_BUCKETS - 1);
 		}
 
 		auto& bucket = m_buckets[bucket_index];
