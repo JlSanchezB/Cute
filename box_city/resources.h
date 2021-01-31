@@ -8,21 +8,10 @@ struct DisplayResource
 {
 	display::VertexBufferHandle m_box_vertex_buffer;
 	display::IndexBufferHandle m_box_index_buffer;
-	display::RootSignatureHandle m_root_signature;
+
 
 	void Load(display::Device* device)
 	{
-		//Create root signature
-		display::RootSignatureDesc root_signature_desc;
-		root_signature_desc.root_parameters[0].type = display::RootSignatureParameterType::ConstantBuffer;
-		root_signature_desc.root_parameters[0].visibility = display::ShaderVisibility::Vertex;
-		root_signature_desc.root_parameters[0].root_param.shader_register = 0;
-		root_signature_desc.num_root_parameters = 1;
-
-		m_root_signature = display::CreateRootSignature(device, root_signature_desc, "Root Signature");
-
-		
-
 		//Box Vertex buffer
 		{
 			struct VertexData
@@ -71,7 +60,6 @@ struct DisplayResource
 	{
 		display::DestroyHandle(device, m_box_vertex_buffer);
 		display::DestroyHandle(device, m_box_index_buffer);
-		display::DestroyHandle(device, m_root_signature);
 	}
 };
 
