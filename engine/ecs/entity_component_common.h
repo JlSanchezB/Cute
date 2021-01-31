@@ -27,6 +27,18 @@ namespace ecs
 		size_t num_deferred_deletions;
 		size_t num_deferred_moves;
 	};
+
+	namespace internal
+	{
+		//Get instance type mask from a indirection index
+		EntityTypeMask GetInstanceTypeMask(Database* database, InstanceIndirectionIndexType index);
+
+		//Get instance type mask from a entity type index
+		EntityTypeMask GetInstanceTypeMask(Database* database, EntityTypeType entity_type);
+
+		//Get component data
+		void* GetComponentData(Database* database, InstanceIndirectionIndexType index, ComponentType component_index);
+	}
 }
 
 #endif

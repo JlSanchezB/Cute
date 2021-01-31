@@ -139,17 +139,8 @@ namespace ecs
 		//Move zone
 		void MoveZoneInstance(Database* database, ZoneType zone_index, EntityTypeType entity_type, InstanceIndexType instance_index, ZoneType new_zone_index);
 
-		//Get component data
-		void* GetComponentData(Database* database, InstanceIndirectionIndexType index, ComponentType component_index);
-
 		//Get instance type from a indirection index
 		size_t GetInstanceType(Database* database, InstanceIndirectionIndexType index);
-
-		//Get instance type mask from a indirection index
-		EntityTypeMask GetInstanceTypeMask(Database* database, InstanceIndirectionIndexType index);
-
-		//Get instance type mask from a entity type index
-		EntityTypeMask GetInstanceTypeMask(Database* database, EntityTypeType entity_type);
 
 		//Tick database
 		void TickDatabase(Database* database);
