@@ -677,7 +677,8 @@ public:
 			//Use render target as texture
 			context->RenderTargetTransition(1, &m_test_1.m_render_target, display::ResourceState::PixelShaderResource);
 			//Set BackBuffer
-			context->SetRenderTargets(1, &display::GetBackBuffer(m_device), display::WeakDepthBufferHandle());
+			display::WeakRenderTargetHandle render_target_array[] = { display::GetBackBuffer(m_device) };
+			context->SetRenderTargets(1, render_target_array, display::WeakDepthBufferHandle());
 
 			context->ClearRenderTargetColour(display::GetBackBuffer(m_device), clear_colour);
 
@@ -704,7 +705,8 @@ public:
 			display::Context* context = display::OpenCommandList(m_device, m_test_2.m_command_list);
 
 			//Set Render Target
-			context->SetRenderTargets(1, &display::GetBackBuffer(m_device), display::WeakDepthBufferHandle());
+			display::WeakRenderTargetHandle render_target_array[] = { display::GetBackBuffer(m_device) };
+			context->SetRenderTargets(1, render_target_array, display::WeakDepthBufferHandle());
 
 			//Set viewport
 			display::Viewport viewport(static_cast<float>(m_width / 2), static_cast<float>(m_height / 2));
@@ -757,7 +759,8 @@ public:
 			display::Context* context = display::OpenCommandList(m_device, m_test_3.m_command_list);
 
 			//Set Render Target
-			context->SetRenderTargets(1, &display::GetBackBuffer(m_device), display::WeakDepthBufferHandle());
+			display::WeakRenderTargetHandle render_target_array[] = { display::GetBackBuffer(m_device) };
+			context->SetRenderTargets(1, render_target_array, display::WeakDepthBufferHandle());
 
 			//Set viewport
 			display::Viewport viewport(static_cast<float>(m_width / 2), static_cast<float>(m_height / 2));
@@ -821,7 +824,8 @@ public:
 			display::Context* context = display::OpenCommandList(m_device, m_test_4.m_command_list);
 
 			//Set Render Target
-			context->SetRenderTargets(1, &display::GetBackBuffer(m_device), display::WeakDepthBufferHandle());
+			display::WeakRenderTargetHandle render_target_array[] = { display::GetBackBuffer(m_device) };
+			context->SetRenderTargets(1, render_target_array, display::WeakDepthBufferHandle());
 
 			//Set viewport
 			display::Viewport viewport(static_cast<float>(m_width / 2), static_cast<float>(m_height / 2));

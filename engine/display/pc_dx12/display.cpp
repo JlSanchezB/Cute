@@ -1,6 +1,7 @@
 #include "display_common.h"
 #include <ext/imgui/imgui.h>
 #include <utility>
+#include <locale.h>
 
 namespace display
 {
