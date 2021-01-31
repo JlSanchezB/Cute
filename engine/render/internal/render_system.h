@@ -19,9 +19,9 @@ namespace render
 	//Source of a resource
 	enum class ResourceSource : uint8_t
 	{
-		Game,
-		PassDescriptor,
-		Pass
+		Game, //Resource added from the game, it can be access by name
+		PassDescriptor, //Resource is defined where it is used, it doesn't have name, it is an inline resource declared in pass declaration
+		Pass //Resource is created by the pass itself, resources that are different by pass (id and passname). For example a resource different by view.
 	};
 
 	class RenderContextInternal : public RenderContext
