@@ -35,50 +35,76 @@ class Camera
 {
 public:
 	//Process input and update the position
-	void Update(platform::Game* game, float ellapsed)
+	void Update(platform::Game* game, float ellapsed_time)
 	{
 		//Apply damp
-		m_move_speed *= (m_damp_factor * ellapsed);
-		m_rotation_speed *= (m_damp_factor * ellapsed);
+		m_move_speed *= (m_damp_factor * ellapsed_time);
+		m_rotation_speed *= (m_damp_factor * ellapsed_time);
 
 		//Calculate position movement
 		glm::vec3 move_speed;
 
-		move_speed.x = game->GetInputSlotValue(platform::InputSlotValue::ControllerThumbRightX) * m_move_factor * ellapsed;
-		move_speed.z = game->GetInputSlotValue(platform::InputSlotValue::ControllerThumbRightY) * m_move_factor * ellapsed;
+		move_speed.x = game->GetInputSlotValue(platform::InputSlotValue::ControllerThumbRightX) * m_move_factor * ellapsed_time;
+		move_speed.z = game->GetInputSlotValue(platform::InputSlotValue::ControllerThumbRightY) * m_move_factor * ellapsed_time;
 
 		m_move_speed += (m_rotation * move_speed);
 
 		//Calculate direction movement
 		glm::vec3 euler_angles;
-		euler_angles.y = game->GetInputSlotValue(platform::InputSlotValue::ControllerThumbLeftY) * m_move_factor * ellapsed;
-		euler_angles.z = game->GetInputSlotValue(platform::InputSlotValue::ControllerThumbLeftX) * m_move_factor * ellapsed;
+		euler_angles.y = game->GetInputSlotValue(platform::InputSlotValue::ControllerThumbLeftY) * m_move_factor * ellapsed_time;
+		euler_angles.z = game->GetInputSlotValue(platform::InputSlotValue::ControllerThumbLeftX) * m_move_factor * ellapsed_time;
 
 		glm::quat rotation_speed(euler_angles);
 
 		m_rotation_speed += rotation_speed;
 
 		//Apply
-		m_position += m_move_speed * ellapsed;
-		m_rotation += m_rotation_speed * ellapsed;
+		m_position += m_move_speed * ellapsed_time;
+		m_rotation += m_rotation_speed * ellapsed_time;
+
+		CalculateMatrices();
 	}
 
+	void CalculateMatrices()
+	{
+		//Calculate view to world
+		glm::mat3x3 rot(m_rotation);
+		m_view_to_world_matrix = glm::lookAtRH(rot[1], m_position, m_up_vector);
+
+		//Calculate world to view
+		m_world_to_view_matrix = glm::inverse(m_view_to_world_matrix);
+
+		//Calculate projection matrix
+		m_projection_matrix = glm::perspective(m_fov_y, m_aspect_ratio, m_near, m_far);
+
+		//Calculate view projection
+		m_view_projection_matrix = m_projection_matrix * m_world_to_view_matrix;
+	}
 
 private:
 
-	//Position
-	glm::vec3 m_position;
-	glm::quat m_rotation;
-	glm::vec3 m_move_speed;
-	glm::quat m_rotation_speed;
+	//State
+	glm::vec3 m_position = glm::vec3(0.f, 0.f, 0.f);
+	glm::quat m_rotation = glm::quat();
+	glm::vec3 m_move_speed = glm::vec3(0.f, 0.f, 0.f);
+	glm::quat m_rotation_speed = glm::quat();
+	glm::vec3 m_up_vector = glm::vec3(0.f, 0.f, 1.f);
+
+	//Matrices
+	glm::mat4x4 m_view_to_world_matrix;
+	glm::mat4x4 m_world_to_view_matrix;
+	glm::mat4x4 m_projection_matrix;
+	glm::mat4x4 m_view_projection_matrix;
 
 
 	//Setup
 	float m_damp_factor = 0.1f;
 	float m_move_factor = 0.1f;
 	float m_rotation_factor = 0.1f;
-	float m_fov;
-	float m_aspect_ratio;
+	float m_fov_y = 1.f;
+	float m_aspect_ratio = 1.f;
+	float m_far = 10000.f;
+	float m_near = 0.1f;
 };
 
 //GPU memory structs
@@ -193,6 +219,9 @@ public:
 	std::uniform_real_distribution<float> m_random_position_x;
 	std::uniform_real_distribution<float> m_random_position_y;
 	std::uniform_real_distribution<float> m_random_position_z;
+
+	//Camera
+	Camera m_camera;
 
 	BoxCityGame() : m_random_generator(m_random_device()),
 		m_random_position_x(-100.f, 100.f),
@@ -309,6 +338,8 @@ public:
 	{
 		//UPDATE GAME
 
+		//Update camera
+		m_camera.Update(this, elapsed_time);
 
 		render::BeginPrepareRender(m_render_system);
 
