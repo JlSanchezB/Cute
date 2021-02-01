@@ -265,6 +265,12 @@ public:
 
 		m_display_resources.Load(m_device);
 
+		//Create view constant buffer
+		display::ConstantBufferDesc view_constant_desc;
+		view_constant_desc.size = sizeof(ViewConstantBuffer);
+		view_constant_desc.access = display::Access::Dynamic;
+		m_view_constant_buffer = display::CreateConstantBuffer(m_device, view_constant_desc, "ViewConstantBuffer");
+
 		//Create job system
 		job::SystemDesc job_system_desc;
 		m_job_system = job::CreateSystem(job_system_desc);
@@ -288,13 +294,12 @@ public:
 
 		render::AddGameResource(m_render_system, "BackBuffer"_sh32, CreateResourceFromHandle<render::RenderTargetResource>(display::GetBackBuffer(m_device), m_width, m_height));
 
+		//Register the ViewConstantBuffer for Main pass, ID 0
+		render::AddGameResource(m_render_system, "ViewConstantBuffer"_sh32, "Main"_sh32, 0, CreateResourceFromHandle<render::ConstantBufferResource>(m_view_constant_buffer));
+
 		m_render_passes_loader.Load("box_city_render_passes.xml", m_render_system, m_device);
 
-		//Create view constant buffer
-		display::ConstantBufferDesc view_constant_desc;
-		view_constant_desc.size = sizeof(ViewConstantBuffer);
-		view_constant_desc.access = display::Access::Dynamic;
-		m_view_constant_buffer = display::CreateConstantBuffer(m_device, view_constant_desc, "ViewConstantBuffer");
+		
 
 		//Create ecs database
 		ecs::DatabaseDesc database_desc;
