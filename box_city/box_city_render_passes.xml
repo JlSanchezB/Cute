@@ -12,7 +12,7 @@
     <InputLayouts>
       <Input semantic_name="POSITION" semantic_index="0" format="R32G32B32A32_FLOAT" input_slot="0"/>
     </InputLayouts>
-    <Shader pixelshader_entry="ps_main" vertexshader_entry="vs_main" target="5_0">
+    <Shader pixelshader_entry="ps_box_main" vertexshader_entry="vs_box_main" target="5_0">
       struct ViewData
       {
         float4x4 view_projection_matrix;
@@ -29,7 +29,7 @@
       {
         PSInput result;
 
-        result.position = view_data_buffer.view_projection_matrix * position;
+        result.position = mul(view_data_buffer.view_projection_matrix, position);
 
         return result;
       }
