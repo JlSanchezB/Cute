@@ -715,11 +715,15 @@ namespace platform
 			//Init input
 			InputFrameInit();
 
+			//Exit?
+			bool mark_as_exit = false;
+
 			// Process any messages in the queue.
 			while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
 			{
 				if (msg.message == WM_QUIT)
 				{
+					mark_as_exit = true;
 					break;
 				}
 				else
@@ -727,6 +731,11 @@ namespace platform
 					TranslateMessage(&msg);
 					DispatchMessage(&msg);
 				}
+			}
+
+			if (mark_as_exit)
+			{
+				break;
 			}
 
 			//Calculate time

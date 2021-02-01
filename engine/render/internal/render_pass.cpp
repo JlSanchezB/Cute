@@ -346,7 +346,8 @@ namespace render
 
 		for (auto& descriptor : m_descriptor_table_names)
 		{
-			Resource* resource = render_context.GetResource(ResourceName(descriptor.c_str()));
+			bool pass_resource;
+			Resource* resource = render_context.GetResource(ResourceName(descriptor.c_str()), pass_resource);
 
 			if (resource)
 			{
@@ -420,7 +421,8 @@ namespace render
 	}
 	void DrawFullScreenQuadPass::Render(RenderContext & render_context) const
 	{
-		VertexBufferResource* vertex_buffer = render_context.GetResource<VertexBufferResource>("DrawFullScreenQuadPassVertexBuffer"_sh32);
+		bool pass_resource;
+		VertexBufferResource* vertex_buffer = render_context.GetResource<VertexBufferResource>("DrawFullScreenQuadPassVertexBuffer"_sh32, pass_resource);
 		if (vertex_buffer)
 		{
 			render_context.GetContext()->SetVertexBuffers(0, 1, &vertex_buffer->GetHandle());

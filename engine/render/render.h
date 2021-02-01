@@ -46,12 +46,12 @@ namespace render
 		bool AddPassResource(const ResourceName& name, std::unique_ptr<Resource>&& resource);
 
 		//Resource
-		Resource* GetResource(const ResourceName& name) const;
+		Resource* GetResource(const ResourceName& name, bool& pass_resource) const;
 
 		template<typename RESOURCE>
-		inline RESOURCE* GetResource(const ResourceName& name) const
+		inline RESOURCE* GetResource(const ResourceName& name, bool& pass_resource) const
 		{
-			Resource* resource = GetResource(name);
+			Resource* resource = GetResource(name, pass_resource);
 			if (resource && resource->Type() == RESOURCE::kClassName)
 			{
 				return dynamic_cast<RESOURCE*>(resource);
@@ -95,6 +95,9 @@ namespace render
 
 	//Add game resource, allows the game to add global resources that the pass system can access them
 	bool AddGameResource(System* system, const ResourceName& name, std::unique_ptr<Resource>&& resource, const std::optional<display::TranstitionState>& current_access = {});
+
+	//Add game resource associated to a pass and pass id, allows the game to add global resources that the pass system can access them
+	bool AddGameResource(System* system, const ResourceName& name, const PassName& pass_name, const uint16_t pass_id, std::unique_ptr<Resource>&& resource, const std::optional<display::TranstitionState>& current_access = {});
 
 	//Register resource factory
 	bool RegisterResourceFactory(System* system, const RenderClassType& resource_type, std::unique_ptr<FactoryInterface<Resource>>& resource_factory);

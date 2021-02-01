@@ -40,9 +40,21 @@ namespace render
 		{
 			if (m_resource_ptr == nullptr)
 			{
-				m_resource_ptr = render_context.GetResource<RESOURCE>(m_resource);
+				bool pass_resource;
+				RESOURCE* resource = render_context.GetResource<RESOURCE>(m_resource, pass_resource);
+
+				//If the resource is a pass resource, do not cache, as it changes depends of the render context
+				if (!pass_resource)
+				{
+					m_resource_ptr = resource;
+				}
+
+				return resource;
 			}
-			return m_resource_ptr;
+			else
+			{
+				return m_resource_ptr;
+			}
 		}
 	};
 

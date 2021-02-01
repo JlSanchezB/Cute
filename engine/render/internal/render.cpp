@@ -46,23 +46,47 @@ namespace
 
 	//Sync fence, it avoids the render frame been used before the render has been submited
 	job::Fence g_render_fence;
+
+	//Generate a pass resource name
+	render::ResourceName CalculatePassResourceName(const render::ResourceName& name, const render::PassName& pass_name, uint16_t pass_id)
+	{
+		return core::HashConst<uint32_t>(name.GetHash() ^ pass_name.GetHash() ^ pass_id, "");
+	}
 }
 
 namespace render
 {
-	Resource * RenderContext::GetResource(const ResourceName& name) const
+	
+
+	Resource * RenderContext::GetResource(const ResourceName& name, bool& pass_resource) const
 	{
 		auto render_context = reinterpret_cast<const RenderContextInternal*>(this);
 
-		//Then check system resources
-		return render::GetResource(render_context->m_render_pass_system, name);
+		//First check it is a pass resource
+		ResourceName pass_resource_name = CalculatePassResourceName(name, render_context->m_pass_name, render_context->m_pass_id);
+		Resource* resource = render::GetResource(render_context->m_render_pass_system, pass_resource_name);
+		
+		if (resource)
+		{
+			pass_resource = true;
+			return resource;
+		}
+		else
+		{
+			pass_resource = false;
+			//Then check system resources
+			return render::GetResource(render_context->m_render_pass_system, name);
+		}
 	}
 
 	bool RenderContext::AddPassResource(const ResourceName& name, std::unique_ptr<Resource>&& resource)
 	{
 		auto render_context = reinterpret_cast<const RenderContextInternal*>(this);
 
-		return render_context->m_render_pass_system->AddResource(name, resource, ResourceSource::Pass);
+		//Mix the pass name and the id in the name of the resource
+		ResourceName pass_resource_name = CalculatePassResourceName(name, render_context->m_pass_name, render_context->m_pass_id);
+
+		return render_context->m_render_pass_system->AddResource(pass_resource_name, resource, ResourceSource::Pass);
 	}
 
 	Frame & RenderContext::GetRenderFrame()
@@ -209,14 +233,14 @@ namespace render
 		}
 	}
 
-	RenderContextInternal * System::CreateRenderContext(display::Device * device, const PassName & pass, const PassInfo & pass_info, std::vector<std::string>& errors)
+	RenderContextInternal * System::CreateRenderContext(display::Device * device, const PassName & pass_name, const uint16_t pass_id, const PassInfo & pass_info, std::vector<std::string>& errors)
 	{
 		//Get pass
-		auto render_pass = GetPass(this, pass);
+		auto render_pass = GetPass(this, pass_name);
 		if (render_pass && render_pass->Type() == RenderClassType("Pass"_sh32))
 		{
 			//Create Render Context
-			RenderContextInternal* render_context = m_render_context_pool.Alloc(this, device, pass_info, dynamic_cast<ContextPass*>(render_pass));
+			RenderContextInternal* render_context = m_render_context_pool.Alloc(this, device, pass_name, pass_id, pass_info, dynamic_cast<ContextPass*>(render_pass));
 
 			ErrorContext errors_context;
 
@@ -227,12 +251,12 @@ namespace render
 
 			if (errors.empty())
 			{
-				core::LogInfo("Created a render pass <%s> from definition pass", pass.GetValue());
+				core::LogInfo("Created a render pass <%s> from definition pass", pass_name.GetValue());
 				return render_context;
 			}
 			else
 			{
-				core::LogError("Errors creating a render pass <%s> from definition pass", pass.GetValue());
+				core::LogError("Errors creating a render pass <%s> from definition pass", pass_name.GetValue());
 				for (auto& error : errors)
 				{
 					core::LogError(error.c_str());
@@ -246,7 +270,7 @@ namespace render
 		else
 		{
 			errors.push_back(std::string("Pass not found"));
-			core::LogError("Errors creating a render pass <%s>, definition pass doesn't exist or it is not a context pass", pass.GetValue());
+			core::LogError("Errors creating a render pass <%s>, definition pass doesn't exist or it is not a context pass", pass_name.GetValue());
 			return nullptr;
 		}
 	}
@@ -534,7 +558,7 @@ namespace render
 		//Init resource map gets moved only here
 
 		std::vector<std::string> errors;
-		auto render_context = CreateRenderContext(m_device, pass_name, pass_info, errors);
+		auto render_context = CreateRenderContext(m_device, pass_name, id, pass_info, errors);
 
 		if (render_context)
 		{
@@ -910,6 +934,12 @@ namespace render
 	bool AddGameResource(System * system, const ResourceName& name, std::unique_ptr<Resource>&& resource, const std::optional<display::TranstitionState>& current_access)
 	{
 		return system->AddResource(name, resource, ResourceSource::Game, current_access);
+	}
+
+	bool AddGameResource(System* system, const ResourceName& name, const PassName& pass_name, const uint16_t pass_id, std::unique_ptr<Resource>&& resource, const std::optional<display::TranstitionState>& current_access)
+	{
+		//Calculate new hash for this resource
+		return system->AddResource(CalculatePassResourceName(name, pass_name, pass_id), resource, ResourceSource::Game, current_access);
 	}
 
 	bool RegisterResourceFactory(System * system, const RenderClassType& resource_type, std::unique_ptr<FactoryInterface<Resource>>& resource_factory)

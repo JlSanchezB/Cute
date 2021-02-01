@@ -27,9 +27,11 @@ namespace render
 	class RenderContextInternal : public RenderContext
 	{
 	public:
-		RenderContextInternal(System* system, display::Device* device, const PassInfo& pass_info, ContextPass* _context_root_pass) :
+		RenderContextInternal(System* system, display::Device* device, const PassName& pass_name, const uint16_t pass_id, const PassInfo& pass_info, ContextPass* _context_root_pass) :
 			m_render_pass_system(system),
 			m_display_device(device),
+			m_pass_name(pass_name),
+			m_pass_id(pass_id),
 			m_pass_info(pass_info),
 			m_context_root_pass(_context_root_pass)
 		{
@@ -47,7 +49,13 @@ namespace render
 		PassInfo m_pass_info;
 
 		//Point of view associated to this context
-		PointOfView* m_point_of_view;
+		PointOfView* m_point_of_view = nullptr;
+
+		//Pass name
+		PassName m_pass_name;
+
+		//Pass id
+		uint16_t m_pass_id;
 	};
 
 	//Activated render contexts
@@ -166,7 +174,7 @@ namespace render
 		display::CommandListHandle m_render_command_list;
 
 		//Create render context
-		RenderContextInternal * CreateRenderContext(display::Device * device, const PassName& pass, const PassInfo& pass_info, std::vector<std::string>& errors);
+		RenderContextInternal * CreateRenderContext(display::Device * device, const PassName& pass, const uint16_t pass_id, const PassInfo& pass_info, std::vector<std::string>& errors);
 
 		//Destroy render context
 		void DestroyRenderContext(RenderContextInternal*& render_context);
