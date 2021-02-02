@@ -237,6 +237,9 @@ public:
 	//View constant buffer
 	display::ConstantBufferHandle m_view_constant_buffer;
 
+	//Solid render priority
+	render::Priority m_box_render_priority;
+
 	BoxCityGame() : m_random_generator(m_random_device()),
 		m_random_position_x(-100.f, 100.f),
 		m_random_position_y(-100.f, 100.f),
@@ -305,7 +308,8 @@ public:
 
 		m_render_passes_loader.Load("box_city_render_passes.xml", m_render_system, m_device);
 
-		
+		//Get render priorities
+		m_box_render_priority = render::GetRenderItemPriority(m_render_system, "Box"_sh32);
 
 		//Create ecs database
 		ecs::DatabaseDesc database_desc;
@@ -402,9 +406,24 @@ public:
 		render_frame.GetBeginFrameCommandBuffer().Close();
 
 		//Add render passes
-		render_frame.AddRenderPass("Main"_sh32, 0, pass_info);
+		render_frame.AddRenderPass("Main"_sh32, 0, pass_info, "Main"_sh32, 0);
 		render_frame.AddRenderPass("SyncStaticGPUMemory"_sh32, 0, pass_info);
-			
+		
+		//Add point of view
+		auto& point_of_view = render_frame.AllocPointOfView("Main"_sh32, 0);
+		
+		//Cull box city
+		ecs::Process<GameDatabase, Box, const BoxRender>([&](const auto& instance_iterator, Box& box, const BoxRender& box_render)
+			{
+				//Calculate if it is in the camera
+
+				//Calculate sort key
+
+				//Add this point of view
+				point_of_view.PushRenderItem(m_box_render_priority, static_cast<render::SortKey>(0), {});
+
+			}, std::bitset<1>(true));
+
 		//Render
 		render::EndPrepareRenderAndSubmit(m_render_system);
 

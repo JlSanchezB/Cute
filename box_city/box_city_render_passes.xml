@@ -67,6 +67,7 @@
         <Descriptor>ViewConstantBuffer</Descriptor>
       </SetDescriptorTable>
 	    <ClearRenderTarget colour="0,0,0,0">BackBuffer</ClearRenderTarget>
+      <DrawCityBoxItems priority="Box"/>
     </Commands>
   </Pass>
 </Passes>
