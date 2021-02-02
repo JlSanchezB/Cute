@@ -135,7 +135,7 @@ namespace render
 		}
 
 		//Get begin frame command buffer
-		CommandBuffer& GetBeginFrameComamndbuffer()
+		CommandBuffer& GetBeginFrameCommandBuffer()
 		{
 			return m_begin_frame_command_buffer.Get();
 		}

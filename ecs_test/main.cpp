@@ -1412,9 +1412,9 @@ public:
 				position_zoom_buffer[3] = m_camera_position[1];
 
 				//Update buffer
-				auto command_offset = render_frame.GetBeginFrameComamndbuffer().Open();
-				render_frame.GetBeginFrameComamndbuffer().UploadResourceBuffer(m_display_resources.m_zoom_position, position_zoom_buffer, sizeof(position_zoom_buffer));
-				render_frame.GetBeginFrameComamndbuffer().Close();
+				auto command_offset = render_frame.GetBeginFrameCommandBuffer().Open();
+				render_frame.GetBeginFrameCommandBuffer().UploadResourceBuffer(m_display_resources.m_zoom_position, position_zoom_buffer, sizeof(position_zoom_buffer));
+				render_frame.GetBeginFrameCommandBuffer().Close();
 
 				//Calculate culling
 				borders.left = m_camera_position[0] - 1.f / (aspect_ratio_x * m_camera_zoom);

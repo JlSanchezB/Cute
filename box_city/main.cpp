@@ -394,12 +394,12 @@ public:
 		render::Frame& render_frame = render::GetGameRenderFrame(m_render_system);
 
 		//Update view constant buffer with the camera and the time
-		auto command_offset = render_frame.GetBeginFrameComamndbuffer().Open();
+		auto command_offset = render_frame.GetBeginFrameCommandBuffer().Open();
 		ViewConstantBuffer view_constant_buffer;
 		view_constant_buffer.projection_view_matrix = m_camera.GetViewProjectionMatrix();
 		view_constant_buffer.time = glm::vec4(static_cast<float>(total_time), 0.f, 0.f, 0.f);
-		render_frame.GetBeginFrameComamndbuffer().UploadResourceBuffer(m_view_constant_buffer, &view_constant_buffer, sizeof(view_constant_buffer));
-		render_frame.GetBeginFrameComamndbuffer().Close();
+		render_frame.GetBeginFrameCommandBuffer().UploadResourceBuffer(m_view_constant_buffer, &view_constant_buffer, sizeof(view_constant_buffer));
+		render_frame.GetBeginFrameCommandBuffer().Close();
 
 		//Add render passes
 		render_frame.AddRenderPass("Main"_sh32, 0, pass_info);
