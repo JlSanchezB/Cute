@@ -81,6 +81,11 @@ public:
 		m_view_projection_matrix = m_projection_matrix * m_world_to_view_matrix;
 	}
 
+	glm::mat4x4 GetViewProjectionMatrix() const
+	{
+		return m_view_projection_matrix;
+	}
+
 private:
 
 	//State
@@ -110,6 +115,7 @@ private:
 struct ViewConstantBuffer
 {
 	glm::mat4x4 projection_view_matrix;
+	glm::vec4 time;
 };
 
 //GPU memory structs
@@ -295,7 +301,7 @@ public:
 		render::AddGameResource(m_render_system, "BackBuffer"_sh32, CreateResourceFromHandle<render::RenderTargetResource>(display::GetBackBuffer(m_device), m_width, m_height));
 
 		//Register the ViewConstantBuffer for Main pass, ID 0
-		render::AddGameResource(m_render_system, "ViewConstantBuffer"_sh32, "Main"_sh32, 0, CreateResourceFromHandle<render::ConstantBufferResource>(m_view_constant_buffer));
+		render::AddGameResource(m_render_system, "ViewConstantBuffer"_sh32, "Main"_sh32, 0, CreateResourceFromHandle<render::ConstantBufferResource>(display::WeakConstantBufferHandle(m_view_constant_buffer)));
 
 		m_render_passes_loader.Load("box_city_render_passes.xml", m_render_system, m_device);
 
@@ -346,6 +352,9 @@ public:
 
 	void OnDestroy() override
 	{
+		//Destroy constant buffer
+		display::DestroyHandle(m_device, m_view_constant_buffer);
+
 		//Destroy handles
 		m_display_resources.Unload(m_device);
 
@@ -383,6 +392,14 @@ public:
 		render::PassInfo pass_info;
 
 		render::Frame& render_frame = render::GetGameRenderFrame(m_render_system);
+
+		//Update view constant buffer with the camera and the time
+		auto command_offset = render_frame.GetBeginFrameComamndbuffer().Open();
+		ViewConstantBuffer view_constant_buffer;
+		view_constant_buffer.projection_view_matrix = m_camera.GetViewProjectionMatrix();
+		view_constant_buffer.time = glm::vec4(static_cast<float>(total_time), 0.f, 0.f, 0.f);
+		render_frame.GetBeginFrameComamndbuffer().UploadResourceBuffer(m_view_constant_buffer, &view_constant_buffer, sizeof(view_constant_buffer));
+		render_frame.GetBeginFrameComamndbuffer().Close();
 
 		//Add render passes
 		render_frame.AddRenderPass("Main"_sh32, 0, pass_info);
