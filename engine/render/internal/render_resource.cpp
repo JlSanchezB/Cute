@@ -386,6 +386,7 @@ namespace render
 
 	void DepthBufferResource::Load(LoadContext & load_context)
 	{
+		//Depth buffers are dynamic, they are created during init pass when the resolution is known
 	}
 
 	void GraphicsPipelineStateResource::Load(LoadContext & load_context)

@@ -167,23 +167,32 @@ namespace render
 	{
 		m_num_render_targets = 0;
 
-		auto xml_element_render_target = load_context.current_xml_element->FirstChildElement("RenderTarget");
+		auto xml_element = load_context.current_xml_element->FirstChildElement();
 
-		while (xml_element_render_target)
+		while (xml_element)
 		{
-			load_context.current_xml_element = xml_element_render_target;
-			m_render_target[m_num_render_targets].UpdateName(load_context.GetResourceReference(load_context));
-
-			m_num_render_targets++;
-			xml_element_render_target = xml_element_render_target->NextSiblingElement();
-
-			if (m_num_render_targets == display::kMaxNumRenderTargets)
+			if (strcmp(xml_element->Name(), "RenderTarget") == 0)
 			{
-				AddError(load_context, "Max number of render target reached loading the pass SetRenderTargets");
-				return;
+				load_context.current_xml_element = xml_element;
+				m_render_target[m_num_render_targets].UpdateName(load_context.GetResourceReference(load_context));
+
+				m_num_render_targets++;
+				
+				if (m_num_render_targets == display::kMaxNumRenderTargets)
+				{
+					AddError(load_context, "Max number of render target reached loading the pass SetRenderTargets");
+					return;
+				}
 			}
+			else if (strcmp(xml_element->Name(), "DepthBuffer") == 0)
+			{
+				m_depth_buffer.UpdateName(load_context.GetResourceReference(load_context));
+			}
+
+			xml_element = xml_element->NextSiblingElement();
 		}
 	}
+
 	void SetRenderTargetPass::Render(RenderContext & render_context) const
 	{
 		//Get render target
@@ -203,7 +212,7 @@ namespace render
 		uint32_t height = 0;
 		render_target_0->GetInfo(width, height);
 
-		render_context.GetContext()->SetRenderTargets(m_num_render_targets, render_targets.data(), display::WeakDepthBufferHandle());
+		render_context.GetContext()->SetRenderTargets(m_num_render_targets, render_targets.data(), {});
 		
 		//Set Viewport and Scissors
 		//Set viewport

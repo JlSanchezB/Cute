@@ -86,6 +86,7 @@ namespace render
 	class SetRenderTargetPass : public Pass
 	{
 		std::array<ResourceReference<RenderTargetResource>, display::kMaxNumRenderTargets> m_render_target;
+		ResourceReference<DepthBufferResource> m_depth_buffer;
 		uint8_t m_num_render_targets;
 	public:
 		DECLARE_RENDER_CLASS("SetRenderTarget");
