@@ -366,6 +366,16 @@ namespace render
 					RenderTargetResource* render_target_resource = dynamic_cast<RenderTargetResource*>(resource);
 					descriptor_table_desc.AddDescriptor(render_target_resource->GetHandle());
 				}
+				else if (resource->Type() == "UnorderedAccessBuffer"_sh32)
+				{
+					UnorderedAccessBufferResource* unordered_access_buffer_resource = dynamic_cast<UnorderedAccessBufferResource*>(resource);
+					descriptor_table_desc.AddDescriptor(unordered_access_buffer_resource->GetHandle());
+				}
+				else if (resource->Type() == "ShaderResource"_sh32)
+				{
+					ShaderResourceResource* shader_resource_resource = dynamic_cast<ShaderResourceResource*>(resource);
+					descriptor_table_desc.AddDescriptor(shader_resource_resource->GetHandle());
+				}
 			}
 			else
 			{

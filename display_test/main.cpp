@@ -530,7 +530,7 @@ public:
 			root_signature_desc.root_parameters[0].type = display::RootSignatureParameterType::ConstantBuffer;
 			root_signature_desc.root_parameters[0].root_param.shader_register = 0;
 			root_signature_desc.root_parameters[0].visibility = display::ShaderVisibility::All;
-			root_signature_desc.root_parameters[1].type = display::RootSignatureParameterType::UnorderAccessBuffer;
+			root_signature_desc.root_parameters[1].type = display::RootSignatureParameterType::UnorderedAccessBuffer;
 			root_signature_desc.root_parameters[1].root_param.shader_register = 0;
 			root_signature_desc.root_parameters[1].visibility = display::ShaderVisibility::All;
 

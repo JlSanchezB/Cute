@@ -122,7 +122,7 @@ namespace display
 		default:
 		case RootSignatureParameterType::ConstantBuffer: return D3D12_ROOT_PARAMETER_TYPE_CBV;
 		case RootSignatureParameterType::ShaderResource: return D3D12_ROOT_PARAMETER_TYPE_SRV;
-		case RootSignatureParameterType::UnorderAccessBuffer: return D3D12_ROOT_PARAMETER_TYPE_UAV;
+		case RootSignatureParameterType::UnorderedAccessBuffer: return D3D12_ROOT_PARAMETER_TYPE_UAV;
 		case RootSignatureParameterType::DescriptorTable: return D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
 		}
 	}
@@ -134,7 +134,7 @@ namespace display
 		default:
 		case DescriptorTableParameterType::ConstantBuffer: return D3D12_DESCRIPTOR_RANGE_TYPE_CBV;
 		case DescriptorTableParameterType::ShaderResource: return D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-		case DescriptorTableParameterType::UnorderAccessBuffer: return D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
+		case DescriptorTableParameterType::UnorderedAccessBuffer: return D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
 		case DescriptorTableParameterType::Sampler: return D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER;
 		}
 	}

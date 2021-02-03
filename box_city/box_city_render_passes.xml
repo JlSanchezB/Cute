@@ -2,7 +2,9 @@
 <Global>
   <Resource type="RootSignature" name="BoxRootSignature">
     <RootParam index="0" type="DescriptorTable">
-      <Range base_shader_register="0" size="1" type="ConstantBuffer" visibility="Vertex"/>
+      <Range base_shader_register="0" size="1" type="ConstantBuffer" visibility="All"/>
+      <Range base_shader_register="1" size="1" type="UnorderedAccessBuffer" visibility="All"/>
+      <Range base_shader_register="2" size="1" type="ShaderResource" visibility="All"/>
     </RootParam>
     <StaticSample shader_register="0" visibility="Pixel"/>
     <StaticSample shader_register="1" visibility="Pixel" filter="Linear"/>
@@ -65,6 +67,8 @@
       <SetRootSignature>BoxRootSignature</SetRootSignature>
       <SetDescriptorTable pipe="Graphics" root_param="0">
         <Descriptor>ViewConstantBuffer</Descriptor>
+        <Descriptor>StaticGPUMemoryBuffer</Descriptor>
+        <Descriptor>DynamicGPUMemoryBuffer</Descriptor>
       </SetDescriptorTable>
 	    <ClearRenderTarget colour="0,0,0,0">BackBuffer</ClearRenderTarget>
       <DrawCityBoxItems priority="Box"/>

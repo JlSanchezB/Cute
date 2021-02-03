@@ -10,7 +10,7 @@ namespace display
 	{
 		Constants,
 		ConstantBuffer,
-		UnorderAccessBuffer,
+		UnorderedAccessBuffer,
 		ShaderResource,
 		DescriptorTable
 	};
@@ -18,7 +18,7 @@ namespace display
 	enum class DescriptorTableParameterType : uint8_t
 	{
 		ConstantBuffer,
-		UnorderAccessBuffer,
+		UnorderedAccessBuffer,
 		ShaderResource,
 		Sampler
 	};

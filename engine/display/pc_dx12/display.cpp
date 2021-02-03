@@ -648,7 +648,7 @@ namespace display
 			case RootSignatureParameterType::ConstantBuffer:
 				root_parameters[i].InitAsConstantBufferView(static_cast<UINT>(source_property.root_param.shader_register), 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, Convert(source_property.visibility));
 				break;
-			case RootSignatureParameterType::UnorderAccessBuffer:
+			case RootSignatureParameterType::UnorderedAccessBuffer:
 				root_parameters[i].InitAsUnorderedAccessView(static_cast<UINT>(source_property.root_param.shader_register), 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, Convert(source_property.visibility));
 				break;
 			case RootSignatureParameterType::ShaderResource:

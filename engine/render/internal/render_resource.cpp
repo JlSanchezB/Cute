@@ -46,7 +46,7 @@ namespace
 			{"Constants", display::RootSignatureParameterType::Constants},
 			{"DescriptorTable", display::RootSignatureParameterType::DescriptorTable},
 			{"ShaderResource", display::RootSignatureParameterType::ShaderResource},
-			{"UnorderedAccessBuffer", display::RootSignatureParameterType::UnorderAccessBuffer}
+			{"UnorderedAccessBuffer", display::RootSignatureParameterType::UnorderedAccessBuffer}
 		};
 	};
 
@@ -56,7 +56,7 @@ namespace
 		constexpr static std::pair<const char*, display::DescriptorTableParameterType> table[] =
 		{
 			{"ConstantBuffer", display::DescriptorTableParameterType::ConstantBuffer},
-			{"UnorderAccessBuffer", display::DescriptorTableParameterType::UnorderAccessBuffer},
+			{"UnorderedAccessBuffer", display::DescriptorTableParameterType::UnorderedAccessBuffer},
 			{"ShaderResource", display::DescriptorTableParameterType::ShaderResource},
 			{"Sampler", display::DescriptorTableParameterType::Sampler}
 		};

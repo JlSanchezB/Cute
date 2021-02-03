@@ -45,7 +45,7 @@ namespace render
 			//Create compute root signature
 			display::RootSignatureDesc root_signature_desc;
 			root_signature_desc.num_root_parameters = 3;
-			root_signature_desc.root_parameters[0].type = display::RootSignatureParameterType::UnorderAccessBuffer;
+			root_signature_desc.root_parameters[0].type = display::RootSignatureParameterType::UnorderedAccessBuffer;
 			root_signature_desc.root_parameters[0].root_param.shader_register = 0;
 			root_signature_desc.root_parameters[0].visibility = display::ShaderVisibility::All;
 
