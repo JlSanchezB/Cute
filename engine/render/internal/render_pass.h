@@ -38,22 +38,16 @@ namespace render
 	//Resource pool dependency like depth buffers and render targets
 	struct ResourcePoolDependency
 	{
-		enum class Type
-		{
-			RenderTarget,
-			DepthBuffer
-		};
-
-		System::ResourceInfoReference resource;
-		Type type;
+		ResourceName name;
+		PoolResourceType type;
 		bool needs_to_be_allocated; //Needs to be allocated this pass
 		bool will_be_free; //It is free after this pass
 		uint16_t width_factor; //fixed point, 256 is factor 1
 		uint16_t height_factor;
 		display::Format format;
 
-		ResourcePoolDependency(ResourceName _resource, Type& _type, bool _needs_to_be_allocated, bool _will_be_free, float _width_factor, float _height_factor, const display::Format& _format) :
-			resource(_resource), type(_type), needs_to_be_allocated(_needs_to_be_allocated), will_be_free(_will_be_free), format(_format)
+		ResourcePoolDependency(ResourceName _name, PoolResourceType& _type, bool _needs_to_be_allocated, bool _will_be_free, float _width_factor, float _height_factor, const display::Format& _format) :
+			name(_name), type(_type), needs_to_be_allocated(_needs_to_be_allocated), will_be_free(_will_be_free), format(_format)
 		{
 			width_factor = static_cast<uint16_t>(_width_factor * 256.f);
 			height_factor = static_cast<uint16_t>(_height_factor * 256.f);
@@ -100,6 +94,11 @@ namespace render
 		const std::vector<ResourceBarrier>& GetResourceBarriers() const
 		{
 			return m_resource_barriers;
+		}
+
+		const std::vector<ResourcePoolDependency>& GetResourcePoolDependencies() const
+		{
+			return m_resource_pool_dependencies;
 		}
 
 		display::WeakCommandListHandle GetCommandList() const

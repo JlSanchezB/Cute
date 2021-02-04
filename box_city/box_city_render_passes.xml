@@ -64,6 +64,7 @@
     <Commands>
       <SetRenderTarget>
 		    <RenderTarget>BackBuffer</RenderTarget>
+        <DepthBuffer>SceneDepth</DepthBuffer>
 	    </SetRenderTarget>
       <SetRootSignature>BoxRootSignature</SetRootSignature>
       <SetDescriptorTable pipe="Graphics" root_param="0">

@@ -40,11 +40,11 @@ namespace render
 		{
 			if (m_resource_ptr == nullptr)
 			{
-				bool pass_resource;
-				RESOURCE* resource = render_context.GetResource<RESOURCE>(m_resource, pass_resource);
+				bool can_not_be_cached;
+				RESOURCE* resource = render_context.GetResource<RESOURCE>(m_resource, can_not_be_cached);
 
 				//If the resource is a pass resource, do not cache, as it changes depends of the render context
-				if (!pass_resource)
+				if (!can_not_be_cached)
 				{
 					m_resource_ptr = resource;
 				}

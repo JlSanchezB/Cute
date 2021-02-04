@@ -119,17 +119,17 @@ namespace render
 					}
 					else
 					{
-						ResourcePoolDependency::Type type;
+						PoolResourceType type;
 						bool valid = false;
 						if (strcmp(dependencies_xml_element->Name(), "RenderTarget") == 0)
 						{
 							valid = true;
-							type = ResourcePoolDependency::Type::RenderTarget;
+							type = PoolResourceType::RenderTarget;
 						}
 						else if (strcmp(dependencies_xml_element->Name(), "DepthBuffer") == 0)
 						{
 							valid = true;
-							type = ResourcePoolDependency::Type::DepthBuffer;
+							type = PoolResourceType::DepthBuffer;
 						}
 
 						if (valid)
@@ -185,17 +185,11 @@ namespace render
 							//Add resource dependency, so the pass will request the resource to the pool
 							m_resource_pool_dependencies.emplace_back(resource_name, type, pre_condition == "Alloc"_sh32, post_condition == "Free"_sh32, width_factor, heigth_factor, format);
 
-							//Needs to access the resource, it will be empty at the moment, as it is going to get assigned during the pass
-							switch (type)
+							if (pre_condition == "Alloc"_sh32)
 							{
-							case ResourcePoolDependency::Type::RenderTarget:
-								load_context.AddResource(resource_name, CreateResourceFromHandle<RenderTargetResource>(display::RenderTargetHandle()));
-								break;
-							case ResourcePoolDependency::Type::DepthBuffer:
-								load_context.AddResource(resource_name, CreateResourceFromHandle<DepthBufferResource>(display::DepthBufferHandle()));
-								break;
+								//Needs to access the resource, it will be empty at the moment, as it is going to get assigned during the pass
+								load_context.AddPoolResource(resource_name);
 							}
-							
 						}
 					}
 

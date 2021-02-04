@@ -21,7 +21,14 @@ namespace render
 	{
 		Game, //Resource added from the game, it can be access by name
 		PassDescriptor, //Resource is defined where it is used, it doesn't have name, it is an inline resource declared in pass declaration
-		Pass //Resource is created by the pass itself, resources that are different by pass (id and passname). For example a resource different by view.
+		Pass, //Resource is created by the pass itself, resources that are different by pass (id and passname). For example a resource different by view.
+		Pool //Resource that is allocated, used and freed during the rendering, it can be used by different passes and reused as well. The resource has a timeline inside the rendering.
+	};
+
+	enum class PoolResourceType
+	{
+		RenderTarget,
+		DepthBuffer
 	};
 
 	class RenderContextInternal : public RenderContext
@@ -133,7 +140,19 @@ namespace render
 			{
 				if (m_resource_ptr == nullptr)
 				{
-					m_resource_ptr = system->m_resources_map.Find(m_resource)->get();
+					ResourceInfo*  resource_ptr = system->m_resources_map.Find(m_resource)->get();
+
+					//Check if it can be cached
+					if (resource_ptr->source != ResourceSource::Pool &&
+						resource_ptr->source != ResourceSource::Pass)
+					{
+						m_resource_ptr = resource_ptr;
+						return resource_ptr;
+					}
+					else
+					{
+						return resource_ptr;
+					}
 				}
 				return m_resource_ptr;
 			}
@@ -173,6 +192,21 @@ namespace render
 		//Render command list, used for render commands from the render system
 		display::CommandListHandle m_render_command_list;
 
+		//Pool resource
+		struct PoolResource
+		{
+			std::unique_ptr<Resource> resource;
+			ResourceName name;
+			PoolResourceType type;
+			uint16_t width;
+			uint16_t height;
+			display::Format format;
+			bool can_be_reuse;
+			uint64_t last_render_frame_used = 0;
+		};
+		//Container for the pool resources
+		std::vector<PoolResource> m_pool_resources;
+
 		//Create render context
 		RenderContextInternal * CreateRenderContext(display::Device * device, const PassName& pass, const uint16_t pass_id, const PassInfo& pass_info, std::vector<std::string>& errors);
 
@@ -183,13 +217,25 @@ namespace render
 		bool Load(LoadContext& load_context, const char* descriptor_file_buffer, size_t descriptor_file_buffer_size);
 
 		//Add Resource
-		bool AddResource(const ResourceName& name, std::unique_ptr<Resource>& resource, ResourceSource source, const std::optional<display::TranstitionState>& current_access = {});
+		bool AddResource(const ResourceName& name, std::unique_ptr<Resource>&& resource, ResourceSource source, const std::optional<display::TranstitionState>& current_access = {});
+
+		//Get Resource
+		Resource* GetResource(const ResourceName& name, ResourceSource& source);
 
 		//Load resource
 		ResourceName LoadResource(LoadContext& load_context, const char* prefix = nullptr);
 
 		//Load Pass
 		Pass* LoadPass(LoadContext& load_context);
+
+		//Alloc pool resource
+		std::unique_ptr<Resource> AllocPoolResource(ResourceName resource_name, PoolResourceType type, uint16_t width, uint16_t weight, const display::Format& format);
+
+		//Dealloc pool resource
+		void DeallocPoolResource(ResourceName resource_name, std::unique_ptr<Resource>& resource);
+
+		//Update pool resources (free resources that have not used for two frames)
+		void UpdatePoolResources();
 
 		//Get Between frames cached render context
 		RenderContextInternal* GetCachedRenderContext(const PassName& pass_name, uint16_t id, const PassInfo& pass_info);

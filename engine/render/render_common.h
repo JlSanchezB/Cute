@@ -45,6 +45,8 @@ namespace render
 	//Information needed for each render pass
 	struct PassInfo
 	{
+		uint16_t width;
+		uint16_t height;
 	};
 
 	//System
@@ -72,6 +74,9 @@ namespace render
 
 		//Add resource
 		bool AddResource(const ResourceName& name, std::unique_ptr<Resource>& resource);
+
+		//Add pool resource
+		bool AddPoolResource(const ResourceName& name);
 	};
 	//Base resource class
 	class Resource

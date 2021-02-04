@@ -58,7 +58,7 @@ namespace render
 {
 	
 
-	Resource * RenderContext::GetResource(const ResourceName& name, bool& pass_resource) const
+	Resource * RenderContext::GetResource(const ResourceName& name, bool& can_not_be_cached) const
 	{
 		auto render_context = reinterpret_cast<const RenderContextInternal*>(this);
 
@@ -68,14 +68,17 @@ namespace render
 		
 		if (resource)
 		{
-			pass_resource = true;
+			can_not_be_cached = true;
 			return resource;
 		}
 		else
 		{
-			pass_resource = false;
+			can_not_be_cached = false;
 			//Then check system resources
-			return render::GetResource(render_context->m_render_pass_system, name);
+			ResourceSource source;
+			Resource* resource = render_context->m_render_pass_system->GetResource(name, source);
+			can_not_be_cached = (source == ResourceSource::Pass || source == ResourceSource::Pool);
+			return resource;
 		}
 	}
 
@@ -86,7 +89,7 @@ namespace render
 		//Mix the pass name and the id in the name of the resource
 		ResourceName pass_resource_name = CalculatePassResourceName(name, render_context->m_pass_name, render_context->m_pass_id);
 
-		return render_context->m_render_pass_system->AddResource(pass_resource_name, resource, ResourceSource::Pass);
+		return render_context->m_render_pass_system->AddResource(pass_resource_name, std::move(resource), ResourceSource::Pass);
 	}
 
 	Frame & RenderContext::GetRenderFrame()
@@ -230,6 +233,118 @@ namespace render
 		{
 			AddError(load_context, "Pass type <%s> is not register", pass_type);
 			return nullptr;
+		}
+	}
+
+	std::unique_ptr<Resource> System::AllocPoolResource(ResourceName resource_name, PoolResourceType type, uint16_t width, uint16_t height, const display::Format& format)
+	{
+		//Look in the pool for one free with the same parameters
+		for (auto& pool_resource : m_pool_resources)
+		{
+			if (pool_resource.can_be_reuse
+				&& pool_resource.name != ResourceName()
+				&& pool_resource.type == type
+				&& pool_resource.format == format
+				&& pool_resource.width == width
+				&& pool_resource.height == height)
+			{
+				assert(pool_resource.resource.get());
+				//It can be use
+				pool_resource.can_be_reuse = false;
+				pool_resource.last_render_frame_used = m_render_frame_index;
+				//TODO, change debug name
+
+				//Give ownership to the resource info
+				return std::move(pool_resource.resource);
+			}
+		}
+
+		//It needs to create a new resource to match the parameters
+
+		std::unique_ptr<Resource> resource;
+		switch (type)
+		{
+		case PoolResourceType::RenderTarget:
+		{
+			display::RenderTargetDesc desc;
+			desc.width = width;
+			desc.height = height;
+			desc.format = format;
+			display::RenderTargetHandle handle = display::CreateRenderTarget(m_device, desc, resource_name.GetValue());
+
+			resource = CreateResourceFromHandle<RenderTargetResource>(handle, width, height);
+		}
+		break;
+		case PoolResourceType::DepthBuffer:
+		{
+			display::DepthBufferDesc desc;
+			desc.width = width;
+			desc.height = height;
+			//desc.format = format;
+			display::DepthBufferHandle handle = display::CreateDepthBuffer(m_device, desc, resource_name.GetValue());
+
+			resource = CreateResourceFromHandle<DepthBufferResource>(handle);
+		}
+			break;
+		}
+
+		//Look for empty slot (no name)
+		for (auto& pool_resource : m_pool_resources)
+		{
+			if (pool_resource.name == ResourceName())
+			{
+				//Use this slot to add the new resource
+				pool_resource = PoolResource{ {}, resource_name, type, width, height, format, false, m_render_frame_index };
+
+				return std::move(resource);
+			}
+		}
+
+		//Add into the pool
+		m_pool_resources.emplace_back(PoolResource{ {}, resource_name, type, width, height, format, false, m_render_frame_index });
+
+		return std::move(resource);
+	}
+
+	void System::DeallocPoolResource(ResourceName resource_name, std::unique_ptr<Resource>& resource)
+	{
+		//Just return it to the pool
+		for (auto& pool_resource : m_pool_resources)
+		{
+			if (pool_resource.name == resource_name)
+			{
+				assert(pool_resource.can_be_reuse == false);
+				assert(pool_resource.resource.get() == nullptr);
+				
+				//Return
+				pool_resource.resource = std::move(resource);
+				pool_resource.can_be_reuse = true;
+				return;
+			}
+		}
+
+		core::LogError("Pool resource <%s> has been ask for release but it has not been allocated as pool resource", resource_name.GetValue());
+	}
+
+	void System::UpdatePoolResources()
+	{
+		//Loop back and check for resources that has not be used for the last two frames
+		size_t i = m_pool_resources.size();
+		while (i != 0)
+		{
+			i--;
+			auto& pool_resource = m_pool_resources[i];
+			if ((pool_resource.last_render_frame_used + 2) < m_render_frame_index)
+			{
+				//Resource can be release
+				assert(pool_resource.can_be_reuse);
+
+				pool_resource.resource->Destroy(m_device);
+				pool_resource.resource = nullptr;
+
+				//We free the slot just making the name empty
+				pool_resource.name = ResourceName();
+			}
 		}
 	}
 
@@ -378,7 +493,7 @@ namespace render
 		return (load_context.errors.size() == 0);
 	}
 
-	bool System::AddResource(const ResourceName& name, std::unique_ptr<Resource>& resource, ResourceSource source, const std::optional<display::TranstitionState>& current_access)
+	bool System::AddResource(const ResourceName& name, std::unique_ptr<Resource>&& resource, ResourceSource source, const std::optional<display::TranstitionState>& current_access)
 	{
 		display::TranstitionState init_state;
 		if (current_access.has_value())
@@ -387,8 +502,15 @@ namespace render
 		}
 		else
 		{
-			//Use default for the resource type
-			init_state = resource->GetDefaultAccess();
+			if (resource)
+			{
+				//Use default for the resource type
+				init_state = resource->GetDefaultAccess();
+			}
+			else
+			{
+				init_state = display::TranstitionState::Common;
+			}
 		}
 
 		auto& resource_it = m_resources_map[name];
@@ -403,6 +525,17 @@ namespace render
 			core::LogWarning("Game Resource <%s> has been already added, discarting the new resource", name.GetValue());
 			return false;
 		}
+	}
+
+	Resource* System::GetResource(const ResourceName& name, ResourceSource& source)
+	{
+		auto& it = m_resources_map[name];
+		if (it)
+		{
+			source = (*it)->source;
+			return (*it)->resource.get();
+		}
+		return nullptr;
 	}
 
 
@@ -458,6 +591,17 @@ namespace render
 		//Destroy resources and passes
 		DestroyResources(device, system->m_resources_map);
 		DestroyPasses(device, system->m_passes_map);
+		
+		//Destroy pool resources
+		for (auto& pool_resource : system->m_pool_resources)
+		{
+			if (pool_resource.resource.get())
+			{
+				pool_resource.resource->Destroy(device);
+				pool_resource.resource = nullptr;
+			}
+		}
+		
 
 		//Destroy command list
 		display::DestroyHandle(device, system->m_render_command_list);
@@ -494,6 +638,18 @@ namespace render
 		//Save old resources in case the pass descriptor can not be load
 		System::ResourceMap resources_map_old = std::move(system->m_resources_map);
 		System::PassMap passes_map_old = std::move(system->m_passes_map);
+
+		//Destroy pool resources, they will get recreated
+		//Destroy pool resources
+		for (auto& pool_resource : system->m_pool_resources)
+		{
+			if (pool_resource.resource.get())
+			{
+				pool_resource.resource->Destroy(device);
+				pool_resource.resource = nullptr;
+			}
+		}
+		system->m_pool_resources.clear();
 
 		LoadContext load_context;
 		load_context.device = device;
@@ -785,6 +941,30 @@ namespace render
 				{
 					PROFILE_SCOPE("Render", "CapturePass", kRenderProfileColour);
 
+					//Request new pool resources
+					for (auto& pool_resource : render_context->GetContextRootPass()->GetResourcePoolDependencies())
+					{
+						if (pool_resource.needs_to_be_allocated)
+						{
+							//Calculate the resolution needed
+							uint16_t width = render_context->m_pass_info.width * pool_resource.width_factor / 256;
+							uint16_t height = render_context->m_pass_info.height * pool_resource.height_factor / 256;
+
+							//Pass the control to the resource in the resource map
+							m_resources_map.Find(pool_resource.name)->get()->resource = std::move(AllocPoolResource(pool_resource.name, pool_resource.type, width, height, pool_resource.format));
+						}
+						else
+						{
+							ResourceSource source;
+							if (GetResource(pool_resource.name, source) == nullptr)
+							{
+								core::LogError("Pool resource <%s> used during render pass <%s><%i> but the resource is not active",
+									pool_resource.name.GetValue(),
+									render_pass.pass_name.GetValue(), render_pass.id);
+							}
+						}
+					}
+
 					//Add resource barriers if needed
 					std::vector<display::ResourceBarrier> resource_barriers_to_execute;
 					resource_barriers_to_execute.reserve(render_context->GetContextRootPass()->GetResourceBarriers().size());
@@ -821,6 +1001,15 @@ namespace render
 					//Capture pass
 					render_context->GetContextRootPass()->RootContextRender(*render_context, resource_barriers_to_execute);
 
+					//Free pool resources
+					for (auto& pool_resource : render_context->GetContextRootPass()->GetResourcePoolDependencies())
+					{
+						if (pool_resource.will_be_free)
+						{
+							//Return to the pool
+							DeallocPoolResource(pool_resource.name, m_resources_map.Find(pool_resource.name)->get()->resource);
+						}
+					}
 					//Add to execute
 					command_list_to_execute.push_back(render_context->GetContextRootPass()->GetCommandList());
 				}
@@ -840,6 +1029,8 @@ namespace render
 		display::EndFrame(m_device);
 
 		render_frame.Reset();
+
+		UpdatePoolResources();
 
 		if (m_game)
 		{
@@ -933,13 +1124,13 @@ namespace render
 
 	bool AddGameResource(System * system, const ResourceName& name, std::unique_ptr<Resource>&& resource, const std::optional<display::TranstitionState>& current_access)
 	{
-		return system->AddResource(name, resource, ResourceSource::Game, current_access);
+		return system->AddResource(name, std::move(resource), ResourceSource::Game, current_access);
 	}
 
 	bool AddGameResource(System* system, const ResourceName& name, const PassName& pass_name, const uint16_t pass_id, std::unique_ptr<Resource>&& resource, const std::optional<display::TranstitionState>& current_access)
 	{
 		//Calculate new hash for this resource
-		return system->AddResource(CalculatePassResourceName(name, pass_name, pass_id), resource, ResourceSource::Game, current_access);
+		return system->AddResource(CalculatePassResourceName(name, pass_name, pass_id), std::move(resource), ResourceSource::Game, current_access);
 	}
 
 	bool RegisterResourceFactory(System * system, const RenderClassType& resource_type, std::unique_ptr<FactoryInterface<Resource>>& resource_factory)
@@ -967,14 +1158,10 @@ namespace render
 		return true;
 	}
 
-	Resource * GetResource(System* system, const ResourceName& name)
+	Resource* GetResource(System* system, const ResourceName& name)
 	{
-		auto& it = system->m_resources_map[name];
-		if (it)
-		{
-			return (*it)->resource.get();
-		}
-		return nullptr;
+		ResourceSource source;
+		return system->GetResource(name, source);
 	}
 
 	Pass * GetPass(System* system, const PassName& name)
@@ -1005,6 +1192,12 @@ namespace render
 
 	bool LoadContext::AddResource(const ResourceName& name, std::unique_ptr<Resource>& resource)
 	{
-		return render_system->AddResource(name, resource, ResourceSource::PassDescriptor);
+		return render_system->AddResource(name, std::move(resource), ResourceSource::PassDescriptor);
+	}
+
+	bool LoadContext::AddPoolResource(const ResourceName& name)
+	{	
+		//Gets added empty, the resource will get assigned during rendering
+		return render_system->AddResource(name, {}, ResourceSource::Pool);
 	}
 }

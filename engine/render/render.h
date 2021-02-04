@@ -46,12 +46,12 @@ namespace render
 		bool AddPassResource(const ResourceName& name, std::unique_ptr<Resource>&& resource);
 
 		//Resource
-		Resource* GetResource(const ResourceName& name, bool& pass_resource) const;
+		Resource* GetResource(const ResourceName& name, bool& can_not_be_cached) const;
 
 		template<typename RESOURCE>
-		inline RESOURCE* GetResource(const ResourceName& name, bool& pass_resource) const
+		inline RESOURCE* GetResource(const ResourceName& name, bool& can_not_be_cached) const
 		{
-			Resource* resource = GetResource(name, pass_resource);
+			Resource* resource = GetResource(name, can_not_be_cached);
 			if (resource && resource->Type() == RESOURCE::kClassName)
 			{
 				return dynamic_cast<RESOURCE*>(resource);
