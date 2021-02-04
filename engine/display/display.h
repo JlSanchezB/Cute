@@ -314,5 +314,11 @@ namespace display
 		DestroyCommandList(device, handle);
 	}
 
+	template<>
+	inline void DestroyHandleInternal(Device* device, DepthBufferHandle& handle)
+	{
+		DestroyDepthBuffer(device, handle);
+	}
+
 }
 #endif DISPLAY_H_

@@ -30,7 +30,26 @@ namespace
 			{"UnorderedAccess", display::TranstitionState::UnorderedAccess},
 			{"PixelShaderResource", display::TranstitionState::PixelShaderResource},
 			{"NonPixelShaderResource", display::TranstitionState::NonPixelShaderResource},
-			{"AllShaderResource", display::TranstitionState::AllShaderResource}
+			{"AllShaderResource", display::TranstitionState::AllShaderResource},
+			{"Depth", display::TranstitionState::Depth},
+			{"DepthRead", display::TranstitionState::DepthRead}
+		};
+	};
+
+	template<>
+	struct ConversionTable<display::Format>
+	{
+		constexpr static std::pair<const char*, display::Format> table[] =
+		{
+			{"UNKNOWN", display::Format::UNKNOWN},
+			{"R32G32_FLOAT", display::Format::R32G32_FLOAT},
+			{"R32G32B32_FLOAT", display::Format::R32G32B32_FLOAT},
+			{"R32G32B32A32_FLOAT", display::Format::R32G32B32A32_FLOAT},
+			{"R8G8B8A8_UNORM", display::Format::R8G8B8A8_UNORM},
+			{"R8G8B8A8_UNORM_SRGB", display::Format::R8G8B8A8_UNORM_SRGB},
+			{"R32_UINT", display::Format::R32_UINT},
+			{"R16_UINT", display::Format::R16_UINT},
+			{"D32_FLOAT", display::Format::D32_FLOAT}
 		};
 	};
 }
@@ -96,6 +115,87 @@ namespace render
 						if (QueryTableAttribute(load_context, dependencies_xml_element, "access", access, AttributeType::Optional))
 						{
 							m_resource_barriers.emplace_back(resource_name, access);
+						}
+					}
+					else
+					{
+						ResourcePoolDependency::Type type;
+						bool valid = false;
+						if (strcmp(dependencies_xml_element->Name(), "RenderTarget") == 0)
+						{
+							valid = true;
+							type = ResourcePoolDependency::Type::RenderTarget;
+						}
+						else if (strcmp(dependencies_xml_element->Name(), "DepthBuffer") == 0)
+						{
+							valid = true;
+							type = ResourcePoolDependency::Type::DepthBuffer;
+						}
+
+						if (valid)
+						{
+							const char* string_value;
+							const char* pre_condition_state;
+							const char* post_condition_state;
+							ResourceName resource_name;
+							ResourceState pre_condition;
+							ResourceState post_condition;
+							if (dependencies_xml_element->QueryStringAttribute("name", &string_value) == tinyxml2::XML_SUCCESS)
+							{
+								resource_name = ResourceName(string_value);
+							}
+							else
+							{
+								AddError(load_context, "Error reading a render target attribute <%s> in node <%s>", "name", load_context.name);
+							}
+
+							if (dependencies_xml_element->QueryStringAttribute("pre_condition_state", &pre_condition_state) == tinyxml2::XML_SUCCESS)
+							{
+								pre_condition = ResourceState(pre_condition_state);
+								if (pre_condition != "Alloc"_sh32)
+								{
+									//Add a pre condition state
+									m_pre_resource_conditions.emplace_back(resource_name, ResourceState(pre_condition_state));
+								}
+							}
+
+							if (dependencies_xml_element->QueryStringAttribute("post_update_state", &post_condition_state) == tinyxml2::XML_SUCCESS)
+							{
+								post_condition = ResourceState(post_condition_state);
+								if (post_condition != "Free"_sh32)
+								{
+									//Add a post update state
+									m_post_resource_updates.emplace_back(resource_name, ResourceState(post_condition_state));
+								}
+							}
+
+							display::TranstitionState access;
+							if (QueryTableAttribute(load_context, dependencies_xml_element, "access", access, AttributeType::Optional))
+							{
+								m_resource_barriers.emplace_back(resource_name, access);
+							}
+							float width_factor = 1.f;
+							dependencies_xml_element->QueryFloatAttribute("width_factor", &width_factor);
+							float heigth_factor = 1.f;
+							dependencies_xml_element->QueryFloatAttribute("heigth_factor", &heigth_factor);
+
+							display::Format format;
+							QueryTableAttribute(load_context, dependencies_xml_element, "format", format, AttributeType::NonOptional);
+
+							//Add resource dependency, so the pass will request the resource to the pool
+							m_resource_pool_dependencies.emplace_back(resource_name, type, pre_condition == "Alloc"_sh32, post_condition == "Free"_sh32, width_factor, heigth_factor, format);
+
+							//Needs to access the resource, it will be empty at the moment, as it is going to get assigned during the pass
+							switch (type)
+							{
+							case ResourcePoolDependency::Type::RenderTarget:
+								load_context.AddResource(resource_name, CreateResourceFromHandle<RenderTargetResource>(display::RenderTargetHandle()));
+								break;
+							case ResourcePoolDependency::Type::DepthBuffer:
+								load_context.AddResource(resource_name, CreateResourceFromHandle<DepthBufferResource>(display::DepthBufferHandle()));
+								break;
+							}
+							
 						}
 					}
 

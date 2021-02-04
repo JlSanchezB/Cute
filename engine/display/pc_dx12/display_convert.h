@@ -25,6 +25,7 @@ namespace display
 		case Format::R8G8B8A8_UNORM_SRGB: return DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
 		case Format::R32_UINT: return DXGI_FORMAT_R32_UINT;
 		case Format::R16_UINT: return DXGI_FORMAT_R16_UINT;
+		case Format::D32_FLOAT: return DXGI_FORMAT_D32_FLOAT;
 		}
 	}
 
@@ -268,6 +269,8 @@ namespace display
 		case TranstitionState::PixelShaderResource: return D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
 		case TranstitionState::NonPixelShaderResource: return D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
 		case TranstitionState::AllShaderResource: return D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+		case TranstitionState::Depth: return D3D12_RESOURCE_STATE_DEPTH_WRITE;
+		case TranstitionState::DepthRead: return D3D12_RESOURCE_STATE_DEPTH_READ | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
 		}
 	}
 }
