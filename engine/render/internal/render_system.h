@@ -203,6 +203,7 @@ namespace render
 			display::Format format;
 			bool can_be_reuse;
 			uint64_t last_render_frame_used = 0;
+			display::TranstitionState m_access;
 		};
 		//Container for the pool resources
 		std::vector<PoolResource> m_pool_resources;
@@ -229,10 +230,10 @@ namespace render
 		Pass* LoadPass(LoadContext& load_context);
 
 		//Alloc pool resource
-		std::unique_ptr<Resource> AllocPoolResource(ResourceName resource_name, PoolResourceType type, uint16_t width, uint16_t weight, const display::Format& format);
+		std::pair<std::unique_ptr<Resource>, display::TranstitionState> AllocPoolResource(ResourceName resource_name, PoolResourceType type, uint16_t width, uint16_t weight, const display::Format& format);
 
 		//Dealloc pool resource
-		void DeallocPoolResource(ResourceName resource_name, std::unique_ptr<Resource>& resource);
+		void DeallocPoolResource(ResourceName resource_name, std::unique_ptr<Resource>& resource, const display::TranstitionState state);
 
 		//Update pool resources (free resources that have not used for two frames)
 		void UpdatePoolResources();

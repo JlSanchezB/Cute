@@ -236,7 +236,7 @@ namespace render
 		}
 	}
 
-	std::unique_ptr<Resource> System::AllocPoolResource(ResourceName resource_name, PoolResourceType type, uint16_t width, uint16_t height, const display::Format& format)
+	std::pair<std::unique_ptr<Resource>, display::TranstitionState> System::AllocPoolResource(ResourceName resource_name, PoolResourceType type, uint16_t width, uint16_t height, const display::Format& format)
 	{
 		//Look in the pool for one free with the same parameters
 		for (auto& pool_resource : m_pool_resources)
@@ -255,13 +255,14 @@ namespace render
 				//TODO, change debug name
 
 				//Give ownership to the resource info
-				return std::move(pool_resource.resource);
+				return std::make_pair<>(std::move(pool_resource.resource), pool_resource.m_access);
 			}
 		}
 
 		//It needs to create a new resource to match the parameters
 
 		std::unique_ptr<Resource> resource;
+		display::TranstitionState access;
 		switch (type)
 		{
 		case PoolResourceType::RenderTarget:
@@ -273,6 +274,7 @@ namespace render
 			display::RenderTargetHandle handle = display::CreateRenderTarget(m_device, desc, resource_name.GetValue());
 
 			resource = CreateResourceFromHandle<RenderTargetResource>(handle, width, height);
+			access = resource->GetDefaultAccess();
 		}
 		break;
 		case PoolResourceType::DepthBuffer:
@@ -284,6 +286,7 @@ namespace render
 			display::DepthBufferHandle handle = display::CreateDepthBuffer(m_device, desc, resource_name.GetValue());
 
 			resource = CreateResourceFromHandle<DepthBufferResource>(handle);
+			access = resource->GetDefaultAccess();
 		}
 			break;
 		}
@@ -294,19 +297,19 @@ namespace render
 			if (pool_resource.name == ResourceName())
 			{
 				//Use this slot to add the new resource
-				pool_resource = PoolResource{ {}, resource_name, type, width, height, format, false, m_render_frame_index };
+				pool_resource = PoolResource{ {}, resource_name, type, width, height, format, false, m_render_frame_index, access };
 
-				return std::move(resource);
+				return std::make_pair<>(std::move(resource), access);
 			}
 		}
 
 		//Add into the pool
-		m_pool_resources.emplace_back(PoolResource{ {}, resource_name, type, width, height, format, false, m_render_frame_index });
+		m_pool_resources.emplace_back(PoolResource{ {}, resource_name, type, width, height, format, false, m_render_frame_index, access });
 
-		return std::move(resource);
+		return std::make_pair<>(std::move(resource), access);
 	}
 
-	void System::DeallocPoolResource(ResourceName resource_name, std::unique_ptr<Resource>& resource)
+	void System::DeallocPoolResource(ResourceName resource_name, std::unique_ptr<Resource>& resource, const display::TranstitionState access)
 	{
 		//Just return it to the pool
 		for (auto& pool_resource : m_pool_resources)
@@ -316,8 +319,9 @@ namespace render
 				assert(pool_resource.can_be_reuse == false);
 				assert(pool_resource.resource.get() == nullptr);
 				
-				//Return
+				//Return to the pool
 				pool_resource.resource = std::move(resource);
+				pool_resource.m_access = access; //Update state
 				pool_resource.can_be_reuse = true;
 				return;
 			}
@@ -959,7 +963,10 @@ namespace render
 							uint16_t height = render_context->m_pass_info.height * pool_resource.height_factor / 256;
 
 							//Pass the control to the resource in the resource map
-							m_resources_map.Find(pool_resource.name)->get()->resource = std::move(AllocPoolResource(pool_resource.name, pool_resource.type, width, height, pool_resource.format));
+							auto allocated_pool_resource = AllocPoolResource(pool_resource.name, pool_resource.type, width, height, pool_resource.format);
+							auto resource_info = m_resources_map.Find(pool_resource.name)->get();
+							resource_info->resource = std::move(allocated_pool_resource.first);
+							resource_info->access = allocated_pool_resource.second;
 						}
 						else
 						{
@@ -1015,7 +1022,7 @@ namespace render
 						if (pool_resource.will_be_free)
 						{
 							//Return to the pool
-							DeallocPoolResource(pool_resource.name, m_resources_map.Find(pool_resource.name)->get()->resource);
+							DeallocPoolResource(pool_resource.name, m_resources_map.Find(pool_resource.name)->get()->resource, m_resources_map.Find(pool_resource.name)->get()->access);
 						}
 					}
 					//Add to execute
