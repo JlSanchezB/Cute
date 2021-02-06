@@ -15,13 +15,13 @@
 <Passes>
   <Pass name="RenderToRenderTarget">
     <Dependencies>
-      <Resource name="RenderTarget" pre_condition_state="Init" post_update_state ="Ready" access="RenderTarget"/>
+      <RenderTarget name="RenderToTexture" pre_condition_state="Alloc" post_update_state ="Ready" access="RenderTarget" format="R8G8B8A8_UNORM" width_factor="1.0" height_factor="1.f"/>
     </Dependencies>
     <Commands>
       <SetRenderTarget>
-        <RenderTarget>RenderTarget</RenderTarget>
+        <RenderTarget>RenderToTexture</RenderTarget>
       </SetRenderTarget>
-      <ClearRenderTarget colour="0,0,0,0">RenderTarget</ClearRenderTarget>
+      <ClearRenderTarget colour="0,0,0,0">RenderToTexture</ClearRenderTarget>
       <SetRootSignature>GraphicsRootSignature</SetRootSignature>
       <SetPipelineState>
         <Resource type="GraphicsPipelineState" name="pipeline test 1">
@@ -77,7 +77,7 @@
   </Pass>
   <Pass name="Main">
     <Dependencies>
-      <Resource name="RenderTarget" pre_condition_state="Ready" access="AllShaderResource"/>
+      <RenderTarget name="RenderToTexture" pre_condition_state="Ready" post_update_state ="Free" access="AllShaderResource" format="R8G8B8A8_UNORM" width_factor="1.0" height_factor="1.f"/>
     </Dependencies>
     <Commands>
 	    <SetRenderTarget>
@@ -131,12 +131,11 @@
         </Resource>
       </SetPipelineState>
       <SetDescriptorTable pipe="Graphics" root_param="0">
-        <Descriptor>RenderTarget</Descriptor>
+        <Descriptor>RenderToTexture</Descriptor>
         <Descriptor>GameGlobal</Descriptor>
       </SetDescriptorTable>
       <DrawFullScreenQuad/>
     </Commands>
-  
 </Pass>
 </Passes>
 </Root>

@@ -185,11 +185,9 @@ namespace render
 							//Add resource dependency, so the pass will request the resource to the pool
 							m_resource_pool_dependencies.emplace_back(resource_name, type, pre_condition == "Alloc"_sh32, post_condition == "Free"_sh32, width_factor, heigth_factor, format);
 
-							if (pre_condition == "Alloc"_sh32)
-							{
-								//Needs to access the resource, it will be empty at the moment, as it is going to get assigned during the pass
-								load_context.AddPoolResource(resource_name);
-							}
+
+							//Needs to access the resource, it will be empty at the moment, as it is going to get assigned during the pass
+							load_context.AddPoolResource(resource_name);
 						}
 					}
 
@@ -441,12 +439,9 @@ namespace render
 		
 		AddError(load_context, "SetDescriptorTablePass uknown definition");
 	}
-	void SetDescriptorTablePass::InitPass(RenderContext & render_context, display::Device * device, ErrorContext& errors)
+	bool SetDescriptorTablePass::FillDescriptorTableDesc(RenderContext& render_context, display::DescriptorTableDesc& descriptor_table_desc) const
 	{
-		//Create a descriptor table resource and add it to render context
-		display::DescriptorTableDesc descriptor_table_desc;
-		descriptor_table_desc.access = display::Access::Dynamic;
-
+		bool descriptor_full_inited = true;
 		for (auto& descriptor : m_descriptor_table_names)
 		{
 			bool pass_resource;
@@ -482,9 +477,21 @@ namespace render
 			}
 			else
 			{
-				AddError(errors, "Descriptor <%s> doesn't exist in the resource maps", descriptor.c_str());
+				descriptor_full_inited = false;
+				//Descriptor has some resources that can not be built until the rendering, for example a pool resource
+				descriptor_table_desc.AddDescriptor(display::DescriptorTableDesc::NullDescriptor());
 			}
 		}
+
+		return descriptor_full_inited;
+	}
+	void SetDescriptorTablePass::InitPass(RenderContext & render_context, display::Device * device, ErrorContext& errors)
+	{
+		//Create a descriptor table resource and add it to render context
+		display::DescriptorTableDesc descriptor_table_desc;
+		descriptor_table_desc.access = display::Access::Dynamic;
+
+		m_update_each_frame = !FillDescriptorTableDesc(render_context, descriptor_table_desc);
 
 		display::DescriptorTableHandle descriptor_table_handle = display::CreateDescriptorTable(device, descriptor_table_desc);
 
@@ -500,6 +507,16 @@ namespace render
 		DescriptorTableResource* descriptor_table = m_descriptor_table.Get(render_context);
 		if (descriptor_table)
 		{
+			if (m_update_each_frame)
+			{
+				//Capture all descriptors
+				display::DescriptorTableDesc descriptor_table_desc;
+				FillDescriptorTableDesc(render_context, descriptor_table_desc);
+
+				//update descriptors
+				display::UpdateDescriptorTable(render_context.GetDevice(), descriptor_table->GetHandle(), descriptor_table_desc.descriptors.data(), descriptor_table_desc.descriptors.size());
+			}
+
 			render_context.GetContext()->SetDescriptorTable(m_pipe, m_root_parameter, descriptor_table->GetHandle());
 		}
 	}

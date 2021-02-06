@@ -521,9 +521,17 @@ namespace render
 		}
 		else
 		{
-			resource.release();
-			core::LogWarning("Game Resource <%s> has been already added, discarting the new resource", name.GetValue());
-			return false;
+			if (source != ResourceSource::Pool)
+			{
+				resource.release();
+				core::LogWarning("Game Resource <%s> has been already added, discarting the new resource", name.GetValue());
+				return false;
+			}
+			else
+			{
+				//Pool resources can be added more than once, as each pass add one
+				return true;
+			}
 		}
 	}
 

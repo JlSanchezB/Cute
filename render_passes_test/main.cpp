@@ -103,6 +103,8 @@ public:
 		display::UpdateResourceBuffer(m_device, m_game_constant_buffer, &game_constant_buffer, sizeof(game_constant_buffer));
 
 		render::PassInfo pass_info;
+		pass_info.width = m_width;
+		pass_info.height = m_height;
 
 		auto& render_frame = render::GetGameRenderFrame(m_render_pass_system);
 

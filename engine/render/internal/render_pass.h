@@ -214,6 +214,8 @@ namespace render
 		display::Pipe m_pipe = display::Pipe::Graphics;
 		//If there is a descriptor table, that resource will be build the first time that it is executed, as it knows the constants buffer
 		std::vector<std::string> m_descriptor_table_names;
+		//Descriptor has a pool resource and needs to be updated each frame
+		bool m_update_each_frame = false;
 
 		//Static resource used
 		ResourceReference<DescriptorTableResource> m_descriptor_table;
@@ -221,6 +223,8 @@ namespace render
 		//Just a global count to handle unique names for the resources
 		inline static uint32_t m_resource_id_count = 0;
 	
+		bool FillDescriptorTableDesc(RenderContext& render_context, display::DescriptorTableDesc& descriptor_table_desc) const;
+
 	public:
 		DECLARE_RENDER_CLASS("SetDescriptorTable");
 

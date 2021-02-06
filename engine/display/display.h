@@ -120,6 +120,8 @@ namespace display
 	DescriptorTableHandle CreateDescriptorTable(Device* device, const DescriptorTableDesc& descriptor_table_desc);
 	//Destroy descriptor table
 	void DestroyDescriptorTable(Device * device, DescriptorTableHandle& handle);
+	//Update descriptor table
+	void UpdateDescriptorTable(Device* device, const WeakDescriptorTableHandle& handle, const DescriptorTableDesc::Descritor* descriptor_table, size_t descriptor_count);
 
 	//Create sampler Descriptor table
 	SamplerDescriptorTableHandle CreateSamplerDescriptorTable(Device* device, const SamplerDescriptorTableDesc& sampler_descriptor_table);

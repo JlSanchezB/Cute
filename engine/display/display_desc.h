@@ -260,7 +260,8 @@ namespace display
 
 	struct DescriptorTableDesc
 	{
-		using Descritor = std::variant<WeakConstantBufferHandle, WeakUnorderedAccessBufferHandle, WeakShaderResourceHandle, WeakRenderTargetHandle>;
+		struct NullDescriptor {}; //Used to reserve a slot, but not setting a handle
+		using Descritor = std::variant<NullDescriptor, WeakConstantBufferHandle, WeakUnorderedAccessBufferHandle, WeakShaderResourceHandle, WeakRenderTargetHandle>;
 		Access access = Access::Static; //With static, only static handles are supported
 		static constexpr size_t kNumMaxDescriptors = 32;
 
