@@ -314,7 +314,8 @@ namespace render
 		//Just return it to the pool
 		for (auto& pool_resource : m_pool_resources)
 		{
-			if (pool_resource.name == resource_name)
+			if (pool_resource.name == resource_name &&
+				pool_resource.can_be_reuse == false)
 			{
 				assert(pool_resource.can_be_reuse == false);
 				assert(pool_resource.resource.get() == nullptr);
@@ -338,7 +339,8 @@ namespace render
 		{
 			i--;
 			auto& pool_resource = m_pool_resources[i];
-			if ((pool_resource.last_render_frame_used + 2) < m_render_frame_index)
+			if (pool_resource.name != ResourceName() &&
+				(pool_resource.last_render_frame_used + 2) < m_render_frame_index)
 			{
 				//Resource can be release
 				assert(pool_resource.can_be_reuse);
