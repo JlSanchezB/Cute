@@ -399,6 +399,10 @@ namespace display
 						[&](const WeakUnorderedAccessBufferHandle& handle)
 						{
 							dx12_resource_barriers[i].Transition.pResource = device->Get(handle).resource.Get();
+						},
+						[&](const WeakDepthBufferHandle& handle)
+						{
+							dx12_resource_barriers[i].Transition.pResource = device->Get(handle).resource.Get();
 						}
 					}, resource_barrier.resource);
 				

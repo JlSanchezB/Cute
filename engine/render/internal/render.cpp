@@ -1003,6 +1003,10 @@ namespace render
 									{
 										resource_barriers_to_execute.emplace_back(handle, current_access, next_access);
 									},
+									[&](const display::WeakDepthBufferHandle& handle)
+									{
+										resource_barriers_to_execute.emplace_back(handle, current_access, next_access);
+									},
 									[&](const display::WeakUnorderedAccessBufferHandle& handle)
 									{
 										resource_barriers_to_execute.emplace_back(handle, current_access, next_access);

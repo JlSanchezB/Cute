@@ -209,6 +209,10 @@ namespace render
 		DECLARE_RENDER_CLASS("DepthBuffer");
 
 		void Load(LoadContext& load_context) override;
+		DisplayHandle GetDisplayHandle() override
+		{
+			return DisplayHandleResource<display::DepthBufferHandle>::GetHandle();
+		}
 	};
 
 	//Graphics pipeline state resource
