@@ -23,12 +23,6 @@ namespace display
 			//Render target handle inside the ring buffer (if it exist)
 			auto frame_render_target = GetRingResource(device, render_target_array[i], device->m_frame_index);
 			auto& render_target = device->Get(frame_render_target);
-			if (render_target.current_state != D3D12_RESOURCE_STATE_RENDER_TARGET)
-			{
-				command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(render_target.resource.Get(), render_target.current_state, D3D12_RESOURCE_STATE_RENDER_TARGET));
-				render_target.current_state = D3D12_RESOURCE_STATE_RENDER_TARGET;
-			}
-
 			render_target_handles[i] = device->m_render_target_pool.GetDescriptor(frame_render_target);
 		}
 
@@ -119,31 +113,7 @@ namespace display
 
 		command_list->IASetIndexBuffer(&index_buffer.view);
 	}
-	void Context::RenderTargetTransition(uint8_t num_targets, WeakRenderTargetHandle * render_target_array, const ResourceState& dest_state)
-	{
-		auto dx12_context = reinterpret_cast<DX12Context*>(this);
-		Device* device = dx12_context->device;
-		const auto& command_list = dx12_context->command_list;
-
-		std::array< CD3DX12_RESOURCE_BARRIER, kMaxNumRenderTargets> dx12_render_target_transtitions;
-
-		size_t num_transitions = 0;
-		for (size_t i = 0; i < num_targets; ++i)
-		{
-			auto& render_target = device->Get(render_target_array[i]);
-			if (render_target.current_state != Convert(dest_state))
-			{
-				dx12_render_target_transtitions[num_transitions] = CD3DX12_RESOURCE_BARRIER::Transition(render_target.resource.Get(), render_target.current_state, Convert(dest_state));
-				render_target.current_state = Convert(dest_state);
-				num_transitions++;
-			}
-		}
-		if (num_transitions > 0)
-		{
-			command_list->ResourceBarrier(static_cast<UINT>(num_transitions), &dx12_render_target_transtitions[0]);
-		}
-
-	}
+	
 	void Context::SetConstants(const Pipe& pipe, uint8_t root_parameter, const void * data, size_t num_constants)
 	{
 		auto dx12_context = reinterpret_cast<DX12Context*>(this);
@@ -387,15 +357,21 @@ namespace display
 					{
 						[&](const WeakRenderTargetHandle& handle)
 						{
-							dx12_resource_barriers[i].Transition.pResource = device->Get(handle).resource.Get();
+							auto& render_target = device->Get(GetRingResource(device, handle, device->m_frame_index));
+							dx12_resource_barriers[i].Transition.pResource = render_target.resource.Get();
+							render_target.current_state = Convert(resource_barrier.state_after);
+							
 						},
 						[&](const WeakUnorderedAccessBufferHandle& handle)
 						{
-							dx12_resource_barriers[i].Transition.pResource = device->Get(handle).resource.Get();
+							auto& unordered_access_buffer = device->Get(handle);
+							dx12_resource_barriers[i].Transition.pResource = unordered_access_buffer.resource.Get();
 						},
 						[&](const WeakDepthBufferHandle& handle)
 						{
-							dx12_resource_barriers[i].Transition.pResource = device->Get(handle).resource.Get();
+							auto& depth_buffer = device->Get(GetRingResource(device, handle, device->m_frame_index));
+							dx12_resource_barriers[i].Transition.pResource = depth_buffer.resource.Get();
+							depth_buffer.current_state = Convert(resource_barrier.state_after);
 						}
 					}, resource_barrier.resource);
 				

@@ -674,8 +674,14 @@ public:
 			draw_desc.vertex_count = 3;
 			context->Draw(draw_desc);
 
-			//Use render target as texture
-			context->RenderTargetTransition(1, &m_test_1.m_render_target, display::ResourceState::PixelShaderResource);
+			{
+				//Use render target as texture and move back buffer to render target
+				std::vector<display::ResourceBarrier> resource_barriers;
+				resource_barriers.emplace_back(m_test_1.m_render_target, display::TranstitionState::RenderTarget, display::TranstitionState::PixelShaderResource);
+				resource_barriers.emplace_back(display::GetBackBuffer(m_device), display::TranstitionState::Present, display::TranstitionState::RenderTarget);
+
+				context->AddResourceBarriers(resource_barriers);
+			}
 			//Set BackBuffer
 			display::WeakRenderTargetHandle render_target_array[] = { display::GetBackBuffer(m_device) };
 			context->SetRenderTargets(1, render_target_array, display::WeakDepthBufferHandle());
@@ -694,6 +700,13 @@ public:
 			//Draw
 			context->Draw(draw_desc);
 
+			//Move texture to render target
+			{
+				std::vector<display::ResourceBarrier> resource_barriers;
+				resource_barriers.emplace_back(m_test_1.m_render_target, display::TranstitionState::PixelShaderResource, display::TranstitionState::RenderTarget);
+
+				context->AddResourceBarriers(resource_barriers);
+			}
 
 			//Close command list
 			display::CloseCommandList(m_device, context);

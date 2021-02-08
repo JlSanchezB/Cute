@@ -591,6 +591,9 @@ namespace render
 		//Create render command list
 		system->m_render_command_list = display::CreateCommandList(device, "RenderSystem");
 
+		//Register the back buffer
+		render::AddGameResource(system, "BackBuffer"_sh32, CreateResourceFromHandle<render::RenderTargetResource>(display::GetBackBuffer(device)), display::TranstitionState::Present);
+
 		return system;
 	}
 
@@ -1058,6 +1061,9 @@ namespace render
 			//We need to present from the render thread
 			m_game->Present();
 		}
+
+		//We need to move the back buffer to present
+		m_resources_map["BackBuffer"_sh32]->get()->access = display::TranstitionState::Present;
 
 		//Increase render index
 		m_render_frame_index++;

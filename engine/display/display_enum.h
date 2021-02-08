@@ -133,13 +133,6 @@ namespace display
 		Texture2D
 	};
 
-	enum class ResourceState : uint8_t
-	{
-		RenderTarget,
-		PixelShaderResource,
-		NonPixelShaderResource
-	};
-
 	//Type of resource barrier
 	enum class ResourceBarrierType : uint8_t
 	{

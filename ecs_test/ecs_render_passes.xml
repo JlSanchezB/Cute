@@ -3,6 +3,9 @@
 </Global>
 <Passes>
   <Pass name="Main">
+    <Dependencies>
+      <Resource name="BackBuffer" access="RenderTarget"/>
+    </Dependencies>
     <Commands>
 	    <SetRenderTarget>
 		    <RenderTarget>BackBuffer</RenderTarget>

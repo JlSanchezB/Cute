@@ -60,6 +60,7 @@
     <Dependencies>
       <Resource name="StaticGPUMemoryBuffer" pre_condition_state="Ready" access="AllShaderResource"/>
       <DepthBuffer name="SceneDepth" pre_condition_state="Alloc" post_update_state="Free" access="Depth" format="D32_FLOAT"/>
+      <Resource name="BackBuffer" access="RenderTarget"/>
     </Dependencies>
     <Commands>
       <SetRenderTarget>

@@ -78,6 +78,7 @@
   <Pass name="Main">
     <Dependencies>
       <RenderTarget name="RenderToTexture" pre_condition_state="Ready" post_update_state ="Free" access="AllShaderResource" format="R8G8B8A8_UNORM" width_factor="1.0" height_factor="1.f"/>
+      <Resource name="BackBuffer" access="RenderTarget"/>
     </Dependencies>
     <Commands>
 	    <SetRenderTarget>
