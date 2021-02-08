@@ -32,13 +32,6 @@ namespace display
 			render_target_handles[i] = device->m_render_target_pool.GetDescriptor(frame_render_target);
 		}
 
-		if (depth_stencil.IsValid())
-		{
-			auto& depth_buffer = device->Get(GetRingResource(device, depth_stencil, device->m_frame_index));
-			command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(depth_buffer.resource.Get(), depth_buffer.current_state, D3D12_RESOURCE_STATE_DEPTH_WRITE));
-			depth_buffer.current_state = D3D12_RESOURCE_STATE_DEPTH_WRITE;
-		}
-
 		command_list->OMSetRenderTargets(static_cast<UINT>(num_targets), render_target_handles, FALSE, depth_stencil.IsValid() ? &device->m_depth_buffer_pool.GetDescriptor(GetRingResource(device, depth_stencil, device->m_frame_index)) : nullptr);
 	}
 
