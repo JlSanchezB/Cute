@@ -176,7 +176,10 @@ namespace display
 		float height;
 		float min_depth = 0.f;
 		float max_depth = 1.f;
-
+		
+		Viewport()
+		{
+		}
 		Viewport(float _width, float _height) : width(_width), height(_height)
 		{
 		}

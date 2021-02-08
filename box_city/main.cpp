@@ -394,8 +394,7 @@ public:
 		m_render_passes_loader.Update();
 			
 		render::PassInfo pass_info;
-		pass_info.width = m_width;
-		pass_info.height = m_height;
+		pass_info.Init(m_width, m_height);
 
 		render::Frame& render_frame = render::GetGameRenderFrame(m_render_system);
 

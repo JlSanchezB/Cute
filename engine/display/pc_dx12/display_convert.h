@@ -271,6 +271,7 @@ namespace display
 		case TranstitionState::AllShaderResource: return D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
 		case TranstitionState::Depth: return D3D12_RESOURCE_STATE_DEPTH_WRITE;
 		case TranstitionState::DepthRead: return D3D12_RESOURCE_STATE_DEPTH_READ | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+		case TranstitionState::Present: return D3D12_RESOURCE_STATE_PRESENT;
 		}
 	}
 }

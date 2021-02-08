@@ -157,7 +157,8 @@ namespace display
 		NonPixelShaderResource,
 		AllShaderResource,
 		Depth,
-		DepthRead
+		DepthRead,
+		Present
 	};
 }
 

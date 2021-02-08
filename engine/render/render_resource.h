@@ -213,6 +213,7 @@ namespace render
 		{
 			return DisplayHandleResource<display::DepthBufferHandle>::GetHandle();
 		}
+		display::TranstitionState GetDefaultAccess() const override { return display::TranstitionState::Depth; };
 	};
 
 	//Graphics pipeline state resource

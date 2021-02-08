@@ -278,6 +278,7 @@ namespace render
 			}
 			else if (strcmp(xml_element->Name(), "DepthBuffer") == 0)
 			{
+				load_context.current_xml_element = xml_element;
 				m_depth_buffer.UpdateName(load_context.GetResourceReference(load_context));
 			}
 
@@ -297,24 +298,16 @@ namespace render
 				render_targets[i] = render_target->GetHandle();
 			}
 		}
+		DepthBufferResource* depth_buffer = m_depth_buffer.Get(render_context);
 
-		//Extract resolution
-		RenderTargetResource* render_target_0 = m_render_target[0].Get(render_context);
-		uint32_t width = 0;
-		uint32_t height = 0;
-		render_target_0->GetInfo(width, height);
-
-		render_context.GetContext()->SetRenderTargets(m_num_render_targets, render_targets.data(), {});
+		render_context.GetContext()->SetRenderTargets(m_num_render_targets, render_targets.data(), (depth_buffer) ? depth_buffer->GetHandle() : display::WeakDepthBufferHandle());
 		
 		//Set Viewport and Scissors
 		//Set viewport
-		display::Viewport viewport(static_cast<float>(width), static_cast<float>(height));
-		viewport.top_left_x = 0;
-		viewport.top_left_y = 0;
-		render_context.GetContext()->SetViewport(viewport);
+		render_context.GetContext()->SetViewport(render_context.GetPassInfo().viewport);
 
 		//Set Scissor Rect
-		render_context.GetContext()->SetScissorRect(display::Rect(0, 0, width, height));
+		render_context.GetContext()->SetScissorRect(render_context.GetPassInfo().scissor_rect);
 	}
 	void ClearRenderTargetPass::Load(LoadContext & load_context)
 	{

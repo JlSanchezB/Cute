@@ -47,6 +47,17 @@ namespace render
 	{
 		uint16_t width;
 		uint16_t height;
+
+		display::Viewport viewport;
+		display::Rect scissor_rect;
+
+		void Init(uint16_t _width, uint16_t _height)
+		{
+			width = _width;
+			height = _height;
+			viewport = display::Viewport(static_cast<float>(width), static_cast<float>(height));
+			scissor_rect = display::Rect(0, 0, width, height);
+		}
 	};
 
 	//System

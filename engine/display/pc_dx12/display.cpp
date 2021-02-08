@@ -176,7 +176,7 @@ namespace display
 
 		if (FAILED(D3D12CreateDevice(
 			hardwareAdapter.Get(),
-			D3D_FEATURE_LEVEL_11_0,
+			D3D_FEATURE_LEVEL_12_0,
 			IID_PPV_ARGS(&device->m_native_device))))
 		{
 			core::LogError("DX12 error creating the device");

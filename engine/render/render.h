@@ -99,6 +99,10 @@ namespace render
 	//Add game resource associated to a pass and pass id, allows the game to add global resources that the pass system can access them
 	bool AddGameResource(System* system, const ResourceName& name, const PassName& pass_name, const uint16_t pass_id, std::unique_ptr<Resource>&& resource, const std::optional<display::TranstitionState>& current_access = {});
 
+	//Update access in a game resorce, transition has to be done outside of the render
+	void UpdateGameResourceAccess(System* system, const ResourceName& name, const display::TranstitionState& access);
+
+
 	//Register resource factory
 	bool RegisterResourceFactory(System* system, const RenderClassType& resource_type, std::unique_ptr<FactoryInterface<Resource>>& resource_factory);
 
