@@ -106,6 +106,9 @@ namespace render
 		//Get static gpu memory resource
 		display::WeakUnorderedAccessBufferHandle GetStaticGPUMemoryResource();
 
+		//Get offset from a AllocHandle
+		size_t GetStaticGPUMemoryOffset(const AllocHandle& handle);
+
 		//Get dynamic gpu memory resource
 		display::WeakShaderResourceHandle GetDynamicGPUMemoryResource();
 	};

@@ -181,6 +181,13 @@ namespace render
 		return m_static_gpu_memory_buffer;
 	}
 
+	size_t GPUMemoryRenderModule::GetStaticGPUMemoryOffset(const AllocHandle& handle)
+	{
+		const FreeListAllocation& allocation = m_static_gpu_memory_allocator.Get(handle);
+		
+		return allocation.offset;
+	}
+
 	display::WeakShaderResourceHandle GPUMemoryRenderModule::GetDynamicGPUMemoryResource()
 	{
 		return m_dynamic_gpu_memory_buffer;

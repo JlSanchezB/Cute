@@ -419,7 +419,7 @@ public:
 				//Calculate sort key
 
 				//Add this point of view
-				point_of_view.PushRenderItem(m_box_render_priority, static_cast<render::SortKey>(0), {});
+				point_of_view.PushRenderItem(m_box_render_priority, static_cast<render::SortKey>(0), static_cast<uint32_t>(m_GPU_memory_render_module->GetStaticGPUMemoryOffset(box_render.gpu_memory)));
 
 			}, std::bitset<1>(true));
 
