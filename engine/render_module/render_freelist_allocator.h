@@ -64,6 +64,11 @@ namespace render
 			return m_handle_pool[handle];
 		}
 
+		//Access to the handle data
+		const FreeListAllocation& Get(const WeakAllocHandle& handle) const
+		{
+			return m_handle_pool[handle];
+		}
 
 	private:
 

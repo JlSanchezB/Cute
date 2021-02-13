@@ -68,6 +68,8 @@ namespace render
 			m_copy_data_commands[frame_index % GPUMemoryRenderModule::kMaxFrames].Get().emplace_back(std::forward<Args>(args)...);
 		}
 
+		uint8_t* m_dynamic_gpu_memory_base_ptr = nullptr;
+
 		uint32_t m_static_gpu_memory_size;
 		uint32_t m_dynamic_gpu_memory_size;
 		uint32_t m_dynamic_gpu_memory_segment_size;
@@ -107,7 +109,10 @@ namespace render
 		display::WeakUnorderedAccessBufferHandle GetStaticGPUMemoryResource();
 
 		//Get offset from a AllocHandle
-		size_t GetStaticGPUMemoryOffset(const AllocHandle& handle);
+		size_t GetStaticGPUMemoryOffset(const AllocHandle& handle) const;
+
+		//Get offset from a allocation in the Dynamic GPU memory
+		size_t GetDynamicGPUMemoryOffset(display::Device* device, void* allocation) const;
 
 		//Get dynamic gpu memory resource
 		display::WeakShaderResourceHandle GetDynamicGPUMemoryResource();

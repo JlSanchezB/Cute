@@ -85,6 +85,12 @@ namespace render
 		//Reset memory for next frame
 		void Reset();
 
+		//Get Sorted Render Items, only accessible from a pass
+		const SortedRenderItems& GetSortedRenderItems() const
+		{
+			return m_sorted_render_items;
+		}
+
 	private:
 		
 		//Point of view name, used for identification

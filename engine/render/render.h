@@ -62,6 +62,9 @@ namespace render
 		//Get Render frame
 		Frame& GetRenderFrame();
 
+		//Get Current Point of View
+		const PointOfView* GetPointOfView() const;
+
 		//Get root pass been rendering
 		ContextPass* GetContextRootPass() const;
 
@@ -76,6 +79,7 @@ namespace render
 
 		//Get pass info
 		const PassInfo& GetPassInfo() const;
+
 
 		//Set display context
 		void SetContext(display::Context* context);

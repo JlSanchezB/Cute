@@ -22,7 +22,7 @@ namespace render
 		static_buffer_desc.element_count = m_static_gpu_memory_size / 16;
 
 		m_static_gpu_memory_buffer = display::CreateUnorderedAccessBuffer(device, static_buffer_desc, "StaticGpuMemoryBuffer");
-
+		
 		//Init static allocator
 		m_static_gpu_memory_allocator.Init(m_static_gpu_memory_size);
 
@@ -35,6 +35,7 @@ namespace render
 		dynamic_buffer_desc.structure_stride = 16;
 
 		m_dynamic_gpu_memory_buffer = display::CreateShaderResource(device, dynamic_buffer_desc, "DynamicGpuMemoryBuffer");
+		m_dynamic_gpu_memory_base_ptr = reinterpret_cast<uint8_t*>(display::GetResourceMemoryBuffer(device, m_dynamic_gpu_memory_buffer));
 
 		//Init dynamic allocator
 		m_dynamic_gpu_memory_allocator.Init(m_dynamic_gpu_memory_size, m_dynamic_gpu_memory_segment_size);
@@ -181,11 +182,23 @@ namespace render
 		return m_static_gpu_memory_buffer;
 	}
 
-	size_t GPUMemoryRenderModule::GetStaticGPUMemoryOffset(const AllocHandle& handle)
+	size_t GPUMemoryRenderModule::GetStaticGPUMemoryOffset(const AllocHandle& handle) const
 	{
 		const FreeListAllocation& allocation = m_static_gpu_memory_allocator.Get(handle);
 		
 		return allocation.offset;
+	}
+
+	size_t GPUMemoryRenderModule::GetDynamicGPUMemoryOffset(display::Device* device, void* allocation) const
+	{
+		//Calculate offsets
+		uint8_t* dynamic_memory_base = m_dynamic_gpu_memory_base_ptr;
+		uint8_t* allocation_uint8 = reinterpret_cast<uint8_t*>(allocation);
+
+		assert(allocation_uint8 > dynamic_memory_base);
+		assert((allocation_uint8 - dynamic_memory_base) < m_dynamic_gpu_memory_size);
+
+		return allocation_uint8 - dynamic_memory_base;
 	}
 
 	display::WeakShaderResourceHandle GPUMemoryRenderModule::GetDynamicGPUMemoryResource()

@@ -98,6 +98,12 @@ namespace render
 		return render_context->m_render_pass_system->m_frame_data;
 	}
 
+	const PointOfView* RenderContext::GetPointOfView() const
+	{
+		auto render_context = reinterpret_cast<const RenderContextInternal*>(this);
+		return render_context->m_point_of_view;
+	}
+
 	ContextPass* RenderContext::GetContextRootPass() const
 	{
 		auto render_context = reinterpret_cast<const RenderContextInternal*>(this);

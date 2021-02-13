@@ -1,10 +1,11 @@
 <Root>
 <Global>
   <Resource type="RootSignature" name="BoxRootSignature">
-    <RootParam index="0" type="DescriptorTable">
-      <Range base_shader_register="0" size="1" type="ConstantBuffer" visibility="All"/>
-      <Range base_shader_register="1" size="1" type="UnorderedAccessBuffer" visibility="All"/>
-      <Range base_shader_register="2" size="1" type="ShaderResource" visibility="All"/>
+    <RootParam index="1" type="Constants" num_constants="1" shader_register="0" visibility="All"/>
+    <RootParam index="1" type="DescriptorTable">
+      <Range base_shader_register="1" size="1" type="ConstantBuffer" visibility="All"/>
+      <Range base_shader_register="2" size="1" type="UnorderedAccessBuffer" visibility="All"/>
+      <Range base_shader_register="3" size="1" type="ShaderResource" visibility="All"/>
     </RootParam>
     <StaticSample shader_register="0" visibility="Pixel"/>
     <StaticSample shader_register="1" visibility="Pixel" filter="Linear"/>
@@ -25,7 +26,7 @@
         float4 position : SV_POSITION;
       };
 
-      ViewData view_data_buffer : c0;
+      ViewData view_data_buffer : c1;
 
       PSInput vs_box_main(float4 position : POSITION)
       {
@@ -68,7 +69,7 @@
         <DepthBuffer>SceneDepth</DepthBuffer>
 	    </SetRenderTarget>
       <SetRootSignature>BoxRootSignature</SetRootSignature>
-      <SetDescriptorTable pipe="Graphics" root_param="0">
+      <SetDescriptorTable pipe="Graphics" root_param="1">
         <Descriptor>ViewConstantBuffer</Descriptor>
         <Descriptor>StaticGPUMemoryBuffer</Descriptor>
         <Descriptor>DynamicGPUMemoryBuffer</Descriptor>
