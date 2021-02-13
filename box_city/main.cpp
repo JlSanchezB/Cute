@@ -208,12 +208,10 @@ public:
 				uint32_t* instances_ptrs = reinterpret_cast<uint32_t*>(gpu_memory->AllocDynamicGPUMemory(render_context.GetDevice(), (end_render_item - begin_render_item) * sizeof(int32_t), render::GetRenderFrameIndex(render_context.GetRenderSystem())));
 
 				//Upload all the instances offsets
-
-				size_t i = 0;
 				for (size_t render_item_index = begin_render_item; render_item_index < end_render_item; ++render_item_index)
 				{
 					//Just copy the offset
-					instances_ptrs[i] = sorted_render_items.m_sorted_render_items[render_item_index].data;
+					instances_ptrs[render_item_index - begin_render_item] = sorted_render_items.m_sorted_render_items[render_item_index].data;
 				}
 
 				uint32_t offset_to_instance_offsets = static_cast<uint32_t>(gpu_memory->GetDynamicGPUMemoryOffset(render_context.GetDevice(), instances_ptrs));
