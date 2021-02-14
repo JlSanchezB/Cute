@@ -123,7 +123,7 @@ struct GPUBoxInstance
 {
 	glm::vec4 bounding_box_min;
 	glm::vec4 bounding_box_max;
-	glm::mat4x3 local_matrix;
+	glm::mat4x4 local_matrix;
 	glm::vec4 dimensions;
 };
 
@@ -175,6 +175,9 @@ using Instance = ecs::Instance<GameDatabase>;
 class DrawCityBoxItemsPass : public render::Pass
 {
 	uint8_t m_priority;
+	inline static DisplayResource* m_display_resources;
+
+	friend class BoxCityGame;
 public:
 	DECLARE_RENDER_CLASS("DrawCityBoxItems");
 
@@ -205,10 +208,10 @@ public:
 				//Allocate a buffer that for each box has an offset to the box data
 				auto* gpu_memory = render::GetModule<render::GPUMemoryRenderModule>(render_context.GetRenderSystem(), "GPUMemory"_sh32);
 
-				uint32_t* instances_ptrs = reinterpret_cast<uint32_t*>(gpu_memory->AllocDynamicGPUMemory(render_context.GetDevice(), (end_render_item - begin_render_item) * sizeof(int32_t), render::GetRenderFrameIndex(render_context.GetRenderSystem())));
+				uint32_t* instances_ptrs = reinterpret_cast<uint32_t*>(gpu_memory->AllocDynamicGPUMemory(render_context.GetDevice(), (end_render_item - begin_render_item + 1) * sizeof(int32_t), render::GetRenderFrameIndex(render_context.GetRenderSystem())));
 
 				//Upload all the instances offsets
-				for (size_t render_item_index = begin_render_item; render_item_index < end_render_item; ++render_item_index)
+				for (size_t render_item_index = begin_render_item; render_item_index <= end_render_item; ++render_item_index)
 				{
 					//Just copy the offset
 					instances_ptrs[render_item_index - begin_render_item] = sorted_render_items.m_sorted_render_items[render_item_index].data;
@@ -216,10 +219,21 @@ public:
 
 				uint32_t offset_to_instance_offsets = static_cast<uint32_t>(gpu_memory->GetDynamicGPUMemoryOffset(render_context.GetDevice(), instances_ptrs));
 
+				auto context = render_context.GetContext();
 				//Set the offset as a root constant
-				render_context.GetContext()->SetConstants(display::Pipe::Graphics, 0, &offset_to_instance_offsets, 1);
+				context->SetConstants(display::Pipe::Graphics, 0, &offset_to_instance_offsets, 1);
 
 				//Render
+				display::WeakPipelineStateHandle box_pipeline_state = render::GetResource<render::GraphicsPipelineStateResource>(render_context.GetRenderSystem(), "BoxPipelineState"_sh32)->GetHandle();
+				context->SetPipelineState(box_pipeline_state);
+
+				context->SetVertexBuffers(0, 1, &m_display_resources->m_box_vertex_buffer);
+				context->SetIndexBuffer(m_display_resources->m_box_index_buffer);
+
+				display::DrawIndexedInstancedDesc desc;
+				desc.instance_count = static_cast<uint32_t>((end_render_item - begin_render_item + 1));
+				desc.index_count = 36;
+				context->DrawIndexedInstanced(desc);
 			}
 		}
 	}
@@ -302,6 +316,7 @@ public:
 		SetDevice(m_device);
 
 		m_display_resources.Load(m_device);
+		DrawCityBoxItemsPass::m_display_resources = &m_display_resources;
 
 		//Create view constant buffer
 		display::ConstantBufferDesc view_constant_desc;
@@ -350,7 +365,7 @@ public:
 			uint32_t id = m_random_generator();
 			float position_z = static_cast<float>(id - m_random_generator.min()) / static_cast<float>(m_random_generator.max() - m_random_generator.min());
 			glm::mat4x4 local_matrix;
-			glm::translate(local_matrix, glm::vec3(m_random_position_x(m_random_generator), m_random_position_y(m_random_generator), position_z));
+			local_matrix = glm::translate(glm::identity<glm::mat4x4>(), glm::vec3(m_random_position_x(m_random_generator), m_random_position_y(m_random_generator), position_z));
 			glm::vec3 dimensions(1.f, 1.f, 1.f);
 			
 			//GPU memory

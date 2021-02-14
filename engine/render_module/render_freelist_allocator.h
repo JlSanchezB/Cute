@@ -125,7 +125,7 @@ namespace render
 		assert(size < m_resource_size);
 
 		//Always align the size to 16
-		size = ((size >> 4) + 1) << 4;
+		size = (((size - 1) >> 4) + 1) << 4;
 
 		core::MutexGuard guard(m_access_mutex);
 

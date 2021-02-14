@@ -120,7 +120,7 @@ namespace render
 		assert(size > 0);
 
 		//Always align the size to 16
-		size = ((size << 4) + 1) >> 4;
+		size = (((size - 1) >> 4) + 1) << 4;
 
 		assert(size <= m_segment_size);
 

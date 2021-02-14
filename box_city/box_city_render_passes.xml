@@ -1,11 +1,11 @@
 <Root>
 <Global>
   <Resource type="RootSignature" name="BoxRootSignature">
-    <RootParam index="1" type="Constants" num_constants="1" shader_register="0" visibility="All"/>
+    <RootParam index="0" type="Constants" num_constants="1" shader_register="0" visibility="All"/>
     <RootParam index="1" type="DescriptorTable">
       <Range base_shader_register="1" size="1" type="ConstantBuffer" visibility="All"/>
-      <Range base_shader_register="2" size="1" type="UnorderedAccessBuffer" visibility="All"/>
-      <Range base_shader_register="3" size="1" type="ShaderResource" visibility="All"/>
+      <Range base_shader_register="0" size="1" type="UnorderedAccessBuffer" visibility="All"/>
+      <Range base_shader_register="0" size="1" type="ShaderResource" visibility="All"/>
     </RootParam>
     <StaticSample shader_register="0" visibility="Pixel"/>
     <StaticSample shader_register="1" visibility="Pixel" filter="Linear"/>
@@ -20,19 +20,45 @@
       {
         float4x4 view_projection_matrix;
       };
+      
+      struct BoxInstance
+      {
+        float4 bounding_box_min;
+	      float4 bounding_box_max;
+	      float4x4 local_matrix;
+	      float4 dimensions;
+      };
 
       struct PSInput
       {
         float4 position : SV_POSITION;
       };
+      uint instance_data_offset : b0;
+      ViewData view_data_buffer : b1;
+      RWStructuredBuffer&lt;float4&gt; static_gpu_memory : u0; 
+      StructuredBuffer&lt;float4&gt; dynamic_gpu_memory : t0;
 
-      ViewData view_data_buffer : c1;
-
-      PSInput vs_box_main(float4 position : POSITION)
+      PSInput vs_box_main(float4 position : POSITION, uint instance_id : SV_InstanceID)
       {
         PSInput result;
-
-        result.position = mul(view_data_buffer.view_projection_matrix, position);
+        
+        //Get box instance data using primitiveId and the instance_data_offset
+        uint instance_offset_floats = instance_data_offset/4 + instance_id;
+        uint instance_data_offset_byte = asuint(dynamic_gpu_memory[instance_offset_floats / 4][instance_offset_floats % 4]);
+        
+        //Read Box instance data
+        BoxInstance instance_data;
+        instance_data.bounding_box_min = static_gpu_memory[instance_data_offset_byte / 4];
+        instance_data.bounding_box_max = static_gpu_memory[(instance_data_offset_byte / 4) + 4];
+        instance_data.local_matrix[0] = static_gpu_memory[(instance_data_offset_byte / 4) + 8];
+        instance_data.local_matrix[1] = static_gpu_memory[(instance_data_offset_byte / 4) + 12];
+        instance_data.local_matrix[2] = static_gpu_memory[(instance_data_offset_byte / 4) + 16];
+        instance_data.dimensions = static_gpu_memory[(instance_data_offset_byte / 4) + 20];
+        
+        //Each position needs to be multiply by the local matrix
+        float3 world_position = mul(instance_data.local_matrix, float4(position.xyz, 1.f));
+        
+        result.position = mul(view_data_buffer.view_projection_matrix, float4(world_position, 1.f));
 
         return result;
       }
