@@ -58,7 +58,7 @@
         //Each position needs to be multiply by the local matrix
         float3 world_position = mul(float4(position.xyz, 1.f), instance_data.local_matrix);
 
-        result.position = mul(float4(world_position, 1.f), view_projection_matrix);
+        result.position = mul(view_projection_matrix, float4(world_position, 1.f));
 
         return result;
       }
@@ -68,7 +68,7 @@
         return float4(1.f, 1.f, 1.f, 1.f);
       }
     </Shader>
-    <Rasterization/>
+    <Rasterization cull_mode="None"/>
     <RenderTargets>
       <RenderTarget format="R8G8B8A8_UNORM"/>
     </RenderTargets>

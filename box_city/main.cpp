@@ -22,6 +22,7 @@
 #define GLM_ENABLE_EXPERIMENTAL
 #include <ext/glm/gtx/vector_angle.hpp>
 #include <ext/glm/gtx/rotate_vector.hpp>
+#include <ext/glm/gtx/euler_angles.hpp>
 
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN             // Exclude rarely-used stuff from Windows headers.
@@ -41,31 +42,38 @@ public:
 	void Update(platform::Game* game, float ellapsed_time)
 	{
 		//Apply damp
-		m_move_speed *= (m_damp_factor * ellapsed_time);
-		m_rotation_speed *= (m_damp_factor * ellapsed_time);
+		m_move_speed -= m_move_speed * glm::clamp((m_damp_factor * ellapsed_time), 0.f, 1.f);
+		m_rotation_speed -= m_rotation_speed * glm::clamp((m_damp_factor * ellapsed_time), 0.f, 1.f);
 
 		//Calculate position movement
 		glm::vec3 move_speed;
 
-		move_speed.x = game->GetInputSlotValue(platform::InputSlotValue::ControllerThumbRightX) * m_move_factor * ellapsed_time;
-		move_speed.y = 0.f;
-		move_speed.z = game->GetInputSlotValue(platform::InputSlotValue::ControllerThumbRightY) * m_move_factor * ellapsed_time;
+		glm::mat3x3 rot = glm::rotate(m_rotation.y, glm::vec3(1.f, 0.f, 0.f)) * glm::rotate(m_rotation.x, glm::vec3(0.f, 0.f, 1.f));
+		//Define forward and side
+		glm::vec3 forward = glm::vec3(0.f, 1.f, 0.f) * rot;
+		glm::vec3 side = glm::vec3(1.f, 0.f, 0.f) * rot;
 
-		m_move_speed += (m_rotation * move_speed);
+		move_speed = -game->GetInputSlotValue(platform::InputSlotValue::ControllerThumbRightX) * m_move_factor * ellapsed_time * side;
+		move_speed += game->GetInputSlotValue(platform::InputSlotValue::ControllerThumbRightY) * m_move_factor * ellapsed_time * forward;
+		//Up/Down doesn't depend of the rotation
+		move_speed.z += (game->GetInputSlotValue(platform::InputSlotValue::ControllerRightTrigger) - game->GetInputSlotValue(platform::InputSlotValue::ControllerLeftTrigger)) * m_move_factor * ellapsed_time;
+
+		
+		m_move_speed += move_speed;
 
 		//Calculate direction movement
-		glm::vec3 euler_angles;
-		euler_angles.x = 0.f;
-		euler_angles.y = game->GetInputSlotValue(platform::InputSlotValue::ControllerThumbLeftY) * m_rotation_factor * ellapsed_time;
-		euler_angles.z = game->GetInputSlotValue(platform::InputSlotValue::ControllerThumbLeftX) * m_rotation_factor * ellapsed_time;
+		glm::vec2 angles;
+		angles.x = -game->GetInputSlotValue(platform::InputSlotValue::ControllerThumbLeftX) * m_rotation_factor * ellapsed_time;
+		angles.y = -game->GetInputSlotValue(platform::InputSlotValue::ControllerThumbLeftY) * m_rotation_factor * ellapsed_time;
 
-		glm::quat rotation_speed(euler_angles);
-
-		m_rotation_speed += rotation_speed;
+		m_rotation_speed += angles;
 
 		//Apply
 		m_position += m_move_speed * ellapsed_time;
 		m_rotation += m_rotation_speed * ellapsed_time;
+
+		if (m_rotation.y > glm::radians(85.f)) m_rotation.y = glm::radians(85.f);
+		if (m_rotation.y < glm::radians(-85.f)) m_rotation.y = glm::radians(-85.f);
 
 		CalculateMatrices();
 	}
@@ -73,14 +81,14 @@ public:
 	void CalculateMatrices()
 	{
 		//Calculate view to world
-		glm::mat3x3 rot(m_rotation);
-		m_world_to_view_matrix = glm::lookAt(rot[1], m_position, m_up_vector);
+		glm::mat3x3 rot = glm::rotate(m_rotation.y, glm::vec3(1.f, 0.f, 0.f)) * glm::rotate(m_rotation.x, glm::vec3(0.f, 0.f, 1.f));
+		m_world_to_view_matrix = glm::lookAt(m_position, m_position + glm::vec3(0.f, 1.f, 0.f) * rot , m_up_vector);
 
 		//Calculate projection matrix
 		m_projection_matrix = glm::perspective(m_fov_y, m_aspect_ratio, m_near, m_far);
 
 		//Calculate view projection
-		m_view_projection_matrix = m_world_to_view_matrix * m_projection_matrix;
+		m_view_projection_matrix = m_projection_matrix * m_world_to_view_matrix;
 	}
 
 	glm::mat4x4 GetViewProjectionMatrix() const
@@ -92,9 +100,9 @@ private:
 
 	//State
 	glm::vec3 m_position = glm::vec3(0.f, 0.f, 0.f);
-	glm::quat m_rotation = glm::quat();
+	glm::vec2 m_rotation = glm::vec3(0.f);
 	glm::vec3 m_move_speed = glm::vec3(0.f, 0.f, 0.f);
-	glm::quat m_rotation_speed = glm::quat();
+	glm::vec2 m_rotation_speed = glm::vec2(0.f, 0.f);
 	glm::vec3 m_up_vector = glm::vec3(0.f, 0.f, 1.f);
 
 	//Matrices
@@ -104,10 +112,10 @@ private:
 
 
 	//Setup
-	float m_damp_factor = 0.1f;
-	float m_move_factor = 10.0f;
-	float m_rotation_factor = 1.0f;
-	float m_fov_y = 1.f;
+	float m_damp_factor = 5.0f;
+	float m_move_factor = 40.0f;
+	float m_rotation_factor = 20.f;
+	float m_fov_y = glm::radians(90.f);
 	float m_aspect_ratio = 1.f;
 	float m_far = 10000.f;
 	float m_near = 0.1f;
@@ -285,9 +293,9 @@ public:
 	render::Priority m_box_render_priority;
 
 	BoxCityGame() : m_random_generator(m_random_device()),
-		m_random_position_x(-100.f, 100.f),
-		m_random_position_y(-100.f, 100.f),
-		m_random_position_z(-100.f, 100.f)
+		m_random_position_x(-10.f, 10.f),
+		m_random_position_y(-10.f, 10.f),
+		m_random_position_z(-10.f, 10.f)
 	{
 	}
 
@@ -364,7 +372,7 @@ public:
 		for (size_t i = 0; i < 100; ++i)
 		{
 			uint32_t id = m_random_generator();
-			float position_z = static_cast<float>(id - m_random_generator.min()) / static_cast<float>(m_random_generator.max() - m_random_generator.min());
+			float position_z = 10.f * static_cast<float>(id - m_random_generator.min()) / static_cast<float>(m_random_generator.max() - m_random_generator.min());
 			glm::mat4x4 local_matrix;
 			local_matrix = glm::translate(glm::identity<glm::mat4x4>(), glm::vec3(m_random_position_x(m_random_generator), m_random_position_y(m_random_generator), position_z));
 			glm::vec3 dimensions(1.f, 1.f, 1.f);
@@ -422,7 +430,7 @@ public:
 		ecs::Process<GameDatabase, Box, const BoxRender>([&](const auto& instance_iterator, Box& box, const BoxRender& box_render)
 		{
 				//Update local position
-				float position_z = static_cast<float>(cos(total_time)) + static_cast<float>(box.id - m_random_generator.min()) / static_cast<float>(m_random_generator.max() - m_random_generator.min());
+				float position_z = 10.f * static_cast<float>(cos(total_time * 0.1f + static_cast<float>(box.id) * 0.1f)) + static_cast<float>(box.id - m_random_generator.min()) / static_cast<float>(m_random_generator.max() - m_random_generator.min());
 				box.local_matrix[3][2] = position_z;
 
 				GPUBoxInstance gpu_box_instance;
