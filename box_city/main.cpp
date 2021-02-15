@@ -1,4 +1,7 @@
 #define NOMINMAX
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
+#define GLM_FORCE_LEFT_HANDED
+
 #include <core/platform.h>
 #include <display/display.h>
 #include <render/render.h>
@@ -45,14 +48,16 @@ public:
 		glm::vec3 move_speed;
 
 		move_speed.x = game->GetInputSlotValue(platform::InputSlotValue::ControllerThumbRightX) * m_move_factor * ellapsed_time;
+		move_speed.y = 0.f;
 		move_speed.z = game->GetInputSlotValue(platform::InputSlotValue::ControllerThumbRightY) * m_move_factor * ellapsed_time;
 
 		m_move_speed += (m_rotation * move_speed);
 
 		//Calculate direction movement
 		glm::vec3 euler_angles;
-		euler_angles.y = game->GetInputSlotValue(platform::InputSlotValue::ControllerThumbLeftY) * m_move_factor * ellapsed_time;
-		euler_angles.z = game->GetInputSlotValue(platform::InputSlotValue::ControllerThumbLeftX) * m_move_factor * ellapsed_time;
+		euler_angles.x = 0.f;
+		euler_angles.y = game->GetInputSlotValue(platform::InputSlotValue::ControllerThumbLeftY) * m_rotation_factor * ellapsed_time;
+		euler_angles.z = game->GetInputSlotValue(platform::InputSlotValue::ControllerThumbLeftX) * m_rotation_factor * ellapsed_time;
 
 		glm::quat rotation_speed(euler_angles);
 
@@ -69,16 +74,13 @@ public:
 	{
 		//Calculate view to world
 		glm::mat3x3 rot(m_rotation);
-		m_view_to_world_matrix = glm::lookAtRH(rot[1], m_position, m_up_vector);
-
-		//Calculate world to view
-		m_world_to_view_matrix = glm::inverse(m_view_to_world_matrix);
+		m_world_to_view_matrix = glm::lookAt(rot[1], m_position, m_up_vector);
 
 		//Calculate projection matrix
 		m_projection_matrix = glm::perspective(m_fov_y, m_aspect_ratio, m_near, m_far);
 
 		//Calculate view projection
-		m_view_projection_matrix = m_projection_matrix * m_world_to_view_matrix;
+		m_view_projection_matrix = m_world_to_view_matrix * m_projection_matrix;
 	}
 
 	glm::mat4x4 GetViewProjectionMatrix() const
@@ -96,7 +98,6 @@ private:
 	glm::vec3 m_up_vector = glm::vec3(0.f, 0.f, 1.f);
 
 	//Matrices
-	glm::mat4x4 m_view_to_world_matrix;
 	glm::mat4x4 m_world_to_view_matrix;
 	glm::mat4x4 m_projection_matrix;
 	glm::mat4x4 m_view_projection_matrix;
@@ -104,8 +105,8 @@ private:
 
 	//Setup
 	float m_damp_factor = 0.1f;
-	float m_move_factor = 0.1f;
-	float m_rotation_factor = 0.1f;
+	float m_move_factor = 10.0f;
+	float m_rotation_factor = 1.0f;
 	float m_fov_y = 1.f;
 	float m_aspect_ratio = 1.f;
 	float m_far = 10000.f;

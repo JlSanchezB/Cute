@@ -16,7 +16,7 @@
       <Input semantic_name="POSITION" semantic_index="0" format="R32G32B32A32_FLOAT" input_slot="0"/>
     </InputLayouts>
     <Shader pixelshader_entry="ps_box_main" vertexshader_entry="vs_box_main" target="5_0">
-      struct ViewData
+      cbuffer ViewData : b1
       {
         float4x4 view_projection_matrix;
       };
@@ -34,31 +34,31 @@
         float4 position : SV_POSITION;
       };
       uint instance_data_offset : b0;
-      ViewData view_data_buffer : b1;
       RWStructuredBuffer&lt;float4&gt; static_gpu_memory : u0; 
       StructuredBuffer&lt;float4&gt; dynamic_gpu_memory : t0;
 
       PSInput vs_box_main(float4 position : POSITION, uint instance_id : SV_InstanceID)
       {
         PSInput result;
-        
+
         //Get box instance data using primitiveId and the instance_data_offset
         uint instance_offset_floats = instance_data_offset/4 + instance_id;
         uint instance_data_offset_byte = asuint(dynamic_gpu_memory[instance_offset_floats / 4][instance_offset_floats % 4]);
-        
+
         //Read Box instance data
         BoxInstance instance_data;
-        instance_data.bounding_box_min = static_gpu_memory[instance_data_offset_byte / 4];
-        instance_data.bounding_box_max = static_gpu_memory[(instance_data_offset_byte / 4) + 4];
-        instance_data.local_matrix[0] = static_gpu_memory[(instance_data_offset_byte / 4) + 8];
-        instance_data.local_matrix[1] = static_gpu_memory[(instance_data_offset_byte / 4) + 12];
-        instance_data.local_matrix[2] = static_gpu_memory[(instance_data_offset_byte / 4) + 16];
-        instance_data.dimensions = static_gpu_memory[(instance_data_offset_byte / 4) + 20];
-        
+        instance_data.bounding_box_min = static_gpu_memory[instance_data_offset_byte / 16];
+        instance_data.bounding_box_max = static_gpu_memory[(instance_data_offset_byte / 16) + 1];
+        instance_data.local_matrix[0] = static_gpu_memory[(instance_data_offset_byte / 16) + 2];
+        instance_data.local_matrix[1] = static_gpu_memory[(instance_data_offset_byte / 16) + 3];
+        instance_data.local_matrix[2] = static_gpu_memory[(instance_data_offset_byte / 16) + 4];
+        instance_data.local_matrix[3] = static_gpu_memory[(instance_data_offset_byte / 16) + 5];
+        instance_data.dimensions = static_gpu_memory[(instance_data_offset_byte / 16) + 6];
+
         //Each position needs to be multiply by the local matrix
-        float3 world_position = mul(instance_data.local_matrix, float4(position.xyz, 1.f));
-        
-        result.position = mul(view_data_buffer.view_projection_matrix, float4(world_position, 1.f));
+        float3 world_position = mul(float4(position.xyz, 1.f), instance_data.local_matrix);
+
+        result.position = mul(float4(world_position, 1.f), view_projection_matrix);
 
         return result;
       }
