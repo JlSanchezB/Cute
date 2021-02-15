@@ -131,6 +131,10 @@ namespace render
 
 		void Load(LoadContext& load_context) override;
 		display::TranstitionState GetDefaultAccess() const override { return display::TranstitionState::AllShaderResource; };
+		DisplayHandle GetDisplayHandle() override
+		{
+			return DisplayHandleResource<display::UnorderedAccessBufferHandle>::GetHandle();
+		}
 	};
 
 	//Shader Resource resource
