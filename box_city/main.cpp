@@ -480,7 +480,7 @@ public:
 		render::EndPrepareRenderAndSubmit(m_render_system);
 
 		{
-			PROFILE_SCOPE("ECSTest", "DatabaseTick", 0xFFFF77FF);
+			PROFILE_SCOPE("ECSTest", 0xFFFF77FF, "DatabaseTick");
 			//Tick database
 			ecs::Tick<GameDatabase>();
 		}

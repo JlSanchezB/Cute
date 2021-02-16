@@ -42,6 +42,8 @@ namespace render
 	using Priority = uint8_t;
 	using SortKey = uint32_t;
 
+	constexpr uint32_t kRenderProfileColour = 0xFF3333FF;
+
 	//Information needed for each render pass
 	struct PassInfo
 	{

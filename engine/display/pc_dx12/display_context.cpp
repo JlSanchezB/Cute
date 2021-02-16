@@ -4,6 +4,13 @@
 
 namespace display
 {
+	ID3D12GraphicsCommandList* GetCommandListFromDisplayContext(display::Context* context)
+	{
+		auto dx12_context = reinterpret_cast<DX12Context*>(context);
+
+		return dx12_context->command_list.Get();
+	}
+
 	Device* Context::GetDevice()
 	{
 		auto dx12_context = reinterpret_cast<DX12Context*>(this);

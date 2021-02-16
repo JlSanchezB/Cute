@@ -41,11 +41,11 @@ job::Fence g_MovedFinishedFence;
 job::Fence g_InstanceBufferFinishedFence;
 
 //Microprofile tokens
-PROFILE_DEFINE_MARKER(g_profile_marker_GrassToken, "Main", "Grass", 0xFFFFAAAA);
-PROFILE_DEFINE_MARKER(g_profile_marker_GazelleToken, "Main", "Gazelle", 0xFFFFAAAA);
-PROFILE_DEFINE_MARKER(g_profile_marker_LionToken, "Main", "Lion", 0xFFFFAAAA);
-PROFILE_DEFINE_MARKER(g_profile_marker_MoveToken, "Main", "Move", 0xFFFFAAAA);
-PROFILE_DEFINE_MARKER(g_profile_marker_PrepareRenderToken, "Main", "PrepareRender", 0xFFFFAAAA);
+PROFILE_DEFINE_MARKER(g_profile_marker_GrassToken, "Main", 0xFFFFAAAA, "Grass");
+PROFILE_DEFINE_MARKER(g_profile_marker_GazelleToken, "Main", 0xFFFFAAAA, "Gazelle");
+PROFILE_DEFINE_MARKER(g_profile_marker_LionToken, "Main", 0xFFFFAAAA, "Lion");
+PROFILE_DEFINE_MARKER(g_profile_marker_MoveToken, "Main", 0xFFFFAAAA, "Move");
+PROFILE_DEFINE_MARKER(g_profile_marker_PrepareRenderToken, "Main", 0xFFFFAAAA, "PrepareRender");
 
 namespace
 {
@@ -635,7 +635,7 @@ public:
 
 	void GrassUpdate(float elapsed_time)
 	{
-		PROFILE_SCOPE("ECSTest", "GrassGrow", 0xFFFF77FF);
+		PROFILE_SCOPE("ECSTest", 0xFFFF77FF, "GrassGrow");
 
 		const auto& zone_bitset = GridZone::All();
 
@@ -686,7 +686,7 @@ public:
 
 	void GazelleUpdate(double total_time, float elapsed_time)
 	{
-		PROFILE_SCOPE("ECSTest", "GazelleUpdate", 0xFFFF77FF);
+		PROFILE_SCOPE("ECSTest", 0xFFFF77FF, "GazelleUpdate");
 
 		const auto& zone_bitset = GridZone::All();
 
@@ -864,7 +864,7 @@ public:
 
 	void LionUpdate(float elapsed_time)
 	{
-		PROFILE_SCOPE("ECSTest", "LionUpdate", 0xFFFF77FF);
+		PROFILE_SCOPE("ECSTest", 0xFFFF77FF, "LionUpdate");
 
 		const auto& zone_bitset = GridZone::All();
 
@@ -1021,7 +1021,7 @@ public:
 	void NewEntities(float elapsed_time)
 	{
 		{
-			PROFILE_SCOPE("ECSTest", "NewGrass", 0xFFFF77FF);
+			PROFILE_SCOPE("ECSTest", 0xFFFF77FF, "NewGrass");
 			//Calculate new grass
 			const size_t grass_count_to_create = m_grass_creation_events.Events(m_random_generator, elapsed_time);
 
@@ -1044,7 +1044,7 @@ public:
 		}
 
 		{
-			PROFILE_SCOPE("ECSTest", "NewGazelles", 0xFFFF77FF);
+			PROFILE_SCOPE("ECSTest", 0xFFFF77FF, "NewGazelles");
 			//Calculate new lions
 			const size_t gazelle_count_to_create = m_gazelle_creation_events.Events(m_random_generator, elapsed_time);
 
@@ -1057,7 +1057,7 @@ public:
 		}
 
 		{
-			PROFILE_SCOPE("ECSTest", "NewLions", 0xFFFF77FF);
+			PROFILE_SCOPE("ECSTest", 0xFFFF77FF, "NewLions");
 			//Calculate new lions
 			const size_t lions_count_to_create = m_lion_creation_events.Events(m_random_generator, elapsed_time);
 
@@ -1110,7 +1110,7 @@ public:
 
 	void MoveEntities(float elapsed_time)
 	{
-		PROFILE_SCOPE("ECSTest", "EntitiesMove", 0xFFFF77FF);
+		PROFILE_SCOPE("ECSTest", 0xFFFF77FF, "EntitiesMove");
 
 		const auto& zone_bitset = GridZone::All();
 
@@ -1279,7 +1279,7 @@ public:
 	{
 		//UPDATE GAME
 		{
-			PROFILE_SCOPE("ECSTest", "Update", 0xFFFF77FF);
+			PROFILE_SCOPE("ECSTest", 0xFFFF77FF, "Update");
 
 			//Reset job allocators
 			m_update_job_allocator->Clear();
@@ -1307,10 +1307,10 @@ public:
 
 		//PREPARE RENDERING
 		{
-			PROFILE_SCOPE("ECSTest", "PrepareRendering", 0xFFFF77FF);
+			PROFILE_SCOPE("ECSTest", 0xFFFF77FF, "PrepareRendering");
 
 			{
-				PROFILE_SCOPE("ECSTest", "BeginPrepareRendering", 0xFFFF77FF);
+				PROFILE_SCOPE("ECSTest", 0xFFFF77FF, "BeginPrepareRendering");
 				render::BeginPrepareRender(m_render_system);
 			}
 
@@ -1492,7 +1492,7 @@ public:
 		}
 
 		{
-			PROFILE_SCOPE("ECSTest", "DatabaseTick", 0xFFFF77FF);
+			PROFILE_SCOPE("ECSTest", 0xFFFF77FF, "DatabaseTick");
 			//Tick database
 			ecs::Tick<GameDatabase>();
 		}

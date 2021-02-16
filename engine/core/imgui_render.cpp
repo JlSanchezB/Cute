@@ -9,6 +9,7 @@
 #include "imgui_render.h"
 #include <ext/imgui/imgui.h>
 #include <display/display.h>
+#include <core/profile.h>
 
 namespace
 {
@@ -372,6 +373,7 @@ void imgui_render::Draw(display::Context* context, ImDrawData* draw_data)
 {
 	if (draw_data)
 	{
+		PROFILE_SCOPE_GPU(context, "Imgui", 0xFFFF00FF, "RenderImgui");
 
 		display::Device* device = context->GetDevice();
 

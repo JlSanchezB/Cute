@@ -9,7 +9,7 @@
 #include <job/job_helper.h>
 #include <core/profile.h>
 
-PROFILE_DEFINE_MARKER(g_profile_marker_ECSJob, "ECSJob", "ECS", 0xFFFFAAAA);
+PROFILE_DEFINE_MARKER(g_profile_marker_ECSJob, "ECSJob", 0xFFFFAAAA, "ECS");
 
 namespace ecs
 {

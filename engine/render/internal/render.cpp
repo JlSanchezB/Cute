@@ -42,8 +42,6 @@ namespace
 		container.clear();
 	}
 
-	constexpr uint32_t kRenderProfileColour = 0xFF3333FF;
-
 	//Sync fence, it avoids the render frame been used before the render has been submited
 	job::Fence g_render_fence;
 
@@ -749,7 +747,7 @@ namespace render
 
 	void System::SubmitRender()
 	{
-		PROFILE_SCOPE("Render", "Submit", kRenderProfileColour);
+		PROFILE_SCOPE("Render", kRenderProfileColour, "Submit");
 
 		//Render thread
 		display::BeginFrame(m_device);
@@ -767,7 +765,7 @@ namespace render
 
 		//Execute begin commands in the render_frame
 		{
-			PROFILE_SCOPE("Render", "ExecuteBeginCommands", kRenderProfileColour);
+			PROFILE_SCOPE("Render", kRenderProfileColour, "ExecuteBeginCommands");
 
 			auto render_context = display::OpenCommandList(m_device, m_render_command_list);
 
@@ -788,7 +786,7 @@ namespace render
 		//Sort all render items for each point of view, it can run in parallel
 		for (auto& point_of_view : render_frame.m_point_of_views)
 		{
-			PROFILE_SCOPE("Render", "SortRenderItems", kRenderProfileColour);
+			PROFILE_SCOPE("Render", kRenderProfileColour, "SortRenderItems");
 
 			auto& render_items = point_of_view.m_render_items;
 			auto& sorted_render_items = point_of_view.m_sorted_render_items;
@@ -918,7 +916,7 @@ namespace render
 
 		if (render_graph_built)
 		{
-			PROFILE_SCOPE("Render", "SubmitRenderPasses", kRenderProfileColour);
+			PROFILE_SCOPE("Render", kRenderProfileColour, "SubmitRenderPasses");
 
 			//For each render pass, we could run it in parallel
 			for (auto& sorted_render_pass_index : render_passes_sorted)
@@ -962,7 +960,7 @@ namespace render
 				render_context->m_pass_info = render_pass.pass_info;
 
 				{
-					PROFILE_SCOPE("Render", "CapturePass", kRenderProfileColour);
+					PROFILE_SCOPE("Render", kRenderProfileColour, "CapturePass");
 
 					//Request new pool resources
 					for (auto& pool_resource : render_context->GetContextRootPass()->GetResourcePoolDependencies())

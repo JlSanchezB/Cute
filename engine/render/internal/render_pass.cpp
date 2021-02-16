@@ -5,6 +5,7 @@
 #include "render_system.h"
 #include <render/render_resource.h>
 #include <string>
+#include <core/profile.h>
 
 namespace
 {
@@ -75,6 +76,7 @@ namespace render
 	{
 		//This pass is a list of passes that get added into a context
 		m_command_list_handle = display::CreateCommandList(load_context.device, load_context.pass_name);
+		m_name = PassName(load_context.pass_name);
 
 		auto xml_element = load_context.current_xml_element->FirstChildElement();
 
@@ -240,17 +242,18 @@ namespace render
 	{
 		//Open context
 		render_context.SetContext(display::OpenCommandList(render_context.GetDevice(), m_command_list_handle));
-
-		if (resource_barriers.size() > 0)
 		{
-			render_context.GetContext()->AddResourceBarriers(resource_barriers);
-		}
+			PROFILE_SCOPE_GPU_ARG(render_context.GetContext(), "Render", kRenderProfileColour, "Render Pass <%s>", m_name.GetValue());
+			if (resource_barriers.size() > 0)
+			{
+				render_context.GetContext()->AddResourceBarriers(resource_barriers);
+			}
 
-		for (auto& item : m_passes)
-		{
-			item->Render(render_context);
+			for (auto& item : m_passes)
+			{
+				item->Render(render_context);
+			}
 		}
-
 		//Close context
 		display::CloseCommandList(render_context.GetDevice(), render_context.GetContext());
 	}

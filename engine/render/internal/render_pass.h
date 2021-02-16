@@ -58,6 +58,8 @@ namespace render
 	class ContextPass : public Pass
 	{
 		display::CommandListHandle m_command_list_handle;
+		PassName m_name;
+
 		std::vector<std::unique_ptr<Pass>> m_passes;
 
 		//Conditions for the pass to run

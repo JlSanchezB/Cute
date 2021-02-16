@@ -2,6 +2,7 @@
 #include <ext/imgui/imgui.h>
 #include <utility>
 #include <locale.h>
+#include <core/profile.h>
 
 namespace display
 {
@@ -462,21 +463,24 @@ namespace display
 	void Present(Device* device)
 	{
 		Context* context = OpenCommandList(device, device->m_present_command_list);
-		auto dx12_context = reinterpret_cast<DX12Context*>(context);
-
-		auto& command_list = dx12_context->command_list;
-
-		//Call framework to render UI/Debug
-		platform::PresentCallback(context);
-
-		// Indicate that the back buffer will now be used to present.
-		auto& back_buffer = device->Get(GetRingResource(device, WeakRenderTargetHandle(device->m_back_buffer_render_target), device->m_frame_index));
-		if (back_buffer.current_state != D3D12_RESOURCE_STATE_PRESENT)
 		{
-			command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(back_buffer.resource.Get(), back_buffer.current_state, D3D12_RESOURCE_STATE_PRESENT));
-			back_buffer.current_state = D3D12_RESOURCE_STATE_PRESENT;
-		}
+			PROFILE_SCOPE_GPU(context, "Display", 0xFFFF00FF, "Present");
 
+			auto dx12_context = reinterpret_cast<DX12Context*>(context);
+
+			auto& command_list = dx12_context->command_list;
+
+			//Call framework to render UI/Debug
+			platform::PresentCallback(context);
+
+			// Indicate that the back buffer will now be used to present.
+			auto& back_buffer = device->Get(GetRingResource(device, WeakRenderTargetHandle(device->m_back_buffer_render_target), device->m_frame_index));
+			if (back_buffer.current_state != D3D12_RESOURCE_STATE_PRESENT)
+			{
+				command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(back_buffer.resource.Get(), back_buffer.current_state, D3D12_RESOURCE_STATE_PRESENT));
+				back_buffer.current_state = D3D12_RESOURCE_STATE_PRESENT;
+			}
+		}
 		CloseCommandList(device, context);
 
 		//Execute command list

@@ -28,9 +28,9 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="packages.config" />
+    <CopyFileToFolders Include="ecs_render_passes.xml" />
   </ItemGroup>
   <ItemGroup>
-    <CopyFileToFolders Include="ecs_render_passes.xml" />
+    <None Include="packages.config" />
   </ItemGroup>
 </Project>

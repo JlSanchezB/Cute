@@ -12,6 +12,12 @@
 #if PROFILE_ENABLE == 1
 
 #include <stdint.h>
+
+namespace display
+{
+	struct Context;
+}
+
 namespace core
 {
 	//Defines a marker for profiling
@@ -30,6 +36,7 @@ namespace core
 		uint32_t m_colour;
 
 		friend class ProfileScope;
+		friend class ProfileScopeGPU;
 	};
 
 	//Profile the marker
@@ -44,6 +51,19 @@ namespace core
 		ProfileMarker& m_marker;
 	};
 
+	//Profile the marker
+	class ProfileScopeGPU
+	{
+	public:
+		ProfileScopeGPU(ProfileMarker& marker, display::Context* context);
+		~ProfileScopeGPU();
+
+	private:
+		uint64_t m_data;
+		ProfileMarker& m_marker;
+		display::Context* m_context;
+	};
+
 	//Init profiles
 	void InitProfiler();
 	//Shutdown profiles
@@ -55,10 +75,17 @@ namespace core
 #define PASTE_HELPER(a,b) a ## b
 #define PASTE(a,b) PASTE_HELPER(a,b)
 
-#define PROFILE_DEFINE_MARKER(var, group, name, colour) inline core::ProfileMarker var(group, name, group ## "-" ##  name, colour);
-#define PROFILE_SCOPE(group, name, colour) static core::ProfileMarker PASTE(g_profile_marker_,__LINE__)(group, name, group ## "-" ## name, colour); core::ProfileScope PASTE(g_profile_scope_,__LINE__)(PASTE(g_profile_marker_,__LINE__));
+#define PROFILE_DEFINE_MARKER(var, group, colour, name) inline core::ProfileMarker var(group, name, group ## "-" ##  name, colour);
+#define PROFILE_SCOPE(group, colour, name) static core::ProfileMarker PASTE(g_profile_marker_,__LINE__)(group, name, group ## "-" ## name, colour); core::ProfileScope PASTE(g_profile_scope_,__LINE__)(PASTE(g_profile_marker_,__LINE__));
 #define PROFILE_SCOPE_MARKER(marker) core::ProfileScope PASTE(g_profile_scope_, __LINE__)(marker);
+#define PROFILE_SCOPE_GPU(context, group, colour, name) static core::ProfileMarker PASTE(g_profile_marker_,__LINE__)(group, name, group ## "-" ## name, colour); core::ProfileScopeGPU PASTE(g_profile_scope_,__LINE__)(PASTE(g_profile_marker_,__LINE__), context);
 
+#define PROFILE_SCOPE_ARG(group, colour, name,...)	char PASTE(profile_buffer_,__LINE__)[256]; \
+													sprintf_s(PASTE(profile_buffer_, __LINE__), 256, group ## "-" ## name, __VA_ARGS__);\
+													core::ProfileMarker PASTE(g_profile_marker_,__LINE__)(group, PASTE(profile_buffer_,__LINE__)+ strlen(group) + 1, PASTE(profile_buffer_,__LINE__), colour); core::ProfileScope PASTE(g_profile_scope_,__LINE__)(PASTE(g_profile_marker_,__LINE__));
+#define PROFILE_SCOPE_GPU_ARG(context, group, colour, name,...)	char PASTE(profile_buffer_,__LINE__)[256]; \
+																sprintf_s(PASTE(profile_buffer_, __LINE__), 256, group ## "-" ## name, __VA_ARGS__);\
+																core::ProfileMarker PASTE(g_profile_marker_,__LINE__)(group, PASTE(profile_buffer_,__LINE__) + strlen(group) + 1, PASTE(profile_buffer_,__LINE__), colour); core::ProfileScopeGPU PASTE(g_profile_scope_,__LINE__)(PASTE(g_profile_marker_,__LINE__), context);
 #else
 namespace core
 {
@@ -70,8 +97,12 @@ namespace core
 	};
 }
 
-#define PROFILE_SCOPE(group, name, colour)
-#define PROFILE_SCOPEM(marker)
+#define PROFILE_DEFINE_MARKER(var, group, colour, name)
+#define PROFILE_SCOPE(group, colour, name)
+#define PROFILE_SCOPE(marker)
+#define PROFILE_SCOPE_GPU(context, group, colour, name)
+#define PROFILE_SCOPE_ARG(group, colour, name,...)
+#define PROFILE_SCOPE_GPU_ARG(context, group, colour, name,...)
 
 #endif
 

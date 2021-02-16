@@ -646,7 +646,7 @@ namespace platform
 	void Game::Present()
 	{
 		{
-			PROFILE_SCOPE("Platform", "Present", 0xFFFF00FF);
+			PROFILE_SCOPE("Platform", 0xFFFF00FF, "Present");
 			//Present
 			display::Present(g_Platform->m_device);
 		}
@@ -759,19 +759,19 @@ namespace platform
 			imgui_render::NextFrame(g_Platform->m_current_hwnd, elapsed_time);
 
 			{
-				PROFILE_SCOPE("Platform", "GameTick", 0xFFFF00FF);
+				PROFILE_SCOPE("Platform", 0xFFFF00FF, "GameTick");
 				//Render
 				game->OnTick(g_Platform->m_total_time, elapsed_time);
 			}
 
 			{
-				PROFILE_SCOPE("Platform", "RenderPlatformImgui", 0xFFFF00FF);
+				PROFILE_SCOPE("Platform", 0xFFFF00FF, "RenderPlatformImgui");
 				//Render platform imgui (menu, fps,...)
 				RenderImgui(game);
 			}
 
 			{
-				PROFILE_SCOPE("Platform", "BuildImguiRender", 0xFFFF00FF);
+				PROFILE_SCOPE("Imgui", 0xFFFF00FF, "BuildImguiRender");
 				//Render IMGUI
 				ImGui::Render();
 

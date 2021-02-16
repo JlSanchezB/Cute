@@ -1,4 +1,5 @@
 #include <core/profile.h>
+#include <display/display.h>
 
 //Profiles enabled
 #define USE_MICROPROFILE
@@ -13,7 +14,14 @@
 #ifdef USE_PIX_PROFILER
 	#define USE_PIX
 	#include <windows.h>
-	#include "pix3.h"
+	#include <d3d12.h>
+	#include <pix3.h>
+//Display is going to define this function, so we can extract the commandlist from a display context
+
+namespace display
+{
+	ID3D12GraphicsCommandList* GetCommandListFromDisplayContext(display::Context* context);
+}
 #endif
 
 namespace core
@@ -48,6 +56,27 @@ namespace core
 
 #ifdef USE_PIX_PROFILER
 		PIXEndEvent();
+#endif
+	}
+
+	ProfileScopeGPU::ProfileScopeGPU(ProfileMarker& marker, display::Context* context) : m_marker(marker), m_context(context)
+	{
+#ifdef USE_MICROPROFILE
+		m_data = MicroProfileEnter(m_marker.m_data);
+#endif
+
+#ifdef USE_PIX_PROFILER
+		PIXBeginEvent(GetCommandListFromDisplayContext(m_context), m_marker.m_colour, m_marker.m_name);
+#endif
+	}
+	ProfileScopeGPU::~ProfileScopeGPU()
+	{
+#ifdef USE_MICROPROFILE
+		MicroProfileLeave(m_marker.m_data, m_data);
+#endif
+
+#ifdef USE_PIX_PROFILER
+		PIXEndEvent(GetCommandListFromDisplayContext(m_context));
 #endif
 	}
 
