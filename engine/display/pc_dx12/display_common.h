@@ -299,6 +299,7 @@ namespace display
 		UINT m_frame_index;
 		HANDLE m_fence_event;
 		ComPtr<ID3D12Fence> m_fence;
+		UINT64 m_fence_wait_offset = 0; //Offset between frame index and calls to wait for GPU
 		bool m_tearing; //It changes all the fullscreen implementation
 		bool m_windowed; //Only if tearing is not enabled
 		bool m_vsync; //vsync

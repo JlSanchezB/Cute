@@ -174,11 +174,11 @@ namespace render
 		//At the moment just one
 		Frame m_frame_data;
 
-		//Game thread frame, starts with 0 to sync with the display frame index
-		uint64_t m_game_frame_index = 0;
+		//Game thread frame, starts with 1 to sync with the display frame index (display frames start with 1, that allows zero as non frame rendered)
+		uint64_t m_game_frame_index = 1;
 
-		//Render thread frame, starts with 0 to sync with the display frame index
-		uint64_t m_render_frame_index = 0;
+		//Render thread frame, starts with 1 to sync with the display frame index
+		uint64_t m_render_frame_index = 1;
 
 		//List of activated render contexts, they get resused between frames using the pass name and id
 		std::vector<CachedRenderContext> m_cached_render_context;

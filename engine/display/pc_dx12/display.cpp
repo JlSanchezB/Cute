@@ -78,6 +78,9 @@ namespace display
 
 		// Increment the fence value for the current frame.
 		device->m_frame_resources[device->m_frame_index].fence_value++;
+
+		//That increase was produced because a wait
+		device->m_fence_wait_offset++;
 	}
 
 	// Prepare to render the next frame.
@@ -529,7 +532,8 @@ namespace display
 	uint64_t GetLastCompletedGPUFrame(Device* device)
 	{
 		//Returns the value of the frame fence, means that GPU is done with the returned frame
-		return static_cast<uint64_t>(device->m_fence->GetCompletedValue()) - 1;
+		//It removes the increments of the fence because WaitToGPU
+		return static_cast<uint64_t>(device->m_fence->GetCompletedValue()) - device->m_fence_wait_offset;
 	}
 
 	//Context

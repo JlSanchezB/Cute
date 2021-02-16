@@ -156,11 +156,10 @@ namespace render
 
 	void GPUMemoryRenderModule::UpdateStaticGPUMemory(display::Device* device, const AllocHandle& handle, const void* data, const size_t size, const uint64_t frame_index)
 	{
-		//Destination size needs to be aligned to float4
-		constexpr size_t size_float4 = sizeof(float) * 4;
 		assert(size > 0);
 
-		size_t dest_size = (((size - 1) % size_float4) + 1) * size_float4;
+		//Destination size needs to be aligned to float4
+		size_t dest_size = (((size - 1) >> 4) + 1) << 4;
 
 		//Data gets copied in the dynamic gpu memory
 		void* gpu_memory = AllocDynamicGPUMemory(device, dest_size, frame_index);
