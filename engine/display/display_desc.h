@@ -261,10 +261,17 @@ namespace display
 		uint32_t height = 0;
 	};
 
+	struct WeakUnorderedAccessBufferHandleAsShaderResource : WeakUnorderedAccessBufferHandle
+	{
+		WeakUnorderedAccessBufferHandleAsShaderResource(WeakUnorderedAccessBufferHandle& in) : WeakUnorderedAccessBufferHandle(in)
+		{
+		}
+	};
+
 	struct DescriptorTableDesc
 	{
 		struct NullDescriptor {}; //Used to reserve a slot, but not setting a handle
-		using Descritor = std::variant<NullDescriptor, WeakConstantBufferHandle, WeakUnorderedAccessBufferHandle, WeakShaderResourceHandle, WeakRenderTargetHandle>;
+		using Descritor = std::variant<NullDescriptor, WeakConstantBufferHandle, WeakUnorderedAccessBufferHandle, WeakUnorderedAccessBufferHandleAsShaderResource, WeakShaderResourceHandle, WeakRenderTargetHandle>;
 		Access access = Access::Static; //With static, only static handles are supported
 		static constexpr size_t kNumMaxDescriptors = 32;
 

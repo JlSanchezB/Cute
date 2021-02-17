@@ -215,7 +215,7 @@ namespace render
 		//Pipe
 		display::Pipe m_pipe = display::Pipe::Graphics;
 		//If there is a descriptor table, that resource will be build the first time that it is executed, as it knows the constants buffer
-		std::vector<std::string> m_descriptor_table_names;
+		std::vector<std::pair<std::string, bool>> m_descriptor_table_names;
 		//Descriptor has a pool resource and needs to be updated each frame
 		bool m_update_each_frame = false;
 

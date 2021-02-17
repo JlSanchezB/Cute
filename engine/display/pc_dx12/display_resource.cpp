@@ -413,7 +413,19 @@ namespace display
 		dx12_unordered_access_buffer_desc_desc.Buffer.CounterOffsetInBytes = 0;
 		dx12_unordered_access_buffer_desc_desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_NONE;
 
-		device->m_native_device->CreateUnorderedAccessView(unordered_access_buffer.resource.Get(), nullptr, &dx12_unordered_access_buffer_desc_desc, device->m_unordered_access_buffer_pool.GetDescriptor(handle));
+		device->m_native_device->CreateUnorderedAccessView(unordered_access_buffer.resource.Get(), nullptr, &dx12_unordered_access_buffer_desc_desc, device->m_unordered_access_buffer_pool.GetDescriptor(handle, 0));
+
+		//Create shader resource view
+		D3D12_SHADER_RESOURCE_VIEW_DESC dx12_shader_resource_desc = {};
+		dx12_shader_resource_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+		dx12_shader_resource_desc.Format = DXGI_FORMAT_UNKNOWN;
+		dx12_shader_resource_desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
+		dx12_shader_resource_desc.Buffer.NumElements = static_cast<UINT>(unordered_access_buffer_desc.element_count);
+		dx12_shader_resource_desc.Buffer.StructureByteStride = static_cast<UINT>(unordered_access_buffer_desc.element_size);
+		
+
+		device->m_native_device->CreateShaderResourceView(unordered_access_buffer.resource.Get(), &dx12_shader_resource_desc, device->m_unordered_access_buffer_pool.GetDescriptor(handle, 1));
+
 
 		SetObjectName(unordered_access_buffer.resource.Get(), name);
 
@@ -621,7 +633,12 @@ namespace display
 						[&](WeakUnorderedAccessBufferHandle unordered_access_buffer)
 						{
 							device->m_native_device->CopyDescriptorsSimple(1, device->m_descriptor_table_pool.GetDescriptor(handle, i),
-								device->m_unordered_access_buffer_pool.GetDescriptor(unordered_access_buffer), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+								device->m_unordered_access_buffer_pool.GetDescriptor(unordered_access_buffer, 0), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+						},
+						[&](WeakUnorderedAccessBufferHandleAsShaderResource unordered_access_buffer_as_shader_resource)
+						{
+							device->m_native_device->CopyDescriptorsSimple(1, device->m_descriptor_table_pool.GetDescriptor(handle, i),
+								device->m_unordered_access_buffer_pool.GetDescriptor(unordered_access_buffer_as_shader_resource, 1), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 						},
 						[&](WeakShaderResourceHandle shader_resource)
 						{
@@ -669,7 +686,12 @@ namespace display
 							[&](WeakUnorderedAccessBufferHandle unordered_access_buffer)
 							{
 								device->m_native_device->CopyDescriptorsSimple(1, device->m_descriptor_table_pool.GetDescriptor(handle_it, i),
-									device->m_unordered_access_buffer_pool.GetDescriptor(unordered_access_buffer), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+									device->m_unordered_access_buffer_pool.GetDescriptor(unordered_access_buffer, 0), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+							},
+							[&](WeakUnorderedAccessBufferHandleAsShaderResource unordered_access_buffer_as_shader_resource)
+							{
+								device->m_native_device->CopyDescriptorsSimple(1, device->m_descriptor_table_pool.GetDescriptor(handle_it, i),
+									device->m_unordered_access_buffer_pool.GetDescriptor(unordered_access_buffer_as_shader_resource, 1), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 							},
 							[&](WeakShaderResourceHandle shader_resource)
 							{

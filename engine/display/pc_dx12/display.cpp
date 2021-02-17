@@ -260,7 +260,8 @@ namespace display
 		device->m_vertex_buffer_pool.Init(2000, 100, params.num_frames);
 		device->m_index_buffer_pool.Init(2000, 100, params.num_frames);
 		device->m_constant_buffer_pool.Init(2000, 100, params.num_frames, device, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-		device->m_unordered_access_buffer_pool.Init(1000, 10, params.num_frames, device, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		D3D12_DESCRIPTOR_HEAP_TYPE unordered_access_heap_types[2] = { D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV , D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV };
+		device->m_unordered_access_buffer_pool.InitMultipleHeaps(1000, 10, params.num_frames, device, 2, unordered_access_heap_types);
 		device->m_shader_resource_pool.Init(2000, 100, params.num_frames, device, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 		device->m_descriptor_table_pool.Init(2000, 100, params.num_frames, 8, device, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 		device->m_sampler_descriptor_table_pool.Init(200, 10, params.num_frames, 8, device, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);

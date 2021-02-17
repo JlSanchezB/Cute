@@ -4,8 +4,8 @@
     <RootParam index="0" type="Constants" num_constants="1" shader_register="0" visibility="All"/>
     <RootParam index="1" type="DescriptorTable">
       <Range base_shader_register="1" size="1" type="ConstantBuffer" visibility="All"/>
-      <Range base_shader_register="0" size="1" type="UnorderedAccessBuffer" visibility="All"/>
       <Range base_shader_register="0" size="1" type="ShaderResource" visibility="All"/>
+      <Range base_shader_register="1" size="1" type="ShaderResource" visibility="All"/>
     </RootParam>
     <StaticSample shader_register="0" visibility="Pixel"/>
     <StaticSample shader_register="1" visibility="Pixel" filter="Linear"/>
@@ -34,8 +34,8 @@
         float4 position : SV_POSITION;
       };
       uint instance_data_offset : b0;
-      RWStructuredBuffer&lt;float4&gt; static_gpu_memory : u0; 
-      StructuredBuffer&lt;float4&gt; dynamic_gpu_memory : t0;
+      StructuredBuffer&lt;float4&gt; static_gpu_memory : t0; 
+      StructuredBuffer&lt;float4&gt; dynamic_gpu_memory : t1;
 
       PSInput vs_box_main(float4 position : POSITION, uint instance_id : SV_InstanceID)
       {
@@ -97,7 +97,7 @@
       <SetRootSignature>BoxRootSignature</SetRootSignature>
       <SetDescriptorTable pipe="Graphics" root_param="1">
         <Descriptor>ViewConstantBuffer</Descriptor>
-        <Descriptor>StaticGPUMemoryBuffer</Descriptor>
+        <Descriptor as="ShaderResource">StaticGPUMemoryBuffer</Descriptor>
         <Descriptor>DynamicGPUMemoryBuffer</Descriptor>
       </SetDescriptorTable>
 	    <ClearRenderTarget colour="0,0,0,0">BackBuffer</ClearRenderTarget>

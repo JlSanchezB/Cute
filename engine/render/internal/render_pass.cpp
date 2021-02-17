@@ -423,7 +423,17 @@ namespace render
 
 			while (xml_element_descriptor)
 			{
-				m_descriptor_table_names.push_back(xml_element_descriptor->GetText());
+				bool as_shader_resource = false;
+				const char* string_value;
+				if (xml_element_descriptor->QueryStringAttribute("as", &string_value) == tinyxml2::XML_SUCCESS)
+				{
+					if (strcmp("ShaderResource", string_value) == 0)
+					{
+						as_shader_resource = true;
+					}
+				}
+
+				m_descriptor_table_names.emplace_back(xml_element_descriptor->GetText(), as_shader_resource);
 
 				//It is a descriptor list, names need to be solve during render
 				xml_element_descriptor = xml_element_descriptor->NextSiblingElement();
@@ -441,7 +451,7 @@ namespace render
 		for (auto& descriptor : m_descriptor_table_names)
 		{
 			bool pass_resource;
-			Resource* resource = render_context.GetResource(ResourceName(descriptor.c_str()), pass_resource);
+			Resource* resource = render_context.GetResource(ResourceName(descriptor.first.c_str()), pass_resource);
 
 			if (resource)
 			{
@@ -463,7 +473,11 @@ namespace render
 				else if (resource->Type() == "UnorderedAccessBuffer"_sh32)
 				{
 					UnorderedAccessBufferResource* unordered_access_buffer_resource = dynamic_cast<UnorderedAccessBufferResource*>(resource);
-					descriptor_table_desc.AddDescriptor(unordered_access_buffer_resource->GetHandle());
+					if (descriptor.second)
+						//Used as shader source
+						descriptor_table_desc.AddDescriptor(display::WeakUnorderedAccessBufferHandleAsShaderResource(unordered_access_buffer_resource->GetHandle()));
+					else
+						descriptor_table_desc.AddDescriptor(unordered_access_buffer_resource->GetHandle());
 				}
 				else if (resource->Type() == "ShaderResource"_sh32)
 				{
