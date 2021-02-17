@@ -41,6 +41,38 @@ public:
 	//Process input and update the position
 	void Update(platform::Game* game, float ellapsed_time)
 	{
+		//Read inputs
+		float forward_input = game->GetInputSlotValue(platform::InputSlotValue::ControllerThumbRightY);
+		if (game->GetInputSlotState(platform::InputSlotState::Up)) forward_input += 1.f;
+		if (game->GetInputSlotState(platform::InputSlotState::Down)) forward_input -= 1.f;
+		float side_input = game->GetInputSlotValue(platform::InputSlotValue::ControllerThumbRightX);
+		if (game->GetInputSlotState(platform::InputSlotState::Right)) side_input += 1.f;
+		if (game->GetInputSlotState(platform::InputSlotState::Left)) side_input -= 1.f;
+		float up_input = (game->GetInputSlotValue(platform::InputSlotValue::ControllerRightTrigger) - game->GetInputSlotValue(platform::InputSlotValue::ControllerLeftTrigger));
+		if (game->GetInputSlotState(platform::InputSlotState::PageUp)) up_input += 1.f;
+		if (game->GetInputSlotState(platform::InputSlotState::PageDown)) up_input -= 1.f;
+
+		if (game->GetInputSlotState(platform::InputSlotState::RightMouseButton))
+		{
+			side_input += game->GetInputSlotValue(platform::InputSlotValue::MouseRelativePositionX) * m_mouse_move_factor;
+			forward_input += game->GetInputSlotValue(platform::InputSlotValue::MouseRelativePositionY) * m_mouse_move_factor;
+		}
+
+		forward_input = glm::clamp(forward_input, -1.f, 1.f);
+		side_input = glm::clamp(side_input, -1.f, 1.f);
+		up_input = glm::clamp(up_input, -1.f, 1.f);
+
+		glm::vec2 rotation_input;
+		rotation_input.x = game->GetInputSlotValue(platform::InputSlotValue::ControllerThumbLeftX);
+		rotation_input.y = game->GetInputSlotValue(platform::InputSlotValue::ControllerThumbLeftY);
+		if (game->GetInputSlotState(platform::InputSlotState::LeftMouseButton))
+		{
+			rotation_input.x += game->GetInputSlotValue(platform::InputSlotValue::MouseRelativePositionX) * m_mouse_rotate_factor;
+			rotation_input.y -= game->GetInputSlotValue(platform::InputSlotValue::MouseRelativePositionY) * m_mouse_rotate_factor;
+		}
+		rotation_input.x = glm::clamp(rotation_input.x, -1.f, 1.f);
+		rotation_input.y = glm::clamp(rotation_input.y, -1.f, 1.f);
+
 		//Apply damp
 		m_move_speed -= m_move_speed * glm::clamp((m_damp_factor * ellapsed_time), 0.f, 1.f);
 		m_rotation_speed -= m_rotation_speed * glm::clamp((m_damp_factor * ellapsed_time), 0.f, 1.f);
@@ -53,18 +85,18 @@ public:
 		glm::vec3 forward = glm::vec3(0.f, 1.f, 0.f) * rot;
 		glm::vec3 side = glm::vec3(1.f, 0.f, 0.f) * rot;
 
-		move_speed = -game->GetInputSlotValue(platform::InputSlotValue::ControllerThumbRightX) * m_move_factor * ellapsed_time * side;
-		move_speed += game->GetInputSlotValue(platform::InputSlotValue::ControllerThumbRightY) * m_move_factor * ellapsed_time * forward;
+		move_speed = -side_input * m_move_factor * ellapsed_time * side;
+		move_speed += forward_input * m_move_factor * ellapsed_time * forward;
 		//Up/Down doesn't depend of the rotation
-		move_speed.z += (game->GetInputSlotValue(platform::InputSlotValue::ControllerRightTrigger) - game->GetInputSlotValue(platform::InputSlotValue::ControllerLeftTrigger)) * m_move_factor * ellapsed_time;
+		move_speed.z += up_input * m_move_factor * ellapsed_time;
 
 		
 		m_move_speed += move_speed;
 
 		//Calculate direction movement
 		glm::vec2 angles;
-		angles.x = -game->GetInputSlotValue(platform::InputSlotValue::ControllerThumbLeftX) * m_rotation_factor * ellapsed_time;
-		angles.y = -game->GetInputSlotValue(platform::InputSlotValue::ControllerThumbLeftY) * m_rotation_factor * ellapsed_time;
+		angles.x = -rotation_input.x * m_rotation_factor * ellapsed_time;
+		angles.y = -rotation_input.y * m_rotation_factor * ellapsed_time;
 
 		m_rotation_speed += angles;
 
@@ -112,6 +144,8 @@ private:
 
 
 	//Setup
+	float m_mouse_rotate_factor = 2.5f;
+	float m_mouse_move_factor = 5.0f;
 	float m_damp_factor = 5.0f;
 	float m_move_factor = 40.0f;
 	float m_rotation_factor = 20.f;
