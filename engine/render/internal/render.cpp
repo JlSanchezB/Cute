@@ -576,6 +576,7 @@ namespace render
 		RegisterPassFactory<ContextPass>(system);
 		RegisterPassFactory<SetRenderTargetPass>(system);
 		RegisterPassFactory<ClearRenderTargetPass>(system);
+		RegisterPassFactory<ClearDepthStencilPass>(system);
 		RegisterPassFactory<SetRootSignaturePass>(system);
 		RegisterPassFactory<SetRootConstantBufferPass>(system);
 		RegisterPassFactory<SetRootShaderResourcePass>(system);

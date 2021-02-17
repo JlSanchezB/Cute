@@ -335,6 +335,30 @@ namespace render
 			render_context.GetContext()->ClearRenderTargetColour(render_target->GetHandle(), colour);
 		}
 	}
+	void ClearDepthStencilPass::Load(LoadContext& load_context)
+	{
+		float depth_value_read = 0.f;
+		uint8_t stencil_value_read = 0;
+		if (QueryAttribute(load_context, load_context.current_xml_element, "depth", depth_value_read, AttributeType::Optional))
+		{
+			depth_value = depth_value_read;
+		}
+		if (QueryAttribute(load_context, load_context.current_xml_element, "stencil", stencil_value_read, AttributeType::Optional))
+		{
+			stencil_value = stencil_value_read;
+		}
+		
+		m_depth_stencil_buffer.UpdateName(load_context.GetResourceReference(load_context));
+	}
+	void ClearDepthStencilPass::Render(RenderContext& render_context) const
+	{
+		//Get render target
+		DepthBufferResource* depth_stencil_resource = m_depth_stencil_buffer.Get(render_context);
+		if (depth_stencil_resource)
+		{
+			render_context.GetContext()->ClearDepthStencil(depth_stencil_resource->GetHandle(), depth_value, stencil_value);
+		}
+	}
 	void SetRootSignaturePass::Load(LoadContext & load_context)
 	{
 		QueryTableAttribute(load_context, load_context.current_xml_element, "pipe", m_pipe, AttributeType::Optional);

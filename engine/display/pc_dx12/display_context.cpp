@@ -48,6 +48,21 @@ namespace display
 
 		command_list->ClearRenderTargetView(device->m_render_target_pool.GetDescriptor(frame_render_target_handle), colour, 0, nullptr);
 	}
+
+	void Context::ClearDepthStencil(const WeakDepthBufferHandle& depth_stencil_handle, std::optional<float> depth, std::optional <uint8_t> stencil)
+	{
+		auto dx12_context = reinterpret_cast<DX12Context*>(this);
+		Device* device = dx12_context->device;
+		const auto& command_list = dx12_context->command_list;
+
+		auto& frame_depth_stencil_handle = GetRingResource(device, depth_stencil_handle, device->m_frame_index);
+
+		auto& depth_stencil = device->Get(frame_depth_stencil_handle);
+		D3D12_CLEAR_FLAGS flags;
+		if (depth.has_value())  flags |= D3D12_CLEAR_FLAG_DEPTH;
+		if (stencil.has_value())  flags |= D3D12_CLEAR_FLAG_STENCIL;
+		command_list->ClearDepthStencilView(device->m_depth_buffer_pool.GetDescriptor(depth_stencil_handle), flags, depth.has_value() ? depth.value() : 0.f, stencil.has_value() ? stencil.value() : 0, 0, nullptr);
+	}
 	void Context::SetRootSignature(const Pipe& pipe, const WeakRootSignatureHandle & root_signature_handle)
 	{
 		auto dx12_context = reinterpret_cast<DX12Context*>(this);

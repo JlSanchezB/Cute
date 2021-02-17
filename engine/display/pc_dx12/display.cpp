@@ -778,9 +778,10 @@ namespace display
 		DX12_pipeline_state_desc.BlendState = blend_desc;
 
 		DX12_pipeline_state_desc.DepthStencilState.DepthEnable = pipeline_state_desc.depth_enable;
+		DX12_pipeline_state_desc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_GREATER_EQUAL;
 		
 		DX12_pipeline_state_desc.DepthStencilState.StencilEnable = pipeline_state_desc.stencil_enable;
-		
+
 		DX12_pipeline_state_desc.SampleMask = UINT_MAX;
 		
 		DX12_pipeline_state_desc.PrimitiveTopologyType = Convert(pipeline_state_desc.primitive_topology);
@@ -797,7 +798,7 @@ namespace display
 				DX12_pipeline_state_desc.RTVFormats[i] = DXGI_FORMAT_UNKNOWN;
 			}
 		}
-		 
+		DX12_pipeline_state_desc.DSVFormat = Convert(pipeline_state_desc.depth_stencil_format);
 		DX12_pipeline_state_desc.SampleDesc.Count = static_cast<UINT>(pipeline_state_desc.sample_count);
 
 		//Create pipeline state

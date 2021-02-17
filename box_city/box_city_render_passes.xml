@@ -10,10 +10,11 @@
     <StaticSample shader_register="0" visibility="Pixel"/>
     <StaticSample shader_register="1" visibility="Pixel" filter="Linear"/>
   </Resource>
-  <Resource type="GraphicsPipelineState" name="BoxPipelineState">
+  <Resource type="GraphicsPipelineState" name="BoxPipelineState" depth_enable="true" depth_stencil_format="D32_FLOAT">
     <RootSignature>BoxRootSignature</RootSignature>
     <InputLayouts>
-      <Input semantic_name="POSITION" semantic_index="0" format="R32G32B32A32_FLOAT" input_slot="0"/>
+      <Input semantic_name="POSITION" semantic_index="0" format="R32G32B32_FLOAT" input_slot="0"/>
+      <Input semantic_name="NORMAL" semantic_index="0" format="R32G32B32_FLOAT" input_slot="1"/>
     </InputLayouts>
     <Shader pixelshader_entry="ps_box_main" vertexshader_entry="vs_box_main" target="5_0">
       cbuffer ViewData : b1
@@ -32,12 +33,13 @@
       struct PSInput
       {
         float4 position : SV_POSITION;
+        float3 normal : TEXCOORD0;
       };
       uint instance_data_offset : b0;
       StructuredBuffer&lt;float4&gt; static_gpu_memory : t0; 
       StructuredBuffer&lt;float4&gt; dynamic_gpu_memory : t1;
 
-      PSInput vs_box_main(float4 position : POSITION, uint instance_id : SV_InstanceID)
+      PSInput vs_box_main(float3 position : POSITION, float3 normal : NORMAL, uint instance_id : SV_InstanceID)
       {
         PSInput result;
 
@@ -57,18 +59,19 @@
 
         //Each position needs to be multiply by the local matrix
         float3 world_position = mul(float4(position.xyz, 1.f), instance_data.local_matrix);
-
         result.position = mul(view_projection_matrix, float4(world_position, 1.f));
-
+        
+        result.normal = mul(float4(normal.xyz, 0.f), instance_data.local_matrix);
+        
         return result;
       }
 
       float4 ps_box_main(PSInput input) : SV_TARGET
       {
-        return float4(1.f, 1.f, 1.f, 1.f);
+        return float4(1.f, 1.f, 1.f, 1.f) * (0.5f + 0.5f * dot(input.normal, normalize(float3(1.f, 1.f, 1.f))));
       }
     </Shader>
-    <Rasterization cull_mode="None"/>
+    <Rasterization cull_mode="Front"/>
     <RenderTargets>
       <RenderTarget format="R8G8B8A8_UNORM"/>
     </RenderTargets>
@@ -101,6 +104,7 @@
         <Descriptor>DynamicGPUMemoryBuffer</Descriptor>
       </SetDescriptorTable>
 	    <ClearRenderTarget colour="0,0,0,0">BackBuffer</ClearRenderTarget>
+      <ClearDepthStencil depth="0.f">SceneDepth</ClearDepthStencil>
       <DrawCityBoxItems priority="Box"/>
     </Commands>
   </Pass>

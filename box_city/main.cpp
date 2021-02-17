@@ -270,7 +270,9 @@ public:
 				display::WeakPipelineStateHandle box_pipeline_state = render::GetResource<render::GraphicsPipelineStateResource>(render_context.GetRenderSystem(), "BoxPipelineState"_sh32)->GetHandle();
 				context->SetPipelineState(box_pipeline_state);
 
-				context->SetVertexBuffers(0, 1, &m_display_resources->m_box_vertex_buffer);
+				display::WeakVertexBufferHandle vertex_buffers[] = { m_display_resources->m_box_vertex_position_buffer, m_display_resources->m_box_vertex_normal_buffer };
+				context->SetVertexBuffers(0, 1, &m_display_resources->m_box_vertex_position_buffer);
+				context->SetVertexBuffers(1, 1, &m_display_resources->m_box_vertex_normal_buffer);
 				context->SetIndexBuffer(m_display_resources->m_box_index_buffer);
 
 				display::DrawIndexedInstancedDesc desc;

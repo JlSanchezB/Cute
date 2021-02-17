@@ -110,7 +110,7 @@ namespace display
 		float slope_depth_bias = 0.f;
 		bool depth_clip_enable = true;
 		bool multisample_enable = false;
-		uint32_t forced_sample_count = 1;
+		uint32_t forced_sample_count = 0;
 		bool convervative_mode = false;
 	};
 
@@ -157,7 +157,7 @@ namespace display
 
 		uint8_t num_render_targets = 0;
 		std::array<Format, kMaxNumRenderTargets> render_target_format;
-
+		Format depth_stencil_format;
 		uint8_t sample_count = 1;
 	};
 

@@ -135,6 +135,18 @@ namespace render
 		void Render(RenderContext& render_context) const override;
 	};
 
+	class ClearDepthStencilPass : public Pass
+	{
+		ResourceReference<DepthBufferResource> m_depth_stencil_buffer;
+		std::optional<float> depth_value;
+		std::optional<uint8_t> stencil_value;
+	public:
+		DECLARE_RENDER_CLASS("ClearDepthStencil");
+
+		void Load(LoadContext& load_context) override;
+		void Render(RenderContext& render_context) const override;
+	};
+
 	class SetRootSignaturePass : public Pass
 	{
 		//Pipe
