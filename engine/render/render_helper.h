@@ -47,8 +47,8 @@ namespace
 			if (attribute_type == AttributeType::NonOptional)
 			{
 				AddError(load_context, "Error reading non optional attribute <%s> in node <%s>, line <%i>", name, load_context.name, xml_element->GetLineNum());
-				return false;
 			}
+			return false;
 		}
 		return true;
 	}
@@ -63,8 +63,8 @@ namespace
 			if (attribute_type == AttributeType::NonOptional)
 			{
 				AddError(load_context, "Error reading non optional attribute <%s> in node <%s>, line <%i>", name, load_context.name, xml_element->GetLineNum());
-				return false;
 			}
+			return false;
 		}
 		else
 		{
@@ -83,8 +83,8 @@ namespace
 			if (attribute_type == AttributeType::NonOptional)
 			{
 				AddError(load_context, "Error reading non optional attribute <%s> in node <%s>, line <%i>", name, load_context.name, xml_element->GetLineNum());
-				return false;
 			}
+			return false;
 		}
 		else
 		{
@@ -103,8 +103,8 @@ namespace
 			if (attribute_type == AttributeType::NonOptional)
 			{
 				AddError(load_context, "Error reading non optional attribute <%s> in node <%s>, line <%i>", name, load_context.name, xml_element->GetLineNum());
-				return false;
 			}
+			return false;
 		}
 		else
 		{
@@ -124,8 +124,8 @@ namespace
 			if (attribute_type == AttributeType::NonOptional)
 			{
 				AddError(load_context, "Error reading non optional attribute <%s> in node <%s>, line <%i>", name, load_context.name, xml_element->GetLineNum());
-				return false;
 			}
+			return false;
 		}
 		else
 		{
