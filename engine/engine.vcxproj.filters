@@ -45,6 +45,9 @@
     <Filter Include="render_module">
       <UniqueIdentifier>{53a5adfb-ed01-4c94-82ae-9013dcb5c893}</UniqueIdentifier>
     </Filter>
+    <Filter Include="helpers">
+      <UniqueIdentifier>{b608370e-2209-4c53-bf01-250541b3f3ce}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="display\display.h">
@@ -926,6 +929,9 @@
     <ClInclude Include="render_module\render_segment_allocator.h">
       <Filter>render_module</Filter>
     </ClInclude>
+    <ClInclude Include="helpers\camera.h">
+      <Filter>helpers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="display\pc_dx12\display.cpp">
@@ -1002,6 +1008,9 @@
     </ClCompile>
     <ClCompile Include="render_module\render_module_gpu_memory.cpp">
       <Filter>render_module</Filter>
+    </ClCompile>
+    <ClCompile Include="helpers\camera.cpp">
+      <Filter>helpers</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

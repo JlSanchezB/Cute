@@ -141,7 +141,43 @@ namespace
 			table[VK_RIGHT] = platform::InputSlotState::Right;
 			table[VK_PRIOR] = platform::InputSlotState::PageUp;
 			table[VK_NEXT] = platform::InputSlotState::PageDown;
+			table['A'] = platform::InputSlotState::Key_A;
+			table['B'] = platform::InputSlotState::Key_B;
+			table['C'] = platform::InputSlotState::Key_C;
+			table['D'] = platform::InputSlotState::Key_D;
+			table['E'] = platform::InputSlotState::Key_E;
+			table['F'] = platform::InputSlotState::Key_F;
+			table['G'] = platform::InputSlotState::Key_G;
+			table['H'] = platform::InputSlotState::Key_H;
+			table['I'] = platform::InputSlotState::Key_I;
+			table['J'] = platform::InputSlotState::Key_J;
+			table['L'] = platform::InputSlotState::Key_L;
+			table['M'] = platform::InputSlotState::Key_M;
+			table['N'] = platform::InputSlotState::Key_N;
+			table['O'] = platform::InputSlotState::Key_O;
+			table['P'] = platform::InputSlotState::Key_P;
+			table['Q'] = platform::InputSlotState::Key_Q;
+			table['R'] = platform::InputSlotState::Key_R;
+			table['S'] = platform::InputSlotState::Key_S;
+			table['T'] = platform::InputSlotState::Key_T;
+			table['U'] = platform::InputSlotState::Key_U;
+			table['V'] = platform::InputSlotState::Key_V;
+			table['W'] = platform::InputSlotState::Key_W;
+			table['X'] = platform::InputSlotState::Key_X;
+			table['Y'] = platform::InputSlotState::Key_Y;
+			table['Z'] = platform::InputSlotState::Key_Z;
+			table['1'] = platform::InputSlotState::Key_1;
+			table['2'] = platform::InputSlotState::Key_2;
+			table['3'] = platform::InputSlotState::Key_3;
+			table['4'] = platform::InputSlotState::Key_4;
+			table['5'] = platform::InputSlotState::Key_5;
+			table['6'] = platform::InputSlotState::Key_6;
+			table['7'] = platform::InputSlotState::Key_7;
+			table['8'] = platform::InputSlotState::Key_8;
+			table['9'] = platform::InputSlotState::Key_9;
+			table['0'] = platform::InputSlotState::Key_0;
 
+		
 			return table;
 		}
 
