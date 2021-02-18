@@ -778,7 +778,8 @@ namespace display
 		DX12_pipeline_state_desc.BlendState = blend_desc;
 
 		DX12_pipeline_state_desc.DepthStencilState.DepthEnable = pipeline_state_desc.depth_enable;
-		DX12_pipeline_state_desc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_GREATER_EQUAL;
+		DX12_pipeline_state_desc.DepthStencilState.DepthFunc = Convert(pipeline_state_desc.depth_func);
+		DX12_pipeline_state_desc.DepthStencilState.DepthWriteMask = (pipeline_state_desc.depth_write) ? D3D12_DEPTH_WRITE_MASK_ALL : D3D12_DEPTH_WRITE_MASK_ZERO;
 		
 		DX12_pipeline_state_desc.DepthStencilState.StencilEnable = pipeline_state_desc.stencil_enable;
 

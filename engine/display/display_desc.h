@@ -151,7 +151,9 @@ namespace display
 		BlendDesc blend_desc;
 
 		bool depth_enable = false;
+		bool depth_write = false;
 		bool stencil_enable = false;
+		ComparationFunction depth_func = ComparationFunction::Less_Equal;
 
 		Topology primitive_topology;
 

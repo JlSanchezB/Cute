@@ -399,6 +399,8 @@ namespace render
 		
 		QueryTableAttribute(load_context, load_context.current_xml_element, "primitive_topology", pipeline_state_desc.primitive_topology, AttributeType::Optional);
 		QueryAttribute(load_context, load_context.current_xml_element, "depth_enable", pipeline_state_desc.depth_enable, AttributeType::Optional);
+		QueryAttribute(load_context, load_context.current_xml_element, "depth_write", pipeline_state_desc.depth_write, AttributeType::Optional);
+		QueryTableAttribute(load_context, load_context.current_xml_element, "depth_func", pipeline_state_desc.depth_func, AttributeType::Optional);
 		QueryAttribute(load_context, load_context.current_xml_element, "stencil_enable", pipeline_state_desc.stencil_enable, AttributeType::Optional);
 		QueryTableAttribute(load_context, load_context.current_xml_element, "depth_stencil_format", pipeline_state_desc.depth_stencil_format, AttributeType::Optional);
 
