@@ -406,6 +406,7 @@
     <ClInclude Include="ext\microprofile\microprofileui.h" />
     <ClInclude Include="ext\tinyxml2\tinyxml2.h" />
     <ClInclude Include="helpers\camera.h" />
+    <ClInclude Include="helpers\collision.h" />
     <ClInclude Include="job\job.h" />
     <ClInclude Include="job\job_queue.h" />
     <ClInclude Include="job\job_helper.h" />

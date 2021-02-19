@@ -9,7 +9,6 @@
 #include <ext/glm/vec2.hpp>
 #include <ext/glm/mat4x4.hpp>
 #include <ext/glm/gtc/constants.hpp>
-#include <array>
 
 namespace platform
 {

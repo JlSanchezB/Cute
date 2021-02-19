@@ -20,6 +20,7 @@
 #include <ext/glm/gtx/vector_angle.hpp>
 #include <ext/glm/gtx/rotate_vector.hpp>
 #include <ext/glm/gtx/euler_angles.hpp>
+#include <helpers/collision.h>
 
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN             // Exclude rarely-used stuff from Windows headers.
