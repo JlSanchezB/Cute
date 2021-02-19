@@ -39,55 +39,60 @@ struct ViewConstantBuffer
 	glm::vec4 time;
 };
 
-//GPU memory structs
-struct GPUBoxInstance
-{
-	glm::vec4 bounding_box_min;
-	glm::vec4 bounding_box_max;
-	glm::mat4x4 local_matrix;
-	glm::vec4 dimensions;
-};
-
 //Components
-struct AABoundingBox
+struct AABBBox
 {
 	glm::vec3 min;
 	glm::vec3 max;
 };
 
-struct Box
+struct OBBBox
 {
-	//Random id 
-	uint32_t id;
-	//Local matrix, center of the city
-	glm::mat4x4 local_matrix;
-	//Dimensions -X to X, -Y to Y, -Z to Z
-	glm::vec3 dimensions;
+	glm::vec3 position;
+	glm::mat3x3 rotation;
+	glm::vec3 extents;
+};
 
-	Box(const uint32_t _id, const glm::mat4x4& _local_matrix, const glm::vec3& _dimensions):
-		id(_id), local_matrix(_local_matrix), dimensions(_dimensions)
-	{
-	}
+struct AnimationBox
+{
+	glm::vec3 original_position;
+	float range; //Distance to navigate in axis Z
+	float offset; //Start offset
+	float frecuency; //Speed
+};
+
+struct BoxGPUHandle
+{
+	//Access to gpu buffer memory
+	render::AllocHandle gpu_memory;
 };
 
 struct BoxRender
 {
 	//Index in the material array
 	uint32_t material;
-	//Access to gpu buffer memory
-	render::AllocHandle gpu_memory;
+};
 
-	BoxRender(uint32_t _material, render::AllocHandle& _gpu_memory)
-		: material(_material), gpu_memory(std::move(_gpu_memory))
+//GPU memory structs
+struct GPUBoxInstance
+{
+	glm::vec4 local_matrix[3];
+
+	void Fill(const OBBBox& obb_box)
 	{
+		glm::mat3x3 scale_rot = glm::mat3x3(glm::scale(glm::identity<glm::mat4x4>(), obb_box.extents)) * obb_box.rotation;
+		local_matrix[0] = glm::vec4(scale_rot[0], obb_box.position.x);
+		local_matrix[1] = glm::vec4(scale_rot[1], obb_box.position.y);
+		local_matrix[2] = glm::vec4(scale_rot[2], obb_box.position.z);
 	}
 };
 
 //ECS definition
-using BoxType = ecs::EntityType<Box, BoxRender, AABoundingBox>;
+using BoxType = ecs::EntityType<BoxRender, BoxGPUHandle, OBBBox, AABBBox>;
+using AnimatedBoxType = ecs::EntityType<BoxRender, BoxGPUHandle, OBBBox, AABBBox, AnimationBox>;
 
-using GameComponents = ecs::ComponentList<Box, BoxRender, AABoundingBox>;
-using GameEntityTypes = ecs::EntityTypeList<BoxType>;
+using GameComponents = ecs::ComponentList<BoxRender, BoxGPUHandle, OBBBox, AABBBox, AnimationBox>;
+using GameEntityTypes = ecs::EntityTypeList<BoxType, AnimatedBoxType>;
 
 using GameDatabase = ecs::DatabaseDeclaration<GameComponents, GameEntityTypes>;
 using Instance = ecs::Instance<GameDatabase>;
@@ -287,21 +292,22 @@ public:
 		{
 			uint32_t id = m_random_generator();
 			float position_z = 10.f * static_cast<float>(id - m_random_generator.min()) / static_cast<float>(m_random_generator.max() - m_random_generator.min());
-			glm::mat4x4 local_matrix;
-			local_matrix = glm::translate(glm::identity<glm::mat4x4>(), glm::vec3(m_random_position_x(m_random_generator), m_random_position_y(m_random_generator), position_z));
-			glm::vec3 dimensions(1.f, 1.f, 1.f);
 			
+			OBBBox obb_box;
+			obb_box.position = glm::vec3(m_random_position_x(m_random_generator), m_random_position_y(m_random_generator), position_z);
+			obb_box.extents = glm::vec3(1.f, 1.f, 1.f);
+			obb_box.rotation = glm::identity<glm::mat3x3>();
+
 			//GPU memory
 			GPUBoxInstance gpu_box_instance;
-			gpu_box_instance.local_matrix = local_matrix;
-			gpu_box_instance.dimensions = glm::vec4(dimensions, 0.f);
+			gpu_box_instance.Fill(obb_box);
 
 			//Allocate the GPU memory
 			render::AllocHandle gpu_memory = m_GPU_memory_render_module->AllocStaticGPUMemory(m_device, sizeof(GPUBoxInstance), &gpu_box_instance, render::GetGameFrameIndex(m_render_system));
 
 			ecs::AllocInstance<GameDatabase, BoxType>(0)
-				.Init<Box>(id, local_matrix, dimensions)
-				.Init<BoxRender>(0, gpu_memory);
+				.Init<OBBBox>(obb_box)
+				.Init<BoxGPUHandle>(BoxGPUHandle{ std::move(gpu_memory) });
 		}
 	}
 
@@ -341,18 +347,17 @@ public:
 		render::BeginPrepareRender(m_render_system);
 
 		//Update all positions for testing the static gpu memory
-		ecs::Process<GameDatabase, Box, const BoxRender>([&](const auto& instance_iterator, Box& box, const BoxRender& box_render)
+		ecs::Process<GameDatabase, OBBBox, BoxGPUHandle>([&](const auto& instance_iterator, OBBBox& obb_box, const BoxGPUHandle& box_gpu_handle)
 		{
 				//Update local position
-				float position_z = 10.f * static_cast<float>(cos(total_time * 0.1f + static_cast<float>(box.id) * 0.1f)) + static_cast<float>(box.id - m_random_generator.min()) / static_cast<float>(m_random_generator.max() - m_random_generator.min());
-				box.local_matrix[3][2] = position_z;
+				float position_z = 10.f * static_cast<float>(cos(total_time * 0.1f + static_cast<float>(instance_iterator.m_instance_index) * 0.1f)) + static_cast<float>(instance_iterator.m_instance_index - m_random_generator.min()) / static_cast<float>(m_random_generator.max() - m_random_generator.min());
+				obb_box.position.z = position_z;
 
 				GPUBoxInstance gpu_box_instance;
-				gpu_box_instance.local_matrix = box.local_matrix;
-				gpu_box_instance.dimensions = glm::vec4(box.dimensions, 0.f);
+				gpu_box_instance.Fill(obb_box);
 
 				//Allocate the GPU memory
-				m_GPU_memory_render_module->UpdateStaticGPUMemory(m_device, box_render.gpu_memory, &gpu_box_instance, sizeof(GPUBoxInstance), render::GetGameFrameIndex(m_render_system));
+				m_GPU_memory_render_module->UpdateStaticGPUMemory(m_device, box_gpu_handle.gpu_memory, &gpu_box_instance, sizeof(GPUBoxInstance), render::GetGameFrameIndex(m_render_system));
 		}, std::bitset<1>(true));
 			
 		//Check if the render passes loader needs to load
@@ -379,14 +384,14 @@ public:
 		auto& point_of_view = render_frame.AllocPointOfView("Main"_sh32, 0);
 		
 		//Cull box city
-		ecs::Process<GameDatabase, Box, const BoxRender>([&](const auto& instance_iterator, Box& box, const BoxRender& box_render)
+		ecs::Process<GameDatabase, AABBBox, BoxGPUHandle>([&](const auto& instance_iterator, AABBBox& aabb_box, const BoxGPUHandle& box_gpu_handle)
 			{
 				//Calculate if it is in the camera
 
 				//Calculate sort key
 
 				//Add this point of view
-				point_of_view.PushRenderItem(m_box_render_priority, static_cast<render::SortKey>(0), static_cast<uint32_t>(m_GPU_memory_render_module->GetStaticGPUMemoryOffset(box_render.gpu_memory)));
+				point_of_view.PushRenderItem(m_box_render_priority, static_cast<render::SortKey>(0), static_cast<uint32_t>(m_GPU_memory_render_module->GetStaticGPUMemoryOffset(box_gpu_handle.gpu_memory)));
 
 			}, std::bitset<1>(true));
 

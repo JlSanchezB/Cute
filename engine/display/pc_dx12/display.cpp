@@ -938,7 +938,7 @@ namespace display
 		auto& depth_buffer = device->Get(handle);
 
 		D3D12_CLEAR_VALUE clear_value;
-		clear_value.DepthStencil = { 0.f, 0 };
+		clear_value.DepthStencil = { 1.f, 0 };
 		clear_value.Format = DXGI_FORMAT_D32_FLOAT;
 
 		//Create commited resource

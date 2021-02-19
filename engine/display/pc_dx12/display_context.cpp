@@ -59,8 +59,9 @@ namespace display
 
 		auto& depth_stencil = device->Get(frame_depth_stencil_handle);
 		D3D12_CLEAR_FLAGS flags;
-		if (depth.has_value())  flags |= D3D12_CLEAR_FLAG_DEPTH;
-		if (stencil.has_value())  flags |= D3D12_CLEAR_FLAG_STENCIL;
+		if (depth.has_value())  flags = D3D12_CLEAR_FLAG_DEPTH;
+		if (stencil.has_value())  flags = D3D12_CLEAR_FLAG_STENCIL;
+		if (depth.has_value() && stencil.has_value())  flags = D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL;
 		command_list->ClearDepthStencilView(device->m_depth_buffer_pool.GetDescriptor(depth_stencil_handle), flags, depth.has_value() ? depth.value() : 0.f, stencil.has_value() ? stencil.value() : 0, 0, nullptr);
 	}
 	void Context::SetRootSignature(const Pipe& pipe, const WeakRootSignatureHandle & root_signature_handle)

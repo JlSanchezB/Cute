@@ -21,54 +21,49 @@
       {
         float4x4 view_projection_matrix;
       };
-      
-      struct BoxInstance
-      {
-        float4 bounding_box_min;
-	      float4 bounding_box_max;
-	      float4x4 local_matrix;
-	      float4 dimensions;
-      };
+     
 
       struct PSInput
       {
         float4 position : SV_POSITION;
         float3 normal : TEXCOORD0;
       };
+      
       uint instance_data_offset : b0;
       StructuredBuffer&lt;float4&gt; static_gpu_memory : t0; 
       StructuredBuffer&lt;float4&gt; dynamic_gpu_memory : t1;
 
       PSInput vs_box_main(float3 position : POSITION, float3 normal : NORMAL, uint instance_id : SV_InstanceID)
       {
-        PSInput result;
+      PSInput result;
 
-        //Get box instance data using primitiveId and the instance_data_offset
-        uint instance_offset_floats = instance_data_offset/4 + instance_id;
-        uint instance_data_offset_byte = asuint(dynamic_gpu_memory[instance_offset_floats / 4][instance_offset_floats % 4]);
+      //Get box instance data using primitiveId and the instance_data_offset
+      uint instance_offset_floats = instance_data_offset/4 + instance_id;
+      uint instance_data_offset_byte = asuint(dynamic_gpu_memory[instance_offset_floats / 4][instance_offset_floats % 4]);
 
-        //Read Box instance data
-        BoxInstance instance_data;
-        instance_data.bounding_box_min = static_gpu_memory[instance_data_offset_byte / 16];
-        instance_data.bounding_box_max = static_gpu_memory[(instance_data_offset_byte / 16) + 1];
-        instance_data.local_matrix[0] = static_gpu_memory[(instance_data_offset_byte / 16) + 2];
-        instance_data.local_matrix[1] = static_gpu_memory[(instance_data_offset_byte / 16) + 3];
-        instance_data.local_matrix[2] = static_gpu_memory[(instance_data_offset_byte / 16) + 4];
-        instance_data.local_matrix[3] = static_gpu_memory[(instance_data_offset_byte / 16) + 5];
-        instance_data.dimensions = static_gpu_memory[(instance_data_offset_byte / 16) + 6];
+      //Read Box instance data
+      float4 instance_data[3];
 
-        //Each position needs to be multiply by the local matrix
-        float3 world_position = mul(float4(position.xyz, 1.f), instance_data.local_matrix);
-        result.position = mul(view_projection_matrix, float4(world_position, 1.f));
-        
-        result.normal = mul(float4(normal.xyz, 0.f), instance_data.local_matrix);
-        
-        return result;
+      instance_data[0] = static_gpu_memory[(instance_data_offset_byte / 16) + 0];
+      instance_data[1] = static_gpu_memory[(instance_data_offset_byte / 16) + 1];
+      instance_data[2] = static_gpu_memory[(instance_data_offset_byte / 16) + 2];
+
+      float3x3 scale_rotate_matrix = float3x3(instance_data[0].xyz, instance_data[1].xyz, instance_data[2].xyz);
+      float3x3 rotate_matrix = float3x3(normalize(instance_data[0].xyz), normalize(instance_data[1].xyz), normalize(instance_data[2].xyz));
+      float3 translation = float3(instance_data[0].w, instance_data[1].w, instance_data[2].w);
+
+      //Each position needs to be multiply by the local matrix
+      float3 world_position = mul(position, scale_rotate_matrix) + translation;
+      result.position = mul(view_projection_matrix, float4(world_position, 1.f));
+
+      result.normal = mul(normal, rotate_matrix);
+
+      return result;
       }
 
       float4 ps_box_main(PSInput input) : SV_TARGET
       {
-        return float4(1.f, 1.f, 1.f, 1.f) * (0.5f + 0.5f * dot(input.normal, normalize(float3(1.f, 1.f, 1.f))));
+      return float4(1.f, 1.f, 1.f, 1.f) * (0.5f + 0.5f * dot(input.normal, normalize(float3(1.f, 1.f, 1.f))));
       }
     </Shader>
     <Rasterization cull_mode="Front"/>
