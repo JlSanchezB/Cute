@@ -41,6 +41,16 @@ struct ViewConstantBuffer
 };
 
 //Components
+struct FlagBox
+{
+	bool gpu_updated : 1;
+
+	FlagBox()
+	{
+		gpu_updated = false;
+	}
+};
+
 struct AABBBox
 {
 	glm::vec3 min;
@@ -89,10 +99,10 @@ struct GPUBoxInstance
 };
 
 //ECS definition
-using BoxType = ecs::EntityType<BoxRender, BoxGPUHandle, OBBBox, AABBBox>;
-using AnimatedBoxType = ecs::EntityType<BoxRender, BoxGPUHandle, OBBBox, AABBBox, AnimationBox>;
+using BoxType = ecs::EntityType<BoxRender, BoxGPUHandle, OBBBox, AABBBox, FlagBox>;
+using AnimatedBoxType = ecs::EntityType<BoxRender, BoxGPUHandle, OBBBox, AABBBox, AnimationBox, FlagBox>;
 
-using GameComponents = ecs::ComponentList<BoxRender, BoxGPUHandle, OBBBox, AABBBox, AnimationBox>;
+using GameComponents = ecs::ComponentList<BoxRender, BoxGPUHandle, OBBBox, AABBBox, AnimationBox, FlagBox>;
 using GameEntityTypes = ecs::EntityTypeList<BoxType, AnimatedBoxType>;
 
 using GameDatabase = ecs::DatabaseDeclaration<GameComponents, GameEntityTypes>;
@@ -357,18 +367,16 @@ public:
 		render::BeginPrepareRender(m_render_system);
 
 		//Update all positions for testing the static gpu memory
-		ecs::Process<GameDatabase, OBBBox, AABBBox, AnimationBox, BoxGPUHandle>([&](const auto& instance_iterator, OBBBox& obb_box, AABBBox& aabb_box, const AnimationBox& animation_box, const BoxGPUHandle& box_gpu_handle)
+		ecs::Process<GameDatabase, OBBBox, AABBBox, FlagBox, AnimationBox>([&](const auto& instance_iterator, OBBBox& obb_box, AABBBox& aabb_box, FlagBox& flags, const AnimationBox& animation_box)
 		{
 				//Update position
 				obb_box.position = animation_box.original_position + glm::row(obb_box.rotation, 2) * animation_box.range * static_cast<float> (cos(total_time * animation_box.frecuency + animation_box.offset));
 
-				GPUBoxInstance gpu_box_instance;
-				gpu_box_instance.Fill(obb_box);
-
+				//Update AABB
 				helpers::CalculateAABBFromOBB(aabb_box.min, aabb_box.max, obb_box.position, obb_box.rotation, obb_box.extents);
 
-				//Allocate the GPU memory
-				m_GPU_memory_render_module->UpdateStaticGPUMemory(m_device, box_gpu_handle.gpu_memory, &gpu_box_instance, sizeof(GPUBoxInstance), render::GetGameFrameIndex(m_render_system));
+				//Mark flags to indicate that the GPU needs to update
+				flags.gpu_updated = false;
 		}, std::bitset<1>(true));
 			
 		//Check if the render passes loader needs to load
@@ -395,11 +403,21 @@ public:
 		auto& point_of_view = render_frame.AllocPointOfView("Main"_sh32, 0);
 		
 		//Cull box city
-		ecs::Process<GameDatabase, AABBBox, const BoxGPUHandle>([&](const auto& instance_iterator, AABBBox& aabb_box, const BoxGPUHandle& box_gpu_handle)
+		ecs::Process<GameDatabase, const OBBBox, const AABBBox, FlagBox, const BoxGPUHandle>([&](const auto& instance_iterator, const OBBBox& obb_box, const AABBBox& aabb_box, FlagBox& flags, const BoxGPUHandle& box_gpu_handle)
 			{
 				//Calculate if it is in the camera
 				if (helpers::CollisionFrustumVsAABB(m_camera, aabb_box.min, aabb_box.max))
 				{
+					//Update GPU if needed
+					if (!flags.gpu_updated)
+					{
+						GPUBoxInstance gpu_box_instance;
+						gpu_box_instance.Fill(obb_box);
+
+						m_GPU_memory_render_module->UpdateStaticGPUMemory(m_device, box_gpu_handle.gpu_memory, &gpu_box_instance, sizeof(GPUBoxInstance), render::GetGameFrameIndex(m_render_system));
+						flags.gpu_updated = true;
+					}
+
 					//Calculate sort key
 
 					//Add this point of view
