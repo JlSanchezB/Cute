@@ -351,6 +351,7 @@ public:
 		//UPDATE GAME
 
 		//Update camera
+		m_camera.UpdateAspectRatio(static_cast<float>(m_width) / static_cast<float>(m_height));
 		m_camera.Update(this, elapsed_time);
 
 		render::BeginPrepareRender(m_render_system);

@@ -55,6 +55,11 @@ namespace helpers
 
 	class Camera : public Frustum
 	{
+	public:
+		void UpdateAspectRatio(float aspect_ratio)
+		{
+			m_aspect_ratio = aspect_ratio;
+		}
 	protected:
 
 		void UpdateInternalData();
