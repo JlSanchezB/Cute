@@ -20,6 +20,7 @@
 #include <ext/glm/gtx/vector_angle.hpp>
 #include <ext/glm/gtx/rotate_vector.hpp>
 #include <ext/glm/gtx/euler_angles.hpp>
+#include <ext/glm/gtc/matrix_access.hpp>
 #include <helpers/collision.h>
 
 #ifndef WIN32_LEAN_AND_MEAN
@@ -194,14 +195,6 @@ public:
 	//GPU Memory render module
 	render::GPUMemoryRenderModule* m_GPU_memory_render_module = nullptr;
 
-	//Random generators
-	std::random_device m_random_device;
-	std::mt19937 m_random_generator;
-
-	std::uniform_real_distribution<float> m_random_position_x;
-	std::uniform_real_distribution<float> m_random_position_y;
-	std::uniform_real_distribution<float> m_random_position_z;
-
 	//Camera
 	helpers::FlyCamera m_camera;
 
@@ -211,10 +204,7 @@ public:
 	//Solid render priority
 	render::Priority m_box_render_priority;
 
-	BoxCityGame() : m_random_generator(m_random_device()),
-		m_random_position_x(-10.f, 10.f),
-		m_random_position_y(-10.f, 10.f),
-		m_random_position_z(-10.f, 10.f)
+	BoxCityGame()
 	{
 	}
 
@@ -287,19 +277,33 @@ public:
 		database_desc.num_zones = 1;
 		ecs::CreateDatabase<GameDatabase>(database_desc);
 
+		std::mt19937 random(34234234);
+
+		std::uniform_real_distribution<float> position_range(-10.f, 10.f);
+		std::uniform_real_distribution<float> angle_range(-glm::half_pi<float>(), glm::half_pi<float>());
+		std::uniform_real_distribution<float> length_range(1.f, 5.f);
+		std::uniform_real_distribution<float> size_range(0.5f, 1.f);
+
+		std::uniform_real_distribution<float> range_animation_range(1.0f, 5.f);
+		std::uniform_real_distribution<float> frecuency_animation_range(0.3f, 1.f);
+		std::uniform_real_distribution<float> offset_animation_range(0.5f, 6.f);
 		//Create boxes
 		for (size_t i = 0; i < 100; ++i)
 		{
-			uint32_t id = m_random_generator();
-			float position_z = 10.f * static_cast<float>(id - m_random_generator.min()) / static_cast<float>(m_random_generator.max() - m_random_generator.min());
-			
 			OBBBox obb_box;
-			obb_box.position = glm::vec3(m_random_position_x(m_random_generator), m_random_position_y(m_random_generator), position_z);
-			obb_box.extents = glm::vec3(1.f, 1.f, 1.f);
-			obb_box.rotation = glm::identity<glm::mat3x3>();
+			float size = size_range(random);
+			obb_box.position = glm::vec3(position_range(random), position_range(random), position_range(random));
+			obb_box.extents = glm::vec3(size, size, length_range(random));
+			obb_box.rotation = glm::rotate(angle_range(random), glm::vec3(1.f, 0.f, 0.f)) * glm::rotate(angle_range(random), glm::vec3(0.f, 0.f, 1.f));;
 
 			AABBBox aabb_box;
 			helpers::CalculateAABBFromOBB(aabb_box.min, aabb_box.max, obb_box.position, obb_box.rotation, obb_box.extents);
+
+			AnimationBox animated_box;
+			animated_box.frecuency = frecuency_animation_range(random);
+			animated_box.offset = offset_animation_range(random);
+			animated_box.range = range_animation_range(random);
+			animated_box.original_position = obb_box.position;
 
 			//GPU memory
 			GPUBoxInstance gpu_box_instance;
@@ -308,9 +312,10 @@ public:
 			//Allocate the GPU memory
 			render::AllocHandle gpu_memory = m_GPU_memory_render_module->AllocStaticGPUMemory(m_device, sizeof(GPUBoxInstance), &gpu_box_instance, render::GetGameFrameIndex(m_render_system));
 
-			ecs::AllocInstance<GameDatabase, BoxType>(0)
+			ecs::AllocInstance<GameDatabase, AnimatedBoxType>(0)
 				.Init<OBBBox>(obb_box)
 				.Init<AABBBox>(aabb_box)
+				.Init<AnimationBox>(animated_box)
 				.Init<BoxGPUHandle>(BoxGPUHandle{ std::move(gpu_memory) });
 		}
 	}
@@ -351,11 +356,10 @@ public:
 		render::BeginPrepareRender(m_render_system);
 
 		//Update all positions for testing the static gpu memory
-		ecs::Process<GameDatabase, OBBBox, AABBBox, BoxGPUHandle>([&](const auto& instance_iterator, OBBBox& obb_box, AABBBox& aabb_box, const BoxGPUHandle& box_gpu_handle)
+		ecs::Process<GameDatabase, OBBBox, AABBBox, AnimationBox, BoxGPUHandle>([&](const auto& instance_iterator, OBBBox& obb_box, AABBBox& aabb_box, const AnimationBox& animation_box, const BoxGPUHandle& box_gpu_handle)
 		{
-				//Update local position
-				float position_z = 10.f * static_cast<float>(cos(total_time * 0.1f + static_cast<float>(instance_iterator.m_instance_index) * 0.1f)) + static_cast<float>(instance_iterator.m_instance_index - m_random_generator.min()) / static_cast<float>(m_random_generator.max() - m_random_generator.min());
-				obb_box.position.z = position_z;
+				//Update position
+				obb_box.position = animation_box.original_position + glm::row(obb_box.rotation, 2) * animation_box.range * static_cast<float> (cos(total_time * animation_box.frecuency + animation_box.offset));
 
 				GPUBoxInstance gpu_box_instance;
 				gpu_box_instance.Fill(obb_box);

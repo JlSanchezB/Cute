@@ -53,10 +53,10 @@
       float3 translation = float3(instance_data[0].w, instance_data[1].w, instance_data[2].w);
 
       //Each position needs to be multiply by the local matrix
-      float3 world_position = mul(position, scale_rotate_matrix) + translation;
+      float3 world_position = mul(scale_rotate_matrix, position) + translation;
       result.position = mul(view_projection_matrix, float4(world_position, 1.f));
 
-      result.normal = mul(normal, rotate_matrix);
+      result.normal = mul(rotate_matrix, normal);
 
       return result;
       }
