@@ -77,11 +77,13 @@ namespace render
 					{\
 						if (thread.x < parameters.y)\
 						{ \
-							uint4 copy_data = source_buffer[parameters.x + thread.x];\
-							for (uint i = 0; i < copy_data.z; ++i)\
-							{\
-								destination_buffer[copy_data.y + i] = source_buffer[copy_data.x + i];\
-							}\
+							uint2 copy_data;\
+							if ((thread.x % 2) == 0)\
+								copy_data = source_buffer[parameters.x + thread.x/2].xy;\
+							else\
+								copy_data = source_buffer[parameters.x + thread.x/2].zw; \
+							\
+							destination_buffer[copy_data.y] = source_buffer[copy_data.x];\
 						}\
 					};";
 
@@ -218,28 +220,30 @@ namespace render
 
 		if (copy_commands.size() > 0)
 		{
-			//Sort all commands by size
-			//We want the waves to have the most similar sizes posible, so we don't diverge a lot
-			std::sort(copy_commands.begin(), copy_commands.end(), [](const CopyDataCommand& a, const CopyDataCommand& b)
-				{
-					return a.size < b.size;
-				});
+			//Calculate the size needed
+			size_t number_of_float4_copies = 0;
 
-			//Send all the the data commands to the GPU, format int4
-			size_t offset = m_dynamic_gpu_memory_allocator.Alloc(copy_commands.size() * sizeof(uint32_t) * 4, frame_index);
+			for (auto& copy_command : copy_commands)
+			{
+				number_of_float4_copies += (copy_command.size / 16);
+			}
+
+			//Send all the the data commands to the GPU, format int2 (offset source, offset destination)
+			size_t offset = m_dynamic_gpu_memory_allocator.Alloc(number_of_float4_copies * sizeof(uint32_t) * 2, frame_index);
 			uint32_t* gpu_data = reinterpret_cast<uint32_t*>(reinterpret_cast<uint8_t*>(display::GetResourceMemoryBuffer(display_context->GetDevice(), m_dynamic_gpu_memory_buffer)) + offset);
 
 			//Send it to the GPU, move from bytes to int4
 			for (auto& copy_command : copy_commands)
 			{
-				*gpu_data = copy_command.source_offset / 16;
-				gpu_data++;
-				*gpu_data = copy_command.dest_offset / 16;
-				gpu_data++;
-				*gpu_data = copy_command.size / 16;
-				gpu_data++;
-				//Add padding for int4
-				gpu_data++;
+				const uint32_t count = copy_command.size / 16;
+
+				for (uint32_t i = 0; i < count; ++i)
+				{
+					*gpu_data = i + (copy_command.source_offset / 16);
+					gpu_data++;
+					*gpu_data = i + (copy_command.dest_offset / 16);
+					gpu_data++;
+				}
 			}
 
 			//Execute copy
@@ -252,7 +256,7 @@ namespace render
 			//Source offset
 			parameters[0] = static_cast<uint32_t>(offset / 16);
 			//Number of copies
-			parameters[1] = static_cast<uint32_t>(copy_commands.size());
+			parameters[1] = static_cast<uint32_t>(number_of_float4_copies);
 
 			display_context->SetUnorderedAccessBuffer(display::Pipe::Compute, 0, m_static_gpu_memory_buffer);
 			display_context->SetShaderResource(display::Pipe::Compute, 1, m_dynamic_gpu_memory_buffer);
@@ -264,7 +268,7 @@ namespace render
 			//Execute
 			display::ExecuteComputeDesc desc;
 			desc.group_count_y = desc.group_count_z = 1;
-			desc.group_count_x = static_cast<uint32_t>(((copy_commands.size() - 1) / 64) + 1);
+			desc.group_count_x = static_cast<uint32_t>(((number_of_float4_copies - 1) / 64) + 1);
 			display_context->ExecuteCompute(desc);
 		}
 	}
