@@ -298,6 +298,9 @@ public:
 			obb_box.extents = glm::vec3(1.f, 1.f, 1.f);
 			obb_box.rotation = glm::identity<glm::mat3x3>();
 
+			AABBBox aabb_box;
+			helpers::CalculateAABBFromOBB(aabb_box.min, aabb_box.max, obb_box.position, obb_box.rotation, obb_box.extents);
+
 			//GPU memory
 			GPUBoxInstance gpu_box_instance;
 			gpu_box_instance.Fill(obb_box);
@@ -307,6 +310,7 @@ public:
 
 			ecs::AllocInstance<GameDatabase, BoxType>(0)
 				.Init<OBBBox>(obb_box)
+				.Init<AABBBox>(aabb_box)
 				.Init<BoxGPUHandle>(BoxGPUHandle{ std::move(gpu_memory) });
 		}
 	}
@@ -347,7 +351,7 @@ public:
 		render::BeginPrepareRender(m_render_system);
 
 		//Update all positions for testing the static gpu memory
-		ecs::Process<GameDatabase, OBBBox, BoxGPUHandle>([&](const auto& instance_iterator, OBBBox& obb_box, const BoxGPUHandle& box_gpu_handle)
+		ecs::Process<GameDatabase, OBBBox, AABBBox, BoxGPUHandle>([&](const auto& instance_iterator, OBBBox& obb_box, AABBBox& aabb_box, const BoxGPUHandle& box_gpu_handle)
 		{
 				//Update local position
 				float position_z = 10.f * static_cast<float>(cos(total_time * 0.1f + static_cast<float>(instance_iterator.m_instance_index) * 0.1f)) + static_cast<float>(instance_iterator.m_instance_index - m_random_generator.min()) / static_cast<float>(m_random_generator.max() - m_random_generator.min());
@@ -355,6 +359,8 @@ public:
 
 				GPUBoxInstance gpu_box_instance;
 				gpu_box_instance.Fill(obb_box);
+
+				helpers::CalculateAABBFromOBB(aabb_box.min, aabb_box.max, obb_box.position, obb_box.rotation, obb_box.extents);
 
 				//Allocate the GPU memory
 				m_GPU_memory_render_module->UpdateStaticGPUMemory(m_device, box_gpu_handle.gpu_memory, &gpu_box_instance, sizeof(GPUBoxInstance), render::GetGameFrameIndex(m_render_system));
@@ -384,14 +390,16 @@ public:
 		auto& point_of_view = render_frame.AllocPointOfView("Main"_sh32, 0);
 		
 		//Cull box city
-		ecs::Process<GameDatabase, AABBBox, BoxGPUHandle>([&](const auto& instance_iterator, AABBBox& aabb_box, const BoxGPUHandle& box_gpu_handle)
+		ecs::Process<GameDatabase, AABBBox, const BoxGPUHandle>([&](const auto& instance_iterator, AABBBox& aabb_box, const BoxGPUHandle& box_gpu_handle)
 			{
 				//Calculate if it is in the camera
+				if (helpers::CollisionFrustumVsAABB(m_camera, aabb_box.min, aabb_box.max))
+				{
+					//Calculate sort key
 
-				//Calculate sort key
-
-				//Add this point of view
-				point_of_view.PushRenderItem(m_box_render_priority, static_cast<render::SortKey>(0), static_cast<uint32_t>(m_GPU_memory_render_module->GetStaticGPUMemoryOffset(box_gpu_handle.gpu_memory)));
+					//Add this point of view
+					point_of_view.PushRenderItem(m_box_render_priority, static_cast<render::SortKey>(0), static_cast<uint32_t>(m_GPU_memory_render_module->GetStaticGPUMemoryOffset(box_gpu_handle.gpu_memory)));
+				}
 
 			}, std::bitset<1>(true));
 

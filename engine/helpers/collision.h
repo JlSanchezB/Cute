@@ -118,6 +118,15 @@ namespace helpers
 		// Since no separating axis is found, the OBBs must be intersecting
 		return 1;
 	}
+
+	void CalculateAABBFromOBB(glm::vec3& min_position, glm::vec3& max_position, const glm::vec3& position_source, const glm::mat3x3& rotation_source, const glm::vec3 extents_source)
+	{
+		//Calculate the max distance
+		glm::vec3 half_distance = glm::abs(rotation_source[0] * extents_source[0]) + glm::abs(rotation_source[1] * extents_source[1]) + glm::abs(rotation_source[2] * extents_source[2]);
+		
+		min_position = position_source - half_distance;
+		max_position = position_source + half_distance;
+	}
 }
 
 #endif //CAMERA_H
