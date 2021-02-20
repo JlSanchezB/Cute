@@ -63,7 +63,7 @@
 
       float4 ps_box_main(PSInput input) : SV_TARGET
       {
-      return float4(1.f, 1.f, 1.f, 1.f) * (0.5f + 0.5f * dot(input.normal, normalize(float3(1.f, 1.f, 1.f))));
+      return float4(1.f, 1.f, 1.f, 1.f) * (0.2f + 0.8f * saturate(dot(normalize(input.normal), normalize(float3(1.f, 1.f, 1.f)))));
       }
     </Shader>
     <Rasterization cull_mode="Front"/>
