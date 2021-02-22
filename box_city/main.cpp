@@ -294,7 +294,7 @@ public:
 		std::uniform_real_distribution<float> length_range(1.f, 5.f);
 		std::uniform_real_distribution<float> size_range(0.5f, 1.f);
 
-		std::uniform_real_distribution<float> range_animation_range(1.0f, 5.f);
+		std::uniform_real_distribution<float> range_animation_range(0.f, 5.f);
 		std::uniform_real_distribution<float> frecuency_animation_range(0.3f, 1.f);
 		std::uniform_real_distribution<float> offset_animation_range(0.5f, 6.f);
 		//Create boxes
@@ -322,11 +322,23 @@ public:
 			//Allocate the GPU memory
 			render::AllocHandle gpu_memory = m_GPU_memory_render_module->AllocStaticGPUMemory(m_device, sizeof(GPUBoxInstance), &gpu_box_instance, render::GetGameFrameIndex(m_render_system));
 
-			ecs::AllocInstance<GameDatabase, AnimatedBoxType>(0)
-				.Init<OBBBox>(obb_box)
-				.Init<AABBBox>(aabb_box)
-				.Init<AnimationBox>(animated_box)
-				.Init<BoxGPUHandle>(BoxGPUHandle{ std::move(gpu_memory) });
+			if (animated_box.range < 1.f)
+			{
+				//Just make it static
+				ecs::AllocInstance<GameDatabase, BoxType>(0)
+					.Init<OBBBox>(obb_box)
+					.Init<AABBBox>(aabb_box)
+					.Init<BoxGPUHandle>(BoxGPUHandle{ std::move(gpu_memory) });
+			}
+			else
+			{
+
+				ecs::AllocInstance<GameDatabase, AnimatedBoxType>(0)
+					.Init<OBBBox>(obb_box)
+					.Init<AABBBox>(aabb_box)
+					.Init<AnimationBox>(animated_box)
+					.Init<BoxGPUHandle>(BoxGPUHandle{ std::move(gpu_memory) });
+			}
 		}
 	}
 
