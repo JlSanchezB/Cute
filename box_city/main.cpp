@@ -51,17 +51,12 @@ struct FlagBox
 	}
 };
 
-struct AABBBox
+struct AABBBox : helpers::AABB
 {
-	glm::vec3 min;
-	glm::vec3 max;
 };
 
-struct OBBBox
+struct OBBBox : helpers::OBB
 {
-	glm::vec3 position;
-	glm::mat3x3 rotation;
-	glm::vec3 extents;
 };
 
 struct AnimationBox
@@ -310,7 +305,7 @@ public:
 			obb_box.rotation = glm::rotate(angle_range(random), glm::vec3(1.f, 0.f, 0.f)) * glm::rotate(angle_range(random), glm::vec3(0.f, 0.f, 1.f));;
 
 			AABBBox aabb_box;
-			helpers::CalculateAABBFromOBB(aabb_box.min, aabb_box.max, obb_box.position, obb_box.rotation, obb_box.extents);
+			helpers::CalculateAABBFromOBB(aabb_box, obb_box);
 
 			AnimationBox animated_box;
 			animated_box.frecuency = frecuency_animation_range(random);
@@ -328,8 +323,7 @@ public:
 			for (auto& current_obb : generated_obbs)
 			{
 					//Collide
-					if (helpers::CollisionOBBVsOBB(current_obb.position, current_obb.rotation, current_obb.extents,
-						new_obb_box.position, new_obb_box.rotation, new_obb_box.extents))
+					if (helpers::CollisionOBBVsOBB(current_obb, new_obb_box))
 					{
 						collide = true;
 						break;
@@ -417,7 +411,7 @@ public:
 				obb_box.position = animation_box.original_position + glm::row(obb_box.rotation, 2) * animation_box.range * static_cast<float> (cos(total_time * animation_box.frecuency + animation_box.offset));
 
 				//Update AABB
-				helpers::CalculateAABBFromOBB(aabb_box.min, aabb_box.max, obb_box.position, obb_box.rotation, obb_box.extents);
+				helpers::CalculateAABBFromOBB(aabb_box, obb_box);
 
 				//Mark flags to indicate that the GPU needs to update
 				flags.gpu_updated = false;
@@ -450,7 +444,7 @@ public:
 		ecs::Process<GameDatabase, const OBBBox, const AABBBox, FlagBox, const BoxGPUHandle>([&](const auto& instance_iterator, const OBBBox& obb_box, const AABBBox& aabb_box, FlagBox& flags, const BoxGPUHandle& box_gpu_handle)
 			{
 				//Calculate if it is in the camera
-				if (helpers::CollisionFrustumVsAABB(m_camera, aabb_box.min, aabb_box.max))
+				if (helpers::CollisionFrustumVsAABB(m_camera, aabb_box))
 				{
 					//Update GPU if needed
 					if (!flags.gpu_updated)

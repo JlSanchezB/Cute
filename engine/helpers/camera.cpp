@@ -110,58 +110,58 @@ namespace helpers
 		//Calculate projection matrix
 		glm::mat4x4 projection_matrix = glm::perspective(m_fov_y, m_aspect_ratio, m_near, m_far);
 
-		UpdateFrustum(world_to_view_matrix, projection_matrix);
-	}
-	
-	void Frustum::UpdateFrustum(const glm::mat4x4& world_to_view_matrix, const glm::mat4x4& projection_matrix)
-	{
 		m_world_to_view_matrix = world_to_view_matrix;
 		m_projection_matrix = projection_matrix;
 
 		//Calculate view projection
 		m_view_projection_matrix = m_projection_matrix * m_world_to_view_matrix;
 
-		//Calculate frustum planes
-		glm::mat4x4 frustum_matrix = glm::transpose(m_view_projection_matrix);
+		Frustum::Init(m_view_projection_matrix);
+	}
 
-		m_planes[Planes::Left] = frustum_matrix[3] + frustum_matrix[0];
-		m_planes[Planes::Right] = frustum_matrix[3] - frustum_matrix[0];
-		m_planes[Planes::Bottom] = frustum_matrix[3] + frustum_matrix[1];
-		m_planes[Planes::Top] = frustum_matrix[3] - frustum_matrix[1];
-		m_planes[Planes::Near] = frustum_matrix[3] + frustum_matrix[2];
-		m_planes[Planes::Far] = frustum_matrix[3] - frustum_matrix[2];
+	glm::mat4x4 Camera::GetViewProjectionMatrix() const
+	{
+		return m_view_projection_matrix;
+	}
+	
+	void Frustum::Init(const glm::mat4x4& view_projection_matrix)
+	{
+		//Calculate frustum planes
+		glm::mat4x4 frustum_matrix = glm::transpose(view_projection_matrix);
+
+		planes[Planes::Left] = frustum_matrix[3] + frustum_matrix[0];
+		planes[Planes::Right] = frustum_matrix[3] - frustum_matrix[0];
+		planes[Planes::Bottom] = frustum_matrix[3] + frustum_matrix[1];
+		planes[Planes::Top] = frustum_matrix[3] - frustum_matrix[1];
+		planes[Planes::Near] = frustum_matrix[3] + frustum_matrix[2];
+		planes[Planes::Far] = frustum_matrix[3] - frustum_matrix[2];
 
 		//Calculate points
 		glm::vec3 crosses[Combinations] = {
-			glm::cross(glm::vec3(m_planes[Left]),   glm::vec3(m_planes[Right])),
-			glm::cross(glm::vec3(m_planes[Left]),   glm::vec3(m_planes[Bottom])),
-			glm::cross(glm::vec3(m_planes[Left]),   glm::vec3(m_planes[Top])),
-			glm::cross(glm::vec3(m_planes[Left]),   glm::vec3(m_planes[Near])),
-			glm::cross(glm::vec3(m_planes[Left]),   glm::vec3(m_planes[Far])),
-			glm::cross(glm::vec3(m_planes[Right]),  glm::vec3(m_planes[Bottom])),
-			glm::cross(glm::vec3(m_planes[Right]),  glm::vec3(m_planes[Top])),
-			glm::cross(glm::vec3(m_planes[Right]),  glm::vec3(m_planes[Near])),
-			glm::cross(glm::vec3(m_planes[Right]),  glm::vec3(m_planes[Far])),
-			glm::cross(glm::vec3(m_planes[Bottom]), glm::vec3(m_planes[Top])),
-			glm::cross(glm::vec3(m_planes[Bottom]), glm::vec3(m_planes[Near])),
-			glm::cross(glm::vec3(m_planes[Bottom]), glm::vec3(m_planes[Far])),
-			glm::cross(glm::vec3(m_planes[Top]),    glm::vec3(m_planes[Near])),
-			glm::cross(glm::vec3(m_planes[Top]),    glm::vec3(m_planes[Far])),
-			glm::cross(glm::vec3(m_planes[Near]),   glm::vec3(m_planes[Far]))
+			glm::cross(glm::vec3(planes[Left]),   glm::vec3(planes[Right])),
+			glm::cross(glm::vec3(planes[Left]),   glm::vec3(planes[Bottom])),
+			glm::cross(glm::vec3(planes[Left]),   glm::vec3(planes[Top])),
+			glm::cross(glm::vec3(planes[Left]),   glm::vec3(planes[Near])),
+			glm::cross(glm::vec3(planes[Left]),   glm::vec3(planes[Far])),
+			glm::cross(glm::vec3(planes[Right]),  glm::vec3(planes[Bottom])),
+			glm::cross(glm::vec3(planes[Right]),  glm::vec3(planes[Top])),
+			glm::cross(glm::vec3(planes[Right]),  glm::vec3(planes[Near])),
+			glm::cross(glm::vec3(planes[Right]),  glm::vec3(planes[Far])),
+			glm::cross(glm::vec3(planes[Bottom]), glm::vec3(planes[Top])),
+			glm::cross(glm::vec3(planes[Bottom]), glm::vec3(planes[Near])),
+			glm::cross(glm::vec3(planes[Bottom]), glm::vec3(planes[Far])),
+			glm::cross(glm::vec3(planes[Top]),    glm::vec3(planes[Near])),
+			glm::cross(glm::vec3(planes[Top]),    glm::vec3(planes[Far])),
+			glm::cross(glm::vec3(planes[Near]),   glm::vec3(planes[Far]))
 		};
 
-		m_points[0] = intersection<Left, Bottom, Near>(m_planes, crosses);
-		m_points[1] = intersection<Left, Top, Near>(m_planes, crosses);
-		m_points[2] = intersection<Right, Bottom, Near>(m_planes, crosses);
-		m_points[3] = intersection<Right, Top, Near>(m_planes, crosses);
-		m_points[4] = intersection<Left, Bottom, Far>(m_planes, crosses);
-		m_points[5] = intersection<Left, Top, Far>(m_planes, crosses);
-		m_points[6] = intersection<Right, Bottom, Far>(m_planes, crosses);
-		m_points[7] = intersection<Right, Top, Far>(m_planes, crosses);
+		points[0] = intersection<Left, Bottom, Near>(planes, crosses);
+		points[1] = intersection<Left, Top, Near>(planes, crosses);
+		points[2] = intersection<Right, Bottom, Near>(planes, crosses);
+		points[3] = intersection<Right, Top, Near>(planes, crosses);
+		points[4] = intersection<Left, Bottom, Far>(planes, crosses);
+		points[5] = intersection<Left, Top, Far>(planes, crosses);
+		points[6] = intersection<Right, Bottom, Far>(planes, crosses);
+		points[7] = intersection<Right, Top, Far>(planes, crosses);
 	}
-
-	glm::mat4x4 Frustum::GetViewProjectionMatrix() const
-	{
-		return m_view_projection_matrix;
-	}	
 }

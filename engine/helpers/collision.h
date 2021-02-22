@@ -14,21 +14,34 @@
 
 namespace helpers
 {
-	bool CollisionFrustumVsAABB(Frustum& frustum, const glm::vec3& min_box, const glm::vec3& max_box)
+	struct AABB
 	{
-		const glm::vec4* planes = frustum.GetPlanes();
-		const glm::vec3* points = frustum.GetPoints();
+		glm::vec3 min;
+		glm::vec3 max;
+	};
+
+	struct OBB
+	{
+		glm::vec3 position;
+		glm::mat3x3 rotation;
+		glm::vec3 extents;
+	};
+
+	bool CollisionFrustumVsAABB(const Frustum& frustum, const AABB& bounding_box)
+	{
+		const glm::vec4* planes = frustum.planes;
+		const glm::vec3* points = frustum.points;
 		// check box outside/inside of frustum
 		for (int i = 0; i < Frustum::Count; i++)
 		{
-			if ((glm::dot(planes[i], glm::vec4(min_box.x, min_box.y, min_box.z, 1.0f)) < 0.0) &&
-				(glm::dot(planes[i], glm::vec4(max_box.x, min_box.y, min_box.z, 1.0f)) < 0.0) &&
-				(glm::dot(planes[i], glm::vec4(min_box.x, max_box.y, min_box.z, 1.0f)) < 0.0) &&
-				(glm::dot(planes[i], glm::vec4(max_box.x, max_box.y, min_box.z, 1.0f)) < 0.0) &&
-				(glm::dot(planes[i], glm::vec4(min_box.x, min_box.y, max_box.z, 1.0f)) < 0.0) &&
-				(glm::dot(planes[i], glm::vec4(max_box.x, min_box.y, max_box.z, 1.0f)) < 0.0) &&
-				(glm::dot(planes[i], glm::vec4(min_box.x, max_box.y, max_box.z, 1.0f)) < 0.0) &&
-				(glm::dot(planes[i], glm::vec4(max_box.x, max_box.y, max_box.z, 1.0f)) < 0.0))
+			if ((glm::dot(planes[i], glm::vec4(bounding_box.min.x, bounding_box.min.y, bounding_box.min.z, 1.0f)) < 0.0) &&
+				(glm::dot(planes[i], glm::vec4(bounding_box.max.x, bounding_box.min.y, bounding_box.min.z, 1.0f)) < 0.0) &&
+				(glm::dot(planes[i], glm::vec4(bounding_box.min.x, bounding_box.max.y, bounding_box.min.z, 1.0f)) < 0.0) &&
+				(glm::dot(planes[i], glm::vec4(bounding_box.max.x, bounding_box.max.y, bounding_box.min.z, 1.0f)) < 0.0) &&
+				(glm::dot(planes[i], glm::vec4(bounding_box.min.x, bounding_box.min.y, bounding_box.max.z, 1.0f)) < 0.0) &&
+				(glm::dot(planes[i], glm::vec4(bounding_box.max.x, bounding_box.min.y, bounding_box.max.z, 1.0f)) < 0.0) &&
+				(glm::dot(planes[i], glm::vec4(bounding_box.min.x, bounding_box.max.y, bounding_box.max.z, 1.0f)) < 0.0) &&
+				(glm::dot(planes[i], glm::vec4(bounding_box.max.x, bounding_box.max.y, bounding_box.max.z, 1.0f)) < 0.0))
 			{
 				return false;
 			}
@@ -36,30 +49,29 @@ namespace helpers
 
 		// check frustum outside/inside box
 		int out;
-		out = 0; for (int i = 0; i < 8; i++) out += ((points[i].x > max_box.x) ? 1 : 0); if (out == 8) return false;
-		out = 0; for (int i = 0; i < 8; i++) out += ((points[i].x < min_box.x) ? 1 : 0); if (out == 8) return false;
-		out = 0; for (int i = 0; i < 8; i++) out += ((points[i].y > max_box.y) ? 1 : 0); if (out == 8) return false;
-		out = 0; for (int i = 0; i < 8; i++) out += ((points[i].y < min_box.y) ? 1 : 0); if (out == 8) return false;
-		out = 0; for (int i = 0; i < 8; i++) out += ((points[i].z > max_box.z) ? 1 : 0); if (out == 8) return false;
-		out = 0; for (int i = 0; i < 8; i++) out += ((points[i].z < min_box.z) ? 1 : 0); if (out == 8) return false;
+		out = 0; for (int i = 0; i < 8; i++) out += ((points[i].x > bounding_box.max.x) ? 1 : 0); if (out == 8) return false;
+		out = 0; for (int i = 0; i < 8; i++) out += ((points[i].x < bounding_box.min.x) ? 1 : 0); if (out == 8) return false;
+		out = 0; for (int i = 0; i < 8; i++) out += ((points[i].y > bounding_box.max.y) ? 1 : 0); if (out == 8) return false;
+		out = 0; for (int i = 0; i < 8; i++) out += ((points[i].y < bounding_box.min.y) ? 1 : 0); if (out == 8) return false;
+		out = 0; for (int i = 0; i < 8; i++) out += ((points[i].z > bounding_box.max.z) ? 1 : 0); if (out == 8) return false;
+		out = 0; for (int i = 0; i < 8; i++) out += ((points[i].z < bounding_box.min.z) ? 1 : 0); if (out == 8) return false;
 
 		return true;
 	}
 
-	bool CollisionOBBVsOBB(const glm::vec3& position_a, const glm::mat3x3& rotation_a, const glm::vec3 extents_a,
-		const glm::vec3& position_b, const glm::mat3x3& rotation_b, const glm::vec3 extents_b)
+	bool CollisionOBBVsOBB(const OBB& a, const OBB& b)
 	{
 		float ra, rb;
 		glm::mat3x3 R, AbsR;
 		// Compute rotation matrix expressing b in a’s coordinate frame
 		for (int i = 0; i < 3; i++)
 			for (int j = 0; j < 3; j++)
-				R[i][j] = glm::dot(glm::row(rotation_a, i), glm::row(rotation_b, j));
+				R[i][j] = glm::dot(glm::row(a.rotation, i), glm::row(b.rotation, j));
 
 		// Compute translation vector t
-		glm::vec3 t = position_b - position_a;
+		glm::vec3 t = b.position - a.position;
 		// Bring translation into a’s coordinate frame
-		t = glm::vec3(glm::dot(t, glm::row(rotation_a, 0)), glm::dot(t, glm::row(rotation_a, 1)), glm::dot(t, glm::row(rotation_a, 2)));
+		t = glm::vec3(glm::dot(t, glm::row(a.rotation, 0)), glm::dot(t, glm::row(a.rotation, 1)), glm::dot(t, glm::row(a.rotation, 2)));
 		// Compute common subexpressions. Add in an epsilon term to
 		// counteract arithmetic errors when two edges are parallel and
 		// their cross product is (near) null (see text for details)
@@ -69,64 +81,64 @@ namespace helpers
 
 		// Test axes L = A0, L = A1, L = A2
 		for (int i = 0; i < 3; i++) {
-			ra = extents_a[i];
-			rb = extents_b[0] * AbsR[i][0] + extents_b[1] * AbsR[i][1] + extents_b[2] * AbsR[i][2];
+			ra = a.extents[i];
+			rb = b.extents[0] * AbsR[i][0] + b.extents[1] * AbsR[i][1] + b.extents[2] * AbsR[i][2];
 			if (fabsf(t[i]) > ra + rb) return false;
 		}
 		// Test axes L = B0, L = B1, L = B2
 		for (int i = 0; i < 3; i++) {
-			ra = extents_a[0] * AbsR[0][i] + extents_a[1] * AbsR[1][i] + extents_a[2] * AbsR[2][i];
-			rb = extents_b[i];
+			ra = a.extents[0] * AbsR[0][i] + a.extents[1] * AbsR[1][i] + a.extents[2] * AbsR[2][i];
+			rb = b.extents[i];
 			if (fabsf(t[0] * R[0][i] + t[1] * R[1][i] + t[2] * R[2][i]) > ra + rb) return false;
 		}
 		// Test axis L = A0 x B0
-		ra = extents_a[1] * AbsR[2][0] + extents_a[2] * AbsR[1][0];
-		rb = extents_b[1] * AbsR[0][2] + extents_b[2] * AbsR[0][1];
+		ra = a.extents[1] * AbsR[2][0] + a.extents[2] * AbsR[1][0];
+		rb = b.extents[1] * AbsR[0][2] + b.extents[2] * AbsR[0][1];
 		if (fabsf(t[2] * R[1][0] - t[1] * R[2][0]) > ra + rb) return false;
 		// Test axis L = A0 x B1
-		ra = extents_a[1] * AbsR[2][1] + extents_a[2] * AbsR[1][1];
-		rb = extents_b[0] * AbsR[0][2] + extents_b[2] * AbsR[0][0];
+		ra = a.extents[1] * AbsR[2][1] + a.extents[2] * AbsR[1][1];
+		rb = b.extents[0] * AbsR[0][2] + b.extents[2] * AbsR[0][0];
 		if (fabsf(t[2] * R[1][1] - t[1] * R[2][1]) > ra + rb) return false;
 		// Test axis L = A0 x B2
-		ra = extents_a[1] * AbsR[2][2] + extents_a[2] * AbsR[1][2];
-		rb = extents_b[0] * AbsR[0][1] + extents_b[1] * AbsR[0][0];
+		ra = a.extents[1] * AbsR[2][2] + a.extents[2] * AbsR[1][2];
+		rb = b.extents[0] * AbsR[0][1] + b.extents[1] * AbsR[0][0];
 		if (fabsf(t[2] * R[1][2] - t[1] * R[2][2]) > ra + rb) return false;
 		// Test axis L = A1 x B0
-		ra = extents_a[0] * AbsR[2][0] + extents_a[2] * AbsR[0][0];
-		rb = extents_b[1] * AbsR[1][2] + extents_b[2] * AbsR[1][1];
+		ra = a.extents[0] * AbsR[2][0] + a.extents[2] * AbsR[0][0];
+		rb = b.extents[1] * AbsR[1][2] + b.extents[2] * AbsR[1][1];
 
 		if (fabsf(t[0] * R[2][0] - t[2] * R[0][0]) > ra + rb) return false;
 		// Test axis L = A1 x B1
-		ra = extents_a[0] * AbsR[2][1] + extents_a[2] * AbsR[0][1];
-		rb = extents_b[0] * AbsR[1][2] + extents_b[2] * AbsR[1][0];
+		ra = a.extents[0] * AbsR[2][1] + a.extents[2] * AbsR[0][1];
+		rb = b.extents[0] * AbsR[1][2] + b.extents[2] * AbsR[1][0];
 		if (fabsf(t[0] * R[2][1] - t[2] * R[0][1]) > ra + rb) return false;
 		// Test axis L = A1 x B2
-		ra = extents_a[0] * AbsR[2][2] + extents_a[2] * AbsR[0][2];
-		rb = extents_b[0] * AbsR[1][1] + extents_b[1] * AbsR[1][0];
+		ra = a.extents[0] * AbsR[2][2] + a.extents[2] * AbsR[0][2];
+		rb = b.extents[0] * AbsR[1][1] + b.extents[1] * AbsR[1][0];
 		if (fabsf(t[0] * R[2][2] - t[2] * R[0][2]) > ra + rb) return false;
 		// Test axis L = A2 x B0
-		ra = extents_a[0] * AbsR[1][0] + extents_a[1] * AbsR[0][0];
-		rb = extents_b[1] * AbsR[2][2] + extents_b[2] * AbsR[2][1];
+		ra = a.extents[0] * AbsR[1][0] + a.extents[1] * AbsR[0][0];
+		rb = b.extents[1] * AbsR[2][2] + b.extents[2] * AbsR[2][1];
 		if (fabsf(t[1] * R[0][0] - t[0] * R[1][0]) > ra + rb) return false;
 		// Test axis L = A2 x B1
-		ra = extents_a[0] * AbsR[1][1] + extents_a[1] * AbsR[0][1];
-		rb = extents_b[0] * AbsR[2][2] + extents_b[2] * AbsR[2][0];
+		ra = a.extents[0] * AbsR[1][1] + a.extents[1] * AbsR[0][1];
+		rb = b.extents[0] * AbsR[2][2] + b.extents[2] * AbsR[2][0];
 		if (fabsf(t[1] * R[0][1] - t[0] * R[1][1]) > ra + rb) return false;
 		// Test axis L = A2 x B2
-		ra = extents_a[0] * AbsR[1][2] + extents_a[1] * AbsR[0][2];
-		rb = extents_b[0] * AbsR[2][1] + extents_b[1] * AbsR[2][0];
+		ra = a.extents[0] * AbsR[1][2] + a.extents[1] * AbsR[0][2];
+		rb = b.extents[0] * AbsR[2][1] + b.extents[1] * AbsR[2][0];
 		if (fabsf(t[1] * R[0][2] - t[0] * R[1][2]) > ra + rb) return false;
 		// Since no separating axis is found, the OBBs must be intersecting
 		return 1;
 	}
 
-	void CalculateAABBFromOBB(glm::vec3& min_position, glm::vec3& max_position, const glm::vec3& position_source, const glm::mat3x3& rotation_source, const glm::vec3 extents_source)
+	void CalculateAABBFromOBB(AABB& output, const OBB& source)
 	{
 		//Calculate the max distance
-		glm::vec3 half_distance = glm::abs(glm::row(rotation_source, 0) * extents_source[0]) + glm::abs(glm::row(rotation_source, 1) * extents_source[1]) + glm::abs(glm::row(rotation_source, 2) * extents_source[2]);
+		glm::vec3 half_distance = glm::abs(glm::row(source.rotation, 0) * source.extents[0]) + glm::abs(glm::row(source.rotation, 1) * source.extents[1]) + glm::abs(glm::row(source.rotation, 2) * source.extents[2]);
 		
-		min_position = position_source - half_distance;
-		max_position = position_source + half_distance;
+		output.min = source.position - half_distance;
+		output.max = source.position + half_distance;
 	}
 }
 

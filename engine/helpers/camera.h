@@ -32,25 +32,13 @@ namespace helpers
 			Combinations = Count * (Count - 1) / 2
 		};
 
-		glm::mat4x4 GetViewProjectionMatrix() const;
-		const glm::vec4* GetPlanes() const { return m_planes; };
-		const glm::vec3* GetPoints() const  { return m_points; };
-
-	protected:
-
-		void UpdateFrustum(const glm::mat4x4& world_to_view_matrix, const glm::mat4x4& projection_matrix);
-
-	private:
-		//Matrices
-		glm::mat4x4 m_world_to_view_matrix;
-		glm::mat4x4 m_projection_matrix;
-		glm::mat4x4 m_view_projection_matrix;
+		void Init(const glm::mat4x4& view_projection_matrix);
 
 		//Frustum planes
-		glm::vec4   m_planes[Planes::Count];
+		glm::vec4   planes[Planes::Count];
 
 		//Frustum points
-		glm::vec3   m_points[8];
+		glm::vec3   points[8];
 	};
 
 	class Camera : public Frustum
@@ -60,6 +48,8 @@ namespace helpers
 		{
 			m_aspect_ratio = aspect_ratio;
 		}
+
+		glm::mat4x4 GetViewProjectionMatrix() const;
 	protected:
 
 		void UpdateInternalData();
@@ -74,7 +64,12 @@ namespace helpers
 		float m_near = 0.1f;
 	
 	private:
-		
+
+		//Matrices
+		glm::mat4x4 m_world_to_view_matrix;
+		glm::mat4x4 m_projection_matrix;
+		glm::mat4x4 m_view_projection_matrix;
+
 	};
 
 	class FlyCamera : public Camera
