@@ -285,9 +285,11 @@ public:
 		std::mt19937 random(34234234);
 
 		std::uniform_real_distribution<float> position_range(-10.f, 10.f);
-		std::uniform_real_distribution<float> angle_range(-glm::half_pi<float>(), glm::half_pi<float>());
-		std::uniform_real_distribution<float> length_range(1.f, 5.f);
-		std::uniform_real_distribution<float> size_range(0.5f, 1.f);
+		std::uniform_real_distribution<float> position_range_z(-20.f, 20.f);
+		std::uniform_real_distribution<float> angle_inc_range(-glm::half_pi<float>() * 0.2f, glm::half_pi<float>() * 0.2f);
+		std::uniform_real_distribution<float> angle_rotation_range(0.f, glm::two_pi<float>());
+		std::uniform_real_distribution<float> length_range(3.f, 8.f);
+		std::uniform_real_distribution<float> size_range(0.5f, 1.0f);
 
 		std::uniform_real_distribution<float> range_animation_range(0.f, 5.f);
 		std::uniform_real_distribution<float> frecuency_animation_range(0.3f, 1.f);
@@ -300,9 +302,9 @@ public:
 		{
 			OBBBox obb_box;
 			float size = size_range(random);
-			obb_box.position = glm::vec3(position_range(random), position_range(random), position_range(random));
+			obb_box.position = glm::vec3(position_range(random), position_range(random), position_range_z(random));
 			obb_box.extents = glm::vec3(size, size, length_range(random));
-			obb_box.rotation = glm::rotate(angle_range(random), glm::vec3(1.f, 0.f, 0.f)) * glm::rotate(angle_range(random), glm::vec3(0.f, 0.f, 1.f));;
+			obb_box.rotation = glm::rotate(angle_inc_range(random), glm::vec3(1.f, 0.f, 0.f)) * glm::rotate(angle_rotation_range(random), glm::vec3(0.f, 0.f, 1.f));;
 
 			AABBBox aabb_box;
 			helpers::CalculateAABBFromOBB(aabb_box, obb_box);
