@@ -54,12 +54,12 @@ namespace helpers
 		// Compute rotation matrix expressing b in a’s coordinate frame
 		for (int i = 0; i < 3; i++)
 			for (int j = 0; j < 3; j++)
-				R[i][j] = glm::dot(rotation_a[i], rotation_b[j]);
+				R[i][j] = glm::dot(glm::row(rotation_a, i), glm::row(rotation_b, j));
 
 		// Compute translation vector t
 		glm::vec3 t = position_b - position_a;
 		// Bring translation into a’s coordinate frame
-		t = glm::vec3(glm::dot(t, rotation_a[0]), glm::dot(t, rotation_a[2]), glm::dot(t, rotation_a[2]));
+		t = glm::vec3(glm::dot(t, glm::row(rotation_a, 0)), glm::dot(t, glm::row(rotation_a, 1)), glm::dot(t, glm::row(rotation_a, 2)));
 		// Compute common subexpressions. Add in an epsilon term to
 		// counteract arithmetic errors when two edges are parallel and
 		// their cross product is (near) null (see text for details)

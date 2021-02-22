@@ -297,6 +297,9 @@ public:
 		std::uniform_real_distribution<float> range_animation_range(0.f, 5.f);
 		std::uniform_real_distribution<float> frecuency_animation_range(0.3f, 1.f);
 		std::uniform_real_distribution<float> offset_animation_range(0.5f, 6.f);
+
+		std::vector<OBBBox> generated_obbs;
+		generated_obbs.reserve(100);
 		//Create boxes
 		for (size_t i = 0; i < 100; ++i)
 		{
@@ -314,6 +317,35 @@ public:
 			animated_box.offset = offset_animation_range(random);
 			animated_box.range = range_animation_range(random);
 			animated_box.original_position = obb_box.position;
+
+			//Check if it is colliding with another one
+			OBBBox new_obb_box = obb_box;
+			if (animated_box.range > 1.f)
+			{
+				new_obb_box.extents.z += animated_box.range;
+			}
+			bool collide = false;
+			for (auto& current_obb : generated_obbs)
+			{
+					//Collide
+					if (helpers::CollisionOBBVsOBB(current_obb.position, current_obb.rotation, current_obb.extents,
+						new_obb_box.position, new_obb_box.rotation, new_obb_box.extents))
+					{
+						collide = true;
+						break;
+					}
+			}
+
+			if (collide)
+			{
+				//Check another one
+				continue;
+			}
+			else
+			{
+				//Add this one in the current list
+				generated_obbs.push_back(new_obb_box);
+			}
 
 			//GPU memory
 			GPUBoxInstance gpu_box_instance;
