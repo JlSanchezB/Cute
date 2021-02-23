@@ -173,6 +173,52 @@ public:
 	}
 };
 
+
+
+struct BoxCityTileManager
+{
+public:
+	struct Tile
+	{
+		constexpr static uint16_t kInvalidTile = static_cast<uint16_t>(-1);
+
+		helpers::AABB bounding_box;
+		uint16_t zone_id = kInvalidTile;
+	};
+
+	constexpr static size_t kTileDimension = 5;
+
+	Tile& GetTile(size_t i, size_t j)
+	{
+		return m_tiles[i + j * kTileDimension];
+	}
+
+	constexpr static size_t GetNumTiles()
+	{
+		return kTileDimension* kTileDimension;
+	}
+
+	std::bitset<kTileDimension* kTileDimension> GetAllZoneBitSet() const
+	{
+		return std::bitset<kTileDimension* kTileDimension>(true);
+	}
+	
+	std::bitset<kTileDimension* kTileDimension> GetCameraBitSet(const helpers::Frustum& frustum) const
+	{
+		std::bitset<kTileDimension* kTileDimension> ret(false);
+
+		for (auto& tile : m_tiles)
+		{
+			ret[tile.zone_id] = helpers::CollisionFrustumVsAABB(frustum, tile.bounding_box);
+		}
+
+		return ret;
+	}
+
+private:
+	Tile m_tiles[kTileDimension * kTileDimension];
+};
+
 class BoxCityGame : public platform::Game
 {
 public:
@@ -208,6 +254,9 @@ public:
 
 	//Solid render priority
 	render::Priority m_box_render_priority;
+
+	//Tile manager
+	BoxCityTileManager m_tile_manager;
 
 	BoxCityGame()
 	{
@@ -250,7 +299,7 @@ public:
 		//Create job system
 		job::SystemDesc job_system_desc;
 		m_job_system = job::CreateSystem(job_system_desc);
-		
+
 		//Create Job allocator now that the job system is enabled
 		m_update_job_allocator = std::make_unique<job::JobAllocator<1024 * 1024>>();
 
@@ -260,8 +309,9 @@ public:
 
 		//Register gpu memory render module
 		render::GPUMemoryRenderModule::GPUMemoryDesc gpu_memory_desc;
-		//gpu_memory_desc.dynamic_gpu_memory_size = 512 * 1024;
-		//gpu_memory_desc.dynamic_gpu_memory_segment_size = 32 * 1024;
+		gpu_memory_desc.static_gpu_memory_size = 10 * 1024 * 1024;
+		gpu_memory_desc.dynamic_gpu_memory_size = 10 * 1024 * 1024;
+		gpu_memory_desc.dynamic_gpu_memory_segment_size = 32 * 1024;
 
 		m_GPU_memory_render_module = render::RegisterModule<render::GPUMemoryRenderModule>(m_render_system, "GPUMemory"_sh32, gpu_memory_desc);
 
@@ -279,95 +329,124 @@ public:
 		//Create ecs database
 		ecs::DatabaseDesc database_desc;
 		database_desc.num_max_entities_zone = 1024;
-		database_desc.num_zones = 1;
+		database_desc.num_zones = m_tile_manager.GetNumTiles();
 		ecs::CreateDatabase<GameDatabase>(database_desc);
 
 		std::mt19937 random(34234234);
 
-		std::uniform_real_distribution<float> position_range(-10.f, 10.f);
-		std::uniform_real_distribution<float> position_range_z(-20.f, 20.f);
+		constexpr float tile_dimension = 40.f;
+		constexpr float tile_height_min = -40.f;
+		constexpr float tile_height_max = 40.f;
+
+
+		std::uniform_real_distribution<float> position_range(0, tile_dimension);
+		std::uniform_real_distribution<float> position_range_z(tile_height_min, tile_height_max);
 		std::uniform_real_distribution<float> angle_inc_range(-glm::half_pi<float>() * 0.2f, glm::half_pi<float>() * 0.2f);
 		std::uniform_real_distribution<float> angle_rotation_range(0.f, glm::two_pi<float>());
-		std::uniform_real_distribution<float> length_range(3.f, 8.f);
-		std::uniform_real_distribution<float> size_range(0.5f, 1.0f);
+		std::uniform_real_distribution<float> length_range(4.f, 12.f);
+		std::uniform_real_distribution<float> size_range(1.5f, 2.5f);
 
 		std::uniform_real_distribution<float> range_animation_range(0.f, 5.f);
 		std::uniform_real_distribution<float> frecuency_animation_range(0.3f, 1.f);
-		std::uniform_real_distribution<float> offset_animation_range(0.5f, 6.f);
+		std::uniform_real_distribution<float> offset_animation_range(0.f, 10.f);
 
-		std::vector<OBBBox> generated_obbs;
-		generated_obbs.reserve(100);
-		//Create boxes
-		for (size_t i = 0; i < 100; ++i)
-		{
-			OBBBox obb_box;
-			float size = size_range(random);
-			obb_box.position = glm::vec3(position_range(random), position_range(random), position_range_z(random));
-			obb_box.extents = glm::vec3(size, size, length_range(random));
-			obb_box.rotation = glm::rotate(angle_inc_range(random), glm::vec3(1.f, 0.f, 0.f)) * glm::rotate(angle_rotation_range(random), glm::vec3(0.f, 0.f, 1.f));;
+		const float static_range_box_city = 2.f;
 
-			AABBBox aabb_box;
-			helpers::CalculateAABBFromOBB(aabb_box, obb_box);
-
-			AnimationBox animated_box;
-			animated_box.frecuency = frecuency_animation_range(random);
-			animated_box.offset = offset_animation_range(random);
-			animated_box.range = range_animation_range(random);
-			animated_box.original_position = obb_box.position;
-
-			//Check if it is colliding with another one
-			OBBBox new_obb_box = obb_box;
-			if (animated_box.range > 1.f)
+		for (size_t i_tile = 0; i_tile < BoxCityTileManager::kTileDimension; ++i_tile)
+			for (size_t j_tile = 0; j_tile < BoxCityTileManager::kTileDimension; ++j_tile)
 			{
-				new_obb_box.extents.z += animated_box.range;
-			}
-			bool collide = false;
-			for (auto& current_obb : generated_obbs)
-			{
-					//Collide
-					if (helpers::CollisionOBBVsOBB(current_obb, new_obb_box))
+				//Tile positions
+				const float begin_tile_x = i_tile * tile_dimension;
+				const float begin_tile_y = j_tile * tile_dimension;
+
+				BoxCityTileManager::Tile& tile = m_tile_manager.GetTile(i_tile, j_tile);
+
+				tile.bounding_box.min = glm::vec3(begin_tile_x, begin_tile_y, tile_height_min);
+				tile.bounding_box.max = glm::vec3(begin_tile_x + tile_dimension, begin_tile_y + tile_dimension, tile_height_max);
+
+				tile.zone_id = static_cast<uint16_t>(i_tile + j_tile * BoxCityTileManager::kTileDimension);
+
+				std::vector<OBBBox> generated_obbs;
+				generated_obbs.reserve(50);
+				//Create boxes
+				for (size_t i = 0; i < 50; ++i)
+				{
+					OBBBox obb_box;
+					float size = size_range(random);
+					obb_box.position = glm::vec3(begin_tile_x + position_range(random), begin_tile_y + position_range(random), position_range_z(random));
+					obb_box.extents = glm::vec3(size, size, length_range(random));
+					obb_box.rotation = glm::rotate(angle_inc_range(random), glm::vec3(1.f, 0.f, 0.f)) * glm::rotate(angle_rotation_range(random), glm::vec3(0.f, 0.f, 1.f));;
+
+					AABBBox aabb_box;
+					helpers::CalculateAABBFromOBB(aabb_box, obb_box);
+
+					AnimationBox animated_box;
+					animated_box.frecuency = frecuency_animation_range(random);
+					animated_box.offset = offset_animation_range(random);
+					animated_box.range = range_animation_range(random);
+					animated_box.original_position = obb_box.position;
+
+					//Check if it is colliding with another one
+					OBBBox new_obb_box = obb_box;
+					if (animated_box.range > static_range_box_city)
 					{
-						collide = true;
-						break;
+						new_obb_box.extents.z += animated_box.range;
 					}
-			}
+					bool collide = false;
+					for (auto& current_obb : generated_obbs)
+					{
+						//Collide
+						if (helpers::CollisionOBBVsOBB(current_obb, new_obb_box))
+						{
+							collide = true;
+							break;
+						}
+					}
 
-			if (collide)
-			{
-				//Check another one
-				continue;
-			}
-			else
-			{
-				//Add this one in the current list
-				generated_obbs.push_back(new_obb_box);
-			}
+					if (collide)
+					{
+						//Check another one
+						continue;
+					}
+					else
+					{
+						//Add this one in the current list
+						generated_obbs.push_back(new_obb_box);
+					}
 
-			//GPU memory
-			GPUBoxInstance gpu_box_instance;
-			gpu_box_instance.Fill(obb_box);
+					//GPU memory
+					GPUBoxInstance gpu_box_instance;
+					gpu_box_instance.Fill(obb_box);
 
-			//Allocate the GPU memory
-			render::AllocHandle gpu_memory = m_GPU_memory_render_module->AllocStaticGPUMemory(m_device, sizeof(GPUBoxInstance), &gpu_box_instance, render::GetGameFrameIndex(m_render_system));
+					//Allocate the GPU memory
+					render::AllocHandle gpu_memory = m_GPU_memory_render_module->AllocStaticGPUMemory(m_device, sizeof(GPUBoxInstance), &gpu_box_instance, render::GetGameFrameIndex(m_render_system));
 
-			if (animated_box.range < 1.f)
-			{
-				//Just make it static
-				ecs::AllocInstance<GameDatabase, BoxType>(0)
-					.Init<OBBBox>(obb_box)
-					.Init<AABBBox>(aabb_box)
-					.Init<BoxGPUHandle>(BoxGPUHandle{ std::move(gpu_memory) });
+					//Gow zone AABB by the bounding box
+					helpers::AABB extended_aabb;
+					helpers::CalculateAABBFromOBB(extended_aabb, new_obb_box);
+					tile.bounding_box.min = glm::min(tile.bounding_box.min, extended_aabb.min);
+					tile.bounding_box.max = glm::max(tile.bounding_box.max, extended_aabb.max);
+
+					if (animated_box.range <+ static_range_box_city)
+					{
+						//Just make it static
+						ecs::AllocInstance<GameDatabase, BoxType>(tile.zone_id)
+							.Init<OBBBox>(obb_box)
+							.Init<AABBBox>(aabb_box)
+							.Init<BoxGPUHandle>(BoxGPUHandle{ std::move(gpu_memory) });
+					}
+					else
+					{
+
+						ecs::AllocInstance<GameDatabase, AnimatedBoxType>(tile.zone_id)
+							.Init<OBBBox>(obb_box)
+							.Init<AABBBox>(aabb_box)
+							.Init<AnimationBox>(animated_box)
+							.Init<BoxGPUHandle>(BoxGPUHandle{ std::move(gpu_memory) });
+					}
+				}
 			}
-			else
-			{
-
-				ecs::AllocInstance<GameDatabase, AnimatedBoxType>(0)
-					.Init<OBBBox>(obb_box)
-					.Init<AABBBox>(aabb_box)
-					.Init<AnimationBox>(animated_box)
-					.Init<BoxGPUHandle>(BoxGPUHandle{ std::move(gpu_memory) });
-			}
-		}
+		
 	}
 
 	void OnPrepareDestroy() override
@@ -417,7 +496,7 @@ public:
 
 				//Mark flags to indicate that the GPU needs to update
 				flags.gpu_updated = false;
-		}, std::bitset<1>(true));
+		}, m_tile_manager.GetCameraBitSet(m_camera));
 			
 		//Check if the render passes loader needs to load
 		m_render_passes_loader.Update();
@@ -464,7 +543,7 @@ public:
 					point_of_view.PushRenderItem(m_box_render_priority, static_cast<render::SortKey>(0), static_cast<uint32_t>(m_GPU_memory_render_module->GetStaticGPUMemoryOffset(box_gpu_handle.gpu_memory)));
 				}
 
-			}, std::bitset<1>(true));
+			}, m_tile_manager.GetCameraBitSet(m_camera));
 
 		//Render
 		render::EndPrepareRenderAndSubmit(m_render_system);

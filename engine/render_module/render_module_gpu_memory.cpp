@@ -196,7 +196,7 @@ namespace render
 		uint8_t* dynamic_memory_base = m_dynamic_gpu_memory_base_ptr;
 		uint8_t* allocation_uint8 = reinterpret_cast<uint8_t*>(allocation);
 
-		assert(allocation_uint8 > dynamic_memory_base);
+		assert(allocation_uint8 >= dynamic_memory_base);
 		assert((allocation_uint8 - dynamic_memory_base) < m_dynamic_gpu_memory_size);
 
 		return allocation_uint8 - dynamic_memory_base;

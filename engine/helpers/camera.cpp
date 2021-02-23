@@ -64,10 +64,6 @@ namespace helpers
 		rotation_input.x = glm::clamp(rotation_input.x, -1.f, 1.f);
 		rotation_input.y = glm::clamp(rotation_input.y, -1.f, 1.f);
 
-		//Apply damp
-		m_move_speed -= m_move_speed * glm::clamp((m_damp_factor * ellapsed_time), 0.f, 1.f);
-		m_rotation_speed -= m_rotation_speed * glm::clamp((m_damp_factor * ellapsed_time), 0.f, 1.f);
-
 		//Calculate position movement
 		glm::vec3 move_speed;
 
@@ -76,8 +72,8 @@ namespace helpers
 		glm::vec3 forward = glm::vec3(0.f, 1.f, 0.f) * rot;
 		glm::vec3 side = glm::vec3(1.f, 0.f, 0.f) * rot;
 
-		move_speed = -side_input * m_move_factor * ellapsed_time * side;
-		move_speed += forward_input * m_move_factor * ellapsed_time * forward;
+		move_speed = -side_input * m_move_factor *  side * ellapsed_time;
+		move_speed += forward_input * m_move_factor * forward * ellapsed_time;
 		//Up/Down doesn't depend of the rotation
 		move_speed.z += up_input * m_move_factor * ellapsed_time;
 
@@ -97,6 +93,10 @@ namespace helpers
 
 		if (m_rotation.y > glm::radians(85.f)) m_rotation.y = glm::radians(85.f);
 		if (m_rotation.y < glm::radians(-85.f)) m_rotation.y = glm::radians(-85.f);
+
+		//Apply damp
+		m_move_speed -= m_move_speed * glm::clamp((m_damp_factor * ellapsed_time), 0.f, 1.f);
+		m_rotation_speed -= m_rotation_speed * glm::clamp((m_damp_factor * ellapsed_time), 0.f, 1.f);
 
 		UpdateInternalData();
 	}
