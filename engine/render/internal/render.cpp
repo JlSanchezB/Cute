@@ -773,7 +773,7 @@ namespace render
 			render_frame.m_begin_frame_command_buffer.Visit([&](auto& data)
 			{
 				render::CommandBuffer::CommandOffset command_offset = 0;
-				while (command_offset != render::CommandBuffer::InvalidCommandOffset)
+				while (command_offset.IsValid())
 				{
 					command_offset = data.Execute(*render_context, command_offset);
 				}

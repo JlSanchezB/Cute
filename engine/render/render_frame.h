@@ -47,8 +47,13 @@ namespace render
 		};
 		
 
-		Item(Priority _priority, SortKey _sort_key, const CommandBuffer::CommandOffset& _command_offset) :
+		explicit Item(Priority _priority, SortKey _sort_key, const CommandBuffer::CommandOffset& _command_offset) :
 			priority(_priority), sort_key(_sort_key), command_offset(_command_offset), command_worker(static_cast<uint32_t>(job::GetWorkerIndex()))
+		{
+		}
+
+		explicit Item(Priority _priority, SortKey _sort_key, const uint32_t& _data) :
+			priority(_priority), sort_key(_sort_key), data(_data)
 		{
 		}
 	};
@@ -75,6 +80,11 @@ namespace render
 		void PushRenderItem(Priority priority, SortKey sort_key, const CommandBuffer::CommandOffset& command_offset)
 		{
 			m_render_items.Get().emplace_back(priority , sort_key, command_offset);
+		}
+
+		void PushRenderItem(Priority priority, SortKey sort_key, const uint32_t& data)
+		{
+			m_render_items.Get().emplace_back(priority, sort_key, data);
 		}
 
 		CommandBuffer& GetCommandBuffer()

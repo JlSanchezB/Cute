@@ -12,8 +12,39 @@ namespace render
 	class CommandBuffer : public core::CommandBuffer<uint8_t>
 	{
 	public:
-		using CommandOffset = uint32_t;
-		const static CommandOffset InvalidCommandOffset = static_cast<uint32_t>(-1);
+		struct CommandOffset
+		{
+			uint32_t offset : 24;
+
+			CommandOffset(const CommandOffset& source)
+			{
+				offset = source.offset;
+			}
+			CommandOffset()
+			{
+				offset = 0xFFFFFF;
+			}
+			CommandOffset(const uint32_t& value)
+			{
+				assert(value < (1<<24));
+				offset = value;
+			}
+
+			CommandOffset& operator=(const uint32_t& value)
+			{
+				offset = value;
+				return *this;
+			}
+			operator uint32_t() const
+			{
+				return offset;
+			}
+
+			bool IsValid() const
+			{
+				return offset != 0xFFFFFF;
+			}
+		};
 
 		//Starts a capture of a command buffer
 		CommandOffset Open();

@@ -311,7 +311,7 @@ public:
 		render::GPUMemoryRenderModule::GPUMemoryDesc gpu_memory_desc;
 		gpu_memory_desc.static_gpu_memory_size = 10 * 1024 * 1024;
 		gpu_memory_desc.dynamic_gpu_memory_size = 10 * 1024 * 1024;
-		gpu_memory_desc.dynamic_gpu_memory_segment_size = 32 * 1024;
+		gpu_memory_desc.dynamic_gpu_memory_segment_size = 256 * 1024;
 
 		m_GPU_memory_render_module = render::RegisterModule<render::GPUMemoryRenderModule>(m_render_system, "GPUMemory"_sh32, gpu_memory_desc);
 
@@ -477,6 +477,9 @@ public:
 
 	void OnTick(double total_time, float elapsed_time) override
 	{
+		//Reset job allocators
+		m_update_job_allocator->Clear();
+
 		//UPDATE GAME
 
 		//Update camera
@@ -485,9 +488,20 @@ public:
 
 		render::BeginPrepareRender(m_render_system);
 
-		//Update all positions for testing the static gpu memory
-		ecs::Process<GameDatabase, OBBBox, AABBBox, FlagBox, AnimationBox>([&](const auto& instance_iterator, OBBBox& obb_box, AABBBox& aabb_box, FlagBox& flags, const AnimationBox& animation_box)
+		job::Fence update_fence;
+
+		struct UpdatePositionsData
 		{
+			double total_time;
+		};
+		auto job_data = m_update_job_allocator->Alloc<UpdatePositionsData>();
+		job_data->total_time = total_time;
+
+		//Update all positions for testing the static gpu memory
+		ecs::AddJobs<GameDatabase, OBBBox, AABBBox, FlagBox, AnimationBox>(m_job_system, update_fence, m_update_job_allocator, 256,
+			[](UpdatePositionsData* job_data, const auto& instance_iterator, OBBBox& obb_box, AABBBox& aabb_box, FlagBox& flags, AnimationBox& animation_box)
+		{
+				const double total_time = job_data->total_time;
 				//Update position
 				obb_box.position = animation_box.original_position + glm::row(obb_box.rotation, 2) * animation_box.range * static_cast<float> (cos(total_time * animation_box.frecuency + animation_box.offset));
 
@@ -496,8 +510,10 @@ public:
 
 				//Mark flags to indicate that the GPU needs to update
 				flags.gpu_updated = false;
-		}, m_tile_manager.GetCameraBitSet(m_camera));
-			
+		}, job_data, m_tile_manager.GetCameraBitSet(m_camera));
+		
+		job::Wait(m_job_system, update_fence);
+
 		//Check if the render passes loader needs to load
 		m_render_passes_loader.Update();
 			
@@ -521,11 +537,32 @@ public:
 		//Add point of view
 		auto& point_of_view = render_frame.AllocPointOfView("Main"_sh32, 0);
 		
+		job::Fence culling_fence;
+
+		//Add task
+		struct JobCullingData
+		{
+			helpers::Frustum* camera;
+			render::PointOfView* point_of_view;
+			render::Priority box_priority;
+			display::Device* device;
+			render::System* render_system;
+			render::GPUMemoryRenderModule* render_gpu_memory_module;
+		};
+		auto job_culling_data = m_update_job_allocator->Alloc<JobCullingData>();
+		job_culling_data->camera = &m_camera;
+		job_culling_data->point_of_view = &point_of_view;
+		job_culling_data->box_priority = m_box_render_priority;
+		job_culling_data->render_system = m_render_system;
+		job_culling_data->device = m_device;
+		job_culling_data->render_gpu_memory_module = m_GPU_memory_render_module;
+
 		//Cull box city
-		ecs::Process<GameDatabase, const OBBBox, const AABBBox, FlagBox, const BoxGPUHandle>([&](const auto& instance_iterator, const OBBBox& obb_box, const AABBBox& aabb_box, FlagBox& flags, const BoxGPUHandle& box_gpu_handle)
+		ecs::AddJobs<GameDatabase, const OBBBox, const AABBBox, FlagBox, const BoxGPUHandle>(m_job_system, culling_fence, m_update_job_allocator, 256,
+			[](JobCullingData* job_data, const auto& instance_iterator, const OBBBox& obb_box, const AABBBox& aabb_box, FlagBox& flags, const BoxGPUHandle& box_gpu_handle)
 			{
 				//Calculate if it is in the camera
-				if (helpers::CollisionFrustumVsAABB(m_camera, aabb_box))
+				if (helpers::CollisionFrustumVsAABB(*job_data->camera, aabb_box))
 				{
 					//Update GPU if needed
 					if (!flags.gpu_updated)
@@ -533,17 +570,19 @@ public:
 						GPUBoxInstance gpu_box_instance;
 						gpu_box_instance.Fill(obb_box);
 
-						m_GPU_memory_render_module->UpdateStaticGPUMemory(m_device, box_gpu_handle.gpu_memory, &gpu_box_instance, sizeof(GPUBoxInstance), render::GetGameFrameIndex(m_render_system));
+						job_data->render_gpu_memory_module->UpdateStaticGPUMemory(job_data->device, box_gpu_handle.gpu_memory, &gpu_box_instance, sizeof(GPUBoxInstance), render::GetGameFrameIndex(job_data->render_system));
 						flags.gpu_updated = true;
 					}
 
 					//Calculate sort key
 
 					//Add this point of view
-					point_of_view.PushRenderItem(m_box_render_priority, static_cast<render::SortKey>(0), static_cast<uint32_t>(m_GPU_memory_render_module->GetStaticGPUMemoryOffset(box_gpu_handle.gpu_memory)));
+					job_data->point_of_view->PushRenderItem(job_data->box_priority, static_cast<render::SortKey>(0), static_cast<uint32_t>(job_data->render_gpu_memory_module->GetStaticGPUMemoryOffset(box_gpu_handle.gpu_memory)));
 				}
 
-			}, m_tile_manager.GetCameraBitSet(m_camera));
+			}, job_culling_data, m_tile_manager.GetCameraBitSet(m_camera));
+
+		job::Wait(m_job_system, culling_fence);
 
 		//Render
 		render::EndPrepareRenderAndSubmit(m_render_system);

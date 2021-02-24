@@ -48,7 +48,7 @@ namespace render
 	{
 		if (command_offset >= GetCurrentCommandPosition())
 		{
-			return InvalidCommandOffset;
+			return CommandOffset();
 		}
 
 		size_t offset = command_offset;
@@ -139,11 +139,11 @@ namespace render
 
 		if (offset == GetCurrentCommandPosition())
 		{
-			return InvalidCommandOffset;
+			return CommandOffset();
 		}
 		else
 		{
-			return static_cast<CommandOffset>(offset);
+			return static_cast<CommandOffset>(static_cast<uint32_t>(offset));
 		}
 	}
 
