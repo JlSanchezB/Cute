@@ -86,10 +86,9 @@ struct GPUBoxInstance
 
 	void Fill(const OBBBox& obb_box)
 	{
-		glm::mat3x3 scale_rot = glm::mat3x3(glm::scale(glm::identity<glm::mat4x4>(), obb_box.extents)) * obb_box.rotation;
-		local_matrix[0] = glm::vec4(scale_rot[0], obb_box.position.x);
-		local_matrix[1] = glm::vec4(scale_rot[1], obb_box.position.y);
-		local_matrix[2] = glm::vec4(scale_rot[2], obb_box.position.z);
+		local_matrix[0] = glm::vec4(obb_box.rotation[0][0] * obb_box.extents[0], obb_box.rotation[0][1] * obb_box.extents[1], obb_box.rotation[0][2] * obb_box.extents[2], obb_box.position.x);
+		local_matrix[1] = glm::vec4(obb_box.rotation[1][0] * obb_box.extents[0], obb_box.rotation[1][1] * obb_box.extents[1], obb_box.rotation[1][2] * obb_box.extents[2], obb_box.position.y);
+		local_matrix[2] = glm::vec4(obb_box.rotation[2][0] * obb_box.extents[0], obb_box.rotation[2][1] * obb_box.extents[1], obb_box.rotation[2][2] * obb_box.extents[2], obb_box.position.z);
 	}
 };
 
@@ -262,6 +261,19 @@ public:
 	{
 	}
 
+	bool BoxCollision(const AABBBox& aabb_box, const OBBBox& obb_box, std::vector<std::pair<AABBBox, OBBBox>> obb_vector)
+	{
+		for (auto& current : obb_vector)
+		{
+			//Collide
+			if (helpers::CollisionAABBVsAABB(current.first, aabb_box) && helpers::CollisionOBBVsOBB(current.second, obb_box))
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
 	void OnInit() override
 	{
 		display::DeviceInitParams device_init_params;
@@ -352,6 +364,9 @@ public:
 
 		const float static_range_box_city = 2.f;
 
+		//Keep them to check for collisions
+		std::vector<std::vector<std::pair<AABBBox, OBBBox>>> generated_obbs(m_tile_manager.GetNumTiles());
+
 		for (size_t i_tile = 0; i_tile < BoxCityTileManager::kTileDimension; ++i_tile)
 			for (size_t j_tile = 0; j_tile < BoxCityTileManager::kTileDimension; ++j_tile)
 			{
@@ -366,16 +381,14 @@ public:
 
 				tile.zone_id = static_cast<uint16_t>(i_tile + j_tile * BoxCityTileManager::kTileDimension);
 
-				std::vector<OBBBox> generated_obbs;
-				generated_obbs.reserve(50);
 				//Create boxes
-				for (size_t i = 0; i < 50; ++i)
+				for (size_t i = 0; i < 150; ++i)
 				{
 					OBBBox obb_box;
 					float size = size_range(random);
 					obb_box.position = glm::vec3(begin_tile_x + position_range(random), begin_tile_y + position_range(random), position_range_z(random));
 					obb_box.extents = glm::vec3(size, size, length_range(random));
-					obb_box.rotation = glm::rotate(angle_inc_range(random), glm::vec3(1.f, 0.f, 0.f)) * glm::rotate(angle_rotation_range(random), glm::vec3(0.f, 0.f, 1.f));;
+					obb_box.rotation = glm::rotate(angle_inc_range(random), glm::vec3(1.f, 0.f, 0.f)) * glm::rotate(angle_rotation_range(random), glm::vec3(0.f, 0.f, 1.f));
 
 					AABBBox aabb_box;
 					helpers::CalculateAABBFromOBB(aabb_box, obb_box);
@@ -386,23 +399,44 @@ public:
 					animated_box.range = range_animation_range(random);
 					animated_box.original_position = obb_box.position;
 
+					bool dynamic_box = true;
+					if (animated_box.range < static_range_box_city)
+					{
+						dynamic_box = false;
+					}
+
 					//Check if it is colliding with another one
 					OBBBox new_obb_box = obb_box;
-					if (animated_box.range > static_range_box_city)
+					if (dynamic_box)
 					{
 						new_obb_box.extents.z += animated_box.range;
 					}
-					bool collide = false;
-					for (auto& current_obb : generated_obbs)
+					AABBBox new_aabb_box;
+					helpers::CalculateAABBFromOBB(new_aabb_box, new_obb_box);
+
+				
+					//First collision in the tile
+					bool collide = BoxCollision(new_aabb_box, new_obb_box, generated_obbs[i_tile + j_tile * BoxCityTileManager::kTileDimension]);
+
+			
+					size_t begin_i = (i_tile == 0) ? 0 : i_tile - 1;
+					size_t end_i = std::min(BoxCityTileManager::kTileDimension - 1, i_tile + 1);
+
+					size_t begin_j = (j_tile == 0) ? 0 : j_tile - 1;
+					size_t end_j = std::min(BoxCityTileManager::kTileDimension - 1, j_tile + 1);
+
+					//Then neighbours
+					for (size_t ii = begin_i; (ii <= end_i) && !collide; ++ii)
 					{
-						//Collide
-						if (helpers::CollisionOBBVsOBB(current_obb, new_obb_box))
+						for (size_t jj = begin_j; (jj <= end_j) && !collide; ++jj)
 						{
-							collide = true;
-							break;
+							if (i_tile != ii || j_tile != jj)
+							{
+								collide = BoxCollision(new_aabb_box, new_obb_box, generated_obbs[ii + jj * BoxCityTileManager::kTileDimension]);
+							}
 						}
 					}
-
+					
 					if (collide)
 					{
 						//Check another one
@@ -411,7 +445,7 @@ public:
 					else
 					{
 						//Add this one in the current list
-						generated_obbs.push_back(new_obb_box);
+						generated_obbs[i_tile + j_tile * BoxCityTileManager::kTileDimension].emplace_back(std::make_pair<>(new_aabb_box,new_obb_box));
 					}
 
 					//GPU memory
@@ -427,7 +461,7 @@ public:
 					tile.bounding_box.min = glm::min(tile.bounding_box.min, extended_aabb.min);
 					tile.bounding_box.max = glm::max(tile.bounding_box.max, extended_aabb.max);
 
-					if (animated_box.range <+ static_range_box_city)
+					if (!dynamic_box)
 					{
 						//Just make it static
 						ecs::AllocInstance<GameDatabase, BoxType>(tile.zone_id)

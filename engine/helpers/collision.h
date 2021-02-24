@@ -106,8 +106,8 @@ namespace helpers
 		// Test axis L = A1 x B0
 		ra = a.extents[0] * AbsR[2][0] + a.extents[2] * AbsR[0][0];
 		rb = b.extents[1] * AbsR[1][2] + b.extents[2] * AbsR[1][1];
-
 		if (fabsf(t[0] * R[2][0] - t[2] * R[0][0]) > ra + rb) return false;
+
 		// Test axis L = A1 x B1
 		ra = a.extents[0] * AbsR[2][1] + a.extents[2] * AbsR[0][1];
 		rb = b.extents[0] * AbsR[1][2] + b.extents[2] * AbsR[1][0];
@@ -130,6 +130,16 @@ namespace helpers
 		if (fabsf(t[1] * R[0][2] - t[0] * R[1][2]) > ra + rb) return false;
 		// Since no separating axis is found, the OBBs must be intersecting
 		return 1;
+	}
+
+	bool CollisionAABBVsAABB(const AABB& a, const AABB& b)
+	{
+		// Exit with no intersection if separated along an axis
+		if (a.max[0] < b.min[0] || a.min[0] > b.max[0]) return false;
+		if (a.max[1] < b.min[1] || a.min[1] > b.max[1]) return false;
+		if (a.max[2] < b.min[2] || a.min[2] > b.max[2]) return false;
+		// Overlapping
+		return true;
 	}
 
 	void CalculateAABBFromOBB(AABB& output, const OBB& source)
