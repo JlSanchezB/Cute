@@ -107,4 +107,8 @@ namespace core
 		MicroProfileFlip();
 #endif
 	}
+	void OnThreadCreate(const char* thread_name)
+	{
+		MicroProfileOnThreadCreate(thread_name);
+	}
 }

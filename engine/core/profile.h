@@ -70,6 +70,8 @@ namespace core
 	void ShutdownProfiler();
 	//Flip profiles
 	void FlipProfiler();
+	//Set the thread name
+	void OnThreadCreate(const char* thread_name);
 }
 
 #define PASTE_HELPER(a,b) a ## b

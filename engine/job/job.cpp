@@ -4,7 +4,14 @@
 #include <cassert>
 #include "job_queue.h"
 #include <cstdlib>
+#include "core/profile.h"
 
+#ifdef _WIN32
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN             // Exclude rarely-used stuff from Windows headers.
+#endif
+#include "windows.h"
+#endif
 namespace
 {
 	//Number of workers
@@ -58,6 +65,11 @@ namespace job
 
 			//Create a thread associated to this worker
 			m_thread = std::make_unique<std::thread>(&Worker::ThreadRun, this);
+#ifdef _WIN32
+			wchar_t name_buffer[256];
+			swprintf_s(name_buffer, L"Worker Thread %zd", m_worker_index);
+			SetThreadDescription(static_cast<HANDLE>(m_thread->native_handle()), name_buffer);
+#endif
 		}
 
 		void Stop()
@@ -305,6 +317,11 @@ namespace job
 
 	inline void Worker::ThreadRun()
 	{
+		//Set name to the profiler
+		char name_buffer[256];
+		sprintf_s(name_buffer, "Worker Thread %zd", m_worker_index);
+		core::OnThreadCreate(name_buffer);
+
 		//Set local thread storage for fast access
 		g_worker_id = m_worker_index;
 
