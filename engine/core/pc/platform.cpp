@@ -1,5 +1,6 @@
 #include <core/platform.h>
 #include <display/display.h>
+#include <render/render.h>
 
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN             // Exclude rarely-used stuff from Windows headers.
@@ -81,6 +82,9 @@ namespace
 	{
 		//Device
 		display::Device* m_device = nullptr;
+
+		//Render System
+		render::System* m_render_system = nullptr;
 
 		//Fullscreen
 		RECT m_window_rect;
@@ -450,6 +454,12 @@ namespace
 
 				core::LogInfo("Windows is going to change size (%i,%i)", clientRect.right - clientRect.left, clientRect.bottom - clientRect.top);
 
+				//Flush the render system
+				if (g_Platform->m_render_system)
+				{
+					render::FlushAndWait(g_Platform->m_render_system);
+				}
+
 				//Call the device
 				if (g_Platform->m_device)
 				{
@@ -652,6 +662,11 @@ namespace platform
 
 		//Create all resources for imgui
 		imgui_render::CreateResources(device);
+	}
+
+	void Game::SetRenderSystem(render::System* render_system)
+	{
+		g_Platform->m_render_system = render_system;
 	}
 
 	void Game::CaptureInput()

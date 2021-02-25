@@ -1083,6 +1083,15 @@ namespace render
 		}
 	}
 
+	void FlushAndWait(System* system)
+	{
+		if (system->m_job_system)
+		{
+			//Sync with the submit job
+			job::Wait(system->m_job_system, g_render_fence);
+		}
+	}
+
 	//Submit render job
 	void SubmitRenderJob(void* data)
 	{

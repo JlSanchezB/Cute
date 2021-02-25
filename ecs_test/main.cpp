@@ -522,6 +522,8 @@ public:
 		render::SystemDesc render_system_desc;
 		m_render_system = render::CreateRenderSystem(m_device, m_job_system, this, render_system_desc);
 
+		SetRenderSystem(m_render_system);
+
 		//Register gpu memory render module
 		//Needed a lot of memory as around 20k entities, 3 frames, 4 float
 		render::GPUMemoryRenderModule::GPUMemoryDesc gpu_memory_desc;

@@ -14,6 +14,11 @@ namespace display
 	struct Device;
 }
 
+namespace render
+{
+	struct System;
+}
+
 namespace platform
 {
 	enum class InputSlotState : uint8_t
@@ -133,7 +138,7 @@ namespace platform
 	{
 	protected:
 		void SetDevice(display::Device* device);
-
+		void SetRenderSystem(render::System* render_system);
 	public:
 		//Input
 		void CaptureInput(); //Recapture the input in the midle of the frame if needed

@@ -319,6 +319,8 @@ public:
 		render::SystemDesc render_system_desc;
 		m_render_system = render::CreateRenderSystem(m_device, m_job_system, this, render_system_desc);
 
+		SetRenderSystem(m_render_system);
+
 		//Register gpu memory render module
 		render::GPUMemoryRenderModule::GPUMemoryDesc gpu_memory_desc;
 		gpu_memory_desc.static_gpu_memory_size = 10 * 1024 * 1024;

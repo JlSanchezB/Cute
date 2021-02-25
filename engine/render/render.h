@@ -154,6 +154,9 @@ namespace render
 	//The render is going to be submit to the GPU (on other thread)
 	void EndPrepareRenderAndSubmit(System* system);
 
+	//Wait until all the task associated the render system is done
+	void FlushAndWait(System* system);
+
 	//Return the current frame for the game
 	uint64_t GetGameFrameIndex(System* system);
 
