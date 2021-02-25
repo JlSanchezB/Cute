@@ -82,6 +82,7 @@ namespace helpers
 		//State
 		glm::vec3 m_move_speed = glm::vec3(0.f, 0.f, 0.f);
 		glm::vec2 m_rotation_speed = glm::vec2(0.f, 0.f);
+		float m_move_speed_factor = 1.f;
 
 		//Setup
 		float m_mouse_rotate_factor = 0.0025f;
@@ -89,6 +90,7 @@ namespace helpers
 		float m_damp_factor = 5.0f;
 		float m_move_factor = 50.0f;
 		float m_rotation_factor = 20.f;
+		float m_wheel_factor = 0.1f;
 	};
 }
 
