@@ -34,6 +34,9 @@
 
 #include "resources.h"
 
+PROFILE_DEFINE_MARKER(g_profile_marker_UpdatePosition, "Main", 0xFFFFAAAA, "BoxUpdate");
+PROFILE_DEFINE_MARKER(g_profile_marker_Culling, "Main", 0xFFFFAAAA, "BoxCulling");
+
 struct ViewConstantBuffer
 {
 	glm::mat4x4 projection_view_matrix;
@@ -522,8 +525,6 @@ public:
 		m_camera.UpdateAspectRatio(static_cast<float>(m_width) / static_cast<float>(m_height));
 		m_camera.Update(this, elapsed_time);
 
-		render::BeginPrepareRender(m_render_system);
-
 		job::Fence update_fence;
 
 		struct UpdatePositionsData
@@ -546,9 +547,11 @@ public:
 
 				//Mark flags to indicate that the GPU needs to update
 				flags.gpu_updated = false;
-		}, job_data, m_tile_manager.GetCameraBitSet(m_camera));
+		}, job_data, m_tile_manager.GetCameraBitSet(m_camera), &g_profile_marker_UpdatePosition);
 		
 		job::Wait(m_job_system, update_fence);
+
+		render::BeginPrepareRender(m_render_system);
 
 		//Check if the render passes loader needs to load
 		m_render_passes_loader.Update();
@@ -616,7 +619,7 @@ public:
 					job_data->point_of_view->PushRenderItem(job_data->box_priority, static_cast<render::SortKey>(0), static_cast<uint32_t>(job_data->render_gpu_memory_module->GetStaticGPUMemoryOffset(box_gpu_handle.gpu_memory)));
 				}
 
-			}, job_culling_data, m_tile_manager.GetCameraBitSet(m_camera));
+			}, job_culling_data, m_tile_manager.GetCameraBitSet(m_camera), &g_profile_marker_Culling);
 
 		job::Wait(m_job_system, culling_fence);
 
