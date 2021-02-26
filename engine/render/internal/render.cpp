@@ -93,7 +93,7 @@ namespace render
 	Frame & RenderContext::GetRenderFrame()
 	{
 		auto render_context = reinterpret_cast<const RenderContextInternal*>(this);
-		return render_context->m_render_pass_system->m_frame_data;
+		return render_context->m_render_pass_system->m_frame_data[render_context->m_render_pass_system->m_render_frame_index % 2];
 	}
 
 	const PointOfView* RenderContext::GetPointOfView() const
@@ -759,7 +759,7 @@ namespace render
 		}
 
 		//Get render frame
-		Frame& render_frame = m_frame_data;
+		Frame& render_frame = m_frame_data[m_render_frame_index % 2];
 
 		//Vector of all command list to be executed at the end of the render
 		std::vector<display::WeakCommandListHandle> command_list_to_execute;
@@ -1076,11 +1076,6 @@ namespace render
 
 	void BeginPrepareRender(System * system)
 	{
-		if (system->m_job_system)
-		{
-			//Sync with the submit job
-			job::Wait(system->m_job_system, g_render_fence);
-		}
 	}
 
 	void FlushAndWait(System* system)
@@ -1102,6 +1097,13 @@ namespace render
 
 	void EndPrepareRenderAndSubmit(System * system)
 	{
+		//Only one render job can be running, waiting here
+		if (system->m_job_system)
+		{
+			//Sync with the submit job
+			job::Wait(system->m_job_system, g_render_fence);
+		}
+
 		//Render frame has all the information
 
 		//Submit render if the job system is activated
@@ -1133,7 +1135,7 @@ namespace render
 
 	Frame & GetGameRenderFrame(System * system)
 	{
-		return system->m_frame_data;
+		return system->m_frame_data[system->m_game_frame_index % 2];
 	}
 
 	Priority GetRenderItemPriority(System * system, const PriorityName priority_name)

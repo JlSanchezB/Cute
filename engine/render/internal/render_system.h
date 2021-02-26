@@ -171,8 +171,8 @@ namespace render
 		core::FastMap<ModuleName, std::unique_ptr<Module>> m_modules;
 
 		//Buffer of all the render frame data
-		//At the moment just one
-		Frame m_frame_data;
+		//Two buffers, one in the render and other in the game, that allows to render and prepare the next frame at the same time
+		Frame m_frame_data[2];
 
 		//Game thread frame, starts with 1 to sync with the display frame index (display frames start with 1, that allows zero as non frame rendered)
 		uint64_t m_game_frame_index = 1;
