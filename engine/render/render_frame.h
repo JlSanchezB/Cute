@@ -79,11 +79,13 @@ namespace render
 
 		void PushRenderItem(Priority priority, SortKey sort_key, const CommandBuffer::CommandOffset& command_offset)
 		{
+			assert(sort_key < (1 << 24));
 			m_render_items.Get().emplace_back(priority , sort_key, command_offset);
 		}
 
 		void PushRenderItem(Priority priority, SortKey sort_key, const uint32_t& data)
 		{
+			assert(sort_key < (1 << 24));
 			m_render_items.Get().emplace_back(priority, sort_key, data);
 		}
 

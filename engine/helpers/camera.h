@@ -50,6 +50,21 @@ namespace helpers
 		}
 
 		glm::mat4x4 GetViewProjectionMatrix() const;
+
+		glm::vec3 GetPosition() const
+		{
+			return m_position;
+		}
+		float GetNearPlane() const
+		{
+			return m_near;
+		}
+
+		float GetFarPlane() const
+		{
+			return m_far;
+		}
+
 	protected:
 
 		void UpdateInternalData();
