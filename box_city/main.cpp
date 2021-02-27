@@ -41,6 +41,7 @@ struct ViewConstantBuffer
 {
 	glm::mat4x4 projection_view_matrix;
 	glm::vec4 time;
+	glm::vec4 sun_direction;
 };
 
 //Components
@@ -259,6 +260,9 @@ public:
 
 	//Tile manager
 	BoxCityTileManager m_tile_manager;
+
+	//Sun direction
+	glm::vec2 m_sun_direction_angles = glm::vec2(45.f, 45.f);
 
 	BoxCityGame()
 	{
@@ -558,6 +562,7 @@ public:
 		ViewConstantBuffer view_constant_buffer;
 		view_constant_buffer.projection_view_matrix = m_camera.GetViewProjectionMatrix();
 		view_constant_buffer.time = glm::vec4(static_cast<float>(total_time), 0.f, 0.f, 0.f);
+		view_constant_buffer.sun_direction = glm::rotate(glm::radians(m_sun_direction_angles.y), glm::vec3(1.f, 0.f, 0.f)) * glm::rotate(glm::radians(m_sun_direction_angles.x), glm::vec3(0.f, 0.f, 1.f)) * glm::vec4(1.f, 0.f, 0.f, 0.f);
 		render_frame.GetBeginFrameCommandBuffer().UploadResourceBuffer(m_view_constant_buffer, &view_constant_buffer, sizeof(view_constant_buffer));
 		render_frame.GetBeginFrameCommandBuffer().Close();
 
@@ -626,7 +631,7 @@ public:
 	void OnAddImguiMenu() override
 	{
 		//Add menu for modifying the render system descriptor file
-		if (ImGui::BeginMenu("ECS"))
+		if (ImGui::BeginMenu("BoxCity"))
 		{
 			m_render_passes_loader.GetShowEditDescriptorFile() = ImGui::MenuItem("Edit descriptor file");
 			bool single_frame_mode = job::GetSingleThreadMode(m_job_system);
@@ -634,6 +639,7 @@ public:
 			{
 				job::SetSingleThreadMode(m_job_system, single_frame_mode);
 			}
+			ImGui::SliderFloat2("Sun Direction", reinterpret_cast<float*>(&m_sun_direction_angles), 0.f, 360.f);
 			ImGui::EndMenu();
 		}
 	}
