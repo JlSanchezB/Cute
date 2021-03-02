@@ -123,44 +123,18 @@ namespace ecs
 	template<typename DATABASE_DECLARATION, typename FUNCTION, typename ...COMPONENTS>
 	struct JobBucketDataWithCapture
 	{
-		//Interface to support a captured callable
-		class ICallable
-		{
-		public:
-			virtual ~ICallable() = default;
-			virtual void Invoke(const InstanceIterator<DATABASE_DECLARATION>&, COMPONENTS&...) = 0;
-		};
-
-		//Concrete implementation
-		template <typename FUNCTION>
-		class CallableT : public ICallable
-		{
-		public:
-			CallableT(const FUNCTION& function) : m_function(function)
-			{
-			}
-			~CallableT() override = default;
-
-			void Invoke(const InstanceIterator<DATABASE_DECLARATION>& instance_iterator, COMPONENTS&... components) override
-			{
-				m_function(instance_iterator, components...);
-			}
-		private:
-			FUNCTION m_function;
-		};
-
 		//Caller helper
 		template<typename DATABASE_DECLARATION, size_t ...indices, typename ...Args>
-		static constexpr inline void caller_helper(ICallable* kernel, const InstanceIterator<DATABASE_DECLARATION>& instance_it, InstanceIndexType instance_index, std::integer_sequence<size_t, indices...>, std::tuple<Args...>& arguments)
+		static constexpr inline void caller_helper(FUNCTION* kernel, const InstanceIterator<DATABASE_DECLARATION>& instance_it, InstanceIndexType instance_index, std::integer_sequence<size_t, indices...>, std::tuple<Args...>& arguments)
 		{
-			kernel->Invoke(instance_it, std::get<indices>(arguments)[instance_index]...);
+			(*kernel)(instance_it, std::get<indices>(arguments)[instance_index]...);
 		}
 
 		//tuple for pointers of the components
 		std::tuple<COMPONENTS*...> components;
 
 		//function to call for each component using the operator() with the correct captures
-		ICallable* kernel;
+		FUNCTION* kernel;
 
 		//Instance interator
 		InstanceIterator<DATABASE_DECLARATION> instance_iterator;
@@ -206,6 +180,10 @@ namespace ecs
 
 		InstanceIterator<DATABASE_DECLARATION> instance_iterator;
 
+		using JobBucketDataT = JobBucketDataWithCapture<DATABASE_DECLARATION, FUNCTION, COMPONENTS...>;
+		//Capture the kernel function into the job allocator
+		FUNCTION* kernel_captured = new (job_allocator->Alloc<FUNCTION>()) FUNCTION(kernel);
+
 		//Loop for all entity type that match the component mask
 		core::visit<DATABASE_DECLARATION::EntityTypes::template Size()>([&](auto entity_type_index)
 			{
@@ -234,7 +212,6 @@ namespace ecs
 								for (InstanceIndexType bucket_index = 0; bucket_index < num_buckets; ++bucket_index)
 								{
 									//Create job data
-									using JobBucketDataT = JobBucketDataWithCapture<DATABASE_DECLARATION, FUNCTION, COMPONENTS...>;
 
 									JobBucketDataT* job_bucket_data = job_allocator->Alloc<JobBucketDataT>();
 
@@ -242,9 +219,7 @@ namespace ecs
 									job_bucket_data->begin_instance = bucket_index * static_cast<InstanceIndexType>(num_instances_per_job);
 									job_bucket_data->end_instance = std::min((bucket_index + 1) * static_cast<InstanceIndexType>(num_instances_per_job), num_instances);
 
-									//Kernel needs to new placement into the job allocator block of memory
-									//Each FUNCTION will have different sizes because the captures
-									job_bucket_data->kernel = new (job_allocator->Alloc<JobBucketDataT::template CallableT<FUNCTION>>()) JobBucketDataT::template CallableT(kernel);
+									job_bucket_data->kernel = kernel_captured;
 
 									job_bucket_data->instance_iterator = instance_iterator;
 									job_bucket_data->microprofile_token = profile_token;
