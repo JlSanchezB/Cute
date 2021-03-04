@@ -1,10 +1,6 @@
 #ifndef CAMERA_H_
 #define CAMERA_H_
 
-#define GLM_FORCE_DEPTH_ZERO_TO_ONE
-#define GLM_FORCE_LEFT_HANDED
-#define GLM_ENABLE_EXPERIMENTAL
-
 #include <ext/glm/vec4.hpp>
 #include <ext/glm/vec2.hpp>
 #include <ext/glm/mat4x4.hpp>

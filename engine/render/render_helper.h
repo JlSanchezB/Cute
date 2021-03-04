@@ -1,3 +1,6 @@
+#ifndef RENDER_HELPERS_H_
+#define RENDER_HELPERS_H_
+
 #include <stdarg.h>
 #include <ext/tinyxml2/tinyxml2.h>
 
@@ -148,3 +151,5 @@ namespace
 		return true;
 	}
 }
+
+#endif //RENDER_HELPERS_H_

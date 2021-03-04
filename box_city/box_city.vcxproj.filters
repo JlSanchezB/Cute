@@ -18,10 +18,28 @@
     <ClCompile Include="main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="box_city_game.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="box_city_tile_manager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resources.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="box_city_components.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="box_city_game.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="box_city_render.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="box_city_tile_manager.h">
+      <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

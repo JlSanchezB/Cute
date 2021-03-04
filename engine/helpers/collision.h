@@ -1,10 +1,6 @@
 #ifndef COLLISION_H_
 #define COLLISION_H_
 
-#define GLM_FORCE_DEPTH_ZERO_TO_ONE
-#define GLM_FORCE_LEFT_HANDED
-#define GLM_ENABLE_EXPERIMENTAL
-
 #include <ext/glm/vec4.hpp>
 #include <ext/glm/vec2.hpp>
 #include <ext/glm/mat4x4.hpp>
@@ -27,7 +23,7 @@ namespace helpers
 		glm::vec3 extents;
 	};
 
-	bool CollisionFrustumVsAABB(const Frustum& frustum, const AABB& bounding_box)
+	inline bool CollisionFrustumVsAABB(const Frustum& frustum, const AABB& bounding_box)
 	{
 		const glm::vec4* planes = frustum.planes;
 		const glm::vec3* points = frustum.points;
@@ -59,7 +55,7 @@ namespace helpers
 		return true;
 	}
 
-	bool CollisionOBBVsOBB(const OBB& a, const OBB& b)
+	inline bool CollisionOBBVsOBB(const OBB& a, const OBB& b)
 	{
 		float ra, rb;
 		glm::mat3x3 R, AbsR;
@@ -132,7 +128,7 @@ namespace helpers
 		return 1;
 	}
 
-	bool CollisionAABBVsAABB(const AABB& a, const AABB& b)
+	inline bool CollisionAABBVsAABB(const AABB& a, const AABB& b)
 	{
 		// Exit with no intersection if separated along an axis
 		if (a.max[0] < b.min[0] || a.min[0] > b.max[0]) return false;
@@ -142,7 +138,7 @@ namespace helpers
 		return true;
 	}
 
-	void CalculateAABBFromOBB(AABB& output, const OBB& source)
+	inline void CalculateAABBFromOBB(AABB& output, const OBB& source)
 	{
 		//Calculate the max distance
 		glm::vec3 half_distance = glm::abs(glm::row(source.rotation, 0) * source.extents[0]) + glm::abs(glm::row(source.rotation, 1) * source.extents[1]) + glm::abs(glm::row(source.rotation, 2) * source.extents[2]);
