@@ -740,7 +740,7 @@ namespace render
 
 		if (render_context)
 		{
-			m_cached_render_context.emplace_back(CachedRenderContext{id, pass_name, render_context});
+			m_cached_render_context.push_back({id, pass_name, render_context});
 		}
 
 		return render_context;

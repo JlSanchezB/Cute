@@ -456,7 +456,7 @@ namespace ecs
 			if (internal_index.zone_index != new_zone_index)
 			{
 				//Add to the deferred moves
-				database->m_deferred_instance_moves.Get().emplace_back(InstanceMove{ index , new_zone_index });
+				database->m_deferred_instance_moves.Get().push_back({ index , new_zone_index });
 			}
 		}
 

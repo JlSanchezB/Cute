@@ -149,7 +149,7 @@ namespace render
 		//Add render pass to execute
 		void AddRenderPass(PassName pass_name, uint16_t id, const PassInfo& pass_info, PointOfViewName associated_point_of_view_name = PointOfViewName("None"), uint16_t associated_point_of_view_id = 0)
 		{
-			m_render_passes.emplace_back(RenderPass{ pass_name, id, pass_info, associated_point_of_view_name, associated_point_of_view_id });
+			m_render_passes.push_back({ pass_name, id, pass_info, associated_point_of_view_name, associated_point_of_view_id });
 		}
 
 		//Get begin frame command buffer
