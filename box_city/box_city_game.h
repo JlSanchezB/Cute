@@ -20,9 +20,6 @@
 #include <ext/glm/gtx/euler_angles.hpp>
 #include <ext/glm/gtc/matrix_access.hpp>
 #include <helpers/collision.h>
-#include <random>
-#include <bitset>
-#include <algorithm>
 
 #include "resources.h"
 #include "box_city_components.h"

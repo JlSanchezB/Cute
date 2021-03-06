@@ -4,6 +4,7 @@
 #include <helpers/collision.h>
 #include <render/render.h>
 #include <ecs/entity_component_system.h>
+#include <render_module/render_module_gpu_memory.h>
 
 //Components
 struct FlagBox
@@ -53,5 +54,18 @@ using GameEntityTypes = ecs::EntityTypeList<BoxType, AnimatedBoxType>;
 
 using GameDatabase = ecs::DatabaseDeclaration<GameComponents, GameEntityTypes>;
 using Instance = ecs::Instance<GameDatabase>;
+
+//GPU memory structs
+struct GPUBoxInstance
+{
+	glm::vec4 local_matrix[3];
+
+	void Fill(const OBBBox& obb_box)
+	{
+		local_matrix[0] = glm::vec4(obb_box.rotation[0][0] * obb_box.extents[0], obb_box.rotation[0][1] * obb_box.extents[1], obb_box.rotation[0][2] * obb_box.extents[2], obb_box.position.x);
+		local_matrix[1] = glm::vec4(obb_box.rotation[1][0] * obb_box.extents[0], obb_box.rotation[1][1] * obb_box.extents[1], obb_box.rotation[1][2] * obb_box.extents[2], obb_box.position.y);
+		local_matrix[2] = glm::vec4(obb_box.rotation[2][0] * obb_box.extents[0], obb_box.rotation[2][1] * obb_box.extents[1], obb_box.rotation[2][2] * obb_box.extents[2], obb_box.position.z);
+	}
+};
 
 #endif //BOX_CITY_COMPONENTS_H
