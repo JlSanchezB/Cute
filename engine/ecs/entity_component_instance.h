@@ -33,6 +33,24 @@ namespace ecs
 
 		template<typename DATABASE_DECLARATION, typename ENTITY_TYPE>
 		friend Instance<DATABASE_DECLARATION> AllocInstance(ZoneType zone_index);
+
+		Instance(const InstanceIndirectionIndexType& indirection_index) : m_indirection_index(indirection_index)
+		{
+		}
+
+		friend class InstanceReference;
+	};
+
+	//Used for having an instance reference inside a component
+	class InstanceReference
+	{
+		template<typename DATABASE_DECLARATION>
+		Instance<DATABASE_DECLARATION> Get() const
+		{
+			return Instance<DATABASE_DECLARATION>(m_indirection_index);
+		}
+	private:
+		InstanceIndirectionIndexType m_indirection_index;
 	};
 
 	template<typename DATABASE_DECLARATION>

@@ -33,6 +33,12 @@ struct AnimationBox
 	float frecuency; //Speed
 };
 
+struct Attachment
+{
+	ecs::InstanceReference parent;
+	glm::mat4x4 parent_to_child;
+};
+
 struct BoxGPUHandle
 {
 	//Access to gpu buffer memory
@@ -48,9 +54,11 @@ struct BoxRender
 //ECS definition
 using BoxType = ecs::EntityType<BoxRender, BoxGPUHandle, OBBBox, AABBBox, FlagBox>;
 using AnimatedBoxType = ecs::EntityType<BoxRender, BoxGPUHandle, OBBBox, AABBBox, AnimationBox, FlagBox>;
+using AttachedPanelType = ecs::EntityType< BoxRender, BoxGPUHandle, OBBBox, AABBBox, FlagBox, Attachment>;
+using PanelType = ecs::EntityType<BoxRender, BoxGPUHandle, OBBBox, AABBBox, FlagBox>;
 
-using GameComponents = ecs::ComponentList<BoxRender, BoxGPUHandle, OBBBox, AABBBox, AnimationBox, FlagBox>;
-using GameEntityTypes = ecs::EntityTypeList<BoxType, AnimatedBoxType>;
+using GameComponents = ecs::ComponentList<BoxRender, BoxGPUHandle, OBBBox, AABBBox, AnimationBox, FlagBox, Attachment>;
+using GameEntityTypes = ecs::EntityTypeList<BoxType, AnimatedBoxType, AttachedPanelType, PanelType>;
 
 using GameDatabase = ecs::DatabaseDeclaration<GameComponents, GameEntityTypes>;
 using Instance = ecs::Instance<GameDatabase>;

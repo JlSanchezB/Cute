@@ -209,10 +209,7 @@ namespace ecs
 	template<typename DATABASE_DECLARATION, typename ENTITY_TYPE>
 	Instance<DATABASE_DECLARATION> AllocInstance(ZoneType zone_index = 0)
 	{
-		Instance<DATABASE_DECLARATION> instance;
-		instance.m_indirection_index = internal::AllocInstance(DATABASE_DECLARATION::s_database, zone_index, DATABASE_DECLARATION::template EntityTypeIndex<ENTITY_TYPE>());
-
-		return instance;
+		return Instance<DATABASE_DECLARATION>(internal::AllocInstance(DATABASE_DECLARATION::s_database, zone_index, DATABASE_DECLARATION::template EntityTypeIndex<ENTITY_TYPE>()));
 	}
 
 	//Dealloc instance
