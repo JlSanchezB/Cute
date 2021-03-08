@@ -220,56 +220,78 @@ namespace render
 
 		if (copy_commands.size() > 0)
 		{
-			//Calculate the size needed
-			size_t number_of_float4_copies = 0;
+			size_t last_command_processed = 0;
+			size_t max_float4_by_dispath = m_dynamic_gpu_memory_segment_size / 16;
 
-			for (auto& copy_command : copy_commands)
+			bool final_pass = true;
+			do
 			{
-				number_of_float4_copies += (copy_command.size / 16);
-			}
+				//Calculate the size needed and if fits in the segment memory size
+				size_t number_of_float4_copies = 0;
 
-			//Send all the the data commands to the GPU, format int2 (offset source, offset destination)
-			size_t offset = m_dynamic_gpu_memory_allocator.Alloc(number_of_float4_copies * sizeof(uint32_t) * 2, frame_index);
-			uint32_t* gpu_data = reinterpret_cast<uint32_t*>(reinterpret_cast<uint8_t*>(display::GetResourceMemoryBuffer(display_context->GetDevice(), m_dynamic_gpu_memory_buffer)) + offset);
-
-			//Send it to the GPU, move from bytes to int4
-			for (auto& copy_command : copy_commands)
-			{
-				const uint32_t count = copy_command.size / 16;
-
-				for (uint32_t i = 0; i < count; ++i)
+				final_pass = true;
+				size_t new_last_command_processed = copy_commands.size();
+				for (size_t i = last_command_processed; i < new_last_command_processed; ++i)
 				{
-					*gpu_data = i + (copy_command.source_offset / 16);
-					gpu_data++;
-					*gpu_data = i + (copy_command.dest_offset / 16);
-					gpu_data++;
+					auto& copy_command = copy_commands[i];
+					if ((number_of_float4_copies + (copy_command.size / 16)) > max_float4_by_dispath)
+					{
+						//It can not process more
+						final_pass = false;
+						new_last_command_processed = i;
+						break; //Out
+					}
+					number_of_float4_copies += (copy_command.size / 16);
 				}
+
+				//Send all the the data commands to the GPU, format int2 (offset source, offset destination)
+				size_t offset = m_dynamic_gpu_memory_allocator.Alloc(number_of_float4_copies * sizeof(uint32_t) * 2, frame_index);
+				uint32_t* gpu_data = reinterpret_cast<uint32_t*>(reinterpret_cast<uint8_t*>(display::GetResourceMemoryBuffer(display_context->GetDevice(), m_dynamic_gpu_memory_buffer)) + offset);
+
+				//Send it to the GPU, move from bytes to int4
+				for (size_t i = last_command_processed; i < new_last_command_processed; ++i)
+				{
+					auto& copy_command = copy_commands[i];
+
+					const uint32_t count = copy_command.size / 16;
+
+					for (uint32_t i = 0; i < count; ++i)
+					{
+						*gpu_data = i + (copy_command.source_offset / 16);
+						gpu_data++;
+						*gpu_data = i + (copy_command.dest_offset / 16);
+						gpu_data++;
+					}
+				}
+
+				//Execute copy
+
+				//Set root signature
+				display_context->SetRootSignature(display::Pipe::Compute, m_copy_data_compute_root_signature);
+
+				//Set parameters
+				uint32_t parameters[2];
+				//Source offset
+				parameters[0] = static_cast<uint32_t>(offset / 16);
+				//Number of copies
+				parameters[1] = static_cast<uint32_t>(number_of_float4_copies);
+
+				display_context->SetUnorderedAccessBuffer(display::Pipe::Compute, 0, m_static_gpu_memory_buffer);
+				display_context->SetShaderResource(display::Pipe::Compute, 1, m_dynamic_gpu_memory_buffer);
+				display_context->SetConstants(display::Pipe::Compute, 2, parameters, 2);
+
+				//Set pipeline
+				display_context->SetPipelineState(m_copy_data_compute_pipeline_state);
+
+				//Execute
+				display::ExecuteComputeDesc desc;
+				desc.group_count_y = desc.group_count_z = 1;
+				desc.group_count_x = static_cast<uint32_t>(((number_of_float4_copies - 1) / 64) + 1);
+				display_context->ExecuteCompute(desc);
+
+				last_command_processed = new_last_command_processed;
 			}
-
-			//Execute copy
-
-			//Set root signature
-			display_context->SetRootSignature(display::Pipe::Compute, m_copy_data_compute_root_signature);
-
-			//Set parameters
-			uint32_t parameters[2];
-			//Source offset
-			parameters[0] = static_cast<uint32_t>(offset / 16);
-			//Number of copies
-			parameters[1] = static_cast<uint32_t>(number_of_float4_copies);
-
-			display_context->SetUnorderedAccessBuffer(display::Pipe::Compute, 0, m_static_gpu_memory_buffer);
-			display_context->SetShaderResource(display::Pipe::Compute, 1, m_dynamic_gpu_memory_buffer);
-			display_context->SetConstants(display::Pipe::Compute, 2, parameters, 2);
-
-			//Set pipeline
-			display_context->SetPipelineState(m_copy_data_compute_pipeline_state);
-
-			//Execute
-			display::ExecuteComputeDesc desc;
-			desc.group_count_y = desc.group_count_z = 1;
-			desc.group_count_x = static_cast<uint32_t>(((number_of_float4_copies - 1) / 64) + 1);
-			display_context->ExecuteCompute(desc);
+			while (!final_pass);
 		}
 	}
 	void SyncStaticGPUMemoryPass::Render(RenderContext& render_context) const
