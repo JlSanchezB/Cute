@@ -167,9 +167,13 @@ void BoxCityTileManager::BuildBlock(std::mt19937& random, const uint16_t zone_id
 	aabb_box_component.min = aabb.min;
 	aabb_box_component.max = aabb.max;
 
+	BoxRender box_render;
+	box_render.colour = glm::vec4(1.f, 1.f, 1.f, 0.f);
+
 	//GPU memory
 	GPUBoxInstance gpu_box_instance;
 	gpu_box_instance.Fill(oob_box_component);
+	gpu_box_instance.Fill(box_render);
 
 	//Allocate the GPU memory
 	render::AllocHandle gpu_memory = GPU_memory_render_module->AllocStaticGPUMemory(device, sizeof(GPUBoxInstance), &gpu_box_instance, render::GetGameFrameIndex(render_system));
@@ -181,6 +185,7 @@ void BoxCityTileManager::BuildBlock(std::mt19937& random, const uint16_t zone_id
 		box_reference = ecs::AllocInstance<GameDatabase, BoxType>(zone_id)
 			.Init<OBBBox>(oob_box_component)
 			.Init<AABBBox>(aabb_box_component)
+			.Init<BoxRender>(box_render)
 			.Init<BoxGPUHandle>(BoxGPUHandle{ std::move(gpu_memory) });
 	}
 	else
@@ -188,6 +193,7 @@ void BoxCityTileManager::BuildBlock(std::mt19937& random, const uint16_t zone_id
 		box_reference = ecs::AllocInstance<GameDatabase, AnimatedBoxType>(zone_id)
 			.Init<OBBBox>(oob_box_component)
 			.Init<AABBBox>(aabb_box_component)
+			.Init<BoxRender>(box_render)
 			.Init<AnimationBox>(animated_box)
 			.Init<BoxGPUHandle>(BoxGPUHandle{ std::move(gpu_memory) });
 	}
@@ -211,11 +217,11 @@ void BoxCityTileManager::BuildBlock(std::mt19937& random, const uint16_t zone_id
 		glm::mat3x3 face_rotation = glm::mat3x3(glm::rotate(glm::half_pi<float>(), glm::vec3(1.f, 0.f, 0.f))) * glm::mat3x3(glm::rotate(glm::half_pi<float>() * face, glm::vec3(0.f, 0.f, 1.f)))  * oob_box_component.rotation;
 		glm::vec3 face_position = oob_box_component.position + glm::vec3(0.f, 0.f, wall_width) * face_rotation;
 		
-		for (size_t i = 0; i < 8; ++i)
+		for (size_t i = 0; i < 16; ++i)
 		{
 			glm::vec2 panel_size(panel_size_range(random), panel_size_range(random));
 			std::uniform_real_distribution<float> panel_position_x_range(-wall_width + panel_size.x, wall_width - panel_size.x);
-			std::uniform_real_distribution<float> panel_position_y_range(-wall_heigh + panel_size.x, wall_heigh - panel_size.y);
+			std::uniform_real_distribution<float> panel_position_y_range(-wall_heigh + panel_size.y, wall_heigh - panel_size.y);
 			glm::vec2 panel_position(panel_position_x_range(random), panel_position_y_range(random));
 
 			//Check if it collides
@@ -241,19 +247,13 @@ void BoxCityTileManager::BuildBlock(std::mt19937& random, const uint16_t zone_id
 			//Color palette
 			const glm::vec4 colour_palette[] =
 			{
-				{1.f, 0.f, 0.f, 0.f},
-				{1.f, 1.f, 0.f, 0.f},
-				{1.f, 0.f, 1.f, 0.f},
-				{1.f, 0.f, 0.f, 0.f},
-				{1.f, 0.5f, 0.f, 0.f},
-				{0.5f, 0.f, 1.f, 0.f},
+				{1.f, 0.1f, 0.6f, 0.f},
+				{1.f, 0.6f, 0.1f, 0.f},
+				{1.f, 0.95f, 0.f, 0.f},
 				{0.5f, 1.f, 0.f, 0.f},
-				{0.5f, 0.f, 0.5f, 0.f},
-				{0.f, 0.f, 1.f, 0.f},
-				{0.f, 1.f, 0.f, 0.f}
+				{0.f, 1.0f, 1.f, 0.f}
 			};
-			glm::vec4 colour = colour_palette[random() % 10];
-			
+
 			//Calculate oob for the panel
 			OBBBox panel_obb;
 			panel_obb.position = face_position + glm::vec3(panel_position.x, panel_position.y, panel_depth / 2.f) * face_rotation;
@@ -263,9 +263,13 @@ void BoxCityTileManager::BuildBlock(std::mt19937& random, const uint16_t zone_id
 			AABBBox panel_aabb;
 			helpers::CalculateAABBFromOBB(panel_aabb, panel_obb);
 
+			BoxRender box_render;
+			box_render.colour = colour_palette[random() % 5] * 5.f;
+
 			//GPU memory
 			GPUBoxInstance gpu_box_instance;
 			gpu_box_instance.Fill(oob_box_component);
+			gpu_box_instance.Fill(box_render);
 
 			//Allocate the GPU memory
 			render::AllocHandle gpu_memory = GPU_memory_render_module->AllocStaticGPUMemory(device, sizeof(GPUBoxInstance), &gpu_box_instance, render::GetGameFrameIndex(render_system));
@@ -286,6 +290,7 @@ void BoxCityTileManager::BuildBlock(std::mt19937& random, const uint16_t zone_id
 				ecs::AllocInstance<GameDatabase, AttachedPanelType>(zone_id)
 					.Init<OBBBox>(panel_obb)
 					.Init<AABBBox>(panel_aabb)
+					.Init<BoxRender>(box_render)
 					.Init<Attachment>(attachment)
 					.Init<BoxGPUHandle>(BoxGPUHandle{ std::move(gpu_memory) });
 			}
@@ -295,6 +300,7 @@ void BoxCityTileManager::BuildBlock(std::mt19937& random, const uint16_t zone_id
 				ecs::AllocInstance<GameDatabase, PanelType>(zone_id)
 					.Init<OBBBox>(panel_obb)
 					.Init<AABBBox>(panel_aabb)
+					.Init<BoxRender>(box_render)
 					.Init<BoxGPUHandle>(BoxGPUHandle{ std::move(gpu_memory)});
 			}
 		}

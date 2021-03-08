@@ -47,8 +47,7 @@ struct BoxGPUHandle
 
 struct BoxRender
 {
-	//Index in the material array
-	uint32_t material;
+	glm::vec4 colour;
 };
 
 //ECS definition
@@ -67,12 +66,16 @@ using Instance = ecs::Instance<GameDatabase>;
 struct GPUBoxInstance
 {
 	glm::vec4 local_matrix[3];
-
+	glm::vec4 colour;
 	void Fill(const OBBBox& obb_box)
 	{
 		local_matrix[0] = glm::vec4(obb_box.rotation[0][0] * obb_box.extents[0], obb_box.rotation[0][1] * obb_box.extents[1], obb_box.rotation[0][2] * obb_box.extents[2], obb_box.position.x);
 		local_matrix[1] = glm::vec4(obb_box.rotation[1][0] * obb_box.extents[0], obb_box.rotation[1][1] * obb_box.extents[1], obb_box.rotation[1][2] * obb_box.extents[2], obb_box.position.y);
 		local_matrix[2] = glm::vec4(obb_box.rotation[2][0] * obb_box.extents[0], obb_box.rotation[2][1] * obb_box.extents[1], obb_box.rotation[2][2] * obb_box.extents[2], obb_box.position.z);
+	}
+	void Fill(const BoxRender& box_render)
+	{
+		colour = box_render.colour;
 	}
 };
 

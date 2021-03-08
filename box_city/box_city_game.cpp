@@ -206,13 +206,14 @@ void BoxCityGame::OnTick(double total_time, float elapsed_time)
 			//Calculate if it is in the camera
 			if (helpers::CollisionFrustumVsAABB(*camera, aabb_box))
 			{
-				//Update GPU if needed
+				//Update GPU if needed, only position
 				if (!flags.gpu_updated)
 				{
 					GPUBoxInstance gpu_box_instance;
 					gpu_box_instance.Fill(obb_box);
 
-					render_gpu_memory_module->UpdateStaticGPUMemory(device, box_gpu_handle.gpu_memory, &gpu_box_instance, sizeof(GPUBoxInstance), render::GetGameFrameIndex(render_system));
+					//Only the first 3 float4
+					render_gpu_memory_module->UpdateStaticGPUMemory(device, box_gpu_handle.gpu_memory, &gpu_box_instance, 3 * sizeof(glm::vec4), render::GetGameFrameIndex(render_system));
 					flags.gpu_updated = true;
 				}
 
