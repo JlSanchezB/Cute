@@ -68,7 +68,7 @@ namespace ecs
 		struct IndirectionInstanceTable
 		{
 			//Using virtual memory here will avoid the sync needed in case the table gets reallocated
-			core::VirtualBufferTypedInitied<InternalInstanceIndex, 8 * 100 * 1024> table;
+			core::VirtualBufferTypedInitied<InternalInstanceIndex, 20 * 100 * 1024> table;
 			InstanceIndexType first_free_slot_indirection_instance; //We use the same type that the instance index, as we create the chain with it
 		};
 

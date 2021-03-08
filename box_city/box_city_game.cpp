@@ -1,7 +1,7 @@
 #include "box_city_game.h"
 
 PROFILE_DEFINE_MARKER(g_profile_marker_UpdatePosition, "Main", 0xFFFFAAAA, "BoxUpdate");
-PROFILE_DEFINE_MARKER(g_profile_marker_UpdateAttachments, "Main", 0xFFFFAAAA, "BoxUpdate");
+PROFILE_DEFINE_MARKER(g_profile_marker_UpdateAttachments, "Main", 0xFFFFAAAA, "BoxAttachment");
 PROFILE_DEFINE_MARKER(g_profile_marker_Culling, "Main", 0xFFFFAAAA, "BoxCulling");
 
 namespace
@@ -63,9 +63,9 @@ void BoxCityGame::OnInit()
 
 	//Register gpu memory render module
 	render::GPUMemoryRenderModule::GPUMemoryDesc gpu_memory_desc;
-	gpu_memory_desc.static_gpu_memory_size = 20 * 1024 * 1024;
-	gpu_memory_desc.dynamic_gpu_memory_size = 10 * 1024 * 1024;
-	gpu_memory_desc.dynamic_gpu_memory_segment_size = 256 * 1024;
+	gpu_memory_desc.static_gpu_memory_size = 50 * 1024 * 1024;
+	gpu_memory_desc.dynamic_gpu_memory_size = 40 * 1024 * 1024;
+	gpu_memory_desc.dynamic_gpu_memory_segment_size = 512 * 1024;
 
 	m_GPU_memory_render_module = render::RegisterModule<render::GPUMemoryRenderModule>(m_render_system, "GPUMemory"_sh32, gpu_memory_desc);
 
@@ -165,7 +165,7 @@ void BoxCityGame::OnTick(double total_time, float elapsed_time)
 
 			//Mark flags to indicate that the GPU needs to update
 			flags.gpu_updated = false;
-		}, m_tile_manager.GetCameraBitSet(m_camera), & g_profile_marker_UpdateAttachments);
+		}, m_tile_manager.GetCameraBitSet(m_camera), &g_profile_marker_UpdateAttachments);
 
 	job::Wait(m_job_system, update_attachments_fence);
 

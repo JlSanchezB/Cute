@@ -199,7 +199,6 @@ void BoxCityTileManager::BuildBlock(std::mt19937& random, const uint16_t zone_id
 	}
 
 	//Create panels in each side of the box
-	std::uniform_real_distribution<float> panel_size_range(0.2f, 1.f);
 
 	//Matrix used for the attachments
 	glm::mat4x4 box_to_world(oob_box_component.rotation);
@@ -212,6 +211,8 @@ void BoxCityTileManager::BuildBlock(std::mt19937& random, const uint16_t zone_id
 		const float wall_width = (face%2==0) ? oob_box_component.extents.x : oob_box_component.extents.y;
 		const float wall_heigh = oob_box_component.extents.z;
 		panels_generated.clear();
+
+		std::uniform_real_distribution<float> panel_size_range(0.2f, glm::min(wall_width, 1.f));
 
 		//Calculate rotation matrix of the face and position
 		glm::mat3x3 face_rotation = glm::mat3x3(glm::rotate(glm::half_pi<float>(), glm::vec3(1.f, 0.f, 0.f))) * glm::mat3x3(glm::rotate(glm::half_pi<float>() * face, glm::vec3(0.f, 0.f, 1.f)))  * oob_box_component.rotation;
@@ -264,7 +265,7 @@ void BoxCityTileManager::BuildBlock(std::mt19937& random, const uint16_t zone_id
 			helpers::CalculateAABBFromOBB(panel_aabb, panel_obb);
 
 			BoxRender box_render;
-			box_render.colour = colour_palette[random() % 5] * 5.f;
+			box_render.colour = colour_palette[random() % 5] * 2.f;
 
 			//GPU memory
 			GPUBoxInstance gpu_box_instance;

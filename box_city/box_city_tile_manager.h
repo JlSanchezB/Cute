@@ -30,7 +30,11 @@ public:
 		std::vector<BoxCollision> m_generated_boxes;
 	};
 
+#ifndef _DEBUG
+	constexpr static size_t kTileDimension = 8;
+#else
 	constexpr static size_t kTileDimension = 2;
+#endif
 
 	Tile& GetTile(size_t i, size_t j)
 	{

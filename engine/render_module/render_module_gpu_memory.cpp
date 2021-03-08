@@ -221,7 +221,7 @@ namespace render
 		if (copy_commands.size() > 0)
 		{
 			size_t last_command_processed = 0;
-			size_t max_float4_by_dispath = m_dynamic_gpu_memory_segment_size / 16;
+			size_t max_float4_by_dispath = m_dynamic_gpu_memory_segment_size / (sizeof(uint32_t) * 2);
 
 			bool final_pass = true;
 			do
