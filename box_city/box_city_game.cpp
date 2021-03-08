@@ -81,7 +81,7 @@ void BoxCityGame::OnInit()
 
 	//Create ecs database
 	ecs::DatabaseDesc database_desc;
-	database_desc.num_max_entities_zone = 1024;
+	database_desc.num_max_entities_zone = 1024 * 1024;
 	database_desc.num_zones = m_tile_manager.GetNumTiles();
 	ecs::CreateDatabase<GameDatabase>(database_desc);
 

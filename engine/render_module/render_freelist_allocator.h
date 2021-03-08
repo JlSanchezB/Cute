@@ -19,8 +19,8 @@ namespace render
 		size_t size;
 	};
 
-	using AllocHandle = core::Handle<FreeListAllocation, uint16_t>;
-	using WeakAllocHandle = core::WeakHandle<FreeListAllocation, uint16_t>;
+	using AllocHandle = core::Handle<FreeListAllocation, uint32_t>;
+	using WeakAllocHandle = core::WeakHandle<FreeListAllocation, uint32_t>;
 
 	//Allocates memory inside a GPU resource and returns a handle
 	//Deferres deallocations when it is dellocated
@@ -40,7 +40,7 @@ namespace render
 			m_free_blocks_pool.emplace_back(FreeListAllocation{ 0, m_resource_size });
 
 			//Init the handle pool
-			m_handle_pool.Init(10000, 100);
+			m_handle_pool.Init(1000000, 100);
 		}
 
 		//Freed live allocations will avaliable

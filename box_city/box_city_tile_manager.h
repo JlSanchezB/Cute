@@ -30,7 +30,7 @@ public:
 		std::vector<BoxCollision> m_generated_boxes;
 	};
 
-	constexpr static size_t kTileDimension = 5;
+	constexpr static size_t kTileDimension = 2;
 
 	Tile& GetTile(size_t i, size_t j)
 	{
@@ -66,7 +66,7 @@ private:
 	Tile m_tiles[kTileDimension * kTileDimension];
 
 	void BuildTile(const size_t i_tile, const size_t j_tile, display::Device* device, render::System* render_system, render::GPUMemoryRenderModule* GPU_memory_render_module);
-	void BuildBlock(const uint16_t zone_id, const helpers::OBB& obb, helpers::AABB& aabb, const bool dynamic_box, const AnimationBox& animated_box, display::Device* device, render::System* render_system, render::GPUMemoryRenderModule* GPU_memory_render_module);
+	void BuildBlock(std::mt19937& random, const uint16_t zone_id, const helpers::OBB& obb, helpers::AABB& aabb, const bool dynamic_box, const AnimationBox& animated_box, display::Device* device, render::System* render_system, render::GPUMemoryRenderModule* GPU_memory_render_module);
 };
 
 #endif //BOX_CITY_TILE_MANAGER_H

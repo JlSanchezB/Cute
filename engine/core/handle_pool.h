@@ -356,7 +356,7 @@ namespace core
 	template<typename HANDLE>
 	inline void HandlePool<HANDLE>::Init(size_t max_size, size_t init_size)
 	{
-		assert(max_size < std::numeric_limits<typename HANDLE::type_param>::max() - 1);
+		assert(max_size <= std::numeric_limits<typename HANDLE::type_param>::max() - 1);
 		assert(init_size <= max_size);
 		m_max_size = max_size;
 		m_first_free_allocated = HANDLE::kInvalid;

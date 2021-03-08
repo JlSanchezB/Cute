@@ -1,5 +1,4 @@
 #include "box_city_tile_manager.h"
-#include <random>
 #include <ext/glm/gtx/vector_angle.hpp>
 #include <ext/glm/gtx/rotate_vector.hpp>
 #include <render/render.h>
@@ -18,6 +17,19 @@ namespace
 			}
 		}
 		return false;
+	}
+
+	bool CollisionPanelVsPanel(const glm::vec2& position_a, const glm::vec2& size_a, const glm::vec2& position_b, const glm::vec2& size_b)
+	{
+		glm::vec2 min_a = position_a - size_a;
+		glm::vec2 max_a = position_a + size_a;
+		glm::vec2 min_b = position_b - size_b;
+		glm::vec2 max_b = position_b + size_b;
+		// Exit with no intersection if separated along an axis
+		if (max_a.x < min_b.x || min_a.x > max_b.x) return false;
+		if (max_a.y < min_b.y || min_a.y > max_b.y) return false;
+		// Overlapping
+		return true;
 	}
 }
 
@@ -132,7 +144,7 @@ void BoxCityTileManager::BuildTile(const size_t i_tile, const size_t j_tile, dis
 		}
 
 		//Block can be build
-		BuildBlock(tile.zone_id, obb_box, aabb_box, dynamic_box, animated_box, device, render_system, GPU_memory_render_module);
+		BuildBlock(random, tile.zone_id, obb_box, aabb_box, dynamic_box, animated_box, device, render_system, GPU_memory_render_module);
 
 		//Gow zone AABB by the bounding box
 		tile.bounding_box.min = glm::min(tile.bounding_box.min, extended_aabb_box.min);
@@ -141,11 +153,14 @@ void BoxCityTileManager::BuildTile(const size_t i_tile, const size_t j_tile, dis
 
 }
 
-void BoxCityTileManager::BuildBlock(const uint16_t zone_id, const helpers::OBB& obb, helpers::AABB& aabb, const bool dynamic_box, const AnimationBox& animated_box, display::Device* device, render::System* render_system, render::GPUMemoryRenderModule* GPU_memory_render_module)
+void BoxCityTileManager::BuildBlock(std::mt19937& random, const uint16_t zone_id, const helpers::OBB& obb, helpers::AABB& aabb, const bool dynamic_box, const AnimationBox& animated_box, display::Device* device, render::System* render_system, render::GPUMemoryRenderModule* GPU_memory_render_module)
 {
+	//Just a little smaller, so it has space for the panels
+	const float panel_depth = 0.1f;
+
 	OBBBox oob_box_component;
 	oob_box_component.position = obb.position;
-	oob_box_component.extents = obb.extents;
+	oob_box_component.extents = obb.extents - glm::vec3(panel_depth, panel_depth, 0.f);
 	oob_box_component.rotation = obb.rotation;
 
 	AABBBox aabb_box_component;
@@ -159,22 +174,122 @@ void BoxCityTileManager::BuildBlock(const uint16_t zone_id, const helpers::OBB& 
 	//Allocate the GPU memory
 	render::AllocHandle gpu_memory = GPU_memory_render_module->AllocStaticGPUMemory(device, sizeof(GPUBoxInstance), &gpu_box_instance, render::GetGameFrameIndex(render_system));
 
-
+	ecs::InstanceReference box_reference;
 	if (!dynamic_box)
 	{
 		//Just make it static
-		ecs::AllocInstance<GameDatabase, BoxType>(zone_id)
+		box_reference = ecs::AllocInstance<GameDatabase, BoxType>(zone_id)
 			.Init<OBBBox>(oob_box_component)
 			.Init<AABBBox>(aabb_box_component)
 			.Init<BoxGPUHandle>(BoxGPUHandle{ std::move(gpu_memory) });
 	}
 	else
 	{
-
-		ecs::AllocInstance<GameDatabase, AnimatedBoxType>(zone_id)
+		box_reference = ecs::AllocInstance<GameDatabase, AnimatedBoxType>(zone_id)
 			.Init<OBBBox>(oob_box_component)
 			.Init<AABBBox>(aabb_box_component)
 			.Init<AnimationBox>(animated_box)
 			.Init<BoxGPUHandle>(BoxGPUHandle{ std::move(gpu_memory) });
 	}
+
+	//Create panels in each side of the box
+	std::uniform_real_distribution<float> panel_size_range(0.2f, 0.5f);
+
+	std::vector<std::pair<glm::vec2, glm::vec2>> panels_generated;
+	for (size_t face = 0; face < 4; ++face)
+	{
+		//For each face try to create panels
+		const float wall_width = (face%2==0) ? oob_box_component.extents.x : oob_box_component.extents.y;
+		const float wall_heigh = oob_box_component.extents.z;
+		panels_generated.clear();
+
+		//Calculate rotation matrix of the face and position
+		glm::mat3x3 face_rotation = glm::mat3x3(glm::rotate(glm::half_pi<float>(), glm::vec3(1.f, 0.f, 0.f))) * glm::mat3x3(glm::rotate(glm::half_pi<float>() * face, glm::vec3(0.f, 0.f, 1.f)))  * oob_box_component.rotation;
+		glm::vec3 face_position = oob_box_component.position + glm::vec3(0.f, 0.f, wall_width) * face_rotation;
+		
+		for (size_t i = 0; i < 8; ++i)
+		{
+			glm::vec2 panel_size(panel_size_range(random), panel_size_range(random));
+			std::uniform_real_distribution<float> panel_position_x_range(-wall_width + panel_size.x, wall_width - panel_size.x);
+			std::uniform_real_distribution<float> panel_position_y_range(-wall_heigh + panel_size.x, wall_heigh - panel_size.y);
+			glm::vec2 panel_position(panel_position_x_range(random), panel_position_y_range(random));
+
+			//Check if it collides
+			bool collide = false;
+			for (auto& generated_panel : panels_generated)
+			{
+				//If collides
+				if (CollisionPanelVsPanel(panel_position, panel_size, generated_panel.first, generated_panel.second))
+				{
+					//Next
+					collide = true;
+					break;
+				}
+			}
+
+			if (collide)
+			{
+				continue;
+			}
+
+			panels_generated.emplace_back(panel_position, panel_size);
+
+			//Color palette
+			const glm::vec4 colour_palette[] =
+			{
+				{1.f, 0.f, 0.f, 0.f},
+				{1.f, 1.f, 0.f, 0.f},
+				{1.f, 0.f, 1.f, 0.f},
+				{1.f, 0.f, 0.f, 0.f},
+				{1.f, 0.5f, 0.f, 0.f},
+				{0.5f, 0.f, 1.f, 0.f},
+				{0.5f, 1.f, 0.f, 0.f},
+				{0.5f, 0.f, 0.5f, 0.f},
+				{0.f, 0.f, 1.f, 0.f},
+				{0.f, 1.f, 0.f, 0.f}
+			};
+			glm::vec4 colour = colour_palette[random() % 10];
+			
+			//Calculate oob for the panel
+			OBBBox panel_obb;
+			panel_obb.position = face_position + glm::vec3(panel_position.x, panel_position.y, panel_depth / 2.f) * face_rotation;
+			panel_obb.rotation = face_rotation;
+			panel_obb.extents = glm::vec3(panel_size.x, panel_size.y, panel_depth / 2.f);
+
+			AABBBox panel_aabb;
+			helpers::CalculateAABBFromOBB(panel_aabb, panel_obb);
+
+			//GPU memory
+			GPUBoxInstance gpu_box_instance;
+			gpu_box_instance.Fill(oob_box_component);
+
+			//Allocate the GPU memory
+			render::AllocHandle gpu_memory = GPU_memory_render_module->AllocStaticGPUMemory(device, sizeof(GPUBoxInstance), &gpu_box_instance, render::GetGameFrameIndex(render_system));
+
+			//Add
+			if (dynamic_box)
+			{
+				//Calculate attachment matrix
+				Attachment attachment;
+				attachment.parent = box_reference;
+				//attachment.parent_to_child;
+
+				//Add attached
+				ecs::AllocInstance<GameDatabase, AttachedPanelType>(zone_id)
+					.Init<OBBBox>(panel_obb)
+					.Init<AABBBox>(panel_aabb)
+					.Init<Attachment>(attachment)
+					.Init<BoxGPUHandle>(BoxGPUHandle{ std::move(gpu_memory) });
+			}
+			else
+			{
+				//Add without attachment
+				ecs::AllocInstance<GameDatabase, PanelType>(zone_id)
+					.Init<OBBBox>(panel_obb)
+					.Init<AABBBox>(panel_aabb)
+					.Init<BoxGPUHandle>(BoxGPUHandle{ std::move(gpu_memory)});
+			}
+		}
+	}
+	
 }

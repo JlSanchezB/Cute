@@ -5,6 +5,7 @@
 #define ENTITY_COMPONENT_INSTANCE_H_
 
 #include <ecs/entity_component_common.h>
+#include <random>
 
 namespace ecs
 {
@@ -44,10 +45,23 @@ namespace ecs
 	//Used for having an instance reference inside a component
 	class InstanceReference
 	{
+	public:
 		template<typename DATABASE_DECLARATION>
 		Instance<DATABASE_DECLARATION> Get() const
 		{
 			return Instance<DATABASE_DECLARATION>(m_indirection_index);
+		}
+
+		InstanceReference()
+		{
+			m_indirection_index.thread_id = static_cast<uint32_t>(-1);
+			m_indirection_index.index = static_cast<uint32_t>(-1);
+		}
+
+		template<typename DATABASE_DECLARATION>
+		InstanceReference(const Instance< DATABASE_DECLARATION>& instance)
+		{
+			m_indirection_index = instance.m_indirection_index;
 		}
 	private:
 		InstanceIndirectionIndexType m_indirection_index;
