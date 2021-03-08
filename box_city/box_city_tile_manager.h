@@ -64,6 +64,9 @@ public:
 
 private:
 	Tile m_tiles[kTileDimension * kTileDimension];
+
+	void BuildTile(const size_t i_tile, const size_t j_tile, display::Device* device, render::System* render_system, render::GPUMemoryRenderModule* GPU_memory_render_module);
+	void BuildBlock(const uint16_t zone_id, const helpers::OBB& obb, helpers::AABB& aabb, const bool dynamic_box, const AnimationBox& animated_box, display::Device* device, render::System* render_system, render::GPUMemoryRenderModule* GPU_memory_render_module);
 };
 
 #endif //BOX_CITY_TILE_MANAGER_H
