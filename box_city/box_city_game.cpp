@@ -1,6 +1,7 @@
 #include "box_city_game.h"
 
 PROFILE_DEFINE_MARKER(g_profile_marker_UpdatePosition, "Main", 0xFFFFAAAA, "BoxUpdate");
+PROFILE_DEFINE_MARKER(g_profile_marker_UpdateAttachments, "Main", 0xFFFFAAAA, "BoxUpdate");
 PROFILE_DEFINE_MARKER(g_profile_marker_Culling, "Main", 0xFFFFAAAA, "BoxCulling");
 
 namespace
@@ -142,6 +143,31 @@ void BoxCityGame::OnTick(double total_time, float elapsed_time)
 		}, m_tile_manager.GetCameraBitSet(m_camera), &g_profile_marker_UpdatePosition);
 
 	job::Wait(m_job_system, update_fence);
+
+	job::Fence update_attachments_fence;
+	//Update attachments
+	ecs::AddJobs<GameDatabase, OBBBox, AABBBox, FlagBox, Attachment>(m_job_system, update_attachments_fence, m_update_job_allocator, 256,
+		[total_time](const auto& instance_iterator, OBBBox& obb_box, AABBBox& aabb_box, FlagBox& flags, Attachment& attachment)
+		{
+			//Get parent matrix
+			OBBBox& parent_obb = attachment.parent.Get<GameDatabase>().Get<OBBBox>();
+
+			glm::mat4x4 box_to_world(parent_obb.rotation);
+			box_to_world[3] = glm::vec4(parent_obb.position, 1.f);
+
+			glm::mat4x4 panel_matrix = box_to_world * attachment.parent_to_child;
+
+			obb_box.position = panel_matrix[3];
+			obb_box.rotation = glm::mat3x3(panel_matrix);
+			
+			//Update AABB
+			helpers::CalculateAABBFromOBB(aabb_box, obb_box);
+
+			//Mark flags to indicate that the GPU needs to update
+			flags.gpu_updated = false;
+		}, m_tile_manager.GetCameraBitSet(m_camera), & g_profile_marker_UpdateAttachments);
+
+	job::Wait(m_job_system, update_attachments_fence);
 
 	render::BeginPrepareRender(m_render_system);
 

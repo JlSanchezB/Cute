@@ -193,7 +193,11 @@ void BoxCityTileManager::BuildBlock(std::mt19937& random, const uint16_t zone_id
 	}
 
 	//Create panels in each side of the box
-	std::uniform_real_distribution<float> panel_size_range(0.2f, 0.5f);
+	std::uniform_real_distribution<float> panel_size_range(0.2f, 1.f);
+
+	//Matrix used for the attachments
+	glm::mat4x4 box_to_world(oob_box_component.rotation);
+	box_to_world[3] = glm::vec4(oob_box_component.position, 1.f);
 
 	std::vector<std::pair<glm::vec2, glm::vec2>> panels_generated;
 	for (size_t face = 0; face < 4; ++face)
@@ -272,7 +276,11 @@ void BoxCityTileManager::BuildBlock(std::mt19937& random, const uint16_t zone_id
 				//Calculate attachment matrix
 				Attachment attachment;
 				attachment.parent = box_reference;
-				//attachment.parent_to_child;
+
+				glm::mat4x4 panel_to_world(panel_obb.rotation);
+				panel_to_world[3] = glm::vec4(panel_obb.position, 1.f);
+				
+				attachment.parent_to_child = glm::inverse(box_to_world) * panel_to_world;
 
 				//Add attached
 				ecs::AllocInstance<GameDatabase, AttachedPanelType>(zone_id)
