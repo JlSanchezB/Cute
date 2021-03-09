@@ -94,6 +94,9 @@ namespace render
 		//Pass factories
 		PassFactoryMap m_pass_factories_map;
 
+		//Job allocator
+		std::unique_ptr<job::JobAllocator<1024 * 1024>> m_job_allocator;
+
 		//Info for each resource
 		struct ResourceInfo
 		{

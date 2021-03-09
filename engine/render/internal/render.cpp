@@ -599,6 +599,11 @@ namespace render
 		//Register the back buffer
 		render::AddGameResource(system, "BackBuffer"_sh32, CreateResourceFromHandle<render::RenderTargetResource>(display::GetBackBuffer(device)), display::TranstitionState::Present);
 
+		//Create a job allocator if there is a job system
+		if (system->m_job_system)
+		{
+			system->m_job_allocator = std::make_unique<job::JobAllocator<1024 * 1024>>();
+		}
 		return system;
 	}
 
@@ -750,6 +755,9 @@ namespace render
 	{
 		PROFILE_SCOPE("Render", kRenderProfileColour, "Submit");
 
+		//Reset job allocators
+		m_job_allocator->Clear();
+
 		//Render thread
 		display::BeginFrame(m_device);
 
@@ -795,18 +803,109 @@ namespace render
 			//Clear sort render items
 			sorted_render_items.m_sorted_render_items.clear();
 
-			//Copy render items from the point of view for each worker to the render context
+			//Get number of render items
+			size_t num_render_items = 0;
 			render_items.Visit([&](auto& data)
 				{
-					sorted_render_items.m_sorted_render_items.insert(sorted_render_items.m_sorted_render_items.end(), data.begin(), data.end());
+					num_render_items += data.size();
 				});
 
-			//Sort render items
-			std::sort(sorted_render_items.m_sorted_render_items.begin(), sorted_render_items.m_sorted_render_items.end(),
-				[](const Item& a, const Item& b)
+			if (num_render_items < 1000 && m_job_system)
+			{
+				//Sort in the render job, not a lot 
+
+				//Copy render items from the point of view for each worker to the render context
+				render_items.Visit([&](auto& data)
+					{
+						sorted_render_items.m_sorted_render_items.insert(sorted_render_items.m_sorted_render_items.end(), data.begin(), data.end());
+					});
+
+				//Sort render items
+				std::sort(sorted_render_items.m_sorted_render_items.begin(), sorted_render_items.m_sorted_render_items.end(),
+					[](const Item& a, const Item& b)
+					{
+						return a.full_32bit_sort_key < b.full_32bit_sort_key;
+					});
+			}
+			else
+			{
+				job::Fence sorting_fence;
+				//Sort each thread data array in a task and merge sort the result
+				render_items.Visit([&](auto& data)
+					{
+						job::AddLambdaJob(m_job_system, [&data]()
+							{
+								PROFILE_SCOPE("Render", kRenderProfileColour, "SortRenderItemsJob");
+								std::sort(data.begin(), data.end(),
+									[](const Item& a, const Item& b)
+									{
+										return a.full_32bit_sort_key < b.full_32bit_sort_key;
+									});
+							}, m_job_allocator, sorting_fence);
+					});
+
+				//Merge sort the result
+				sorted_render_items.m_sorted_render_items.resize(num_render_items);
+
+				job::Wait(m_job_system, sorting_fence);
+
+				struct SourceData
 				{
-					return a.full_32bit_sort_key < b.full_32bit_sort_key;
-				});
+					std::vector<render::Item>& data;
+					size_t next_index;
+					size_t size;
+					SourceData(std::vector<render::Item>& _data) : data(_data)
+					{
+						next_index = 0;
+						size = data.size();
+					}
+				};
+					
+				//Indicate the next position to merge for each sorted source data
+				std::vector<SourceData> sorted_source_data;
+				sorted_source_data.reserve(8);
+				render_items.Visit([&](auto& data)
+					{
+						sorted_source_data.emplace_back(data);
+					});
+
+				const size_t num_sorted_source_data = sorted_source_data.size();
+				bool all_empty = false;
+				size_t sorted_render_items_index = 0;
+				{
+					PROFILE_SCOPE("Render", kRenderProfileColour, "MergedSortRenderItems");
+					while (!all_empty)
+					{
+						render::Item next_render_item(0xFF, 0xFFFFFF, 0); //Worst case
+						size_t next_item_sorted_data_index = static_cast<size_t>(-1);
+						for (size_t i = 0; i < num_sorted_source_data; ++i)
+						{
+							auto& sorted_source = sorted_source_data[i];
+							if (sorted_source.next_index < sorted_source.size)
+							{
+								if (sorted_source.data[sorted_source.next_index].full_32bit_sort_key < next_render_item.full_32bit_sort_key)
+								{
+									next_item_sorted_data_index = i;
+									next_render_item = sorted_source.data[sorted_source.next_index];
+								}
+							}
+						}
+
+						if (next_item_sorted_data_index != static_cast<size_t>(-1))
+						{
+							//Found, add into the dest buffer
+							sorted_render_items.m_sorted_render_items[sorted_render_items_index++] = next_render_item;
+							//Increase the index for that sorted data
+							sorted_source_data[next_item_sorted_data_index].next_index++;
+						}
+						else
+						{
+							//Done, if we didn't found any, means that all is done
+							all_empty = true;
+						}
+					}
+				}
+			}
 
 			//Calculate begin/end for each render priority	
 			sorted_render_items.m_priority_table.resize(m_render_priorities.size());
