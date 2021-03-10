@@ -32,14 +32,18 @@ namespace core
 	//Global map for each namespace
 	core::FastMap<uint64_t, NamespaceStringHashMap>* g_namespaces_string_hash_table = nullptr;
 
-	core::VirtualBufferInitied<1024 * 1024> g_string_buffer;
+	core::VirtualBufferInitied<1024 * 1024>* g_string_buffer;
 
 	const char* AddString(const char* string)
 	{
+		if (g_string_buffer == nullptr)
+		{
+			g_string_buffer = new core::VirtualBufferInitied<1024 * 1024>;
+		}
 		//Increase the size of the buffer by the new string
 		size_t string_size = strlen(string);
-		char* buffer = (reinterpret_cast<char*>(g_string_buffer.GetPtr())) + g_string_buffer.GetCommitedSize();
-		g_string_buffer.SetCommitedSize(g_string_buffer.GetCommitedSize() + string_size + 1);
+		char* buffer = (reinterpret_cast<char*>(g_string_buffer->GetPtr())) + g_string_buffer->GetCommitedSize();
+		g_string_buffer->SetCommitedSize(g_string_buffer->GetCommitedSize() + string_size + 1);
 
 		//Copy the string
 		strcpy_s(buffer, string_size + 1, string);
@@ -47,14 +51,13 @@ namespace core
 		return buffer;
 	}
 
-	void CreateStringHashMap()
-	{
-		g_namespaces_string_hash_table = new core::FastMap<uint64_t, NamespaceStringHashMap>;
-	}
 	void DestroyStringHashMap()
 	{
 		delete g_namespaces_string_hash_table;
 		g_namespaces_string_hash_table = nullptr;
+
+		delete g_string_buffer;
+		g_string_buffer = nullptr;
 	}
 
 	//Debug access funtions
@@ -105,40 +108,42 @@ namespace core
 	template<typename TYPE>
 	void AddStringHashT(uint64_t namespace_hash, TYPE string_hash, const char* string)
 	{
-		if (g_namespaces_string_hash_table)
+		if (g_namespaces_string_hash_table == nullptr)
 		{
-			auto namespace_string_hash_map = g_namespaces_string_hash_table->Find(namespace_hash);
+			g_namespaces_string_hash_table = new core::FastMap<uint64_t, NamespaceStringHashMap>;
+		}
 
-			if (!namespace_string_hash_map)
-			{
-				//Create namespace
-				namespace_string_hash_map = g_namespaces_string_hash_table->Insert(namespace_hash, NamespaceStringHashMap());
-			}
+		auto namespace_string_hash_map = g_namespaces_string_hash_table->Find(namespace_hash);
 
-			auto string_hash_find = namespace_string_hash_map->GetStringHashMap<TYPE>().Find(string_hash);
-			if (string_hash_find)
+		if (!namespace_string_hash_map)
+		{
+			//Create namespace
+			namespace_string_hash_map = g_namespaces_string_hash_table->Insert(namespace_hash, NamespaceStringHashMap());
+		}
+
+		auto string_hash_find = namespace_string_hash_map->GetStringHashMap<TYPE>().Find(string_hash);
+		if (string_hash_find)
+		{
+			//Check if the hash is the same
+			if (strcmp(*string_hash_find, string) == 0)
 			{
-				//Check if the hash is the same
-				if (strcmp(*string_hash_find, string) == 0)
-				{
-					//Same string, all correct
-				}
-				else
-				{
-					//Different string, that can not happen
-					//Collision detected, fatal error
-					core::LogError("Collision detected in string hashes, same hash <%i> in two values<'%s','%s'>", string_hash, string, *string_hash_find);
-					throw std::runtime_error("Collision detected in string hashes");
-				}
+				//Same string, all correct
 			}
 			else
 			{
-				//Add string to the string table
-
-
-				//Add the hash, all correct
-				namespace_string_hash_map->GetStringHashMap<TYPE>().Insert(string_hash, AddString(string));
+				//Different string, that can not happen
+				//Collision detected, fatal error
+				core::LogError("Collision detected in string hashes, same hash <%i> in two values<'%s','%s'>", string_hash, string, *string_hash_find);
+				throw std::runtime_error("Collision detected in string hashes");
 			}
+		}
+		else
+		{
+			//Add string to the string table
+
+
+			//Add the hash, all correct
+			namespace_string_hash_map->GetStringHashMap<TYPE>().Insert(string_hash, AddString(string));
 		}
 	}
 

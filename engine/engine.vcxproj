@@ -128,6 +128,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="core\command_buffer.h" />
+    <ClInclude Include="core\control_variable.h" />
     <ClInclude Include="core\fast_map.h" />
     <ClInclude Include="core\handle_pool.h" />
     <ClInclude Include="core\imgui_render.h" />
@@ -424,6 +425,7 @@
     <ClInclude Include="render_module\render_segment_allocator.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="core\control_variable.cpp" />
     <ClCompile Include="core\imgui_render.cpp" />
     <ClCompile Include="core\pc\log.cpp" />
     <ClCompile Include="core\pc\platform.cpp" />

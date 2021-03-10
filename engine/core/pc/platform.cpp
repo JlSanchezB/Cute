@@ -12,6 +12,7 @@
 #include <core/imgui_render.h>
 #include <core/string_hash.h>
 #include <core/profile.h>
+#include <core/control_variable.h>
 
 typedef unsigned __int64 QWORD;
 
@@ -123,6 +124,9 @@ namespace
 
 		//Imgui render log
 		bool m_imgui_log_enable = false;
+
+		//Imgui control variables
+		bool m_imgui_control_variables_enable = false;
 
 		constexpr std::array<platform::InputSlotState, 256> build_keyboard_conversion()
 		{
@@ -600,6 +604,7 @@ namespace
 					ImGui::Checkbox("Show Log", &g_Platform->m_imgui_log_enable);
 					ImGui::Checkbox("Show Imgui Demo", &g_Platform->m_imgui_demo_enable);
 					ImGui::Checkbox("Display Stats", &g_Platform->m_imgui_display_stats);
+					ImGui::Checkbox("Show Control Variables", &g_Platform->m_imgui_control_variables_enable);
 					ImGui::EndMenu();
 				}
 				//Call game to add it owns menus
@@ -630,6 +635,11 @@ namespace
 			g_Platform->m_imgui_log_enable = core::LogRender();
 		}
 
+		if (g_Platform->m_imgui_control_variables_enable)
+		{
+			g_Platform->m_imgui_control_variables_enable = core::RenderControlVariables();
+		}
+
 		//Render game imgui
 		game->OnImguiRender();
 	}
@@ -646,6 +656,9 @@ namespace platform
 	void PresentCallback(display::Context* context)
 	{
 		imgui_render::Draw(context, &g_Platform->m_imgui_draw_data[g_Platform->m_render_frame_index % Platform::kNumImguiFrames].draw_data);
+
+		//Update render control variables
+		core::UpdateControlVariablesRender();
 	}
 
 	void Game::SetDevice(display::Device * device)
@@ -691,7 +704,7 @@ namespace platform
 
 	bool Game::IsFocus() const
 	{
-		return GetForegroundWindow() == g_Platform->m_current_hwnd;
+		return GetForegroundWindow() == g_Platform->m_current_hwnd && !ImGui::IsAnyWindowFocused();
 	}
 
 	void Game::Present()
@@ -708,10 +721,6 @@ namespace platform
 
 	char Run(const char* name, void* param, uint32_t width, uint32_t height, Game* game)
 	{
-#ifdef _STRING_HASH_MAP_ENABLED_
-		core::CreateStringHashMap();
-#endif
-
 		g_Platform = new Platform;
 
 		HINSTANCE hInstance = *(reinterpret_cast<HINSTANCE*>(param));
@@ -763,6 +772,9 @@ namespace platform
 		MSG msg = {};
 		do 
 		{
+			//Update Control variables
+			core::UpdateControlVariablesMain();
+
 			//Init input
 			InputFrameInit();
 

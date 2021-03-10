@@ -6,6 +6,7 @@
 #include <render/render_resource.h>
 #include <core/profile.h>
 #include "render_pass.h"
+#include <core/control_variable.h>
 
 #include <cassert>
 #include <stdarg.h>
@@ -14,6 +15,10 @@
 
 template<class... Ts> struct overloaded : Ts... { using Ts::operator()...; };
 template<class... Ts> overloaded(Ts...)->overloaded<Ts...>;
+
+
+CONTROL_VARIABLE_RENDER(uint32_t, c_parallel_sort_render_item_min_count, 1000, 0, 1000000, "Render", "Parallel Sort Render Item Min Count");
+CONTROL_VARIABLE_BOOL_RENDER(c_parallel_sort_render_item_enable, true, "Render", "Parallel Sort Render Item Enable");
 
 namespace
 {
@@ -810,7 +815,7 @@ namespace render
 					num_render_items += data.size();
 				});
 
-			if (num_render_items < 1000 && m_job_system)
+			if (!m_job_system || !c_parallel_sort_render_item_enable || (num_render_items < c_parallel_sort_render_item_min_count))
 			{
 				//Sort in the render job, not a lot 
 

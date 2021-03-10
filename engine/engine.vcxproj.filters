@@ -935,6 +935,9 @@
     <ClInclude Include="helpers\collision.h">
       <Filter>helpers</Filter>
     </ClInclude>
+    <ClInclude Include="core\control_variable.h">
+      <Filter>core</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="display\pc_dx12\display.cpp">
@@ -1014,6 +1017,9 @@
     </ClCompile>
     <ClCompile Include="helpers\camera.cpp">
       <Filter>helpers</Filter>
+    </ClCompile>
+    <ClCompile Include="core\control_variable.cpp">
+      <Filter>core</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

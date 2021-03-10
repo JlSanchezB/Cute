@@ -24,7 +24,6 @@ namespace core
 	void AddStringHash(uint64_t namespace_hash, uint32_t string_hash, const char* string);
 	void AddStringHash(uint64_t namespace_hash, uint16_t string_hash, const char* string);
 
-	void CreateStringHashMap();
 	void DestroyStringHashMap();
 #endif
 
