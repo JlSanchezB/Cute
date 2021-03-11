@@ -5,7 +5,7 @@ PROFILE_DEFINE_MARKER(g_profile_marker_UpdatePosition, "Main", 0xFFFFAAAA, "BoxU
 PROFILE_DEFINE_MARKER(g_profile_marker_UpdateAttachments, "Main", 0xFFFFAAAA, "BoxAttachment");
 PROFILE_DEFINE_MARKER(g_profile_marker_Culling, "Main", 0xFFFFAAAA, "BoxCulling");
 
-COUNTER(c_Culled_Boxes, "Box City", "Culled Boxes", true);
+COUNTER(c_Culled_Boxes, "Box City", "Render Boxes", true);
 
 namespace
 {
@@ -227,6 +227,8 @@ void BoxCityGame::OnTick(double total_time, float elapsed_time)
 
 				//Add this point of view
 				point_of_view->PushRenderItem(box_priority, static_cast<render::SortKey>(sort_key), static_cast<uint32_t>(render_gpu_memory_module->GetStaticGPUMemoryOffset(box_gpu_handle.gpu_memory)));
+
+				COUNTER_INC(c_Culled_Boxes);
 			}
 
 		}, m_tile_manager.GetCameraBitSet(m_camera), &g_profile_marker_Culling);

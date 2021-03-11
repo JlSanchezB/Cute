@@ -3,6 +3,10 @@
 #include <ext/glm/gtx/rotate_vector.hpp>
 #include <render/render.h>
 #include <render_module/render_module_gpu_memory.h>
+#include <core/counters.h>
+
+COUNTER(c_Blocks_Count, "Box City", "Number of Blocks", false);
+COUNTER(c_Panels_Count, "Box City", "Number of Panels", false);
 
 namespace
 {
@@ -187,6 +191,8 @@ void BoxCityTileManager::BuildBlock(std::mt19937& random, const uint16_t zone_id
 			.Init<AABBBox>(aabb_box_component)
 			.Init<BoxRender>(box_render)
 			.Init<BoxGPUHandle>(BoxGPUHandle{ std::move(gpu_memory) });
+
+		COUNTER_INC(c_Blocks_Count);
 	}
 	else
 	{
@@ -196,6 +202,8 @@ void BoxCityTileManager::BuildBlock(std::mt19937& random, const uint16_t zone_id
 			.Init<BoxRender>(box_render)
 			.Init<AnimationBox>(animated_box)
 			.Init<BoxGPUHandle>(BoxGPUHandle{ std::move(gpu_memory) });
+
+		COUNTER_INC(c_Blocks_Count);
 	}
 
 	//Create panels in each side of the box
@@ -294,6 +302,8 @@ void BoxCityTileManager::BuildBlock(std::mt19937& random, const uint16_t zone_id
 					.Init<BoxRender>(box_render)
 					.Init<Attachment>(attachment)
 					.Init<BoxGPUHandle>(BoxGPUHandle{ std::move(gpu_memory) });
+
+				COUNTER_INC(c_Panels_Count);
 			}
 			else
 			{
@@ -303,6 +313,8 @@ void BoxCityTileManager::BuildBlock(std::mt19937& random, const uint16_t zone_id
 					.Init<AABBBox>(panel_aabb)
 					.Init<BoxRender>(box_render)
 					.Init<BoxGPUHandle>(BoxGPUHandle{ std::move(gpu_memory)});
+
+				COUNTER_INC(c_Panels_Count);
 			}
 		}
 	}

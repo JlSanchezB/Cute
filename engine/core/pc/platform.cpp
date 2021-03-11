@@ -13,6 +13,7 @@
 #include <core/string_hash.h>
 #include <core/profile.h>
 #include <core/control_variables.h>
+#include <core/counters.h>
 
 typedef unsigned __int64 QWORD;
 
@@ -127,6 +128,9 @@ namespace
 
 		//Imgui control variables
 		bool m_imgui_control_variables_enable = false;
+
+		//Imgui counters
+		bool m_imgui_counters_enable = false;
 
 		constexpr std::array<platform::InputSlotState, 256> build_keyboard_conversion()
 		{
@@ -605,6 +609,7 @@ namespace
 					ImGui::Checkbox("Show Imgui Demo", &g_Platform->m_imgui_demo_enable);
 					ImGui::Checkbox("Display Stats", &g_Platform->m_imgui_display_stats);
 					ImGui::Checkbox("Show Control Variables", &g_Platform->m_imgui_control_variables_enable);
+					ImGui::Checkbox("Show Counters", &g_Platform->m_imgui_counters_enable);
 					ImGui::EndMenu();
 				}
 				//Call game to add it owns menus
@@ -640,6 +645,11 @@ namespace
 			g_Platform->m_imgui_control_variables_enable = core::RenderControlVariables();
 		}
 
+		if (g_Platform->m_imgui_counters_enable)
+		{
+			g_Platform->m_imgui_counters_enable = core::RenderCounters();
+		}
+
 		//Render game imgui
 		game->OnImguiRender();
 	}
@@ -659,6 +669,9 @@ namespace platform
 
 		//Update render control variables
 		core::UpdateControlVariablesRender();
+
+		//Update render counters
+		core::UpdateCountersRender();
 	}
 
 	void Game::SetDevice(display::Device * device)
@@ -774,6 +787,9 @@ namespace platform
 		{
 			//Update Control variables
 			core::UpdateControlVariablesMain();
+
+			//Update counters
+			core::UpdateCountersMain();
 
 			//Init input
 			InputFrameInit();
