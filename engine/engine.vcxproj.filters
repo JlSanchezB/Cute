@@ -935,7 +935,10 @@
     <ClInclude Include="helpers\collision.h">
       <Filter>helpers</Filter>
     </ClInclude>
-    <ClInclude Include="core\control_variable.h">
+    <ClInclude Include="core\counters.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="core\control_variables.h">
       <Filter>core</Filter>
     </ClInclude>
   </ItemGroup>
@@ -1018,7 +1021,10 @@
     <ClCompile Include="helpers\camera.cpp">
       <Filter>helpers</Filter>
     </ClCompile>
-    <ClCompile Include="core\control_variable.cpp">
+    <ClCompile Include="core\counters.cpp">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="core\control_variables.cpp">
       <Filter>core</Filter>
     </ClCompile>
   </ItemGroup>

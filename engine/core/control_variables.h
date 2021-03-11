@@ -2,16 +2,16 @@
 // Cute engine - Control variables
 //////////////////////////////////////////////////////////////////////////
 
-#ifndef CONTROL_VARIABLE_H_
-#define CONTROL_VARIABLE_H_
+#ifndef CONTROL_VARIABLES_H_
+#define CONTROL_VARIABLES_H_
 
 #include <variant>
-#include "string_hash.h"
+#include <core/string_hash.h>
 
 namespace core
 {
-	using ControlVariableGroupName = StringHash32<"ControlVariableGroup"_namespace>;
-	using ControlVariableName = StringHash32<"ControlVariableGroup"_namespace>;
+	using ControlVariableGroupName = StringHash32<"ControlVariableGroupName"_namespace>;
+	using ControlVariableName = StringHash32<"ControlVariableName"_namespace>;
 	
 	enum class ConsoleVariableType
 	{
@@ -39,4 +39,4 @@ namespace core
 #define CONTROL_VARIABLE(type, variable, range_min, range_max, default_value, group_name, variable_name) static type variable = RegisterControlVariable(static_cast<type>(default_value), &variable, static_cast<type>(range_min), static_cast<type>(range_max), group_name##_sh32, variable_name##_sh32, core::ConsoleVariableType::Main); 
 #define CONTROL_VARIABLE_RENDER(type, variable, default_value, range_min, range_max, group_name, variable_name) static type variable = RegisterControlVariable(static_cast<type>(default_value), &variable, static_cast<type>(range_min), static_cast<type>(range_max), group_name##_sh32, variable_name##_sh32, core::ConsoleVariableType::Render); 
 
-#endif //LOG_H
+#endif //CONTROL_VARIABLES_H_

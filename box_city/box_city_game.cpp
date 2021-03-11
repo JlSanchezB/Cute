@@ -1,8 +1,11 @@
 #include "box_city_game.h"
+#include <core/counters.h>
 
 PROFILE_DEFINE_MARKER(g_profile_marker_UpdatePosition, "Main", 0xFFFFAAAA, "BoxUpdate");
 PROFILE_DEFINE_MARKER(g_profile_marker_UpdateAttachments, "Main", 0xFFFFAAAA, "BoxAttachment");
 PROFILE_DEFINE_MARKER(g_profile_marker_Culling, "Main", 0xFFFFAAAA, "BoxCulling");
+
+COUNTER(c_Culled_Boxes, "Box City", "Culled Boxes", true);
 
 namespace
 {

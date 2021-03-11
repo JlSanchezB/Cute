@@ -2,7 +2,7 @@
 // Cute engine - Control variables
 //////////////////////////////////////////////////////////////////////////
 
-#include "control_variable.h"
+#include "control_variables.h"
 #include "fast_map.h"
 #include "log.h"
 #include <ext/imgui/imgui.h>

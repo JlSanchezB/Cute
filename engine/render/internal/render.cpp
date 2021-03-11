@@ -6,7 +6,7 @@
 #include <render/render_resource.h>
 #include <core/profile.h>
 #include "render_pass.h"
-#include <core/control_variable.h>
+#include <core/control_variables.h>
 
 #include <cassert>
 #include <stdarg.h>

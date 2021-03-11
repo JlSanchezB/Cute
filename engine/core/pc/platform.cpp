@@ -12,7 +12,7 @@
 #include <core/imgui_render.h>
 #include <core/string_hash.h>
 #include <core/profile.h>
-#include <core/control_variable.h>
+#include <core/control_variables.h>
 
 typedef unsigned __int64 QWORD;
 
