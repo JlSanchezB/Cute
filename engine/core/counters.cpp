@@ -108,13 +108,21 @@ namespace core
 
 	void CounterMarker::Set(const uint32_t& value)
 	{
-		size_t atomic_index = (!reset) ? index : index + (render_counter) ? g_counter_manager->render_index : g_counter_manager->main_index;
+		size_t atomic_index = index;
+		if (reset)
+		{
+			atomic_index += (render_counter) ? g_counter_manager->render_index : g_counter_manager->main_index;
+		}
 		g_counter_manager->GetAtomic(atomic_index).exchange(value);
 	}
 
 	void CounterMarker::Add(const uint32_t& value)
 	{
-		size_t atomic_index = (!reset) ? index : index + (render_counter) ? g_counter_manager->render_index : g_counter_manager->main_index;
+		size_t atomic_index = index;
+		if (reset)
+		{
+			atomic_index += (render_counter) ? g_counter_manager->render_index : g_counter_manager->main_index;
+		}
 		g_counter_manager->GetAtomic(atomic_index).fetch_add(value);
 	}
 
