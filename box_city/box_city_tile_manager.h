@@ -31,7 +31,7 @@ public:
 	};
 
 #ifndef _DEBUG
-	constexpr static size_t kTileDimension = 8;
+	constexpr static size_t kTileDimension = 12;
 #else
 	constexpr static size_t kTileDimension = 2;
 #endif

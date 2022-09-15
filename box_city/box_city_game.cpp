@@ -67,8 +67,8 @@ void BoxCityGame::OnInit()
 	//Register gpu memory render module
 	render::GPUMemoryRenderModule::GPUMemoryDesc gpu_memory_desc;
 	gpu_memory_desc.static_gpu_memory_size = 50 * 1024 * 1024;
-	gpu_memory_desc.dynamic_gpu_memory_size = 40 * 1024 * 1024;
-	gpu_memory_desc.dynamic_gpu_memory_segment_size = 512 * 1024;
+	gpu_memory_desc.dynamic_gpu_memory_size = 200 * 1024 * 1024;
+	gpu_memory_desc.dynamic_gpu_memory_segment_size = 5 * 1024 * 1024;
 
 	m_GPU_memory_render_module = render::RegisterModule<render::GPUMemoryRenderModule>(m_render_system, "GPUMemory"_sh32, gpu_memory_desc);
 

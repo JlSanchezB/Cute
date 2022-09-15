@@ -52,22 +52,22 @@ void BoxCityTileManager::BuildTile(const size_t i_tile, const size_t j_tile, dis
 {
 	std::mt19937 random(static_cast<uint32_t>(i_tile + j_tile * BoxCityTileManager::kTileDimension));
 
-	constexpr float tile_dimension = 40.f;
-	constexpr float tile_height_min = -40.f;
-	constexpr float tile_height_max = 40.f;
+	constexpr float tile_dimension = 500.f;
+	constexpr float tile_height_min = -650.f;
+	constexpr float tile_height_max = 250.f;
 
 	std::uniform_real_distribution<float> position_range(0, tile_dimension);
 	std::uniform_real_distribution<float> position_range_z(tile_height_min, tile_height_max);
 	std::uniform_real_distribution<float> angle_inc_range(-glm::half_pi<float>() * 0.2f, glm::half_pi<float>() * 0.2f);
 	std::uniform_real_distribution<float> angle_rotation_range(0.f, glm::two_pi<float>());
-	std::uniform_real_distribution<float> length_range(4.f, 12.f);
-	std::uniform_real_distribution<float> size_range(1.5f, 2.5f);
+	std::uniform_real_distribution<float> length_range(50.f, 150.f);
+	std::uniform_real_distribution<float> size_range(20.0f, 40.0f);
 
-	std::uniform_real_distribution<float> range_animation_range(0.f, 5.f);
+	std::uniform_real_distribution<float> range_animation_range(0.f, 50.f);
 	std::uniform_real_distribution<float> frecuency_animation_range(0.3f, 1.f);
-	std::uniform_real_distribution<float> offset_animation_range(0.f, 10.f);
+	std::uniform_real_distribution<float> offset_animation_range(0.f, 40.f);
 
-	const float static_range_box_city = 2.f;
+	float static_range_box_city = 10.f;
 
 	//Tile positions
 	const float begin_tile_x = i_tile * tile_dimension;
@@ -79,6 +79,14 @@ void BoxCityTileManager::BuildTile(const size_t i_tile, const size_t j_tile, dis
 	tile.bounding_box.max = glm::vec3(begin_tile_x + tile_dimension, begin_tile_y + tile_dimension, tile_height_max);
 
 	tile.zone_id = static_cast<uint16_t>(i_tile + j_tile * BoxCityTileManager::kTileDimension);
+
+	float high_range_cut = FLT_MIN;
+
+	if (i_tile > 4 || j_tile > 4)
+	{
+		//We only need the top ones
+		high_range_cut = 0.f;
+	}
 
 	//Create boxes
 	for (size_t i = 0; i < 150; ++i)
@@ -103,6 +111,10 @@ void BoxCityTileManager::BuildTile(const size_t i_tile, const size_t j_tile, dis
 		{
 			dynamic_box = false;
 		}
+
+		//Cut bottom boxes
+		if (obb_box.position.z < high_range_cut)
+			continue;
 
 		//Check if it is colliding with another one
 		helpers::OBB extended_obb_box = obb_box;
@@ -160,7 +172,7 @@ void BoxCityTileManager::BuildTile(const size_t i_tile, const size_t j_tile, dis
 void BoxCityTileManager::BuildBlock(std::mt19937& random, const uint16_t zone_id, const helpers::OBB& obb, helpers::AABB& aabb, const bool dynamic_box, const AnimationBox& animated_box, display::Device* device, render::System* render_system, render::GPUMemoryRenderModule* GPU_memory_render_module)
 {
 	//Just a little smaller, so it has space for the panels
-	const float panel_depth = 0.1f;
+	const float panel_depth = 5.0f;
 
 	OBBBox oob_box_component;
 	oob_box_component.position = obb.position;
@@ -220,7 +232,7 @@ void BoxCityTileManager::BuildBlock(std::mt19937& random, const uint16_t zone_id
 		const float wall_heigh = oob_box_component.extents.z;
 		panels_generated.clear();
 
-		std::uniform_real_distribution<float> panel_size_range(0.2f, glm::min(wall_width, 1.f));
+		std::uniform_real_distribution<float> panel_size_range(5.f, glm::min(wall_width, 15.f));
 
 		//Calculate rotation matrix of the face and position
 		glm::mat3x3 face_rotation = glm::mat3x3(glm::rotate(glm::half_pi<float>(), glm::vec3(1.f, 0.f, 0.f))) * glm::mat3x3(glm::rotate(glm::half_pi<float>() * face, glm::vec3(0.f, 0.f, 1.f)))  * oob_box_component.rotation;
