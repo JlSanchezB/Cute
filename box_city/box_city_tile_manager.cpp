@@ -39,25 +39,28 @@ namespace
 
 void BoxCityTileManager::Build(display::Device* device, render::System* render_system, render::GPUMemoryRenderModule* GPU_memory_render_module)
 {
-	for (size_t i_tile = 0; i_tile < BoxCityTileManager::kTileDimension; ++i_tile)
+	for (size_t i_tile = 0; i_tile < BoxCityTileManager::kLocalTileSize; ++i_tile)
 	{
-		for (size_t j_tile = 0; j_tile < BoxCityTileManager::kTileDimension; ++j_tile)
+		for (size_t j_tile = 0; j_tile < BoxCityTileManager::kLocalTileSize; ++j_tile)
 		{
 			BuildTile(i_tile, j_tile, device, render_system, GPU_memory_render_module);
 		}
 	}
 }
 
+void BoxCityTileManager::Update(const glm::vec3& camera_position)
+{
+	//Check if the camera is still in the same tile, with a fudge factor
+
+	//If the camera has move of tile, destroy the tiles out of view and create the new ones
+}
+
 void BoxCityTileManager::BuildTile(const size_t i_tile, const size_t j_tile, display::Device* device, render::System* render_system, render::GPUMemoryRenderModule* GPU_memory_render_module)
 {
-	std::mt19937 random(static_cast<uint32_t>(i_tile + j_tile * BoxCityTileManager::kTileDimension));
+	std::mt19937 random(static_cast<uint32_t>(i_tile + j_tile * BoxCityTileManager::kLocalTileSize));
 
-	constexpr float tile_dimension = 500.f;
-	constexpr float tile_height_min = -650.f;
-	constexpr float tile_height_max = 250.f;
-
-	std::uniform_real_distribution<float> position_range(0, tile_dimension);
-	std::uniform_real_distribution<float> position_range_z(tile_height_min, tile_height_max);
+	std::uniform_real_distribution<float> position_range(0, kTileSize);
+	std::uniform_real_distribution<float> position_range_z(kTileHeightTop, kTileHeightBottom);
 	std::uniform_real_distribution<float> angle_inc_range(-glm::half_pi<float>() * 0.2f, glm::half_pi<float>() * 0.2f);
 	std::uniform_real_distribution<float> angle_rotation_range(0.f, glm::two_pi<float>());
 	std::uniform_real_distribution<float> length_range(50.f, 150.f);
@@ -70,15 +73,15 @@ void BoxCityTileManager::BuildTile(const size_t i_tile, const size_t j_tile, dis
 	float static_range_box_city = 10.f;
 
 	//Tile positions
-	const float begin_tile_x = i_tile * tile_dimension;
-	const float begin_tile_y = j_tile * tile_dimension;
+	const float begin_tile_x = i_tile * kTileSize;
+	const float begin_tile_y = j_tile * kTileSize;
 
 	BoxCityTileManager::Tile& tile = GetTile(i_tile, j_tile);
 
-	tile.bounding_box.min = glm::vec3(begin_tile_x, begin_tile_y, tile_height_min);
-	tile.bounding_box.max = glm::vec3(begin_tile_x + tile_dimension, begin_tile_y + tile_dimension, tile_height_max);
+	tile.bounding_box.min = glm::vec3(begin_tile_x, begin_tile_y, kTileHeightTop);
+	tile.bounding_box.max = glm::vec3(begin_tile_x + kTileSize, begin_tile_y + kTileSize, kTileHeightBottom);
 
-	tile.zone_id = static_cast<uint16_t>(i_tile + j_tile * BoxCityTileManager::kTileDimension);
+	tile.zone_id = static_cast<uint16_t>(i_tile + j_tile * BoxCityTileManager::kLocalTileSize);
 
 	float high_range_cut = FLT_MIN;
 
@@ -131,10 +134,10 @@ void BoxCityTileManager::BuildTile(const size_t i_tile, const size_t j_tile, dis
 
 
 		size_t begin_i = (i_tile == 0) ? 0 : i_tile - 1;
-		size_t end_i = std::min(BoxCityTileManager::kTileDimension - 1, i_tile + 1);
+		size_t end_i = std::min(BoxCityTileManager::kLocalTileSize - 1, i_tile + 1);
 
 		size_t begin_j = (j_tile == 0) ? 0 : j_tile - 1;
-		size_t end_j = std::min(BoxCityTileManager::kTileDimension - 1, j_tile + 1);
+		size_t end_j = std::min(BoxCityTileManager::kLocalTileSize - 1, j_tile + 1);
 
 		//Then neighbours
 		for (size_t ii = begin_i; (ii <= end_i) && !collide; ++ii)
