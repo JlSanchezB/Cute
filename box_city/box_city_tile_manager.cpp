@@ -37,30 +37,64 @@ namespace
 	}
 }
 
-void BoxCityTileManager::Build(display::Device* device, render::System* render_system, render::GPUMemoryRenderModule* GPU_memory_render_module)
+void BoxCityTileManager::Init(display::Device* device, render::System* render_system, render::GPUMemoryRenderModule* GPU_memory_render_module)
 {
-	for (size_t i_tile = 0; i_tile < BoxCityTileManager::kLocalTileSize; ++i_tile)
-	{
-		for (size_t j_tile = 0; j_tile < BoxCityTileManager::kLocalTileSize; ++j_tile)
-		{
-			BuildTile(i_tile, j_tile, device, render_system, GPU_memory_render_module);
-		}
-	}
+	m_device = device;
+	m_render_system = render_system;
+	m_GPU_memory_render_module = GPU_memory_render_module;
+
+	m_camera_tile_position.i = std::numeric_limits<int32_t>::max();
+	m_camera_tile_position.j = std::numeric_limits<int32_t>::max();
+
+	//Simulate one frame in the center, it has to create all tiles around origin
+	Update(glm::vec3(0.f, 0.f, 0.f));
 }
 
 void BoxCityTileManager::Update(const glm::vec3& camera_position)
 {
-	//Check if the camera is still in the same tile, with a fudge factor
+	//Check if the camera is still in the same tile, TODO: with a fudge factor
+	WorldTilePosition new_camera_tile_position = GetWorldTilePosition(camera_position);
 
 	//If the camera has move of tile, destroy the tiles out of view and create the new ones
+	if (new_camera_tile_position.i != m_camera_tile_position.i || new_camera_tile_position.j != m_camera_tile_position.j)
+	{
+		m_camera_tile_position = new_camera_tile_position;
+
+		//We go through all the tiles and check if they are ok in the current state or they need update
+		constexpr int32_t range = static_cast<int32_t>(BoxCityTileManager::kLocalTileSize / 2);
+		for (int32_t i_offset = -range; i_offset < range; ++i_offset)
+		{
+			for (int32_t j_offset = -range; j_offset < range; ++j_offset)
+			{
+				//Calculate world tile
+				WorldTilePosition world_tile{ m_camera_tile_position.i + i_offset, m_camera_tile_position.j + j_offset };
+				
+				//Calculate local tile
+				LocalTilePosition local_tile = CalculateLocalTileIndex(world_tile);
+				Tile& tile = GetTile(local_tile);
+
+				//Check if the tile has the different world index
+				if (tile.tile_position.i != world_tile.i || tile.tile_position.j != world_tile.j || !tile.load)
+				{
+					//This tile is an old one
+					BuildTile(local_tile, world_tile);
+				}
+			}
+		}
+	}
 }
 
-void BoxCityTileManager::BuildTile(const size_t i_tile, const size_t j_tile, display::Device* device, render::System* render_system, render::GPUMemoryRenderModule* GPU_memory_render_module)
+BoxCityTileManager::Tile& BoxCityTileManager::GetTile(const LocalTilePosition& local_tile)
 {
-	std::mt19937 random(static_cast<uint32_t>(i_tile + j_tile * BoxCityTileManager::kLocalTileSize));
+	return m_tiles[local_tile.i + local_tile.j * kLocalTileSize];
+}
+
+void BoxCityTileManager::BuildTile(const LocalTilePosition& local_tile, const WorldTilePosition& world_tile)
+{
+	std::mt19937 random(static_cast<uint32_t>((world_tile.i + 100000) + (world_tile.j + 100000) * BoxCityTileManager::kLocalTileSize));
 
 	std::uniform_real_distribution<float> position_range(0, kTileSize);
-	std::uniform_real_distribution<float> position_range_z(kTileHeightTop, kTileHeightBottom);
+	std::uniform_real_distribution<float> position_range_z(kTileHeightBottom, kTileHeightTop);
 	std::uniform_real_distribution<float> angle_inc_range(-glm::half_pi<float>() * 0.2f, glm::half_pi<float>() * 0.2f);
 	std::uniform_real_distribution<float> angle_rotation_range(0.f, glm::two_pi<float>());
 	std::uniform_real_distribution<float> length_range(50.f, 150.f);
@@ -73,23 +107,18 @@ void BoxCityTileManager::BuildTile(const size_t i_tile, const size_t j_tile, dis
 	float static_range_box_city = 10.f;
 
 	//Tile positions
-	const float begin_tile_x = i_tile * kTileSize;
-	const float begin_tile_y = j_tile * kTileSize;
+	const float begin_tile_x = world_tile.i * kTileSize;
+	const float begin_tile_y = world_tile.j * kTileSize;
 
-	BoxCityTileManager::Tile& tile = GetTile(i_tile, j_tile);
+	BoxCityTileManager::Tile& tile = GetTile(local_tile);
 
 	tile.bounding_box.min = glm::vec3(begin_tile_x, begin_tile_y, kTileHeightTop);
 	tile.bounding_box.max = glm::vec3(begin_tile_x + kTileSize, begin_tile_y + kTileSize, kTileHeightBottom);
 
-	tile.zone_id = static_cast<uint16_t>(i_tile + j_tile * BoxCityTileManager::kLocalTileSize);
+	tile.zone_id = static_cast<uint16_t>(local_tile.i + local_tile.j * BoxCityTileManager::kLocalTileSize);
+	tile.load = true;
 
 	float high_range_cut = FLT_MIN;
-
-	if (i_tile > 4 || j_tile > 4)
-	{
-		//We only need the top ones
-		high_range_cut = 0.f;
-	}
 
 	//Create boxes
 	for (size_t i = 0; i < 150; ++i)
@@ -132,7 +161,8 @@ void BoxCityTileManager::BuildTile(const size_t i_tile, const size_t j_tile, dis
 		//First collision in the tile
 		bool collide = CollisionBoxVsTile(extended_aabb_box, extended_obb_box, tile.m_generated_boxes);
 
-
+		//TODO, add neightbour in the calculation like before
+		/*
 		size_t begin_i = (i_tile == 0) ? 0 : i_tile - 1;
 		size_t end_i = std::min(BoxCityTileManager::kLocalTileSize - 1, i_tile + 1);
 
@@ -150,7 +180,7 @@ void BoxCityTileManager::BuildTile(const size_t i_tile, const size_t j_tile, dis
 				}
 			}
 		}
-
+		*/
 		if (collide)
 		{
 			//Check another one
@@ -163,7 +193,7 @@ void BoxCityTileManager::BuildTile(const size_t i_tile, const size_t j_tile, dis
 		}
 
 		//Block can be build
-		BuildBlock(random, tile.zone_id, obb_box, aabb_box, dynamic_box, animated_box, device, render_system, GPU_memory_render_module);
+		BuildBlock(random, tile.zone_id, obb_box, aabb_box, dynamic_box, animated_box);
 
 		//Gow zone AABB by the bounding box
 		tile.bounding_box.min = glm::min(tile.bounding_box.min, extended_aabb_box.min);
@@ -172,7 +202,7 @@ void BoxCityTileManager::BuildTile(const size_t i_tile, const size_t j_tile, dis
 
 }
 
-void BoxCityTileManager::BuildBlock(std::mt19937& random, const uint16_t zone_id, const helpers::OBB& obb, helpers::AABB& aabb, const bool dynamic_box, const AnimationBox& animated_box, display::Device* device, render::System* render_system, render::GPUMemoryRenderModule* GPU_memory_render_module)
+void BoxCityTileManager::BuildBlock(std::mt19937& random, const uint16_t zone_id, const helpers::OBB& obb, helpers::AABB& aabb, const bool dynamic_box, const AnimationBox& animated_box)
 {
 	//Just a little smaller, so it has space for the panels
 	const float panel_depth = 5.0f;
@@ -195,7 +225,7 @@ void BoxCityTileManager::BuildBlock(std::mt19937& random, const uint16_t zone_id
 	gpu_box_instance.Fill(box_render);
 
 	//Allocate the GPU memory
-	render::AllocHandle gpu_memory = GPU_memory_render_module->AllocStaticGPUMemory(device, sizeof(GPUBoxInstance), &gpu_box_instance, render::GetGameFrameIndex(render_system));
+	render::AllocHandle gpu_memory = m_GPU_memory_render_module->AllocStaticGPUMemory(m_device, sizeof(GPUBoxInstance), &gpu_box_instance, render::GetGameFrameIndex(m_render_system));
 
 	ecs::InstanceReference box_reference;
 	if (!dynamic_box)
@@ -296,7 +326,7 @@ void BoxCityTileManager::BuildBlock(std::mt19937& random, const uint16_t zone_id
 			gpu_box_instance.Fill(box_render);
 
 			//Allocate the GPU memory
-			render::AllocHandle gpu_memory = GPU_memory_render_module->AllocStaticGPUMemory(device, sizeof(GPUBoxInstance), &gpu_box_instance, render::GetGameFrameIndex(render_system));
+			render::AllocHandle gpu_memory = m_GPU_memory_render_module->AllocStaticGPUMemory(m_device, sizeof(GPUBoxInstance), &gpu_box_instance, render::GetGameFrameIndex(m_render_system));
 
 			//Add
 			if (dynamic_box)

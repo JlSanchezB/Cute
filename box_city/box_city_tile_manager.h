@@ -14,6 +14,21 @@ namespace render
 struct BoxCityTileManager
 {
 public:
+	
+	//Represent a local tile position
+	struct LocalTilePosition
+	{
+		uint32_t i;
+		uint32_t j;
+	};
+
+	//Represents a world tile position
+	struct WorldTilePosition
+	{
+		int32_t i;
+		int32_t j;
+	};
+
 	struct BoxCollision
 	{
 		helpers::AABB aabb;
@@ -27,8 +42,7 @@ public:
 		uint16_t zone_id = kInvalidTile;
 
 		//World time index that represent
-		int32_t world_i;
-		int32_t world_j;
+		WorldTilePosition tile_position;
 
 		//Load?
 		bool load = false;
@@ -37,10 +51,13 @@ public:
 		std::vector<BoxCollision> m_generated_boxes;
 	};
 
+
+
 #ifndef _DEBUG
-	constexpr static size_t kLocalTileSize = 12;
+	//Needs to be odd number, as the camera is in the middle, when same tiles left and right
+	constexpr static size_t kLocalTileSize = 11;
 #else
-	constexpr static size_t kLocalTileSize = 2;
+	constexpr static size_t kLocalTileSize = 3;
 #endif
 
 	constexpr static float kTileSize = 500.f;
@@ -68,32 +85,52 @@ public:
 
 		for (auto& tile : m_tiles)
 		{
-			ret[tile.zone_id] = helpers::CollisionFrustumVsAABB(frustum, tile.bounding_box);
+			if (tile.load)
+			{
+				ret[tile.zone_id] = helpers::CollisionFrustumVsAABB(frustum, tile.bounding_box);
+			}
 		}
 
 		return ret;
 	}
 
 	//Get local tiles index from world tiles
-	std::pair<size_t, size_t> CalculateLocalTileIndex(const int32_t i, const int32_t j)
+	LocalTilePosition CalculateLocalTileIndex(const WorldTilePosition& world_tile_position)
 	{
 		//First we need to move them in the position range
 		//Then we do a modulo
 
-		return std::make_pair(static_cast<size_t>((j + kLocalTileSize * 10000))% kLocalTileSize, static_cast<size_t>((j + kLocalTileSize * 10000)) % kLocalTileSize);
+		return LocalTilePosition{ static_cast<uint32_t>((world_tile_position.i + kLocalTileSize * 10000)) % kLocalTileSize, static_cast<uint32_t>((world_tile_position.j + kLocalTileSize * 10000)) % kLocalTileSize };
 	}
 
-	//Builds the start tiles
-	void Build(display::Device* device, render::System* render_system, render::GPUMemoryRenderModule* GPU_memory_render_module);
+	//Get world tile position from a position
+	WorldTilePosition GetWorldTilePosition(const glm::vec3& position)
+	{
+		return WorldTilePosition{static_cast<int32_t>(position.x / kLocalTileSize), static_cast<int32_t>(position.y / kLocalTileSize) };
+	}
+
+	//Init
+	void Init(display::Device* device, render::System* render_system, render::GPUMemoryRenderModule* GPU_memory_render_module);
 
 	//Update, it will check if new tiles need to be created/move because the camera has moved
 	void Update(const glm::vec3& camera_position);
 
 private:
+	//System
+	display::Device* m_device = nullptr;
+	render::System* m_render_system = nullptr;
+	render::GPUMemoryRenderModule* m_GPU_memory_render_module = nullptr;
+
+	//Tiles
 	Tile m_tiles[kLocalTileSize * kLocalTileSize];
 
-	void BuildTile(const size_t i_tile, const size_t j_tile, display::Device* device, render::System* render_system, render::GPUMemoryRenderModule* GPU_memory_render_module);
-	void BuildBlock(std::mt19937& random, const uint16_t zone_id, const helpers::OBB& obb, helpers::AABB& aabb, const bool dynamic_box, const AnimationBox& animated_box, display::Device* device, render::System* render_system, render::GPUMemoryRenderModule* GPU_memory_render_module);
+	//Current camera tile position, center of our local tiles
+	WorldTilePosition m_camera_tile_position;
+	
+	Tile& GetTile(const LocalTilePosition& local_tile);
+	void BuildTile(const LocalTilePosition& local_tile, const WorldTilePosition& world_tile);
+	void BuildBlock(std::mt19937& random, const uint16_t zone_id, const helpers::OBB& obb, helpers::AABB& aabb, const bool dynamic_box, const AnimationBox& animated_box);
+	
 };
 
 #endif //BOX_CITY_TILE_MANAGER_H

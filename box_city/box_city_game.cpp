@@ -89,7 +89,7 @@ void BoxCityGame::OnInit()
 	database_desc.num_zones = m_tile_manager.GetNumTiles();
 	ecs::CreateDatabase<GameDatabase>(database_desc);
 
-	m_tile_manager.Build(m_device, m_render_system, m_GPU_memory_render_module);
+	m_tile_manager.Init(m_device, m_render_system, m_GPU_memory_render_module);
 }
 	
 void BoxCityGame::OnPrepareDestroy()
