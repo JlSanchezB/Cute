@@ -53,7 +53,7 @@ void BoxCityTileManager::Init(display::Device* device, render::System* render_sy
 void BoxCityTileManager::Update(const glm::vec3& camera_position)
 {
 	//Check if the camera is still in the same tile, TODO: with a fudge factor
-	WorldTilePosition new_camera_tile_position = GetWorldTilePosition(camera_position);
+	WorldTilePosition new_camera_tile_position = WorldTilePosition{ static_cast<int32_t>(camera_position.x / kTileSize), static_cast<int32_t>(camera_position.y / kTileSize) };
 
 	//If the camera has move of tile, destroy the tiles out of view and create the new ones
 	if (new_camera_tile_position.i != m_camera_tile_position.i || new_camera_tile_position.j != m_camera_tile_position.j)
@@ -61,7 +61,7 @@ void BoxCityTileManager::Update(const glm::vec3& camera_position)
 		m_camera_tile_position = new_camera_tile_position;
 
 		//We go through all the tiles and check if they are ok in the current state or they need update
-		constexpr int32_t range = static_cast<int32_t>(BoxCityTileManager::kLocalTileSize / 2);
+		constexpr int32_t range = static_cast<int32_t>(BoxCityTileManager::kLocalTileCount / 2);
 		for (int32_t i_offset = -range; i_offset < range; ++i_offset)
 		{
 			for (int32_t j_offset = -range; j_offset < range; ++j_offset)
@@ -76,7 +76,19 @@ void BoxCityTileManager::Update(const glm::vec3& camera_position)
 				//Check if the tile has the different world index
 				if (tile.tile_position.i != world_tile.i || tile.tile_position.j != world_tile.j || !tile.load)
 				{
-					//This tile is an old one
+					//Deallocate tile using the zoneID
+					std::bitset<kLocalTileCount* kLocalTileCount> zone_bitfield(false);
+					zone_bitfield[local_tile.i + local_tile.j * BoxCityTileManager::kLocalTileCount] = true;
+
+					ecs::Process<GameDatabase, BoxGPUHandle>([&](const auto& instance_iterator, BoxGPUHandle& gpu_handle)
+						{
+							//Dealloc the gpu handle
+							m_GPU_memory_render_module->DeallocStaticGPUMemory(m_device, gpu_handle.gpu_memory, render::GetGameFrameIndex(m_render_system));
+							//Dealloc instance
+							instance_iterator.Dealloc();
+						}, zone_bitfield);
+
+					//Create new time
 					BuildTile(local_tile, world_tile);
 				}
 			}
@@ -86,12 +98,12 @@ void BoxCityTileManager::Update(const glm::vec3& camera_position)
 
 BoxCityTileManager::Tile& BoxCityTileManager::GetTile(const LocalTilePosition& local_tile)
 {
-	return m_tiles[local_tile.i + local_tile.j * kLocalTileSize];
+	return m_tiles[local_tile.i + local_tile.j * kLocalTileCount];
 }
 
 void BoxCityTileManager::BuildTile(const LocalTilePosition& local_tile, const WorldTilePosition& world_tile)
 {
-	std::mt19937 random(static_cast<uint32_t>((world_tile.i + 100000) + (world_tile.j + 100000) * BoxCityTileManager::kLocalTileSize));
+	std::mt19937 random(static_cast<uint32_t>((100000 + world_tile.i) + (100000 + world_tile.j) * BoxCityTileManager::kLocalTileCount));
 
 	std::uniform_real_distribution<float> position_range(0, kTileSize);
 	std::uniform_real_distribution<float> position_range_z(kTileHeightBottom, kTileHeightTop);
@@ -115,8 +127,9 @@ void BoxCityTileManager::BuildTile(const LocalTilePosition& local_tile, const Wo
 	tile.bounding_box.min = glm::vec3(begin_tile_x, begin_tile_y, kTileHeightTop);
 	tile.bounding_box.max = glm::vec3(begin_tile_x + kTileSize, begin_tile_y + kTileSize, kTileHeightBottom);
 
-	tile.zone_id = static_cast<uint16_t>(local_tile.i + local_tile.j * BoxCityTileManager::kLocalTileSize);
+	tile.zone_id = static_cast<uint16_t>(local_tile.i + local_tile.j * BoxCityTileManager::kLocalTileCount);
 	tile.load = true;
+	tile.tile_position = world_tile;
 
 	float high_range_cut = FLT_MIN;
 
@@ -164,10 +177,10 @@ void BoxCityTileManager::BuildTile(const LocalTilePosition& local_tile, const Wo
 		//TODO, add neightbour in the calculation like before
 		/*
 		size_t begin_i = (i_tile == 0) ? 0 : i_tile - 1;
-		size_t end_i = std::min(BoxCityTileManager::kLocalTileSize - 1, i_tile + 1);
+		size_t end_i = std::min(BoxCityTileManager::kLocalTileCount - 1, i_tile + 1);
 
 		size_t begin_j = (j_tile == 0) ? 0 : j_tile - 1;
-		size_t end_j = std::min(BoxCityTileManager::kLocalTileSize - 1, j_tile + 1);
+		size_t end_j = std::min(BoxCityTileManager::kLocalTileCount - 1, j_tile + 1);
 
 		//Then neighbours
 		for (size_t ii = begin_i; (ii <= end_i) && !collide; ++ii)

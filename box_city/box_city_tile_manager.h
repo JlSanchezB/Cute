@@ -55,9 +55,9 @@ public:
 
 #ifndef _DEBUG
 	//Needs to be odd number, as the camera is in the middle, when same tiles left and right
-	constexpr static size_t kLocalTileSize = 11;
+	constexpr static size_t kLocalTileCount = 11;
 #else
-	constexpr static size_t kLocalTileSize = 3;
+	constexpr static size_t kLocalTileCount = 3;
 #endif
 
 	constexpr static float kTileSize = 500.f;
@@ -66,22 +66,22 @@ public:
 
 	Tile& GetTile(size_t i, size_t j)
 	{
-		return m_tiles[i + j * kLocalTileSize];
+		return m_tiles[i + j * kLocalTileCount];
 	}
 
 	constexpr static size_t GetNumTiles()
 	{
-		return kLocalTileSize * kLocalTileSize;
+		return kLocalTileCount * kLocalTileCount;
 	}
 
-	std::bitset<kLocalTileSize * kLocalTileSize> GetAllZoneBitSet() const
+	std::bitset<kLocalTileCount * kLocalTileCount> GetAllZoneBitSet() const
 	{
-		return std::bitset<kLocalTileSize * kLocalTileSize>(true);
+		return std::bitset<kLocalTileCount * kLocalTileCount>(true);
 	}
 
-	std::bitset<kLocalTileSize * kLocalTileSize> GetCameraBitSet(const helpers::Frustum& frustum) const
+	std::bitset<kLocalTileCount * kLocalTileCount> GetCameraBitSet(const helpers::Frustum& frustum) const
 	{
-		std::bitset<kLocalTileSize * kLocalTileSize> ret(false);
+		std::bitset<kLocalTileCount * kLocalTileCount> ret(false);
 
 		for (auto& tile : m_tiles)
 		{
@@ -100,13 +100,7 @@ public:
 		//First we need to move them in the position range
 		//Then we do a modulo
 
-		return LocalTilePosition{ static_cast<uint32_t>((world_tile_position.i + kLocalTileSize * 10000)) % kLocalTileSize, static_cast<uint32_t>((world_tile_position.j + kLocalTileSize * 10000)) % kLocalTileSize };
-	}
-
-	//Get world tile position from a position
-	WorldTilePosition GetWorldTilePosition(const glm::vec3& position)
-	{
-		return WorldTilePosition{static_cast<int32_t>(position.x / kLocalTileSize), static_cast<int32_t>(position.y / kLocalTileSize) };
+		return LocalTilePosition{ static_cast<uint32_t>((world_tile_position.i + kLocalTileCount * 10000)) % kLocalTileCount, static_cast<uint32_t>((world_tile_position.j + kLocalTileCount * 10000)) % kLocalTileCount };
 	}
 
 	//Init
@@ -122,7 +116,7 @@ private:
 	render::GPUMemoryRenderModule* m_GPU_memory_render_module = nullptr;
 
 	//Tiles
-	Tile m_tiles[kLocalTileSize * kLocalTileSize];
+	Tile m_tiles[kLocalTileCount * kLocalTileCount];
 
 	//Current camera tile position, center of our local tiles
 	WorldTilePosition m_camera_tile_position;

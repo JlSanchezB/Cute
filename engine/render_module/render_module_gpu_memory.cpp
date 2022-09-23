@@ -151,9 +151,9 @@ namespace render
 		return std::move(handle);
 	}
 
-	void GPUMemoryRenderModule::DeallocStaticGPUMemory(display::Device* device, AllocHandle&& handle, const uint64_t frame_index)
+	void GPUMemoryRenderModule::DeallocStaticGPUMemory(display::Device* device, AllocHandle& handle, const uint64_t frame_index)
 	{
-		m_static_gpu_memory_allocator.Dealloc(std::move(handle), frame_index);
+		m_static_gpu_memory_allocator.Dealloc(handle, frame_index);
 	}
 
 	void GPUMemoryRenderModule::UpdateStaticGPUMemory(display::Device* device, const AllocHandle& handle, const void* data, const size_t size, const uint64_t frame_index)

@@ -129,6 +129,9 @@ void BoxCityGame::OnTick(double total_time, float elapsed_time)
 	m_camera.UpdateAspectRatio(static_cast<float>(m_width) / static_cast<float>(m_height));
 	m_camera.Update(this, elapsed_time);
 
+	//Update tile manager
+	m_tile_manager.Update(m_camera.GetPosition());
+
 	job::Fence update_fence;
 
 	//Update all positions for testing the static gpu memory
@@ -206,8 +209,8 @@ void BoxCityGame::OnTick(double total_time, float elapsed_time)
 		[camera = &m_camera, point_of_view = &point_of_view, box_priority = m_box_render_priority, render_system = m_render_system, device = m_device, render_gpu_memory_module = m_GPU_memory_render_module]
 	(const auto& instance_iterator, const OBBBox& obb_box, const AABBBox& aabb_box, FlagBox& flags, const BoxGPUHandle& box_gpu_handle)
 		{
-			//Calculate if it is in the camera
-			if (helpers::CollisionFrustumVsAABB(*camera, aabb_box))
+			//Calculate if it is in the camera and has still a gpu memory handle
+			if (helpers::CollisionFrustumVsAABB(*camera, aabb_box) && box_gpu_handle.gpu_memory.IsValid())
 			{
 				//Update GPU if needed, only position
 				if (!flags.gpu_updated)

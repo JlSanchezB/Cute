@@ -97,7 +97,7 @@ namespace render
 		AllocHandle AllocStaticGPUMemory(display::Device* device, const size_t size, const void* data, const uint64_t frame_index);
 
 		//Deallocate static gpu memory
-		void DeallocStaticGPUMemory(display::Device* device, AllocHandle&& handle, const uint64_t frame_index);
+		void DeallocStaticGPUMemory(display::Device* device, AllocHandle& handle, const uint64_t frame_index);
 
 		//Update Static GPU memory
 		void UpdateStaticGPUMemory(display::Device* device, const AllocHandle& handle, const void* data, const size_t size, const uint64_t frame_index);

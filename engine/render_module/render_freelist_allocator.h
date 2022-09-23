@@ -56,7 +56,7 @@ namespace render
 		AllocHandle Alloc(size_t size);
 
 		//Deallocate memory with last frame used
-		void Dealloc(AllocHandle&& handle, uint64_t last_used_frame_index);
+		void Dealloc(AllocHandle& handle, uint64_t last_used_frame_index);
 
 		//Access to the handle data
 		FreeListAllocation& Get(const WeakAllocHandle& handle)
@@ -166,7 +166,7 @@ namespace render
 		throw std::runtime_error("No more free allocations in the free list render allocator");
 	}
 
-	inline void FreeListAllocator::Dealloc(AllocHandle&& handle, uint64_t last_used_frame_index)
+	inline void FreeListAllocator::Dealloc(AllocHandle& handle, uint64_t last_used_frame_index)
 	{
 		assert(handle.IsValid());
 
@@ -223,10 +223,14 @@ namespace render
 						//add it as a free block
 						m_free_blocks_pool.push_back(block);
 					}
+
+					//Free the handle
+					m_handle_pool.Free(handle);
 				}
 
 				//Mark this frame as completly free
 				frame.frame_index = 0;
+				frame.handles.clear();
 			}
 		}
 	}
