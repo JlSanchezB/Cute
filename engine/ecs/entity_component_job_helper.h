@@ -63,7 +63,7 @@ namespace ecs
 		FUNCTION&& kernel, JOB_DATA* job_data, BITSET&& zone_bitset, core::ProfileMarker* profile_token = nullptr)
 	{
 		//Calculate component mask
-		const EntityTypeMask component_mask = EntityType<std::remove_const<COMPONENTS>::type...>::template EntityTypeMask<DATABASE_DECLARATION>();
+		const EntityTypeMask component_mask = EntityType<std::remove_const<COMPONENTS>::template type...>::template EntityTypeMask<DATABASE_DECLARATION>();
 
 		const ZoneType num_zones = internal::GetNumZones(DATABASE_DECLARATION::s_database);
 
@@ -174,7 +174,7 @@ namespace ecs
 		FUNCTION&& kernel, BITSET&& zone_bitset, core::ProfileMarker* profile_token = nullptr)
 	{
 		//Calculate component mask
-		const EntityTypeMask component_mask = EntityType<std::remove_const<COMPONENTS>::type...>::template EntityTypeMask<DATABASE_DECLARATION>();
+		const EntityTypeMask component_mask = EntityType<std::remove_const<COMPONENTS>::template type...>::template EntityTypeMask<DATABASE_DECLARATION>();
 
 		const ZoneType num_zones = internal::GetNumZones(DATABASE_DECLARATION::s_database);
 

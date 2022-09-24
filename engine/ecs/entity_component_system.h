@@ -158,7 +158,7 @@ namespace ecs
 			return reinterpret_cast<COMPONENT*>(GetStorageComponent(DATABASE_DECLARATION::s_database,
 				zone_index,
 				entity_type,
-				DATABASE_DECLARATION::template ComponentIndex<std::remove_const<COMPONENT>::type>()));
+				DATABASE_DECLARATION::template ComponentIndex<std::remove_const<COMPONENT>::template type>()));
 		}
 
 		//Get num instances
@@ -323,7 +323,7 @@ namespace ecs
 	void Process(FUNCTION&& kernel, BITSET&& zone_bitset)
 	{
 		//Calculate component mask
-		const EntityTypeMask component_mask = EntityType<std::remove_const<COMPONENTS>::type...>::template EntityTypeMask<DATABASE_DECLARATION>();
+		const EntityTypeMask component_mask = EntityType<std::remove_const<COMPONENTS>::template type...>::template EntityTypeMask<DATABASE_DECLARATION>();
 		
 		const ZoneType num_zones = internal::GetNumZones(DATABASE_DECLARATION::s_database);
 
