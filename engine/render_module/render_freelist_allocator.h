@@ -16,7 +16,10 @@ namespace render
 	struct FreeListAllocation
 	{
 		size_t offset;
-		size_t size;
+		size_t size : 63;
+		bool free : 1;
+
+		core::WeakHandle<FreeListAllocation, uint32_t> parent;
 	};
 
 	using AllocHandle = core::Handle<FreeListAllocation, uint32_t>;
@@ -30,17 +33,22 @@ namespace render
 
 		virtual ~FreeListAllocator()
 		{
+			//Free all allocs in the free blocks
+			for (auto& free_alloc : m_free_blocks_pool)
+			{
+				m_handle_pool.Free(free_alloc);
+			}
 		}
 
 		void Init(size_t resource_size)
 		{
 			m_resource_size = resource_size;
 
-			//Add free block
-			m_free_blocks_pool.emplace_back(FreeListAllocation{ 0, m_resource_size });
-
 			//Init the handle pool
 			m_handle_pool.Init(1000000, 100);
+
+			//Add free block
+			m_free_blocks_pool.push_back(m_handle_pool.Alloc(FreeListAllocation{ 0, m_resource_size, true}));
 		}
 
 		//Freed live allocations will avaliable
@@ -77,7 +85,7 @@ namespace render
 		static constexpr size_t kMaxFrames = 8;
 
 		//List of free blocks
-		std::vector<FreeListAllocation> m_free_blocks_pool;
+		std::vector<AllocHandle> m_free_blocks_pool;
 
 		struct LiveDeallocation
 		{
@@ -129,35 +137,44 @@ namespace render
 
 		core::MutexGuard guard(m_access_mutex);
 
-		//Get a allocation for our free list
-		//Find first free block in the list
-		FreeListAllocation allocation;
-
 		for (size_t i = 0; i < m_free_blocks_pool.size(); ++i)
 		{
-			auto& free_block = m_free_blocks_pool[i];
+			auto& free_block = m_handle_pool[m_free_blocks_pool[i]];
 			if (free_block.size >= size)
 			{
-				//Found it
-				allocation.offset = free_block.offset;
-				allocation.size = size;
+				//Only free blocks can be called here
+				assert(free_block.free);
 
-				//Left the rest as free
+				//Check if it is the same size or not
 				if (free_block.size == size)
 				{
-					//We use all the free block, swap with the back and remove
-					free_block = m_free_blocks_pool.back();
+					//We just return this block, but we flag it as not free
+					free_block.free = false;
+					
+					//Removed it from the free blocks pool with swap erase
+					std::iter_swap(m_free_blocks_pool.begin() + i, m_free_blocks_pool.end() - 1);
+
+					//Return block and pop
+					AllocHandle ret = std::move(m_free_blocks_pool.back());
 					m_free_blocks_pool.pop_back();
+					return ret;
 				}
 				else
 				{
 					//Keep the free part of the block as free
 					free_block.offset += size;
 					free_block.size -= size;
-				}
 
-				//Alloc handle in pool 
-				return m_handle_pool.Alloc(allocation);
+					FreeListAllocation allocation;
+					//Create a new block
+					allocation.offset = free_block.offset;
+					allocation.size = size;
+					allocation.free = false;
+					//Remember the parent, it will be used during merging
+					allocation.parent = m_free_blocks_pool[i];
+
+					return m_handle_pool.Alloc(allocation);
+				}
 			}
 		}
 
@@ -195,37 +212,28 @@ namespace render
 				{
 					FreeListAllocation& block = m_handle_pool[handle];
 
-					//Look inside the free blocks for blocks that connects with this block
-					bool merge = false;
-					for (size_t i = 0; i < m_free_blocks_pool.size(); ++i)
+					//Set it as free
+					assert(!block.free);
+					block.free = true;
+
+					//Check if it can be merged with the parent instead to return to the free block list
+					if (block.parent.IsValid() && m_handle_pool[block.parent].free)
 					{
-						auto& free_block = m_free_blocks_pool[i];
+						//The parent is free, so it can be merged
+						FreeListAllocation& parent_block = m_handle_pool[block.parent];
 
-						if ((free_block.offset + free_block.size) == block.offset)
-						{
-							//Free block and block are continuos, merge
-							free_block.size += block.size;
-							merge = true;
-							break;
-						}
-						if ((block.offset + block.size) == block.offset)
-						{
-							//Block and free block are continuos, merge
-							free_block.offset = block.offset;
-							free_block.size += block.size;
-							merge = true;
-							break;
-						}
+						//Just add the memory to the parent
+						parent_block.size += block.size;
+
+						//Dealloc block
+						m_handle_pool.Free(handle);
 					}
-
-					if (!merge)
+					else
 					{
-						//add it as a free block
-						m_free_blocks_pool.push_back(block);
+						//Parent is not free, it can not be merged
+						//Move it to the free blocks
+						m_free_blocks_pool.emplace_back(std::move(handle));
 					}
-
-					//Free the handle
-					m_handle_pool.Free(handle);
 				}
 
 				//Mark this frame as completly free
