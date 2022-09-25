@@ -276,6 +276,13 @@ namespace ecs
 			return (DATABASE_DECLARATION::template ComponentMask<COMPONENT>() & internal::GetInstanceTypeMask(DATABASE_DECLARATION::s_database, m_entity_type)) != 0;
 		}
 
+		template<typename ENTITY_TYPE>
+		bool Is() const
+		{
+			return DATABASE_DECLARATION::template EntityTypeIndex<ENTITY_TYPE>() == m_entity_type;
+		}
+
+
 		void Dealloc() const
 		{
 			internal::DeallocInstance(DATABASE_DECLARATION::s_database, m_zone_index, m_entity_type, m_instance_index);

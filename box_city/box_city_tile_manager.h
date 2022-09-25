@@ -120,6 +120,10 @@ private:
 
 	//Current camera tile position, center of our local tiles
 	WorldTilePosition m_camera_tile_position;
+
+	//Needs more streaming to do
+	bool m_pending_streaming_work = false;
+
 	
 	Tile& GetTile(const LocalTilePosition& local_tile);
 	void BuildTile(const LocalTilePosition& local_tile, const WorldTilePosition& world_tile);

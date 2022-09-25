@@ -56,15 +56,18 @@ void BoxCityTileManager::Update(const glm::vec3& camera_position)
 	WorldTilePosition new_camera_tile_position = WorldTilePosition{ static_cast<int32_t>(camera_position.x / kTileSize), static_cast<int32_t>(camera_position.y / kTileSize) };
 
 	//If the camera has move of tile, destroy the tiles out of view and create the new ones
-	if (new_camera_tile_position.i != m_camera_tile_position.i || new_camera_tile_position.j != m_camera_tile_position.j)
+	if (new_camera_tile_position.i != m_camera_tile_position.i || new_camera_tile_position.j != m_camera_tile_position.j || m_pending_streaming_work)
 	{
 		m_camera_tile_position = new_camera_tile_position;
 
+		uint32_t num_tile_changed = 0;
+		const uint32_t max_tile_changed_per_frame = 1;
+
 		//We go through all the tiles and check if they are ok in the current state or they need update
 		constexpr int32_t range = static_cast<int32_t>(BoxCityTileManager::kLocalTileCount / 2);
-		for (int32_t i_offset = -range; i_offset < range; ++i_offset)
+		for (int32_t i_offset = -range; i_offset < range && num_tile_changed < max_tile_changed_per_frame; ++i_offset)
 		{
-			for (int32_t j_offset = -range; j_offset < range; ++j_offset)
+			for (int32_t j_offset = -range; j_offset < range && num_tile_changed < max_tile_changed_per_frame; ++j_offset)
 			{
 				//Calculate world tile
 				WorldTilePosition world_tile{ m_camera_tile_position.i + i_offset, m_camera_tile_position.j + j_offset };
@@ -74,7 +77,7 @@ void BoxCityTileManager::Update(const glm::vec3& camera_position)
 				Tile& tile = GetTile(local_tile);
 
 				//Check if the tile has the different world index
-				if (tile.tile_position.i != world_tile.i || tile.tile_position.j != world_tile.j || !tile.load)
+				if ((tile.tile_position.i != world_tile.i || tile.tile_position.j != world_tile.j) && tile.load)
 				{
 					//Deallocate tile using the zoneID
 					std::bitset<kLocalTileCount* kLocalTileCount> zone_bitfield(false);
@@ -86,12 +89,39 @@ void BoxCityTileManager::Update(const glm::vec3& camera_position)
 							m_GPU_memory_render_module->DeallocStaticGPUMemory(m_device, gpu_handle.gpu_memory, render::GetGameFrameIndex(m_render_system));
 							//Dealloc instance
 							instance_iterator.Dealloc();
+
+							if (instance_iterator.Is<BoxType>() || instance_iterator.Is<AnimatedBoxType>())
+							{
+								COUNTER_SUB(c_Blocks_Count);
+							}
+							else if (instance_iterator.Is<PanelType>() || instance_iterator.Is<AttachedPanelType>())
+							{
+								COUNTER_SUB(c_Panels_Count);
+							}
 						}, zone_bitfield);
 
+					tile.load = false;
+					num_tile_changed++;
+				}
+
+				if ((tile.tile_position.i != world_tile.i || tile.tile_position.j != world_tile.j) && !tile.load)
+				{
 					//Create new time
 					BuildTile(local_tile, world_tile);
+					num_tile_changed++;
 				}
 			}
+		}
+
+		if (num_tile_changed < max_tile_changed_per_frame)
+		{
+			//All done
+			m_pending_streaming_work = false;
+		}
+		else
+		{
+			//It needs to go back
+			m_pending_streaming_work = true;
 		}
 	}
 }
