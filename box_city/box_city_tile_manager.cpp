@@ -83,22 +83,31 @@ void BoxCityTileManager::Update(const glm::vec3& camera_position)
 					std::bitset<kLocalTileCount* kLocalTileCount> zone_bitfield(false);
 					zone_bitfield[local_tile.i + local_tile.j * BoxCityTileManager::kLocalTileCount] = true;
 
-					ecs::Process<GameDatabase, BoxGPUHandle>([&](const auto& instance_iterator, BoxGPUHandle& gpu_handle)
-						{
-							//Dealloc the gpu handle
-							m_GPU_memory_render_module->DeallocStaticGPUMemory(m_device, gpu_handle.gpu_memory, render::GetGameFrameIndex(m_render_system));
-							//Dealloc instance
-							instance_iterator.Dealloc();
+					//Dealloc blocks
+					for (auto& block_instance : tile.block_instances)
+					{
+						//Dealloc the gpu handle
+						m_GPU_memory_render_module->DeallocStaticGPUMemory(m_device, block_instance.Get<BoxGPUHandle>().gpu_memory, render::GetGameFrameIndex(m_render_system));
+						
+						//Dealloc instance
+						ecs::DeallocInstance<GameDatabase>(block_instance);
 
-							if (instance_iterator.Is<BoxType>() || instance_iterator.Is<AnimatedBoxType>())
-							{
-								COUNTER_SUB(c_Blocks_Count);
-							}
-							else if (instance_iterator.Is<PanelType>() || instance_iterator.Is<AttachedPanelType>())
-							{
-								COUNTER_SUB(c_Panels_Count);
-							}
-						}, zone_bitfield);
+						COUNTER_SUB(c_Blocks_Count);
+					}
+					tile.block_instances.clear();
+
+					//Dealloc panels
+					for (auto& panel_instance : tile.panel_instances)
+					{
+						//Dealloc the gpu handle
+						m_GPU_memory_render_module->DeallocStaticGPUMemory(m_device, panel_instance.Get<BoxGPUHandle>().gpu_memory, render::GetGameFrameIndex(m_render_system));
+
+						//Dealloc instance
+						ecs::DeallocInstance<GameDatabase>(panel_instance);
+
+						COUNTER_SUB(c_Panels_Count);
+					}
+					tile.panel_instances.clear();
 
 					tile.load = false;
 					num_tile_changed++;
@@ -236,7 +245,7 @@ void BoxCityTileManager::BuildTile(const LocalTilePosition& local_tile, const Wo
 		}
 
 		//Block can be build
-		BuildBlock(random, tile.zone_id, obb_box, aabb_box, dynamic_box, animated_box);
+		BuildBlock(random, tile, tile.zone_id, obb_box, aabb_box, dynamic_box, animated_box);
 
 		//Gow zone AABB by the bounding box
 		tile.bounding_box.min = glm::min(tile.bounding_box.min, extended_aabb_box.min);
@@ -245,7 +254,7 @@ void BoxCityTileManager::BuildTile(const LocalTilePosition& local_tile, const Wo
 
 }
 
-void BoxCityTileManager::BuildBlock(std::mt19937& random, const uint16_t zone_id, const helpers::OBB& obb, helpers::AABB& aabb, const bool dynamic_box, const AnimationBox& animated_box)
+void BoxCityTileManager::BuildBlock(std::mt19937& random, Tile& tile, const uint16_t zone_id, const helpers::OBB& obb, helpers::AABB& aabb, const bool dynamic_box, const AnimationBox& animated_box)
 {
 	//Just a little smaller, so it has space for the panels
 	const float panel_depth = 5.0f;
@@ -270,29 +279,29 @@ void BoxCityTileManager::BuildBlock(std::mt19937& random, const uint16_t zone_id
 	//Allocate the GPU memory
 	render::AllocHandle gpu_memory = m_GPU_memory_render_module->AllocStaticGPUMemory(m_device, sizeof(GPUBoxInstance), &gpu_box_instance, render::GetGameFrameIndex(m_render_system));
 
-	ecs::InstanceReference box_reference;
 	if (!dynamic_box)
 	{
 		//Just make it static
-		box_reference = ecs::AllocInstance<GameDatabase, BoxType>(zone_id)
+		tile.block_instances.push_back(ecs::AllocInstance<GameDatabase, BoxType>(zone_id)
 			.Init<OBBBox>(oob_box_component)
 			.Init<AABBBox>(aabb_box_component)
 			.Init<BoxRender>(box_render)
-			.Init<BoxGPUHandle>(BoxGPUHandle{ std::move(gpu_memory) });
+			.Init<BoxGPUHandle>(BoxGPUHandle{ std::move(gpu_memory) }));
 
 		COUNTER_INC(c_Blocks_Count);
 	}
 	else
 	{
-		box_reference = ecs::AllocInstance<GameDatabase, AnimatedBoxType>(zone_id)
+		tile.block_instances.push_back(ecs::AllocInstance<GameDatabase, AnimatedBoxType>(zone_id)
 			.Init<OBBBox>(oob_box_component)
 			.Init<AABBBox>(aabb_box_component)
 			.Init<BoxRender>(box_render)
 			.Init<AnimationBox>(animated_box)
-			.Init<BoxGPUHandle>(BoxGPUHandle{ std::move(gpu_memory) });
+			.Init<BoxGPUHandle>(BoxGPUHandle{ std::move(gpu_memory) }));
 
 		COUNTER_INC(c_Blocks_Count);
 	}
+	ecs::InstanceReference box_reference = tile.block_instances.back();
 
 	//Create panels in each side of the box
 
@@ -384,23 +393,23 @@ void BoxCityTileManager::BuildBlock(std::mt19937& random, const uint16_t zone_id
 				attachment.parent_to_child = glm::inverse(box_to_world) * panel_to_world;
 
 				//Add attached
-				ecs::AllocInstance<GameDatabase, AttachedPanelType>(zone_id)
+				tile.panel_instances.push_back(ecs::AllocInstance<GameDatabase, AttachedPanelType>(zone_id)
 					.Init<OBBBox>(panel_obb)
 					.Init<AABBBox>(panel_aabb)
 					.Init<BoxRender>(box_render)
 					.Init<Attachment>(attachment)
-					.Init<BoxGPUHandle>(BoxGPUHandle{ std::move(gpu_memory) });
+					.Init<BoxGPUHandle>(BoxGPUHandle{ std::move(gpu_memory) }));
 
 				COUNTER_INC(c_Panels_Count);
 			}
 			else
 			{
 				//Add without attachment
-				ecs::AllocInstance<GameDatabase, PanelType>(zone_id)
+				tile.panel_instances.push_back(ecs::AllocInstance<GameDatabase, PanelType>(zone_id)
 					.Init<OBBBox>(panel_obb)
 					.Init<AABBBox>(panel_aabb)
 					.Init<BoxRender>(box_render)
-					.Init<BoxGPUHandle>(BoxGPUHandle{ std::move(gpu_memory)});
+					.Init<BoxGPUHandle>(BoxGPUHandle{ std::move(gpu_memory)}));
 
 				COUNTER_INC(c_Panels_Count);
 			}

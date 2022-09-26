@@ -35,6 +35,9 @@ namespace ecs
 		template<typename DATABASE_DECLARATION, typename ENTITY_TYPE>
 		friend Instance<DATABASE_DECLARATION> AllocInstance(ZoneType zone_index);
 
+		template<typename DATABASE_DECLARATION>
+		friend void DeallocInstance(Instance<DATABASE_DECLARATION>& instance);
+
 		Instance(const InstanceIndirectionIndexType& indirection_index) : m_indirection_index(indirection_index)
 		{
 		}

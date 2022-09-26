@@ -49,6 +49,10 @@ public:
 
 		//Vector of all the bbox already in the tile
 		std::vector<BoxCollision> m_generated_boxes;
+
+		//Vector of the block instances
+		std::vector<Instance> block_instances;
+		std::vector<Instance> panel_instances;
 	};
 
 
@@ -127,7 +131,7 @@ private:
 	
 	Tile& GetTile(const LocalTilePosition& local_tile);
 	void BuildTile(const LocalTilePosition& local_tile, const WorldTilePosition& world_tile);
-	void BuildBlock(std::mt19937& random, const uint16_t zone_id, const helpers::OBB& obb, helpers::AABB& aabb, const bool dynamic_box, const AnimationBox& animated_box);
+	void BuildBlock(std::mt19937& random, Tile& tile, const uint16_t zone_id, const helpers::OBB& obb, helpers::AABB& aabb, const bool dynamic_box, const AnimationBox& animated_box);
 	
 };
 

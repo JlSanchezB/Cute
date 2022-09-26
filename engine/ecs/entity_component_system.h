@@ -217,7 +217,7 @@ namespace ecs
 	void DeallocInstance(Instance<DATABASE_DECLARATION>& instance)
 	{
 		internal::DeallocInstance(DATABASE_DECLARATION::s_database, instance.m_indirection_index);
-		instance.m_indirection_index = -1;
+		instance.m_indirection_index.index = static_cast<uint32_t>(- 1);
 	}
 
 	//Move instance
