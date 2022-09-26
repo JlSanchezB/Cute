@@ -65,9 +65,9 @@ void BoxCityTileManager::Update(const glm::vec3& camera_position)
 
 		//We go through all the tiles and check if they are ok in the current state or they need update
 		constexpr int32_t range = static_cast<int32_t>(BoxCityTileManager::kLocalTileCount / 2);
-		for (int32_t i_offset = -range; i_offset < range && num_tile_changed < max_tile_changed_per_frame; ++i_offset)
+		for (int32_t i_offset = -range; i_offset <= range && num_tile_changed < max_tile_changed_per_frame; ++i_offset)
 		{
-			for (int32_t j_offset = -range; j_offset < range && num_tile_changed < max_tile_changed_per_frame; ++j_offset)
+			for (int32_t j_offset = -range; j_offset <= range && num_tile_changed < max_tile_changed_per_frame; ++j_offset)
 			{
 				//Calculate world tile
 				WorldTilePosition world_tile{ m_camera_tile_position.i + i_offset, m_camera_tile_position.j + j_offset };
@@ -169,6 +169,7 @@ void BoxCityTileManager::BuildTile(const LocalTilePosition& local_tile, const Wo
 	tile.zone_id = static_cast<uint16_t>(local_tile.i + local_tile.j * BoxCityTileManager::kLocalTileCount);
 	tile.load = true;
 	tile.tile_position = world_tile;
+	tile.generated_boxes.clear();
 
 	float high_range_cut = FLT_MIN;
 
@@ -211,7 +212,7 @@ void BoxCityTileManager::BuildTile(const LocalTilePosition& local_tile, const Wo
 
 
 		//First collision in the tile
-		bool collide = CollisionBoxVsTile(extended_aabb_box, extended_obb_box, tile.m_generated_boxes);
+		bool collide = CollisionBoxVsTile(extended_aabb_box, extended_obb_box, tile.generated_boxes);
 
 		//TODO, add neightbour in the calculation like before
 		/*
@@ -228,7 +229,7 @@ void BoxCityTileManager::BuildTile(const LocalTilePosition& local_tile, const Wo
 			{
 				if (i_tile != ii || j_tile != jj)
 				{
-					collide = CollisionBoxVsTile(extended_aabb_box, extended_obb_box, GetTile(ii, jj).m_generated_boxes);
+					collide = CollisionBoxVsTile(extended_aabb_box, extended_obb_box, GetTile(ii, jj).generated_boxes);
 				}
 			}
 		}
@@ -241,7 +242,7 @@ void BoxCityTileManager::BuildTile(const LocalTilePosition& local_tile, const Wo
 		else
 		{
 			//Add this one in the current list
-			tile.m_generated_boxes.push_back({ extended_aabb_box, extended_obb_box });
+			tile.generated_boxes.push_back({ extended_aabb_box, extended_obb_box });
 		}
 
 		//Block can be build

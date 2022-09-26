@@ -48,7 +48,7 @@ public:
 		bool load = false;
 
 		//Vector of all the bbox already in the tile
-		std::vector<BoxCollision> m_generated_boxes;
+		std::vector<BoxCollision> generated_boxes;
 
 		//Vector of the block instances
 		std::vector<Instance> block_instances;
