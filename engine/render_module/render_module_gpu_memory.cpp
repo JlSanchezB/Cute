@@ -68,24 +68,19 @@ namespace render
 		{
 			//Compute pipeline, compile shader for testing
 			const char* shader_code =
-				"RWStructuredBuffer<uint4> destination_buffer : u0; \
-					 StructuredBuffer<uint4> source_buffer : t0; \
-					 uint4 parameters : b0; \
-					 \
-					[numthreads(64, 1, 1)]\
-					void copy_data(uint3 thread : SV_DispatchThreadID)\
-					{\
-						if (thread.x < parameters.y)\
-						{ \
-							uint2 copy_data;\
-							if ((thread.x % 2) == 0)\
-								copy_data = source_buffer[parameters.x + thread.x/2].xy;\
-							else\
-								copy_data = source_buffer[parameters.x + thread.x/2].zw; \
-							\
-							destination_buffer[copy_data.y] = source_buffer[copy_data.x];\
-						}\
-					};";
+				"RWByteAddressBuffer destination_buffer : u0; \
+				ByteAddressBuffer source_buffer : t0; \
+				uint4 parameters : b0; \
+				\
+				[numthreads(64, 1, 1)]\
+				void copy_data(uint3 thread : SV_DispatchThreadID)\
+				{\
+					if (thread.x < parameters.y)\
+					{ \
+						uint2 copy_command = source_buffer.Load2(parameters.x + thread.x * 2 * 4);\
+						destination_buffer.Store4(copy_command.y, source_buffer.Load4(copy_command.x));\
+					}\
+				};";
 
 			std::vector<char> compute_shader;
 
@@ -220,7 +215,9 @@ namespace render
 
 		if (copy_commands.size() > 0)
 		{
-			size_t last_command_processed = 0;
+			size_t begin_command = 0;
+
+			//We only can copy the max of a segment of the dynamic gpu memory
 			size_t max_float4_by_dispath = m_dynamic_gpu_memory_segment_size / (sizeof(uint32_t) * 2);
 
 			bool final_pass = true;
@@ -230,15 +227,16 @@ namespace render
 				size_t number_of_float4_copies = 0;
 
 				final_pass = true;
-				size_t new_last_command_processed = copy_commands.size();
-				for (size_t i = last_command_processed; i < new_last_command_processed; ++i)
+				size_t last_command = copy_commands.size();
+				for (size_t i = begin_command; i < last_command; ++i)
 				{
 					auto& copy_command = copy_commands[i];
+					assert(copy_command.size % 16 == 0);
 					if ((number_of_float4_copies + (copy_command.size / 16)) > max_float4_by_dispath)
 					{
 						//It can not process more
 						final_pass = false;
-						new_last_command_processed = i;
+						last_command = i;
 						break; //Out
 					}
 					number_of_float4_copies += (copy_command.size / 16);
@@ -249,7 +247,7 @@ namespace render
 				uint32_t* gpu_data = reinterpret_cast<uint32_t*>(reinterpret_cast<uint8_t*>(display::GetResourceMemoryBuffer(display_context->GetDevice(), m_dynamic_gpu_memory_buffer)) + offset);
 
 				//Send it to the GPU, move from bytes to int4
-				for (size_t i = last_command_processed; i < new_last_command_processed; ++i)
+				for (size_t i = begin_command; i < last_command; ++i)
 				{
 					auto& copy_command = copy_commands[i];
 
@@ -257,9 +255,9 @@ namespace render
 
 					for (uint32_t i = 0; i < count; ++i)
 					{
-						*gpu_data = i + (copy_command.source_offset / 16);
+						*gpu_data = copy_command.source_offset + i * 16;
 						gpu_data++;
-						*gpu_data = i + (copy_command.dest_offset / 16);
+						*gpu_data = copy_command.dest_offset + i * 16;
 						gpu_data++;
 					}
 				}
@@ -272,7 +270,7 @@ namespace render
 				//Set parameters
 				uint32_t parameters[2];
 				//Source offset
-				parameters[0] = static_cast<uint32_t>(offset / 16);
+				parameters[0] = static_cast<uint32_t>(offset);
 				//Number of copies
 				parameters[1] = static_cast<uint32_t>(number_of_float4_copies);
 
@@ -289,7 +287,7 @@ namespace render
 				desc.group_count_x = static_cast<uint32_t>(((number_of_float4_copies - 1) / 64) + 1);
 				display_context->ExecuteCompute(desc);
 
-				last_command_processed = new_last_command_processed;
+				begin_command = last_command;
 			}
 			while (!final_pass);
 		}
