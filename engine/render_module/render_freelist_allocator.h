@@ -11,19 +11,18 @@
 #include <vector>
 #include <utility>
 
+#define RENDER_FREELIST_VALIDATE
+
 namespace render
 {
-	struct FreeListAllocation
+	struct AllocateListAllocation
 	{
 		size_t offset;
-		size_t size : 63;
-		bool free : 1;
-
-		core::WeakHandle<FreeListAllocation, uint32_t> parent;
+		size_t size;
 	};
 
-	using AllocHandle = core::Handle<FreeListAllocation, uint32_t>;
-	using WeakAllocHandle = core::WeakHandle<FreeListAllocation, uint32_t>;
+	using AllocHandle = core::Handle<AllocateListAllocation, uint32_t>;
+	using WeakAllocHandle = core::WeakHandle<AllocateListAllocation, uint32_t>;
 
 	//Allocates memory inside a GPU resource and returns a handle
 	//Deferres deallocations when it is dellocated
@@ -33,11 +32,6 @@ namespace render
 
 		virtual ~FreeListAllocator()
 		{
-			//Free all allocs in the free blocks
-			for (auto& free_alloc : m_free_blocks_pool)
-			{
-				m_handle_pool.Free(free_alloc);
-			}
 		}
 
 		void Init(size_t resource_size)
@@ -48,7 +42,8 @@ namespace render
 			m_handle_pool.Init(1000000, 100);
 
 			//Add free block
-			m_free_blocks_pool.push_back(m_handle_pool.Alloc(FreeListAllocation{ 0, m_resource_size, true}));
+			m_first_free_block = 0;
+			m_free_block_pool.emplace_back(0, m_resource_size);
 		}
 
 		//Freed live allocations will avaliable
@@ -67,13 +62,13 @@ namespace render
 		void Dealloc(AllocHandle& handle, uint64_t last_used_frame_index);
 
 		//Access to the handle data
-		FreeListAllocation& Get(const WeakAllocHandle& handle)
+		AllocateListAllocation& Get(const WeakAllocHandle& handle)
 		{
 			return m_handle_pool[handle];
 		}
 
 		//Access to the handle data
-		const FreeListAllocation& Get(const WeakAllocHandle& handle) const
+		const AllocateListAllocation& Get(const WeakAllocHandle& handle) const
 		{
 			return m_handle_pool[handle];
 		}
@@ -83,9 +78,6 @@ namespace render
 		//An over approximation of max distance between CPU and GPU
 		//That is from the GAME thread to the GPU
 		static constexpr size_t kMaxFrames = 8;
-
-		//List of free blocks
-		std::vector<AllocHandle> m_free_blocks_pool;
 
 		struct LiveDeallocation
 		{
@@ -101,8 +93,28 @@ namespace render
 		//Resource size
 		size_t m_resource_size;
 
-		//Handle pool
+		//Handle pool of allocated blocks
 		core::HandlePool<AllocHandle> m_handle_pool;
+
+		static constexpr uint32_t kInvalidFreeBlock = static_cast<uint32_t>(-1);
+		struct FreeListFreeAllocation
+		{
+			size_t offset;
+			size_t size;
+
+			uint32_t prev = kInvalidFreeBlock;
+			uint32_t next = kInvalidFreeBlock;
+
+			FreeListFreeAllocation(size_t _offset, size_t _size) : offset(_offset), size(_size)
+			{
+			}
+		};
+
+		//Vector with all the free blocks
+		std::vector<FreeListFreeAllocation> m_free_block_pool;
+
+		//First free block
+		uint32_t m_first_free_block;
 
 		//Access mutex
 		core::Mutex m_access_mutex;
@@ -125,8 +137,143 @@ namespace render
 			}
 			return frame;
 		}
-	};
 
+		void CheckBlockForMerge(uint32_t new_free_index)
+		{
+			//Check if it can be merged with the previous or the next, or the two
+
+			bool prev_merge = false;
+			bool next_merge = false;
+
+			FreeListFreeAllocation& new_free_allocation = m_free_block_pool[new_free_index];
+
+			if (new_free_allocation.prev != kInvalidFreeBlock)
+			{
+				FreeListFreeAllocation& prev_free_allocation = m_free_block_pool[new_free_allocation.prev];
+
+				if (prev_free_allocation.offset + prev_free_allocation.size == new_free_allocation.offset)
+				{
+					//That can be merged
+					prev_merge = true;
+				}
+			}
+
+			if (new_free_allocation.next != kInvalidFreeBlock)
+			{
+				FreeListFreeAllocation& next_free_allocation = m_free_block_pool[new_free_allocation.next];
+
+				if (new_free_allocation.offset + new_free_allocation.size == next_free_allocation.offset)
+				{
+					//That can be merged
+					next_merge = true;
+				}
+			}
+
+			//We the previous, but merge all of them
+			if (prev_merge && next_merge)
+			{
+				//We can delete new and the next
+				uint32_t prev_index = new_free_allocation.prev;
+				uint32_t next_index = new_free_allocation.next;
+				FreeListFreeAllocation& prev_free_allocation = m_free_block_pool[prev_index];
+				FreeListFreeAllocation& next_free_allocation = m_free_block_pool[next_index];
+				
+				//Add the sizes
+				prev_free_allocation.size += new_free_allocation.size + next_free_allocation.size;
+
+				//Fix the linked list
+				prev_free_allocation.next = next_free_allocation.next;
+
+				if (next_free_allocation.next != kInvalidFreeBlock)
+				{
+					m_free_block_pool[next_free_allocation.next].prev = prev_index;
+				}
+				
+				//Deallocate new and next
+				std::iter_swap(m_free_block_pool.begin() + new_free_index, m_free_block_pool.end() - 1);
+				m_free_block_pool.pop_back();
+
+				std::iter_swap(m_free_block_pool.begin() + next_index, m_free_block_pool.end() - 1);
+				m_free_block_pool.pop_back();
+			}
+			else if (prev_merge)
+			{
+				//We delete new and merge it to the prev
+				uint32_t prev_index = new_free_allocation.prev;
+				FreeListFreeAllocation& prev_free_allocation = m_free_block_pool[prev_index];
+
+				//Add the sizes
+				prev_free_allocation.size += new_free_allocation.size;
+
+				//Fix the linked list
+				prev_free_allocation.next = new_free_allocation.next;
+
+				if (new_free_allocation.next != kInvalidFreeBlock)
+				{
+					m_free_block_pool[new_free_allocation.next].prev = prev_index;
+				}
+
+				//Deallocate new and next
+				std::iter_swap(m_free_block_pool.begin() + new_free_index, m_free_block_pool.end() - 1);
+				m_free_block_pool.pop_back();
+			}
+			else if (next_merge)
+			{
+				//We delete the next one and keep the new
+				uint32_t next_index = new_free_allocation.next;
+				FreeListFreeAllocation& next_free_allocation = m_free_block_pool[next_index];
+
+				//Add the sizes
+				new_free_allocation.size += next_free_allocation.size;
+
+				//Fix the linked list
+				new_free_allocation.next = next_free_allocation.next;
+
+				if (new_free_allocation.next != kInvalidFreeBlock)
+				{
+					m_free_block_pool[new_free_allocation.next].prev = new_free_index;
+				}
+
+				//We deallocate the next
+				std::iter_swap(m_free_block_pool.begin() + next_index, m_free_block_pool.end() - 1);
+				m_free_block_pool.pop_back();
+			}
+
+			//Nothing to merge
+		}
+#ifdef RENDER_FREELIST_VALIDATE
+		//Check for issues in the allocator
+		void Validate()
+		{
+			
+			//Test that all inside the free list is in order and is merged
+			uint32_t current_index = m_first_free_block;
+			while (current_index != kInvalidFreeBlock)
+			{
+				auto& current_block = m_free_block_pool[current_index];
+
+				if (current_block.prev != kInvalidFreeBlock)
+				{
+					//Is not merged and in order
+					auto& prev_block = m_free_block_pool[current_block.prev];
+
+					assert(prev_block.offset < current_block.offset); //Order
+					assert(prev_block.offset + prev_block.size < current_block.offset); //Not merged
+				}
+				if (current_block.next != kInvalidFreeBlock)
+				{
+					//Is not merged and in order
+					auto& next_block = m_free_block_pool[current_block.next];
+
+					assert(next_block.offset > current_block.offset); //Order
+					assert(current_block.offset + current_block.size < next_block.offset); //Not merged
+				}
+
+				current_index = current_block.next;
+			}
+		}
+	};
+#endif
 	inline AllocHandle FreeListAllocator::Alloc(size_t size)
 	{
 		assert(size > 0);
@@ -137,45 +284,55 @@ namespace render
 
 		core::MutexGuard guard(m_access_mutex);
 
-		for (size_t i = 0; i < m_free_blocks_pool.size(); ++i)
+		uint32_t free_index = m_first_free_block;
+
+		while (free_index != kInvalidFreeBlock)
 		{
-			auto& free_block = m_handle_pool[m_free_blocks_pool[i]];
+			auto& free_block = m_free_block_pool[free_index];
 			if (free_block.size >= size)
 			{
-				//Only free blocks can be called here
-				assert(free_block.free);
-
 				//Check if it is the same size or not
 				if (free_block.size == size)
 				{
-					//We just return this block, but we flag it as not free
-					free_block.free = false;
-					
-					//Removed it from the free blocks pool with swap erase
-					std::iter_swap(m_free_blocks_pool.begin() + i, m_free_blocks_pool.end() - 1);
+					//Remove handle from free blocks
+					//Fix linked list
+					if (free_block.prev != kInvalidFreeBlock)
+					{
+						m_free_block_pool[free_block.prev].next = free_block.next;
+					}
+					else
+					{
+						//Ok, this block was the first free, so now it is the next
+						m_first_free_block = free_block.next;
+					}
 
-					//Return block and pop
-					AllocHandle ret = std::move(m_free_blocks_pool.back());
-					m_free_blocks_pool.pop_back();
-					return ret;
+					if (free_block.next != kInvalidFreeBlock)
+					{
+						m_free_block_pool[free_block.next].prev = free_block.prev;
+					}
+
+					//Deallocate, swap and pop
+					std::iter_swap(m_free_block_pool.begin() + free_index, m_free_block_pool.end() - 1);
+					m_free_block_pool.pop_back();
+
+					//Create alloc handle
+					return m_handle_pool.Alloc(AllocateListAllocation{free_block.offset, free_block.size});
 				}
 				else
 				{
-					//Keep the free part of the block as free
+					AllocateListAllocation new_allocation;
+					new_allocation.offset = free_block.offset;
+					new_allocation.size = size;
+
+					//Split the free block, the back the free
 					free_block.offset += size;
 					free_block.size -= size;
 
-					FreeListAllocation allocation;
-					//Create a new block
-					allocation.offset = free_block.offset;
-					allocation.size = size;
-					allocation.free = false;
-					//Remember the parent, it will be used during merging
-					allocation.parent = m_free_blocks_pool[i];
-
-					return m_handle_pool.Alloc(allocation);
+					//We don't need to create or delete new block, as the blocks only handle the free handles
+					return m_handle_pool.Alloc(new_allocation);
 				}
 			}
+			free_index = free_block.next;
 		}
 
 		//It doesn't fit in the list
@@ -199,8 +356,6 @@ namespace render
 	{
 		core::MutexGuard guard(m_access_mutex);
 
-		//Check if the deallocations are not used in the gpu
-
 		//Free all allocations until freed_frame_index
 		for (size_t i = 0; i < kMaxFrames; ++i)
 		{
@@ -210,29 +365,36 @@ namespace render
 				//Add to the free list
 				for (auto&& handle : frame.handles)
 				{
-					FreeListAllocation& block = m_handle_pool[handle];
+					AllocateListAllocation& deallocated_block = m_handle_pool[handle];
 
-					//Set it as free
-					assert(!block.free);
-					block.free = true;
+					//All the free blocks are linked list in order in the memory, we need to keep that order
+					uint32_t reference_free_index = m_first_free_block;
 
-					//Check if it can be merged with the parent instead to return to the free block list
-					if (block.parent.IsValid() && m_handle_pool[block.parent].free)
+					while (reference_free_index != kInvalidFreeBlock)
 					{
-						//The parent is free, so it can be merged
-						FreeListAllocation& parent_block = m_handle_pool[block.parent];
+						if (m_free_block_pool[reference_free_index].offset > deallocated_block.offset)
+						{
+							//We need to add it just before the free_block
+							m_free_block_pool.emplace_back(deallocated_block.offset, deallocated_block.size);
+							uint32_t new_free_index = static_cast<uint32_t>(m_free_block_pool.size() - 1);
+							FreeListFreeAllocation& new_free_block = m_free_block_pool.back();
+							
+							auto& reference_free_block = m_free_block_pool[reference_free_index];
 
-						//Just add the memory to the parent
-						parent_block.size += block.size;
+							//Fix the linked list
+							new_free_block.next = reference_free_index;
+							new_free_block.prev = reference_free_block.prev;
+							reference_free_block.prev = new_free_index;
 
-						//Dealloc block
-						m_handle_pool.Free(handle);
-					}
-					else
-					{
-						//Parent is not free, it can not be merged
-						//Move it to the free blocks
-						m_free_blocks_pool.emplace_back(std::move(handle));
+							//Deallocate the handle
+							m_handle_pool.Free(handle);
+
+							CheckBlockForMerge(new_free_index);
+
+							break;
+						}
+
+						reference_free_index = m_free_block_pool[reference_free_index].next;
 					}
 				}
 
@@ -241,6 +403,10 @@ namespace render
 				frame.handles.clear();
 			}
 		}
+
+#ifdef RENDER_FREELIST_VALIDATE
+		Validate();
+#endif
 	}
 }
 #endif //RENDER_FREELIST_ALLOCATOR_H_

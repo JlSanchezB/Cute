@@ -166,7 +166,7 @@ namespace render
 		uint8_t* dynamic_memory_base = reinterpret_cast<uint8_t*>(display::GetResourceMemoryBuffer(device, m_dynamic_gpu_memory_buffer));
 
 		uint32_t source_offset = static_cast<uint32_t>(reinterpret_cast<uint8_t*>(gpu_memory) - dynamic_memory_base);
-		const FreeListAllocation& destination_allocation = m_static_gpu_memory_allocator.Get(handle);
+		const auto& destination_allocation = m_static_gpu_memory_allocator.Get(handle);
 
 		//Add copy command
 		AddCopyDataCommand(frame_index, source_offset, static_cast<uint32_t>(destination_allocation.offset), static_cast<uint32_t>(size));
@@ -180,7 +180,7 @@ namespace render
 
 	size_t GPUMemoryRenderModule::GetStaticGPUMemoryOffset(const AllocHandle& handle) const
 	{
-		const FreeListAllocation& allocation = m_static_gpu_memory_allocator.Get(handle);
+		const auto& allocation = m_static_gpu_memory_allocator.Get(handle);
 		
 		return allocation.offset;
 	}
