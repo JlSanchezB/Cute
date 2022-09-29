@@ -119,8 +119,22 @@ private:
 	render::System* m_render_system = nullptr;
 	render::GPUMemoryRenderModule* m_GPU_memory_render_module = nullptr;
 
+	struct TileDescriptor
+	{
+		bool loaded; //tiles outside the radius will get unloaded
+		uint32_t lod; //lod index of this tile, it depends of the center distance
+		int32_t i_offset; //offset from the center
+		int32_t j_offset; //offset from the center
+		uint32_t index; //index in the kLocalTileCount * kLocalTileCount vector
+		float normalized_distance;
+		float distance;
+	};
+
+	//The tile descriptors are sorted from center
+	std::vector<TileDescriptor> m_tile_descriptors;
+
 	//Tiles
-	Tile m_tiles[kLocalTileCount * kLocalTileCount];
+	std::array<Tile,kLocalTileCount * kLocalTileCount> m_tiles;
 
 	//Current camera tile position, center of our local tiles
 	WorldTilePosition m_camera_tile_position;
@@ -128,6 +142,7 @@ private:
 	//Needs more streaming to do
 	bool m_pending_streaming_work = false;
 
+	void GenerateTileDescriptors();
 	
 	Tile& GetTile(const LocalTilePosition& local_tile);
 	void BuildTile(const LocalTilePosition& local_tile, const WorldTilePosition& world_tile);

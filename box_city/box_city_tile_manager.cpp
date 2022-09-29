@@ -46,6 +46,9 @@ void BoxCityTileManager::Init(display::Device* device, render::System* render_sy
 	m_camera_tile_position.i = std::numeric_limits<int32_t>::max();
 	m_camera_tile_position.j = std::numeric_limits<int32_t>::max();
 
+	//Build tile descriptors
+	GenerateTileDescriptors();
+
 	//Simulate one frame in the center, it has to create all tiles around origin
 	Update(glm::vec3(0.f, 0.f, 0.f));
 }
@@ -64,61 +67,54 @@ void BoxCityTileManager::Update(const glm::vec3& camera_position)
 		const uint32_t max_tile_changed_per_frame = 1;
 
 		//We go through all the tiles and check if they are ok in the current state or they need update
-		constexpr int32_t range = static_cast<int32_t>(BoxCityTileManager::kLocalTileCount / 2);
-		for (int32_t i_offset = -range; i_offset <= range && num_tile_changed < max_tile_changed_per_frame; ++i_offset)
+		//The tile descriptors are in order from the center
+		for (auto& tile_descriptor : m_tile_descriptors)
 		{
-			for (int32_t j_offset = -range; j_offset <= range && num_tile_changed < max_tile_changed_per_frame; ++j_offset)
-			{
-				//Calculate world tile
-				WorldTilePosition world_tile{ m_camera_tile_position.i + i_offset, m_camera_tile_position.j + j_offset };
+			//Calculate world tile
+			WorldTilePosition world_tile{ m_camera_tile_position.i + tile_descriptor.i_offset, m_camera_tile_position.j + tile_descriptor.j_offset};
 				
-				//Calculate local tile
-				LocalTilePosition local_tile = CalculateLocalTileIndex(world_tile);
-				Tile& tile = GetTile(local_tile);
+			//Calculate local tile
+			LocalTilePosition local_tile = CalculateLocalTileIndex(world_tile);
+			Tile& tile = GetTile(local_tile);
 
-				//Check if the tile has the different world index
-				if ((tile.tile_position.i != world_tile.i || tile.tile_position.j != world_tile.j) && tile.load)
+			//Check if the tile has the different world index
+			if ((tile.tile_position.i != world_tile.i || tile.tile_position.j != world_tile.j) && tile.load || !tile_descriptor.loaded && tile.load)
+			{
+				//Dealloc blocks
+				for (auto& block_instance : tile.block_instances)
 				{
-					//Deallocate tile using the zoneID
-					std::bitset<kLocalTileCount* kLocalTileCount> zone_bitfield(false);
-					zone_bitfield[local_tile.i + local_tile.j * BoxCityTileManager::kLocalTileCount] = true;
-
-					//Dealloc blocks
-					for (auto& block_instance : tile.block_instances)
-					{
-						//Dealloc the gpu handle
-						m_GPU_memory_render_module->DeallocStaticGPUMemory(m_device, block_instance.Get<BoxGPUHandle>().gpu_memory, render::GetGameFrameIndex(m_render_system));
+					//Dealloc the gpu handle
+					m_GPU_memory_render_module->DeallocStaticGPUMemory(m_device, block_instance.Get<BoxGPUHandle>().gpu_memory, render::GetGameFrameIndex(m_render_system));
 						
-						//Dealloc instance
-						ecs::DeallocInstance<GameDatabase>(block_instance);
+					//Dealloc instance
+					ecs::DeallocInstance<GameDatabase>(block_instance);
 
-						COUNTER_SUB(c_Blocks_Count);
-					}
-					tile.block_instances.clear();
-
-					//Dealloc panels
-					for (auto& panel_instance : tile.panel_instances)
-					{
-						//Dealloc the gpu handle
-						m_GPU_memory_render_module->DeallocStaticGPUMemory(m_device, panel_instance.Get<BoxGPUHandle>().gpu_memory, render::GetGameFrameIndex(m_render_system));
-
-						//Dealloc instance
-						ecs::DeallocInstance<GameDatabase>(panel_instance);
-
-						COUNTER_SUB(c_Panels_Count);
-					}
-					tile.panel_instances.clear();
-
-					tile.load = false;
-					num_tile_changed++;
+					COUNTER_SUB(c_Blocks_Count);
 				}
+				tile.block_instances.clear();
 
-				if ((tile.tile_position.i != world_tile.i || tile.tile_position.j != world_tile.j) && !tile.load)
+				//Dealloc panels
+				for (auto& panel_instance : tile.panel_instances)
 				{
-					//Create new time
-					BuildTile(local_tile, world_tile);
-					num_tile_changed++;
+					//Dealloc the gpu handle
+					m_GPU_memory_render_module->DeallocStaticGPUMemory(m_device, panel_instance.Get<BoxGPUHandle>().gpu_memory, render::GetGameFrameIndex(m_render_system));
+
+					//Dealloc instance
+					ecs::DeallocInstance<GameDatabase>(panel_instance);
+
+					COUNTER_SUB(c_Panels_Count);
 				}
+				tile.panel_instances.clear();
+
+				tile.load = false;
+				num_tile_changed++;
+			}
+
+			if ((tile.tile_position.i != world_tile.i || tile.tile_position.j != world_tile.j) && !tile.load || !tile.load && tile_descriptor.loaded)
+			{
+				//Create new time
+				BuildTile(local_tile, world_tile);
+				num_tile_changed++;
 			}
 		}
 
@@ -133,6 +129,66 @@ void BoxCityTileManager::Update(const glm::vec3& camera_position)
 			m_pending_streaming_work = true;
 		}
 	}
+}
+
+void BoxCityTileManager::GenerateTileDescriptors()
+{
+	//We create all the tile descriptors
+	constexpr int32_t range = static_cast<int32_t>(BoxCityTileManager::kLocalTileCount / 2);
+	for (int32_t i_offset = -range; i_offset <= range; ++i_offset)
+	{
+		for (int32_t j_offset = -range; j_offset <= range; ++j_offset)
+		{
+			TileDescriptor tile_descriptor;
+			tile_descriptor.i_offset = i_offset;
+			tile_descriptor.j_offset = j_offset;
+
+			//Calculate the distance to the center
+			tile_descriptor.distance = sqrtf(static_cast<float>(i_offset) * static_cast<float>(i_offset) + static_cast<float>(j_offset) * static_cast<float>(j_offset));
+
+			//Calculate normal distance
+			tile_descriptor.normalized_distance = tile_descriptor.distance / static_cast<float>(range);
+
+			//You want a tile only inside the radius
+			if (tile_descriptor.normalized_distance <= 1.f)
+			{
+				tile_descriptor.loaded = true;
+				//Calculate LODs
+				if (tile_descriptor.normalized_distance < 0.5f)
+				{
+					//0.0 to 0.5 is max lod, lod 0
+					tile_descriptor.lod = 0;
+				}
+				else if (tile_descriptor.normalized_distance < 0.75f)
+				{
+					//0.5 to 0.75 is lod 1
+					tile_descriptor.lod = 1;
+				}
+				else
+				{
+					//0.75 to 1.0 is lod 2
+					tile_descriptor.lod = 2;
+				}
+			}
+			else
+			{
+				//Non loaded
+				tile_descriptor.loaded = false;
+				tile_descriptor.lod = 0;
+			}
+
+			tile_descriptor.index = static_cast<uint32_t>(m_tile_descriptors.size());
+
+			//This is a valid descriptor tile
+			m_tile_descriptors.push_back(tile_descriptor);
+		}
+	}
+
+	//Sort tiles from center to far
+	std::sort(m_tile_descriptors.begin(), m_tile_descriptors.end(), [](const TileDescriptor& a, const TileDescriptor& b)
+		{
+			return a.normalized_distance < b.normalized_distance;
+		});
 }
 
 BoxCityTileManager::Tile& BoxCityTileManager::GetTile(const LocalTilePosition& local_tile)
