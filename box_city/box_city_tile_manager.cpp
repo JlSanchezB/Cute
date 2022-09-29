@@ -56,7 +56,7 @@ void BoxCityTileManager::Init(display::Device* device, render::System* render_sy
 void BoxCityTileManager::Update(const glm::vec3& camera_position)
 {
 	//Check if the camera is still in the same tile, TODO: with a fudge factor
-	WorldTilePosition new_camera_tile_position = WorldTilePosition{ static_cast<int32_t>(camera_position.x / kTileSize), static_cast<int32_t>(camera_position.y / kTileSize) };
+	WorldTilePosition new_camera_tile_position = WorldTilePosition{ static_cast<int32_t>(-0.5f + (camera_position.x / kTileSize)), static_cast<int32_t>(-0.5f + (camera_position.y / kTileSize)) };
 
 	//If the camera has move of tile, destroy the tiles out of view and create the new ones
 	if (new_camera_tile_position.i != m_camera_tile_position.i || new_camera_tile_position.j != m_camera_tile_position.j || m_pending_streaming_work)
@@ -150,7 +150,7 @@ void BoxCityTileManager::GenerateTileDescriptors()
 			tile_descriptor.normalized_distance = tile_descriptor.distance / static_cast<float>(range);
 
 			//You want a tile only inside the radius
-			if (tile_descriptor.normalized_distance <= 1.f)
+			if (tile_descriptor.normalized_distance <= 1.2f)
 			{
 				tile_descriptor.loaded = true;
 				//Calculate LODs

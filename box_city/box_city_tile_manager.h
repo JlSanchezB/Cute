@@ -59,9 +59,9 @@ public:
 
 #ifndef _DEBUG
 	//Needs to be odd number, as the camera is in the middle, when same tiles left and right
-	constexpr static size_t kLocalTileCount = 11;
+	constexpr static uint32_t kLocalTileCount = 11;
 #else
-	constexpr static size_t kLocalTileCount = 3;
+	constexpr static uint32_t kLocalTileCount = 3;
 #endif
 
 	constexpr static float kTileSize = 500.f;
