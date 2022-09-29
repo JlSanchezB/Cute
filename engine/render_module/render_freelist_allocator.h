@@ -369,14 +369,14 @@ namespace render
 
 					//All the free blocks are linked list in order in the memory, we need to keep that order
 					uint32_t reference_free_index = m_first_free_block;
-
+					uint32_t prev_reference_free_index = kInvalidFreeBlock;
 					while (reference_free_index != kInvalidFreeBlock)
 					{
 						if (m_free_block_pool[reference_free_index].offset > deallocated_block.offset)
 						{
 							break;
 						}
-
+						prev_reference_free_index = reference_free_index;
 						reference_free_index = m_free_block_pool[reference_free_index].next;
 					}
 
@@ -393,10 +393,23 @@ namespace render
 						new_free_block.next = reference_free_index;
 						new_free_block.prev = reference_free_block.prev;
 						reference_free_block.prev = new_free_index;
+
+						if (m_first_free_block == reference_free_index)
+						{
+							//You are the new first
+							m_first_free_block = new_free_index;
+						}
 					}
 					else
 					{
-						//It is the last one
+						//It is the last one, the last has to be in prev_reference_free_index
+						assert(prev_reference_free_index != kInvalidFreeBlock);
+
+						//Add the new node after the end of the list
+						auto& prev_reference_free_block = m_free_block_pool[prev_reference_free_index];
+						prev_reference_free_block.next = new_free_index;
+						new_free_block.next = kInvalidFreeBlock;
+						new_free_block.prev = prev_reference_free_index;
 					}
 
 					//Deallocate the handle
