@@ -205,7 +205,7 @@ void BoxCityTileManager::BuildTile(const LocalTilePosition& local_tile, const Wo
 	std::uniform_real_distribution<float> angle_inc_range(-glm::half_pi<float>() * 0.2f, glm::half_pi<float>() * 0.2f);
 	std::uniform_real_distribution<float> angle_rotation_range(0.f, glm::two_pi<float>());
 	std::uniform_real_distribution<float> length_range(50.f, 150.f);
-	std::uniform_real_distribution<float> size_range(20.0f, 40.0f);
+	std::uniform_real_distribution<float> size_range(20.0f, 30.0f);
 
 	std::uniform_real_distribution<float> range_animation_range(0.f, 50.f);
 	std::uniform_real_distribution<float> frecuency_animation_range(0.3f, 1.f);
@@ -230,7 +230,7 @@ void BoxCityTileManager::BuildTile(const LocalTilePosition& local_tile, const Wo
 	float high_range_cut = FLT_MIN;
 
 	//Create boxes
-	for (size_t i = 0; i < 150; ++i)
+	for (size_t i = 0; i < 350; ++i)
 	{
 		helpers::OBB obb_box;
 		float size = size_range(random);
@@ -254,8 +254,8 @@ void BoxCityTileManager::BuildTile(const LocalTilePosition& local_tile, const Wo
 		}
 
 		//Cut bottom boxes
-		if (obb_box.position.z < high_range_cut)
-			continue;
+		//if (obb_box.position.z < high_range_cut)
+		//	continue;
 
 		//Check if it is colliding with another one
 		helpers::OBB extended_obb_box = obb_box;
@@ -266,30 +266,31 @@ void BoxCityTileManager::BuildTile(const LocalTilePosition& local_tile, const Wo
 		helpers::AABB extended_aabb_box;
 		helpers::CalculateAABBFromOBB(extended_aabb_box, extended_obb_box);
 
-
 		//First collision in the tile
 		bool collide = CollisionBoxVsTile(extended_aabb_box, extended_obb_box, tile.generated_boxes);
 
-		//TODO, add neightbour in the calculation like before
-		/*
-		size_t begin_i = (i_tile == 0) ? 0 : i_tile - 1;
-		size_t end_i = std::min(BoxCityTileManager::kLocalTileCount - 1, i_tile + 1);
+		
+		//Neigbour calculation, is not perfect as it depends of the loading pattern...
+		size_t begin_i = (local_tile.i == 0) ? 0 : local_tile.i - 1;
+		size_t end_i = std::min(BoxCityTileManager::kLocalTileCount - 1, local_tile.i + 1);
 
-		size_t begin_j = (j_tile == 0) ? 0 : j_tile - 1;
-		size_t end_j = std::min(BoxCityTileManager::kLocalTileCount - 1, j_tile + 1);
+		size_t begin_j = (local_tile.j == 0) ? 0 : local_tile.j - 1;
+		size_t end_j = std::min(BoxCityTileManager::kLocalTileCount - 1, local_tile.j + 1);
 
 		//Then neighbours
 		for (size_t ii = begin_i; (ii <= end_i) && !collide; ++ii)
 		{
 			for (size_t jj = begin_j; (jj <= end_j) && !collide; ++jj)
 			{
-				if (i_tile != ii || j_tile != jj)
+				if (local_tile.i != ii || local_tile.i != jj)
 				{
-					collide = CollisionBoxVsTile(extended_aabb_box, extended_obb_box, GetTile(ii, jj).generated_boxes);
+					if (GetTile(ii, jj).load)
+					{
+						collide = CollisionBoxVsTile(extended_aabb_box, extended_obb_box, GetTile(ii, jj).generated_boxes);
+					}
 				}
 			}
 		}
-		*/
 		if (collide)
 		{
 			//Check another one
@@ -299,6 +300,12 @@ void BoxCityTileManager::BuildTile(const LocalTilePosition& local_tile, const Wo
 		{
 			//Add this one in the current list
 			tile.generated_boxes.push_back({ extended_aabb_box, extended_obb_box });
+
+			//Expand the bbox of the time if needed
+			tile.bounding_box.max.x = std::max(tile.bounding_box.max.x, extended_aabb_box.max.x);
+			tile.bounding_box.max.y = std::max(tile.bounding_box.max.y, extended_aabb_box.max.y);
+			tile.bounding_box.min.x = std::min(tile.bounding_box.min.x, extended_aabb_box.min.x);
+			tile.bounding_box.min.y = std::min(tile.bounding_box.min.y, extended_aabb_box.min.y);
 		}
 
 		//Block can be build

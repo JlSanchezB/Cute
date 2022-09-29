@@ -64,9 +64,9 @@ public:
 	constexpr static uint32_t kLocalTileCount = 3;
 #endif
 
-	constexpr static float kTileSize = 500.f;
+	constexpr static float kTileSize = 1000.f;
 	constexpr static float kTileHeightTop = 250.f;
-	constexpr static float kTileHeightBottom = -650.f;
+	constexpr static float kTileHeightBottom = -250.f;
 
 	Tile& GetTile(size_t i, size_t j)
 	{

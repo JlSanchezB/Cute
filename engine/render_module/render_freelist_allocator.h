@@ -374,28 +374,35 @@ namespace render
 					{
 						if (m_free_block_pool[reference_free_index].offset > deallocated_block.offset)
 						{
-							//We need to add it just before the free_block
-							m_free_block_pool.emplace_back(deallocated_block.offset, deallocated_block.size);
-							uint32_t new_free_index = static_cast<uint32_t>(m_free_block_pool.size() - 1);
-							FreeListFreeAllocation& new_free_block = m_free_block_pool.back();
-							
-							auto& reference_free_block = m_free_block_pool[reference_free_index];
-
-							//Fix the linked list
-							new_free_block.next = reference_free_index;
-							new_free_block.prev = reference_free_block.prev;
-							reference_free_block.prev = new_free_index;
-
-							//Deallocate the handle
-							m_handle_pool.Free(handle);
-
-							CheckBlockForMerge(new_free_index);
-
 							break;
 						}
 
 						reference_free_index = m_free_block_pool[reference_free_index].next;
 					}
+
+					//We need to add it just before the free_block
+					m_free_block_pool.emplace_back(deallocated_block.offset, deallocated_block.size);
+					uint32_t new_free_index = static_cast<uint32_t>(m_free_block_pool.size() - 1);
+					FreeListFreeAllocation& new_free_block = m_free_block_pool.back();
+
+					if (reference_free_index != kInvalidFreeBlock)
+					{
+						auto& reference_free_block = m_free_block_pool[reference_free_index];
+
+						//Fix the linked list
+						new_free_block.next = reference_free_index;
+						new_free_block.prev = reference_free_block.prev;
+						reference_free_block.prev = new_free_index;
+					}
+					else
+					{
+						//It is the last one
+					}
+
+					//Deallocate the handle
+					m_handle_pool.Free(handle);
+
+					CheckBlockForMerge(new_free_index);
 				}
 
 				//Mark this frame as completly free

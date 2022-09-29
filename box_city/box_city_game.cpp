@@ -226,7 +226,7 @@ void BoxCityGame::OnTick(double total_time, float elapsed_time)
 				//Calculate sort key, sort key is 24 bits
 				float camera_distance = glm::length(obb_box.position - camera->GetPosition());
 				float camera_distance_01 = glm::clamp(camera_distance, 0.f, camera->GetFarPlane()) / camera->GetFarPlane();
-				uint32_t sort_key = static_cast<uint32_t>(camera_distance_01 * (1 << 24));
+				uint32_t sort_key = static_cast<uint32_t>(camera_distance_01 * ((1 << 24) - 1));
 
 				//Add this point of view
 				point_of_view->PushRenderItem(box_priority, static_cast<render::SortKey>(sort_key), static_cast<uint32_t>(render_gpu_memory_module->GetStaticGPUMemoryOffset(box_gpu_handle.gpu_memory)));
