@@ -10,14 +10,18 @@ COUNTER(c_Panels_Count, "Box City", "Number of Panels", false);
 
 namespace
 {
-	bool CollisionBoxVsTile(const helpers::AABB& aabb_box, const helpers::OBB& obb_box, const std::vector<BoxCityTileManager::BoxCollision>& generated_boxes)
+	bool CollisionBoxVsTile(const helpers::AABB& aabb_box, const helpers::OBB& obb_box, const BoxCityTileManager::Tile& tile)
 	{
-		for (auto& current : generated_boxes)
+		//First, check the bbox of the level
+		if (helpers::CollisionAABBVsAABB(aabb_box, tile.bounding_box))
 		{
-			//Collide
-			if (helpers::CollisionAABBVsAABB(current.aabb, aabb_box) && helpers::CollisionOBBVsOBB(current.obb, obb_box))
+			for (auto& current : tile.generated_boxes)
 			{
-				return true;
+				//Collide
+				if (helpers::CollisionAABBVsAABB(current.aabb, aabb_box) && helpers::CollisionOBBVsOBB(current.obb, obb_box))
+				{
+					return true;
+				}
 			}
 		}
 		return false;
@@ -108,13 +112,18 @@ void BoxCityTileManager::Update(const glm::vec3& camera_position)
 
 				tile.load = false;
 				num_tile_changed++;
+
+				core::LogInfo("Tile Local<%i,%i>, World<%i,%i> unloaded", local_tile.i, local_tile.j, world_tile.i, world_tile.j);
 			}
 
-			if ((tile.tile_position.i != world_tile.i || tile.tile_position.j != world_tile.j) && !tile.load || !tile.load && tile_descriptor.loaded)
+			//If tile is unloaded but it needs to be loaded
+			if (!tile.load && tile_descriptor.loaded && num_tile_changed < max_tile_changed_per_frame)
 			{
 				//Create new time
 				BuildTile(local_tile, world_tile);
 				num_tile_changed++;
+
+				core::LogInfo("Tile Local<%i,%i>, World<%i,%i> loaded", local_tile.i, local_tile.j, world_tile.i, world_tile.j);
 			}
 		}
 
@@ -267,26 +276,24 @@ void BoxCityTileManager::BuildTile(const LocalTilePosition& local_tile, const Wo
 		helpers::CalculateAABBFromOBB(extended_aabb_box, extended_obb_box);
 
 		//First collision in the tile
-		bool collide = CollisionBoxVsTile(extended_aabb_box, extended_obb_box, tile.generated_boxes);
+		bool collide = CollisionBoxVsTile(extended_aabb_box, extended_obb_box, tile);
 
 		
 		//Neigbour calculation, is not perfect as it depends of the loading pattern...
-		size_t begin_i = (local_tile.i == 0) ? 0 : local_tile.i - 1;
-		size_t end_i = std::min(BoxCityTileManager::kLocalTileCount - 1, local_tile.i + 1);
-
-		size_t begin_j = (local_tile.j == 0) ? 0 : local_tile.j - 1;
-		size_t end_j = std::min(BoxCityTileManager::kLocalTileCount - 1, local_tile.j + 1);
-
+		
 		//Then neighbours
-		for (size_t ii = begin_i; (ii <= end_i) && !collide; ++ii)
+		for (int32_t ii = world_tile.i - 1; (ii <= (world_tile.i + 1)) && !collide; ++ii)
 		{
-			for (size_t jj = begin_j; (jj <= end_j) && !collide; ++jj)
+			for (int32_t jj = world_tile.j - 1; (jj <= (world_tile.j + 1)) && !collide; ++jj)
 			{
-				if (local_tile.i != ii || local_tile.i != jj)
+				if (ii != world_tile.i || jj != world_tile.j)
 				{
-					if (GetTile(ii, jj).load)
+					//Calculate local tile
+					LocalTilePosition local_tile = CalculateLocalTileIndex(WorldTilePosition{ ii, jj });
+					const Tile& neighbour_tile = GetTile(local_tile.i, local_tile.j);
+					if (neighbour_tile.load)
 					{
-						collide = CollisionBoxVsTile(extended_aabb_box, extended_obb_box, GetTile(ii, jj).generated_boxes);
+						collide = CollisionBoxVsTile(extended_aabb_box, extended_obb_box, neighbour_tile);
 					}
 				}
 			}
