@@ -59,13 +59,21 @@ void BoxCityTileManager::Init(display::Device* device, render::System* render_sy
 
 void BoxCityTileManager::Update(const glm::vec3& camera_position)
 {
-	//Check if the camera is still in the same tile, TODO: with a fudge factor
-	WorldTilePosition new_camera_tile_position = WorldTilePosition{ static_cast<int32_t>(-0.5f + (camera_position.x / kTileSize)), static_cast<int32_t>(-0.5f + (camera_position.y / kTileSize)) };
+	//Check if the camera is still in the same tile, using some fugde factor
+	constexpr float fudge_factor = 0.05f;
+	float min_x = (-0.5f + m_camera_tile_position.i - fudge_factor) * kTileSize;
+	float min_y = (-0.5f + m_camera_tile_position.j - fudge_factor) * kTileSize;
+	float max_x = (-0.5f + m_camera_tile_position.i + 1 + fudge_factor) * kTileSize;
+	float max_y = (-0.5f + m_camera_tile_position.j + 1 + fudge_factor) * kTileSize;
 
 	//If the camera has move of tile, destroy the tiles out of view and create the new ones
-	if (new_camera_tile_position.i != m_camera_tile_position.i || new_camera_tile_position.j != m_camera_tile_position.j || m_pending_streaming_work)
+	bool camera_moved = (camera_position.x < min_x) || (camera_position.y < min_y) || (camera_position.x > max_x) || (camera_position.y > max_y);
+	if (camera_moved || m_pending_streaming_work)
 	{
-		m_camera_tile_position = new_camera_tile_position;
+		if (camera_moved)
+		{
+			m_camera_tile_position = WorldTilePosition{ static_cast<int32_t>(-0.5f + (camera_position.x / kTileSize)), static_cast<int32_t>(-0.5f + (camera_position.y / kTileSize)) };;
+		}
 
 		uint32_t num_tile_changed = 0;
 		const uint32_t max_tile_changed_per_frame = 1;
