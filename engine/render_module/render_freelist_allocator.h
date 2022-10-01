@@ -12,7 +12,6 @@
 #include <utility>
 
 #define RENDER_FREELIST_VALIDATE
-
 namespace render
 {
 	struct AllocateListAllocation
@@ -137,6 +136,83 @@ namespace render
 			}
 			return frame;
 		}
+		void RemoveFreeBlock(uint32_t index_to_remove)
+		{
+			auto& block_to_free = m_free_block_pool[index_to_remove];
+			//Fix linked list
+			if (block_to_free.prev != kInvalidFreeBlock)
+			{
+				m_free_block_pool[block_to_free.prev].next = block_to_free.next;
+			}
+			else
+			{
+				//Ok, this block was the first free, so now it is the next
+				m_first_free_block = block_to_free.next;
+				assert(m_first_free_block != kInvalidFreeBlock);
+			}
+
+			if (block_to_free.next != kInvalidFreeBlock)
+			{
+				m_free_block_pool[block_to_free.next].prev = block_to_free.prev;
+			}
+
+			//Deallocate, swap and pop
+
+			//We need to copy the last to the free slot and fix the linked list
+			if (index_to_remove != m_free_block_pool.size() - 1)
+			{
+				if (m_first_free_block == m_free_block_pool.size() - 1)
+				{
+					m_first_free_block = index_to_remove;
+				}
+
+				//Copy the last block over the index to remove
+				m_free_block_pool[index_to_remove] = m_free_block_pool.back();
+				auto& swap_block = m_free_block_pool[index_to_remove];
+
+				//Fix linked list
+				if (swap_block.prev != kInvalidFreeBlock)
+				{
+					m_free_block_pool[swap_block.prev].next = index_to_remove;
+				}
+
+				if (swap_block.next != kInvalidFreeBlock)
+				{
+					m_free_block_pool[swap_block.next].prev = index_to_remove;
+				}
+			}
+			//And pop the last
+			m_free_block_pool.pop_back();
+		}
+		uint32_t InsertPrev(uint32_t index_to_insert, size_t offset, size_t size)
+		{
+			m_free_block_pool.emplace_back(offset, size);
+			uint32_t new_free_index = static_cast<uint32_t>(m_free_block_pool.size() - 1);
+			FreeListFreeAllocation& new_free_block = m_free_block_pool.back();
+
+			FreeListFreeAllocation& reference_free_block = m_free_block_pool[index_to_insert];
+
+			assert(new_free_block.offset < reference_free_block.offset);
+
+			//Fix the linked list
+			if (reference_free_block.prev != kInvalidFreeBlock)
+			{
+				m_free_block_pool[reference_free_block.prev].next = new_free_index;
+			}
+			else
+			{
+				assert(m_first_free_block == index_to_insert);
+				//You are the new first
+				m_first_free_block = new_free_index;
+			}
+			new_free_block.next = index_to_insert;
+			new_free_block.prev = reference_free_block.prev;
+			reference_free_block.prev = new_free_index;
+
+			assert(new_free_block.next != new_free_block.prev);
+
+			return new_free_index;
+		}
 
 		void CheckBlockForMerge(uint32_t new_free_index)
 		{
@@ -178,23 +254,12 @@ namespace render
 				FreeListFreeAllocation& prev_free_allocation = m_free_block_pool[prev_index];
 				FreeListFreeAllocation& next_free_allocation = m_free_block_pool[next_index];
 				
-				//Add the sizes
+				//Add the sizes to the previous
 				prev_free_allocation.size += new_free_allocation.size + next_free_allocation.size;
 
-				//Fix the linked list
-				prev_free_allocation.next = next_free_allocation.next;
-
-				if (next_free_allocation.next != kInvalidFreeBlock)
-				{
-					m_free_block_pool[next_free_allocation.next].prev = prev_index;
-				}
-				
-				//Deallocate new and next
-				std::iter_swap(m_free_block_pool.begin() + new_free_index, m_free_block_pool.end() - 1);
-				m_free_block_pool.pop_back();
-
-				std::iter_swap(m_free_block_pool.begin() + next_index, m_free_block_pool.end() - 1);
-				m_free_block_pool.pop_back();
+				//Deallocate current and next
+				RemoveFreeBlock(new_free_index);
+				RemoveFreeBlock(next_index);
 			}
 			else if (prev_merge)
 			{
@@ -205,17 +270,8 @@ namespace render
 				//Add the sizes
 				prev_free_allocation.size += new_free_allocation.size;
 
-				//Fix the linked list
-				prev_free_allocation.next = new_free_allocation.next;
-
-				if (new_free_allocation.next != kInvalidFreeBlock)
-				{
-					m_free_block_pool[new_free_allocation.next].prev = prev_index;
-				}
-
-				//Deallocate new and next
-				std::iter_swap(m_free_block_pool.begin() + new_free_index, m_free_block_pool.end() - 1);
-				m_free_block_pool.pop_back();
+				//Deallocate current
+				RemoveFreeBlock(new_free_index);
 			}
 			else if (next_merge)
 			{
@@ -226,32 +282,24 @@ namespace render
 				//Add the sizes
 				new_free_allocation.size += next_free_allocation.size;
 
-				//Fix the linked list
-				new_free_allocation.next = next_free_allocation.next;
-
-				if (new_free_allocation.next != kInvalidFreeBlock)
-				{
-					m_free_block_pool[new_free_allocation.next].prev = new_free_index;
-				}
-
-				//We deallocate the next
-				std::iter_swap(m_free_block_pool.begin() + next_index, m_free_block_pool.end() - 1);
-				m_free_block_pool.pop_back();
+				//Deallocate next
+				RemoveFreeBlock(next_index);
 			}
-
 			//Nothing to merge
 		}
 #ifdef RENDER_FREELIST_VALIDATE
 		//Check for issues in the allocator
 		void Validate()
-		{
-			
+		{	
 			//Test that all inside the free list is in order and is merged
 			uint32_t current_index = m_first_free_block;
 			while (current_index != kInvalidFreeBlock)
 			{
+				assert(current_index < m_free_block_pool.size());
 				auto& current_block = m_free_block_pool[current_index];
-
+				assert(current_block.next != current_block.prev || current_block.next == kInvalidFreeBlock);
+				assert(current_block.size > 0);
+				assert(m_first_free_block != current_index || current_block.prev == kInvalidFreeBlock);
 				if (current_block.prev != kInvalidFreeBlock)
 				{
 					//Is not merged and in order
@@ -294,29 +342,14 @@ namespace render
 				//Check if it is the same size or not
 				if (free_block.size == size)
 				{
+					//Create the allocation
+					AllocateListAllocation allocation_block{ free_block.offset, free_block.size };
+
 					//Remove handle from free blocks
-					//Fix linked list
-					if (free_block.prev != kInvalidFreeBlock)
-					{
-						m_free_block_pool[free_block.prev].next = free_block.next;
-					}
-					else
-					{
-						//Ok, this block was the first free, so now it is the next
-						m_first_free_block = free_block.next;
-					}
-
-					if (free_block.next != kInvalidFreeBlock)
-					{
-						m_free_block_pool[free_block.next].prev = free_block.prev;
-					}
-
-					//Deallocate, swap and pop
-					std::iter_swap(m_free_block_pool.begin() + free_index, m_free_block_pool.end() - 1);
-					m_free_block_pool.pop_back();
-
+					RemoveFreeBlock(free_index);
+					
 					//Create alloc handle
-					return m_handle_pool.Alloc(AllocateListAllocation{free_block.offset, free_block.size});
+					return m_handle_pool.Alloc(allocation_block);
 				}
 				else
 				{
@@ -369,48 +402,20 @@ namespace render
 
 					//All the free blocks are linked list in order in the memory, we need to keep that order
 					uint32_t reference_free_index = m_first_free_block;
-					uint32_t prev_reference_free_index = kInvalidFreeBlock;
 					while (reference_free_index != kInvalidFreeBlock)
 					{
+						assert(m_free_block_pool[reference_free_index].offset != deallocated_block.offset);
 						if (m_free_block_pool[reference_free_index].offset > deallocated_block.offset)
 						{
 							break;
 						}
-						prev_reference_free_index = reference_free_index;
 						reference_free_index = m_free_block_pool[reference_free_index].next;
 					}
+					//Always found one, as the last one is the rest of the buffer, we can not go right to it
+					assert(reference_free_index != kInvalidFreeBlock);
 
 					//We need to add it just before the free_block
-					m_free_block_pool.emplace_back(deallocated_block.offset, deallocated_block.size);
-					uint32_t new_free_index = static_cast<uint32_t>(m_free_block_pool.size() - 1);
-					FreeListFreeAllocation& new_free_block = m_free_block_pool.back();
-
-					if (reference_free_index != kInvalidFreeBlock)
-					{
-						auto& reference_free_block = m_free_block_pool[reference_free_index];
-
-						//Fix the linked list
-						new_free_block.next = reference_free_index;
-						new_free_block.prev = reference_free_block.prev;
-						reference_free_block.prev = new_free_index;
-
-						if (m_first_free_block == reference_free_index)
-						{
-							//You are the new first
-							m_first_free_block = new_free_index;
-						}
-					}
-					else
-					{
-						//It is the last one, the last has to be in prev_reference_free_index
-						assert(prev_reference_free_index != kInvalidFreeBlock);
-
-						//Add the new node after the end of the list
-						auto& prev_reference_free_block = m_free_block_pool[prev_reference_free_index];
-						prev_reference_free_block.next = new_free_index;
-						new_free_block.next = kInvalidFreeBlock;
-						new_free_block.prev = prev_reference_free_index;
-					}
+					uint32_t new_free_index = InsertPrev(reference_free_index, deallocated_block.offset, deallocated_block.size);
 
 					//Deallocate the handle
 					m_handle_pool.Free(handle);
