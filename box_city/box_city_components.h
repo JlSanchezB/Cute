@@ -17,13 +17,9 @@ struct FlagBox
 	}
 };
 
-struct AABBBox : helpers::AABB
-{
-};
+using AABBBox = helpers::AABB;
 
-struct OBBBox : helpers::OBB
-{
-};
+using OBBBox = helpers::OBB;
 
 struct AnimationBox
 {
@@ -67,7 +63,7 @@ struct GPUBoxInstance
 {
 	glm::vec4 local_matrix[3];
 	glm::vec4 colour;
-	void Fill(const OBBBox& obb_box)
+	void Fill(const helpers::OBB& obb_box)
 	{
 		local_matrix[0] = glm::vec4(obb_box.rotation[0][0] * obb_box.extents[0], obb_box.rotation[0][1] * obb_box.extents[1], obb_box.rotation[0][2] * obb_box.extents[2], obb_box.position.x);
 		local_matrix[1] = glm::vec4(obb_box.rotation[1][0] * obb_box.extents[0], obb_box.rotation[1][1] * obb_box.extents[1], obb_box.rotation[1][2] * obb_box.extents[2], obb_box.position.y);

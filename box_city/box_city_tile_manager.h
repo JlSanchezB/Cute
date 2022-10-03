@@ -34,6 +34,53 @@ public:
 		helpers::AABB aabb;
 		helpers::OBB obb;
 	};
+
+	enum class LODGroup
+	{
+		TopBuildings, //Top Buildings, used for LOD 0,1,2
+		TopPanels, //Top pannels, Used for LOD 0,1 
+		Rest, // Rest, used for LOD 0
+		Count
+	};
+
+	struct BoxData
+	{
+		helpers::AABB aabb_box;
+		helpers::OBB oob_box;
+	};
+
+	struct AnimatedBoxData : public BoxData
+	{
+		AnimationBox animation;
+	};
+
+	struct PanelData : BoxData
+	{
+		uint8_t colour_palette;
+	};
+
+	struct AnimatedPanelData : PanelData
+	{
+		uint32_t parent_index;
+		glm::mat4x4 parent_to_child;
+	};
+
+	struct LODGroupData
+	{
+		std::vector<BoxData> building_data;
+		std::vector<PanelData> panel_data;
+		std::vector<AnimatedBoxData> animated_building_data;
+		std::vector<AnimatedPanelData> animated_panel_data;
+
+		void clear()
+		{
+			building_data.clear();
+			panel_data.clear();
+			animated_building_data.clear();
+			animated_panel_data.clear();
+		}
+	};
+
 	struct Tile
 	{
 		constexpr static uint16_t kInvalidTile = static_cast<uint16_t>(-1);
@@ -45,26 +92,41 @@ public:
 		WorldTilePosition tile_position;
 
 		//Load?
-		bool load = false;
+		bool loaded = false;
 
-		//Vector of all the bbox already in the tile
+		//Visible
+		bool visible = false;
+
+		//Vector of all the bbox in the tile
 		std::vector<BoxCollision> generated_boxes;
 
-		//Vector of the block instances
-		std::vector<Instance> block_instances;
-		std::vector<Instance> panel_instances;
+		//Vector of precalculated items
+		std::array<LODGroupData, static_cast<size_t>(LODGroup::Count)> level_data;
+
+		//Vector of the block instances loaded in the ECS
+		std::array<std::vector<Instance>, static_cast<size_t>(LODGroup::Count)> instances;
+
+		LODGroupData& GetLodGroupData(const LODGroup lod_group)
+		{
+			return level_data[static_cast<size_t>(lod_group)];
+		}
+
+		auto& GetLodInstances(const LODGroup lod_group)
+		{
+			return instances[static_cast<size_t>(lod_group)];
+		}
 	};
 
 
 
 #ifndef _DEBUG
 	//Needs to be odd number, as the camera is in the middle, when same tiles left and right
-	constexpr static uint32_t kLocalTileCount = 11;
+	constexpr static uint32_t kLocalTileCount = 15;
 #else
 	constexpr static uint32_t kLocalTileCount = 3;
 #endif
 
-	constexpr static float kTileSize = 1000.f;
+	constexpr static float kTileSize = 750.f;
 	constexpr static float kTileHeightTop = 250.f;
 	constexpr static float kTileHeightBottom = -250.f;
 
@@ -89,7 +151,7 @@ public:
 
 		for (auto& tile : m_tiles)
 		{
-			if (tile.load)
+			if (tile.visible)
 			{
 				ret[tile.zone_id] = helpers::CollisionFrustumVsAABB(frustum, tile.bounding_box);
 			}
@@ -145,9 +207,19 @@ private:
 	void GenerateTileDescriptors();
 	
 	Tile& GetTile(const LocalTilePosition& local_tile);
-	void BuildTile(const LocalTilePosition& local_tile, const WorldTilePosition& world_tile);
-	void BuildBlock(std::mt19937& random, Tile& tile, const uint16_t zone_id, const helpers::OBB& obb, helpers::AABB& aabb, const bool dynamic_box, const AnimationBox& animated_box);
-	
+
+	//Builds the tile data, creates the tile
+	void BuildTileData(const LocalTilePosition& local_tile, const WorldTilePosition& world_tile);
+	void BuildBlockData(std::mt19937& random, Tile& tile, const uint16_t zone_id, const helpers::OBB& obb, helpers::AABB& aabb, const bool dynamic_box, const AnimationBox& animated_box);
+
+	//Spawn lod group
+	void SpawnLodGroup(Tile& tile, const LODGroup lod_group);
+	//Spawn the tile in the ECS
+	void SpawnTile(Tile& tile, uint32_t lod);
+	//Despawn the tile from the ECS
+	void DespawnTile(Tile& tile);
+	//Change lod
+	void LodTile(Tile& tile, uint32_t new_lod);
 };
 
 #endif //BOX_CITY_TILE_MANAGER_H

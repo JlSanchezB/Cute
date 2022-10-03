@@ -489,6 +489,11 @@ namespace ecs
 			return database->m_entity_types[entity_type];
 		}
 
+		size_t GetInstanceTypeIndex(Database* database, InstanceIndirectionIndexType index)
+		{
+			return database->AccessInternalInstanceIndex(index).entity_type_index;
+		}
+
 		void TickDatabase(Database* database)
 		{
 			//Lock database
