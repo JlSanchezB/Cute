@@ -95,7 +95,7 @@ void BoxCityTileManager::Update(const glm::vec3& camera_position)
 				DespawnTile(tile);
 				num_tile_changed++;
 
-				core::LogInfo("Tile Local<%i,%i>, World<%i,%i> unvisible", local_tile.i, local_tile.j, world_tile.i, world_tile.j);
+				core::LogInfo("Tile Local<%i,%i>, World<%i,%i>, unvisible", local_tile.i, local_tile.j, world_tile.i, world_tile.j);
 			}
 
 			//If tile is unloaded but it needs to be loaded
@@ -106,7 +106,14 @@ void BoxCityTileManager::Update(const glm::vec3& camera_position)
 				SpawnTile(tile, tile_descriptor.lod);
 				num_tile_changed++;
 
-				core::LogInfo("Tile Local<%i,%i>, World<%i,%i> visible", local_tile.i, local_tile.j, world_tile.i, world_tile.j);
+				core::LogInfo("Tile Local<%i,%i>, World<%i,%i>, Lod<%i> visible", local_tile.i, local_tile.j, world_tile.i, world_tile.j, tile_descriptor.lod);
+			}
+
+			if (tile.visible && tile.lod != tile_descriptor.lod)
+			{
+				//Change lod
+				LodTile(tile, tile_descriptor.lod);
+				num_tile_changed++;
 			}
 		}
 
@@ -146,12 +153,12 @@ void BoxCityTileManager::GenerateTileDescriptors()
 			{
 				tile_descriptor.loaded = true;
 				//Calculate LODs
-				if (tile_descriptor.normalized_distance < 0.5f)
+				if (tile_descriptor.normalized_distance < 0.75f)
 				{
 					//0.0 to 0.5 is max lod, lod 0
 					tile_descriptor.lod = 0;
 				}
-				else if (tile_descriptor.normalized_distance < 0.75f)
+				else if (tile_descriptor.normalized_distance < 0.90f)
 				{
 					//0.5 to 0.75 is lod 1
 					tile_descriptor.lod = 1;
@@ -313,7 +320,7 @@ void BoxCityTileManager::BuildBlockData(std::mt19937& random, Tile& tile, const 
 	helpers::OBB updated_obb = obb;
 	updated_obb.extents = updated_obb.extents - glm::vec3(panel_depth, panel_depth, 0.f);
 
-	const float top_tile_z = 100.f;
+	const float top_tile_z = 200.f;
 
 	uint32_t parent_index;
 	bool top;
@@ -603,42 +610,23 @@ void BoxCityTileManager::SpawnTile(Tile& tile, uint32_t lod)
 	assert(tile.loaded);
 
 	SpawnLodGroup(tile, LODGroup::TopBuildings);
-	SpawnLodGroup(tile, LODGroup::TopPanels);
-	SpawnLodGroup(tile, LODGroup::Rest);
 
+	if (lod < 2)
+	{
+		SpawnLodGroup(tile, LODGroup::TopPanels);
+	}
+	if (lod < 1)
+	{
+		SpawnLodGroup(tile, LODGroup::Rest);
+	}
+	
+	tile.lod = lod;
 	tile.visible = true;
 }
 
-
-void BoxCityTileManager::DespawnTile(Tile& tile)
+void BoxCityTileManager::DespawnLodGroup(Tile& tile, const LODGroup lod_group)
 {
-	//Removes all the instances left in the ECS
-
-	for (auto& instance : tile.GetLodInstances(LODGroup::TopBuildings))
-	{
-		//Dealloc the gpu handle
-		m_GPU_memory_render_module->DeallocStaticGPUMemory(m_device, instance.Get<BoxGPUHandle>().gpu_memory, render::GetGameFrameIndex(m_render_system));
-
-		//Dealloc instance
-		ecs::DeallocInstance<GameDatabase>(instance);
-
-		COUNTER_SUB(c_Panels_Count);
-	}
-	tile.GetLodInstances(LODGroup::TopBuildings).clear();
-
-	for (auto& instance : tile.GetLodInstances(LODGroup::TopPanels))
-	{
-		//Dealloc the gpu handle
-		m_GPU_memory_render_module->DeallocStaticGPUMemory(m_device, instance.Get<BoxGPUHandle>().gpu_memory, render::GetGameFrameIndex(m_render_system));
-
-		//Dealloc instance
-		ecs::DeallocInstance<GameDatabase>(instance);
-
-		COUNTER_SUB(c_Panels_Count);
-	}
-	tile.GetLodInstances(LODGroup::TopPanels).clear();
-
-	for (auto& instance : tile.GetLodInstances(LODGroup::Rest))
+	for (auto& instance : tile.GetLodInstances(lod_group))
 	{
 		//Dealloc the gpu handle
 		m_GPU_memory_render_module->DeallocStaticGPUMemory(m_device, instance.Get<BoxGPUHandle>().gpu_memory, render::GetGameFrameIndex(m_render_system));
@@ -646,7 +634,7 @@ void BoxCityTileManager::DespawnTile(Tile& tile)
 		//Check the type
 		if (instance.Is<BoxType>() || instance.Is<AnimatedBoxType>())
 		{
-			COUNTER_SUB(c_Panels_Count);
+			COUNTER_SUB(c_Blocks_Count);
 		}
 		else
 		{
@@ -656,11 +644,68 @@ void BoxCityTileManager::DespawnTile(Tile& tile)
 		//Dealloc instance
 		ecs::DeallocInstance<GameDatabase>(instance);
 	}
-	tile.GetLodInstances(LODGroup::Rest).clear();
+	tile.GetLodInstances(lod_group).clear();
+}
+
+
+void BoxCityTileManager::DespawnTile(Tile& tile)
+{
+	//Removes all the instances left in the ECS
+	DespawnLodGroup(tile, LODGroup::TopBuildings);
+	DespawnLodGroup(tile, LODGroup::TopPanels);
+	DespawnLodGroup(tile, LODGroup::Rest);
 
 	tile.visible = false;
 }
 
 void BoxCityTileManager::LodTile(Tile& tile, uint32_t new_lod)
 {
+	//LOD 0 has Rest, TopBuildings and TopPanels
+	//LOD 1 has TopBuildings and Top Panels
+	//LOD 2 has TopBuildings only
+	if (tile.lod != new_lod)
+	{
+		switch (new_lod)
+		{
+		case 0:
+			if (tile.lod == 1)
+			{
+				//Needs to spawn the rest
+				SpawnLodGroup(tile, LODGroup::Rest);
+			}
+			if (tile.lod == 2)
+			{
+				//Needs to spawn rest and TopPannels
+				SpawnLodGroup(tile, LODGroup::Rest);
+				SpawnLodGroup(tile, LODGroup::TopPanels);
+			}
+			break;
+		case 1:
+			if (tile.lod == 0)
+			{
+				//Needs to despawn Rest
+				DespawnLodGroup(tile, LODGroup::Rest);
+			}
+			if (tile.lod == 2)
+			{
+				//Needed to add TopPanels
+				SpawnLodGroup(tile, LODGroup::TopPanels);
+			}
+			break;
+		case 2:
+			if (tile.lod == 0)
+			{
+				//Needs to despawn the Rest and TopPanels
+				DespawnLodGroup(tile, LODGroup::Rest);
+				DespawnLodGroup(tile, LODGroup::TopPanels);
+			}
+			if (tile.lod == 1)
+			{
+				//Needs to despawn the TopPannels
+				DespawnLodGroup(tile, LODGroup::TopPanels);
+			}
+		}
+
+		tile.lod = new_lod;
+	}
 }

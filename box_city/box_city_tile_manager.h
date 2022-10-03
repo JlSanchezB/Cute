@@ -97,6 +97,9 @@ public:
 		//Visible
 		bool visible = false;
 
+		//Current lod
+		uint32_t lod = 0;
+
 		//Vector of all the bbox in the tile
 		std::vector<BoxCollision> generated_boxes;
 
@@ -126,7 +129,7 @@ public:
 	constexpr static uint32_t kLocalTileCount = 3;
 #endif
 
-	constexpr static float kTileSize = 750.f;
+	constexpr static float kTileSize = 1000.f;
 	constexpr static float kTileHeightTop = 250.f;
 	constexpr static float kTileHeightBottom = -250.f;
 
@@ -216,6 +219,8 @@ private:
 	void SpawnLodGroup(Tile& tile, const LODGroup lod_group);
 	//Spawn the tile in the ECS
 	void SpawnTile(Tile& tile, uint32_t lod);
+	//Despawn lod group
+	void DespawnLodGroup(Tile& tile, const LODGroup lod_group);
 	//Despawn the tile from the ECS
 	void DespawnTile(Tile& tile);
 	//Change lod
