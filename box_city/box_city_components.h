@@ -37,8 +37,19 @@ struct Attachment
 
 struct BoxGPUHandle
 {
-	//Access to gpu buffer memory
-	render::AllocHandle gpu_memory;
+	//Offset in the GPU handle
+	uint32_t offset_gpu_allocator : 24;
+	uint32_t lod_group : 8;
+
+	static constexpr uint32_t kInvalidOffset = 0xFFFFFF;
+	bool IsValid() const
+	{
+		return offset_gpu_allocator != kInvalidOffset;
+	}
+
+	BoxGPUHandle(const uint32_t _offset_gpu_allocator, const uint32_t _lod_group) : offset_gpu_allocator(_offset_gpu_allocator), lod_group(_lod_group)
+	{
+	}
 };
 
 struct BoxRender

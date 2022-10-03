@@ -108,6 +108,9 @@ void BoxCityGame::OnPrepareDestroy()
 
 void BoxCityGame::OnDestroy()
 {
+	//Destroy tile manager
+	m_tile_manager.Shutdown();
+
 	//Destroy constant buffer
 	display::DestroyHandle(m_device, m_view_constant_buffer);
 
@@ -206,12 +209,15 @@ void BoxCityGame::OnTick(double total_time, float elapsed_time)
 	//Add task
 	//Cull box city
 	ecs::AddJobs<GameDatabase, const OBBBox, const AABBBox, FlagBox, const BoxGPUHandle>(m_job_system, culling_fence, m_update_job_allocator, 256,
-		[camera = &m_camera, point_of_view = &point_of_view, box_priority = m_box_render_priority, render_system = m_render_system, device = m_device, render_gpu_memory_module = m_GPU_memory_render_module]
+		[camera = &m_camera, point_of_view = &point_of_view, box_priority = m_box_render_priority, render_system = m_render_system, device = m_device, render_gpu_memory_module = m_GPU_memory_render_module, tile_manager = &m_tile_manager]
 	(const auto& instance_iterator, const OBBBox& obb_box, const AABBBox& aabb_box, FlagBox& flags, const BoxGPUHandle& box_gpu_handle)
 		{
 			//Calculate if it is in the camera and has still a gpu memory handle
-			if (helpers::CollisionFrustumVsAABB(*camera, aabb_box) && box_gpu_handle.gpu_memory.IsValid())
+			if (helpers::CollisionFrustumVsAABB(*camera, aabb_box) && box_gpu_handle.IsValid())
 			{
+				//Get GPU alloc handle
+				render::AllocHandle& gpu_handle = tile_manager->GetGPUHandle(instance_iterator.m_zone_index, box_gpu_handle.lod_group);
+
 				//Update GPU if needed, only position
 				if (!flags.gpu_updated)
 				{
@@ -219,7 +225,7 @@ void BoxCityGame::OnTick(double total_time, float elapsed_time)
 					gpu_box_instance.Fill(obb_box);
 
 					//Only the first 3 float4
-					render_gpu_memory_module->UpdateStaticGPUMemory(device, box_gpu_handle.gpu_memory, &gpu_box_instance, 3 * sizeof(glm::vec4), render::GetGameFrameIndex(render_system));
+					render_gpu_memory_module->UpdateStaticGPUMemory(device, gpu_handle, &gpu_box_instance, 3 * sizeof(glm::vec4), render::GetGameFrameIndex(render_system), box_gpu_handle.offset_gpu_allocator * sizeof(GPUBoxInstance));
 					flags.gpu_updated = true;
 				}
 
@@ -229,7 +235,7 @@ void BoxCityGame::OnTick(double total_time, float elapsed_time)
 				uint32_t sort_key = static_cast<uint32_t>(camera_distance_01 * ((1 << 24) - 1));
 
 				//Add this point of view
-				point_of_view->PushRenderItem(box_priority, static_cast<render::SortKey>(sort_key), static_cast<uint32_t>(render_gpu_memory_module->GetStaticGPUMemoryOffset(box_gpu_handle.gpu_memory)));
+				point_of_view->PushRenderItem(box_priority, static_cast<render::SortKey>(sort_key), static_cast<uint32_t>(render_gpu_memory_module->GetStaticGPUMemoryOffset(gpu_handle) + box_gpu_handle.offset_gpu_allocator * sizeof(GPUBoxInstance)));
 
 				COUNTER_INC(c_Culled_Boxes);
 			}

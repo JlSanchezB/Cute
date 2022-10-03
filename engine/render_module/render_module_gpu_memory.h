@@ -100,7 +100,7 @@ namespace render
 		void DeallocStaticGPUMemory(display::Device* device, AllocHandle& handle, const uint64_t frame_index);
 
 		//Update Static GPU memory
-		void UpdateStaticGPUMemory(display::Device* device, const AllocHandle& handle, const void* data, const size_t size, const uint64_t frame_index);
+		void UpdateStaticGPUMemory(display::Device* device, const AllocHandle& handle, const void* data, const size_t size, const uint64_t frame_index, size_t destination_offset = 0);
 
 		//Alloc dynamic gpu memory
 		void* AllocDynamicGPUMemory(display::Device* device, const size_t size, const uint64_t frame_index);

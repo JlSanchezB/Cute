@@ -109,6 +109,9 @@ public:
 		//Vector of the block instances loaded in the ECS
 		std::array<std::vector<Instance>, static_cast<size_t>(LODGroup::Count)> instances;
 
+		//Vector of the GPU allocation for each lod group
+		std::array<render::AllocHandle, static_cast<size_t>(LODGroup::Count)> gpu_allocation;
+
 		LODGroupData& GetLodGroupData(const LODGroup lod_group)
 		{
 			return level_data[static_cast<size_t>(lod_group)];
@@ -117,6 +120,11 @@ public:
 		auto& GetLodInstances(const LODGroup lod_group)
 		{
 			return instances[static_cast<size_t>(lod_group)];
+		}
+
+		render::AllocHandle& GetLodGPUAllocation(const LODGroup lod_group)
+		{
+			return gpu_allocation[static_cast<size_t>(lod_group)];
 		}
 	};
 
@@ -175,9 +183,14 @@ public:
 	//Init
 	void Init(display::Device* device, render::System* render_system, render::GPUMemoryRenderModule* GPU_memory_render_module);
 
+	//Shutdown
+	void Shutdown();
+
 	//Update, it will check if new tiles need to be created/move because the camera has moved
 	void Update(const glm::vec3& camera_position);
 
+	//Get GPU alloc handle from zoneID
+	render::AllocHandle& GetGPUHandle(uint32_t zoneID, uint32_t lod_group);
 private:
 	//System
 	display::Device* m_device = nullptr;

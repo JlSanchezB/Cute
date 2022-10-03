@@ -57,6 +57,18 @@ void BoxCityTileManager::Init(display::Device* device, render::System* render_sy
 	Update(glm::vec3(0.f, 0.f, 0.f));
 }
 
+void BoxCityTileManager::Shutdown()
+{
+	//Unload each tile
+	for (auto& tile : m_tiles)
+	{
+		if (tile.visible)
+		{
+			DespawnTile(tile);
+		}
+	}
+}
+
 void BoxCityTileManager::Update(const glm::vec3& camera_position)
 {
 	//Check if the camera is still in the same tile, using some fugde factor
@@ -128,6 +140,11 @@ void BoxCityTileManager::Update(const glm::vec3& camera_position)
 			m_pending_streaming_work = true;
 		}
 	}
+}
+
+render::AllocHandle& BoxCityTileManager::GetGPUHandle(uint32_t zoneID, uint32_t lod_group)
+{
+	return m_tiles[zoneID].GetLodGPUAllocation(static_cast<LODGroup>(lod_group));
 }
 
 void BoxCityTileManager::GenerateTileDescriptors()
@@ -475,6 +492,15 @@ void BoxCityTileManager::SpawnLodGroup(Tile& tile, const LODGroup lod_group)
 	LODGroupData& lod_group_data = tile.GetLodGroupData(lod_group);
 	auto& instances_vector = tile.GetLodInstances(lod_group);
 
+	//Size of the GPU allocation
+	size_t gpu_allocation_size = sizeof(GPUBoxInstance) * (lod_group_data.animated_building_data.size() + lod_group_data.building_data.size() + lod_group_data.animated_panel_data.size() + lod_group_data.panel_data.size());
+	
+	//Allocate the GPU memory
+	tile.GetLodGPUAllocation(lod_group) = m_GPU_memory_render_module->AllocStaticGPUMemory(m_device, gpu_allocation_size, nullptr, render::GetGameFrameIndex(m_render_system));
+
+	//Each instance it will reserve like a lineal allocator
+	uint32_t gpu_offset = 0;
+
 	//First dynamic
 	for (auto& building_data : lod_group_data.animated_building_data)
 	{
@@ -486,8 +512,8 @@ void BoxCityTileManager::SpawnLodGroup(Tile& tile, const LODGroup lod_group)
 		gpu_box_instance.Fill(building_data.oob_box);
 		gpu_box_instance.Fill(box_render);
 
-		//Allocate the GPU memory
-		render::AllocHandle gpu_memory = m_GPU_memory_render_module->AllocStaticGPUMemory(m_device, sizeof(GPUBoxInstance), &gpu_box_instance, render::GetGameFrameIndex(m_render_system));
+		//Update the GPU memory
+		m_GPU_memory_render_module->UpdateStaticGPUMemory(m_device, tile.GetLodGPUAllocation(lod_group), &gpu_box_instance, sizeof(GPUBoxInstance), render::GetGameFrameIndex(m_render_system), gpu_offset * sizeof(GPUBoxInstance));
 
 		//Just make it static
 		instances_vector.push_back(ecs::AllocInstance<GameDatabase, AnimatedBoxType>(tile.zone_id)
@@ -495,8 +521,9 @@ void BoxCityTileManager::SpawnLodGroup(Tile& tile, const LODGroup lod_group)
 			.Init<AABBBox>(building_data.aabb_box)
 			.Init<BoxRender>(box_render)
 			.Init<AnimationBox>(building_data.animation)
-			.Init<BoxGPUHandle>(BoxGPUHandle{ std::move(gpu_memory) }));
+			.Init<BoxGPUHandle>(gpu_offset, static_cast<uint32_t>(lod_group)));
 
+		gpu_offset++;
 		COUNTER_INC(c_Blocks_Count);
 	}
 
@@ -510,16 +537,17 @@ void BoxCityTileManager::SpawnLodGroup(Tile& tile, const LODGroup lod_group)
 		gpu_box_instance.Fill(building_data.oob_box);
 		gpu_box_instance.Fill(box_render);
 
-		//Allocate the GPU memory
-		render::AllocHandle gpu_memory = m_GPU_memory_render_module->AllocStaticGPUMemory(m_device, sizeof(GPUBoxInstance), &gpu_box_instance, render::GetGameFrameIndex(m_render_system));
+		//Update the GPU memory
+		m_GPU_memory_render_module->UpdateStaticGPUMemory(m_device, tile.GetLodGPUAllocation(lod_group), &gpu_box_instance, sizeof(GPUBoxInstance), render::GetGameFrameIndex(m_render_system), gpu_offset * sizeof(GPUBoxInstance));
 
 		//Just make it static
 		instances_vector.push_back(ecs::AllocInstance<GameDatabase, BoxType>(tile.zone_id)
 			.Init<OBBBox>(building_data.oob_box)
 			.Init<AABBBox>(building_data.aabb_box)
 			.Init<BoxRender>(box_render)
-			.Init<BoxGPUHandle>(BoxGPUHandle{ std::move(gpu_memory) }));
+			.Init<BoxGPUHandle>(gpu_offset, static_cast<uint32_t>(lod_group)));
 
+		gpu_offset++;
 		COUNTER_INC(c_Blocks_Count);
 	}
 
@@ -566,8 +594,8 @@ void BoxCityTileManager::SpawnLodGroup(Tile& tile, const LODGroup lod_group)
 		gpu_box_instance.Fill(panel_data.oob_box);
 		gpu_box_instance.Fill(box_render);
 
-		//Allocate the GPU memory
-		render::AllocHandle gpu_memory = m_GPU_memory_render_module->AllocStaticGPUMemory(m_device, sizeof(GPUBoxInstance), &gpu_box_instance, render::GetGameFrameIndex(m_render_system));
+		//Update the GPU memory
+		m_GPU_memory_render_module->UpdateStaticGPUMemory(m_device, tile.GetLodGPUAllocation(lod_group), &gpu_box_instance, sizeof(GPUBoxInstance), render::GetGameFrameIndex(m_render_system), gpu_offset * sizeof(GPUBoxInstance));
 
 		//Add attached
 		instances_vector.push_back(ecs::AllocInstance<GameDatabase, AttachedPanelType>(tile.zone_id)
@@ -575,8 +603,9 @@ void BoxCityTileManager::SpawnLodGroup(Tile& tile, const LODGroup lod_group)
 			.Init<AABBBox>(panel_data.aabb_box)
 			.Init<BoxRender>(box_render)
 			.Init<Attachment>(attachment)
-			.Init<BoxGPUHandle>(BoxGPUHandle{ std::move(gpu_memory) }));
+			.Init<BoxGPUHandle>(gpu_offset, static_cast<uint32_t>(lod_group)));
 
+		gpu_offset++;
 		COUNTER_INC(c_Panels_Count);
 	}
 
@@ -590,16 +619,17 @@ void BoxCityTileManager::SpawnLodGroup(Tile& tile, const LODGroup lod_group)
 		gpu_box_instance.Fill(panel_data.oob_box);
 		gpu_box_instance.Fill(box_render);
 
-		//Allocate the GPU memory
-		render::AllocHandle gpu_memory = m_GPU_memory_render_module->AllocStaticGPUMemory(m_device, sizeof(GPUBoxInstance), &gpu_box_instance, render::GetGameFrameIndex(m_render_system));
+		//Update the GPU memory
+		m_GPU_memory_render_module->UpdateStaticGPUMemory(m_device, tile.GetLodGPUAllocation(lod_group), &gpu_box_instance, sizeof(GPUBoxInstance), render::GetGameFrameIndex(m_render_system), gpu_offset * sizeof(GPUBoxInstance));
 
 		//Add attached
 		instances_vector.push_back(ecs::AllocInstance<GameDatabase, PanelType>(tile.zone_id)
 			.Init<OBBBox>(panel_data.oob_box)
 			.Init<AABBBox>(panel_data.aabb_box)
 			.Init<BoxRender>(box_render)
-			.Init<BoxGPUHandle>(BoxGPUHandle{ std::move(gpu_memory) }));
+			.Init<BoxGPUHandle>(gpu_offset, static_cast<uint32_t>(lod_group)));
 
+		gpu_offset++;
 		COUNTER_INC(c_Panels_Count);
 	}
 }
@@ -628,9 +658,6 @@ void BoxCityTileManager::DespawnLodGroup(Tile& tile, const LODGroup lod_group)
 {
 	for (auto& instance : tile.GetLodInstances(lod_group))
 	{
-		//Dealloc the gpu handle
-		m_GPU_memory_render_module->DeallocStaticGPUMemory(m_device, instance.Get<BoxGPUHandle>().gpu_memory, render::GetGameFrameIndex(m_render_system));
-
 		//Check the type
 		if (instance.Is<BoxType>() || instance.Is<AnimatedBoxType>())
 		{
@@ -640,11 +667,19 @@ void BoxCityTileManager::DespawnLodGroup(Tile& tile, const LODGroup lod_group)
 		{
 			COUNTER_SUB(c_Panels_Count);
 		}
+		//Set to invalid to the GPU memory
+		instance.Get<BoxGPUHandle>().offset_gpu_allocator = BoxGPUHandle::kInvalidOffset;
 
 		//Dealloc instance
 		ecs::DeallocInstance<GameDatabase>(instance);
 	}
 	tile.GetLodInstances(lod_group).clear();
+	
+	//Dealloc the gpu handle
+	if (tile.GetLodGPUAllocation(lod_group).IsValid())
+	{
+		m_GPU_memory_render_module->DeallocStaticGPUMemory(m_device, tile.GetLodGPUAllocation(lod_group), render::GetGameFrameIndex(m_render_system));
+	}
 }
 
 

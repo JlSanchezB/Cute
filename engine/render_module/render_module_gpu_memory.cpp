@@ -151,7 +151,7 @@ namespace render
 		m_static_gpu_memory_allocator.Dealloc(handle, frame_index);
 	}
 
-	void GPUMemoryRenderModule::UpdateStaticGPUMemory(display::Device* device, const AllocHandle& handle, const void* data, const size_t size, const uint64_t frame_index)
+	void GPUMemoryRenderModule::UpdateStaticGPUMemory(display::Device* device, const AllocHandle& handle, const void* data, const size_t size, const uint64_t frame_index, size_t destination_offset)
 	{
 		assert(size > 0);
 
@@ -169,7 +169,7 @@ namespace render
 		const auto& destination_allocation = m_static_gpu_memory_allocator.Get(handle);
 
 		//Add copy command
-		AddCopyDataCommand(frame_index, source_offset, static_cast<uint32_t>(destination_allocation.offset), static_cast<uint32_t>(size));
+		AddCopyDataCommand(frame_index, source_offset, static_cast<uint32_t>(destination_allocation.offset + destination_offset), static_cast<uint32_t>(size));
 
 	}
 
