@@ -4,6 +4,7 @@
 #include <render/render.h>
 #include <render_module/render_module_gpu_memory.h>
 #include <core/counters.h>
+#include <core/profile.h>
 
 COUNTER(c_Blocks_Count, "Box City", "Number of Blocks", false);
 COUNTER(c_Panels_Count, "Box City", "Number of Panels", false);
@@ -71,6 +72,7 @@ void BoxCityTileManager::Shutdown()
 
 void BoxCityTileManager::Update(const glm::vec3& camera_position)
 {
+	PROFILE_SCOPE("BoxCityTileManager", 0xFFFF77FF, "Update");
 	//Check if the camera is still in the same tile, using some fugde factor
 	constexpr float fudge_factor = 0.05f;
 	float min_x = (-0.5f + m_camera_tile_position.i - fudge_factor) * kTileSize;
@@ -80,11 +82,20 @@ void BoxCityTileManager::Update(const glm::vec3& camera_position)
 
 	//If the camera has move of tile, destroy the tiles out of view and create the new ones
 	bool camera_moved = (camera_position.x < min_x) || (camera_position.y < min_y) || (camera_position.x > max_x) || (camera_position.y > max_y);
+
+	constexpr float fudge_top_range = 10.0f;
+
+	if (m_camera_top_range && camera_position.z < (kTileHeightTopViewRange - fudge_top_range))
+		camera_moved = true;
+	if (!m_camera_top_range && camera_position.z > (kTileHeightTopViewRange + fudge_top_range))
+		camera_moved = true;
+
 	if (camera_moved || m_pending_streaming_work)
 	{
 		if (camera_moved)
 		{
-			m_camera_tile_position = WorldTilePosition{ static_cast<int32_t>(-0.5f + (camera_position.x / kTileSize)), static_cast<int32_t>(-0.5f + (camera_position.y / kTileSize)) };;
+			m_camera_tile_position = WorldTilePosition{ static_cast<int32_t>(-0.5f + (camera_position.x / kTileSize)), static_cast<int32_t>(-0.5f + (camera_position.y / kTileSize)) };
+			m_camera_top_range = (camera_position.z > kTileHeightTopViewRange);
 		}
 
 		uint32_t num_tile_changed = 0;
@@ -106,8 +117,8 @@ void BoxCityTileManager::Update(const glm::vec3& camera_position)
 			bool visible = tile_descriptor.loaded;
 
 			//If we are under the horizon, we don't need LOD2 or LOD1
-//			if (camera_position.z < kTileHeightTopViewRange && lod > 0)
-//				visible = false;
+			if (camera_position.z < kTileHeightTopViewRange && lod > 0)
+				visible = false;
 			
 
 			//Check if the tile has the different world index

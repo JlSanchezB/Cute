@@ -230,6 +230,9 @@ private:
 	//Current camera tile position, center of our local tiles
 	WorldTilePosition m_camera_tile_position;
 
+	//Current camera height position
+	bool m_camera_top_range = false;
+
 	//Needs more streaming to do
 	bool m_pending_streaming_work = false;
 
