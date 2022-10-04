@@ -61,6 +61,12 @@ namespace helpers
 			return m_far;
 		}
 
+		//Set near/far
+		void SetNearFar(const float near, const float far)
+		{
+			m_near = near;
+			m_far = far;
+		}
 	protected:
 
 		void UpdateInternalData();

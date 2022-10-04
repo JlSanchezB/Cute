@@ -101,8 +101,17 @@ void BoxCityTileManager::Update(const glm::vec3& camera_position)
 			LocalTilePosition local_tile = CalculateLocalTileIndex(world_tile);
 			Tile& tile = GetTile(local_tile);
 
+			//Depends of the camera, we calculate the lod 1 or 0
+			uint32_t lod = tile_descriptor.lod;
+			bool visible = tile_descriptor.loaded;
+
+			//If we are under the horizon, we don't need LOD2 or LOD1
+//			if (camera_position.z < kTileHeightTopViewRange && lod > 0)
+//				visible = false;
+			
+
 			//Check if the tile has the different world index
-			if ((tile.tile_position.i != world_tile.i || tile.tile_position.j != world_tile.j) && tile.visible || !tile_descriptor.loaded && tile.visible)
+			if ((tile.tile_position.i != world_tile.i || tile.tile_position.j != world_tile.j) && tile.visible || !visible && tile.visible)
 			{
 				DespawnTile(tile);
 				num_tile_changed++;
@@ -111,20 +120,20 @@ void BoxCityTileManager::Update(const glm::vec3& camera_position)
 			}
 
 			//If tile is unloaded but it needs to be loaded
-			if (!tile.visible && tile_descriptor.loaded && num_tile_changed < max_tile_changed_per_frame)
+			if (!tile.visible && visible && num_tile_changed < max_tile_changed_per_frame)
 			{
 				//Create new time
 				BuildTileData(local_tile, world_tile);
-				SpawnTile(tile, tile_descriptor.lod);
+				SpawnTile(tile, lod);
 				num_tile_changed++;
 
-				core::LogInfo("Tile Local<%i,%i>, World<%i,%i>, Lod<%i> visible", local_tile.i, local_tile.j, world_tile.i, world_tile.j, tile_descriptor.lod);
+				core::LogInfo("Tile Local<%i,%i>, World<%i,%i>, Lod<%i> visible", local_tile.i, local_tile.j, world_tile.i, world_tile.j, lod);
 			}
 
-			if (tile.visible && tile.lod != tile_descriptor.lod)
+			if (tile.visible && tile.lod != lod && num_tile_changed < max_tile_changed_per_frame)
 			{
 				//Change lod
-				LodTile(tile, tile_descriptor.lod);
+				LodTile(tile, lod);
 				num_tile_changed++;
 			}
 		}
@@ -172,17 +181,17 @@ void BoxCityTileManager::GenerateTileDescriptors()
 				//Calculate LODs
 				if (tile_descriptor.normalized_distance < 0.75f)
 				{
-					//0.0 to 0.5 is max lod, lod 0
+					//0.0 to 0.75 is max lod, lod 0
 					tile_descriptor.lod = 0;
 				}
 				else if (tile_descriptor.normalized_distance < 0.90f)
 				{
-					//0.5 to 0.75 is lod 1
+					//0.75 to 0.9 is lod 1
 					tile_descriptor.lod = 1;
 				}
 				else
 				{
-					//0.75 to 1.0 is lod 2
+					//0.9 to 1.0 is lod 2
 					tile_descriptor.lod = 2;
 				}
 			}
@@ -190,7 +199,7 @@ void BoxCityTileManager::GenerateTileDescriptors()
 			{
 				//Non loaded
 				tile_descriptor.loaded = false;
-				tile_descriptor.lod = 0;
+				tile_descriptor.lod = -1;
 			}
 
 			tile_descriptor.index = static_cast<uint32_t>(m_tile_descriptors.size());
@@ -239,7 +248,6 @@ void BoxCityTileManager::BuildTileData(const LocalTilePosition& local_tile, cons
 	tile.bounding_box.max = glm::vec3(begin_tile_x + kTileSize, begin_tile_y + kTileSize, kTileHeightBottom);
 
 	tile.zone_id = static_cast<uint16_t>(local_tile.i + local_tile.j * BoxCityTileManager::kLocalTileCount);
-	tile.loaded = true;
 	tile.tile_position = world_tile;
 	tile.generated_boxes.clear();
 	tile.level_data[static_cast<size_t>(LODGroup::TopBuildings)].clear();
@@ -327,6 +335,8 @@ void BoxCityTileManager::BuildTileData(const LocalTilePosition& local_tile, cons
 		tile.bounding_box.max = glm::max(tile.bounding_box.max, extended_aabb_box.max);
 	}
 
+	tile.loaded = true;
+	tile.lod = -1;
 }
 
 void BoxCityTileManager::BuildBlockData(std::mt19937& random, Tile& tile, const uint16_t zone_id, const helpers::OBB& obb, helpers::AABB& aabb, const bool dynamic_box, const AnimationBox& animated_box)
@@ -337,8 +347,6 @@ void BoxCityTileManager::BuildBlockData(std::mt19937& random, Tile& tile, const 
 	helpers::OBB updated_obb = obb;
 	updated_obb.extents = updated_obb.extents - glm::vec3(panel_depth, panel_depth, 0.f);
 
-	const float top_tile_z = 200.f;
-
 	uint32_t parent_index;
 	bool top;
 	if (!dynamic_box)
@@ -347,7 +355,7 @@ void BoxCityTileManager::BuildBlockData(std::mt19937& random, Tile& tile, const 
 		box_data.aabb_box = aabb;
 		box_data.oob_box = updated_obb;
 
-		if (box_data.oob_box.position.z + box_data.oob_box.extents.z > top_tile_z)
+		if (box_data.oob_box.position.z + box_data.oob_box.extents.z > kTileHeightTopViewRange)
 		{
 			top = true;
 			//Top box
@@ -367,7 +375,7 @@ void BoxCityTileManager::BuildBlockData(std::mt19937& random, Tile& tile, const 
 		animated_box_data.oob_box = updated_obb;
 		animated_box_data.animation = animated_box;
 		
-		if (animated_box_data.oob_box.position.z + animated_box_data.oob_box.extents.z + animated_box.range > top_tile_z)
+		if (animated_box_data.oob_box.position.z + animated_box_data.oob_box.extents.z + animated_box.range > kTileHeightTopViewRange)
 		{
 			top = true;
 			//Top box
@@ -636,21 +644,15 @@ void BoxCityTileManager::SpawnLodGroup(Tile& tile, const LODGroup lod_group)
 
 void BoxCityTileManager::SpawnTile(Tile& tile, uint32_t lod)
 {
+	//LOD 0 has Rest
+	//LOD 1 has Rest, TopBuildings and TopPanels
+	//LOD 2 has TopBuildings and Top Panels
+	//LOD 3 has TopBuildings only
+	// 
 	//Depends of the LOD, it spawns the instances the ECS
 	assert(tile.loaded);
 
-	SpawnLodGroup(tile, LODGroup::TopBuildings);
-
-	if (lod < 2)
-	{
-		SpawnLodGroup(tile, LODGroup::TopPanels);
-	}
-	if (lod < 1)
-	{
-		SpawnLodGroup(tile, LODGroup::Rest);
-	}
-	
-	tile.lod = lod;
+	LodTile(tile, lod);
 	tile.visible = true;
 }
 
@@ -695,49 +697,33 @@ void BoxCityTileManager::DespawnTile(Tile& tile)
 
 void BoxCityTileManager::LodTile(Tile& tile, uint32_t new_lod)
 {
-	//LOD 0 has Rest, TopBuildings and TopPanels
-	//LOD 1 has TopBuildings and Top Panels
-	//LOD 2 has TopBuildings only
 	if (tile.lod != new_lod)
 	{
-		switch (new_lod)
+		//For each group lod, check what it needs to be done
+		const uint32_t next_lod_mask = kLodMask[new_lod];
+		uint32_t prev_lod_mask;
+		if (tile.lod == -1)
 		{
-		case 0:
-			if (tile.lod == 1)
+			//Nothing was loaded
+			prev_lod_mask = 0;
+		}
+		else
+		{
+			prev_lod_mask = kLodMask[tile.lod];
+		}
+
+		for (uint32_t i = 0; i < static_cast<uint32_t>(LODGroup::Count); ++i)
+		{
+			const LODGroup lod_group = static_cast<LODGroup>(i);
+			if ((prev_lod_mask & (1 << i)) != 0 && (next_lod_mask & (1 << i)) == 0)
 			{
-				//Needs to spawn the rest
-				SpawnLodGroup(tile, LODGroup::Rest);
+				//We need to despawn the lod group
+				DespawnLodGroup(tile, lod_group);
 			}
-			if (tile.lod == 2)
+			if ((prev_lod_mask & (1 << i)) == 0 && (next_lod_mask & (1 << i)) != 0)
 			{
-				//Needs to spawn rest and TopPannels
-				SpawnLodGroup(tile, LODGroup::Rest);
-				SpawnLodGroup(tile, LODGroup::TopPanels);
-			}
-			break;
-		case 1:
-			if (tile.lod == 0)
-			{
-				//Needs to despawn Rest
-				DespawnLodGroup(tile, LODGroup::Rest);
-			}
-			if (tile.lod == 2)
-			{
-				//Needed to add TopPanels
-				SpawnLodGroup(tile, LODGroup::TopPanels);
-			}
-			break;
-		case 2:
-			if (tile.lod == 0)
-			{
-				//Needs to despawn the Rest and TopPanels
-				DespawnLodGroup(tile, LODGroup::Rest);
-				DespawnLodGroup(tile, LODGroup::TopPanels);
-			}
-			if (tile.lod == 1)
-			{
-				//Needs to despawn the TopPannels
-				DespawnLodGroup(tile, LODGroup::TopPanels);
+				//We need to spawn the lod group
+				SpawnLodGroup(tile, lod_group);
 			}
 		}
 

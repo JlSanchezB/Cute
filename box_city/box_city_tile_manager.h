@@ -34,13 +34,25 @@ public:
 		helpers::AABB aabb;
 		helpers::OBB obb;
 	};
-
 	enum class LODGroup
 	{
-		TopBuildings, //Top Buildings, used for LOD 0,1,2
-		TopPanels, //Top pannels, Used for LOD 0,1 
-		Rest, // Rest, used for LOD 0
+		TopBuildings,
+		TopPanels,
+		Rest,
 		Count
+	};
+
+	constexpr static uint32_t kNumLods = 3;
+	//LOD 0 has Rest, TopBuildings and TopPanels
+	//LOD 1 has TopBuildings and Top Panels
+	//LOD 2 has TopBuildings only
+
+	//Mask to represent each lod
+	constexpr static uint32_t kLodMask[kNumLods] =
+	{
+		1 << static_cast<uint32_t>(LODGroup::Rest) | 1 << static_cast<uint32_t>(LODGroup::TopBuildings) | 1 << static_cast<uint32_t>(LODGroup::TopPanels),
+		1 << static_cast<uint32_t>(LODGroup::TopBuildings) | 1 << static_cast<uint32_t>(LODGroup::TopPanels),
+		1 << static_cast<uint32_t>(LODGroup::TopBuildings)
 	};
 
 	struct BoxData
@@ -140,6 +152,7 @@ public:
 	constexpr static float kTileSize = 1000.f;
 	constexpr static float kTileHeightTop = 250.f;
 	constexpr static float kTileHeightBottom = -250.f;
+	constexpr static float kTileHeightTopViewRange = 200.f;
 
 	Tile& GetTile(size_t i, size_t j)
 	{

@@ -89,6 +89,8 @@ void BoxCityGame::OnInit()
 	database_desc.num_zones = m_tile_manager.GetNumTiles();
 	ecs::CreateDatabase<GameDatabase>(database_desc);
 
+	m_camera.SetNearFar(5.f, 8000.f);
+
 	m_tile_manager.Init(m_device, m_render_system, m_GPU_memory_render_module);
 }
 	
