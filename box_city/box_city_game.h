@@ -55,7 +55,7 @@ public:
 	render::GPUMemoryRenderModule* m_GPU_memory_render_module = nullptr;
 
 	//Camera
-	helpers::FlyCamera m_camera;
+	helpers::FlyCamera m_camera = helpers::FlyCamera(helpers::Camera::ZRange::OneZero);
 
 	//View constant buffer
 	display::ConstantBufferHandle m_view_constant_buffer;

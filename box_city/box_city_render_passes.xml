@@ -10,7 +10,7 @@
     <StaticSample shader_register="0" visibility="Pixel"/>
     <StaticSample shader_register="1" visibility="Pixel" filter="Linear"/>
   </Resource>
-  <Resource type="GraphicsPipelineState" name="BoxPipelineState" depth_enable="true" depth_write="true" depth_stencil_format="D32_FLOAT">
+  <Resource type="GraphicsPipelineState" name="BoxPipelineState" depth_enable="true" depth_write="true" depth_stencil_format="D32_FLOAT" depth_func="Greater">
     <RootSignature>BoxRootSignature</RootSignature>
     <InputLayouts>
       <Input semantic_name="POSITION" semantic_index="0" format="R32G32B32_FLOAT" input_slot="0"/>
@@ -108,7 +108,7 @@
         <Descriptor>DynamicGPUMemoryBuffer</Descriptor>
       </SetDescriptorTable>
 	    <ClearRenderTarget colour="0,0,0,0">BackBuffer</ClearRenderTarget>
-      <ClearDepthStencil depth="1.f">SceneDepth</ClearDepthStencil>
+      <ClearDepthStencil depth="0.f">SceneDepth</ClearDepthStencil>
       <DrawCityBoxItems priority="Box"/>
     </Commands>
   </Pass>

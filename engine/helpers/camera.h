@@ -40,6 +40,11 @@ namespace helpers
 	class Camera : public Frustum
 	{
 	public:
+		enum class ZRange
+		{
+			ZeroOne,
+			OneZero
+		};
 		void UpdateAspectRatio(float aspect_ratio)
 		{
 			m_aspect_ratio = aspect_ratio;
@@ -61,17 +66,23 @@ namespace helpers
 			return m_far;
 		}
 
+
 		//Set near/far
 		void SetNearFar(const float near, const float far)
 		{
 			m_near = near;
 			m_far = far;
 		}
+
+		Camera(const ZRange type) : m_type(type)
+		{
+		}
 	protected:
 
 		void UpdateInternalData();
 
 		//Setup
+		ZRange m_type;
 		glm::vec3 m_position = glm::vec3(0.f, 0.f, 0.f);
 		glm::vec2 m_rotation = glm::vec3(0.f);
 		glm::vec3 m_up_vector = glm::vec3(0.f, 0.f, 1.f);
@@ -83,9 +94,9 @@ namespace helpers
 	private:
 
 		//Matrices
-		glm::mat4x4 m_world_to_view_matrix;
-		glm::mat4x4 m_projection_matrix;
-		glm::mat4x4 m_view_projection_matrix;
+		glm::mat4x4 m_world_to_view_matrix = glm::mat4x4();
+		glm::mat4x4 m_projection_matrix = glm::mat4x4();
+		glm::mat4x4 m_view_projection_matrix = glm::mat4x4();
 
 	};
 
@@ -95,7 +106,10 @@ namespace helpers
 		//Process input and update the position
 		void Update(platform::Game* game, float ellapsed_time);
 
-	private:
+		FlyCamera(const Camera::ZRange type) : Camera(type)
+		{
+		}
+	private: 
 		//State
 		glm::vec3 m_move_speed = glm::vec3(0.f, 0.f, 0.f);
 		glm::vec2 m_rotation_speed = glm::vec2(0.f, 0.f);

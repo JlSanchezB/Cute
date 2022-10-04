@@ -115,7 +115,17 @@ namespace helpers
 		glm::mat4x4 world_to_view_matrix = glm::lookAt(m_position, m_position + glm::vec3(0.f, 1.f, 0.f) * rot, m_up_vector);
 
 		//Calculate projection matrix
-		glm::mat4x4 projection_matrix = glm::perspective(m_fov_y, m_aspect_ratio, m_near, m_far);
+		glm::mat4x4 projection_matrix;
+		switch (m_type)
+		{
+		case ZRange::ZeroOne:
+			projection_matrix = glm::perspective(m_fov_y, m_aspect_ratio, m_near, m_far);
+			break;
+		case ZRange::OneZero:
+			//Inverse near - far
+			projection_matrix = glm::perspective(m_fov_y, m_aspect_ratio, m_far, m_near);
+			break;
+		}
 
 		m_world_to_view_matrix = world_to_view_matrix;
 		m_projection_matrix = projection_matrix;
@@ -123,7 +133,15 @@ namespace helpers
 		//Calculate view projection
 		m_view_projection_matrix = m_projection_matrix * m_world_to_view_matrix;
 
-		Frustum::Init(m_view_projection_matrix);
+		//If it is the reverseZ, the FrustumInit only works with a normal 0-1, we could calculate the differences or just recalculate it to 0-1
+		glm::mat4x4 frustum_view_projection_matrix = m_view_projection_matrix;
+
+		if (m_type == ZRange::OneZero)
+		{
+			frustum_view_projection_matrix = glm::perspective(m_fov_y, m_aspect_ratio, m_near, m_far) * m_world_to_view_matrix;
+		}
+
+		Frustum::Init(frustum_view_projection_matrix);
 	}
 
 	glm::mat4x4 Camera::GetViewProjectionMatrix() const
