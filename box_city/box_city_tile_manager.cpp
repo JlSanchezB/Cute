@@ -254,6 +254,9 @@ namespace BoxCityTileSystem
 
 	void Manager::LoadingThreadRun(Manager* manager)
 	{
+		//Set name to the profiler
+		core::OnThreadCreate("TileLoading Thread");
+
 		std::unique_lock<core::Mutex> lock_guard(manager->m_loading_access_mutex);
 
 		while (!manager->m_loading_thread_quit)
