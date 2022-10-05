@@ -60,6 +60,26 @@ namespace core
 	private:
 		Mutex& m_spin_lock;
 	};
+
+	enum class ThreadPriority
+	{
+		Normal,
+		Background
+	};
+
+	class Thread : public std::thread
+	{
+	public:
+		template<class FUNCTION, class ...ARGS>
+		Thread(const wchar_t* name, ThreadPriority thread_priority, FUNCTION&& f, ARGS&&... args) : std::thread(std::forward<FUNCTION>(f), std::forward<ARGS>(args)...)
+		{
+			//Init platform dependent part
+			Init(name, thread_priority);
+		}
+	private:
+		//Platform dependent init
+		void Init(const wchar_t* name, ThreadPriority thread_priority);
+	};
 }
 
 #endif //SYNC_H_

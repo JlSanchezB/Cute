@@ -129,8 +129,8 @@ namespace BoxCityTileSystem
 			WorldTilePosition world_tile_position;
 		};
 
-		std::unique_ptr<std::thread> m_loading_thread;
-		std::mutex m_loading_access_mutex;
+		std::unique_ptr<core::Thread> m_loading_thread;
+		core::Mutex m_loading_access_mutex;
 		std::queue<LoadingJob> m_loading_queue;
 		std::condition_variable m_loading_queue_condition_variable;
 		bool m_loading_thread_quit = false;

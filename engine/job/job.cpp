@@ -5,13 +5,8 @@
 #include "job_queue.h"
 #include <cstdlib>
 #include "core/profile.h"
+#include "core/sync.h"
 
-#ifdef _WIN32
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN             // Exclude rarely-used stuff from Windows headers.
-#endif
-#include "windows.h"
-#endif
 namespace
 {
 	//Number of workers
@@ -63,13 +58,11 @@ namespace job
 
 			m_running = true;
 
-			//Create a thread associated to this worker
-			m_thread = std::make_unique<std::thread>(&Worker::ThreadRun, this);
-#ifdef _WIN32
 			wchar_t name_buffer[256];
 			swprintf_s(name_buffer, L"Worker Thread %zd", m_worker_index);
-			SetThreadDescription(static_cast<HANDLE>(m_thread->native_handle()), name_buffer);
-#endif
+
+			//Create a thread associated to this worker
+			m_thread = std::make_unique<core::Thread>(name_buffer, core::ThreadPriority::Normal, &Worker::ThreadRun, this);
 		}
 
 		void Stop()
@@ -107,7 +100,7 @@ namespace job
 
 	private:
 		//Thread if it needed
-		std::unique_ptr<std::thread> m_thread;
+		std::unique_ptr<core::Thread> m_thread;
 		//Running
 		bool m_running = false;
 		//Worker index

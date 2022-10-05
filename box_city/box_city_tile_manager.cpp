@@ -23,7 +23,7 @@ namespace BoxCityTileSystem
 		GenerateTileDescriptors();
 
 		//Create loading thread
-		m_loading_thread = std::make_unique<std::thread>(&LoadingThreadRun, this);
+		m_loading_thread.reset( new core::Thread(L"TileLoading Thread", core::ThreadPriority::Background, &LoadingThreadRun, this));
 
 		//Simulate one frame in the center, it has to create all tiles around origin
 		Update(glm::vec3(0.f, 0.f, 0.f));
