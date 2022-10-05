@@ -96,6 +96,9 @@ void BoxCityGame::OnInit()
 	
 void BoxCityGame::OnPrepareDestroy()
 {
+	//Destroy tile manager
+	m_tile_manager.Shutdown();
+
 	//Sync the render and the jobs, so we can safe destroy the resources
 	if (m_render_system)
 	{
@@ -110,9 +113,6 @@ void BoxCityGame::OnPrepareDestroy()
 
 void BoxCityGame::OnDestroy()
 {
-	//Destroy tile manager
-	m_tile_manager.Shutdown();
-
 	//Destroy constant buffer
 	display::DestroyHandle(m_device, m_view_constant_buffer);
 

@@ -4,6 +4,9 @@
 #include <render/render.h>
 #include <render_module/render_module_gpu_memory.h>
 #include <core/profile.h>
+#include <core/control_variables.h>
+
+CONTROL_VARIABLE_BOOL(c_use_loading_thread, true, "BoxCityTileManager", "Use loading thread for loading");
 
 namespace BoxCityTileSystem
 {
@@ -19,12 +22,30 @@ namespace BoxCityTileSystem
 		//Build tile descriptors
 		GenerateTileDescriptors();
 
+		//Create loading thread
+		m_loading_thread = std::make_unique<std::thread>(&LoadingThreadRun, this);
+
 		//Simulate one frame in the center, it has to create all tiles around origin
 		Update(glm::vec3(0.f, 0.f, 0.f));
+
 	}
 
 	void Manager::Shutdown()
 	{
+		//Quit the loading thread
+		{
+			std::unique_lock<core::Mutex> lock_guard(m_loading_access_mutex);
+
+			//Mark the loading thread for quit
+			m_loading_thread_quit = true;
+
+			//Notify the loading thread that has work
+			m_loading_queue_condition_variable.notify_one();
+		}
+
+		//Join the thread
+		m_loading_thread->join();
+
 		//Unload each tile
 		for (auto& tile : m_tiles)
 		{
@@ -55,7 +76,9 @@ namespace BoxCityTileSystem
 		if (!m_camera_top_range && camera_position.z > (kTileHeightTopViewRange + fudge_top_range))
 			camera_moved = true;
 
-		if (camera_moved || m_pending_streaming_work)
+		bool new_tiles_loaded = m_tiles_loaded.exchange(false);
+
+		if (camera_moved || m_pending_streaming_work || new_tiles_loaded)
 		{
 			if (camera_moved)
 			{
@@ -79,15 +102,15 @@ namespace BoxCityTileSystem
 
 				//Depends of the camera, we calculate the lod 1 or 0
 				uint32_t lod = tile_descriptor.lod;
-				bool m_visible = tile_descriptor.m_loaded;
+				bool tile_needs_to_be_visible = tile_descriptor.m_loaded;
 
 				//If we are under the horizon, we don't need LOD2 or LOD1
 				if (camera_position.z < kTileHeightTopViewRange && lod > 0)
-					m_visible = false;
+					tile_needs_to_be_visible = false;
 			
 
 				//Check if the tile has the different world index
-				if ((tile.GetWorldTilePosition().i != world_tile.i || tile.GetWorldTilePosition().j != world_tile.j) && tile.IsVisible() || !m_visible && tile.IsVisible())
+				if ((tile.GetWorldTilePosition().i != world_tile.i || tile.GetWorldTilePosition().j != world_tile.j) && tile.IsVisible() || !tile_needs_to_be_visible && tile.IsVisible())
 				{
 					tile.DespawnTile(this);
 					num_tile_changed++;
@@ -95,11 +118,18 @@ namespace BoxCityTileSystem
 					core::LogInfo("Tile Local<%i,%i>, World<%i,%i>, unvisible", local_tile.i, local_tile.j, world_tile.i, world_tile.j);
 				}
 
-				//If tile is unloaded but it needs to be m_loaded
-				if (!tile.IsVisible() && m_visible && num_tile_changed < max_tile_changed_per_frame)
+				//If tile is unloaded or changed world position but it needs to be m_loaded, added to the queue
+				if ((tile.GetWorldTilePosition().i != world_tile.i || tile.GetWorldTilePosition().j != world_tile.j) && tile_needs_to_be_visible || !tile.IsLoaded() && tile_needs_to_be_visible)
 				{
-					//Create new time
-					tile.BuildTileData(this, local_tile, world_tile);
+					if (!tile.IsLoading())
+					{
+						AddTileToLoad(tile, local_tile, world_tile);
+					}
+				}
+
+				//The tile is loaded but still not visible
+				if (!tile.IsVisible() && tile.IsLoaded() && tile_needs_to_be_visible && num_tile_changed < max_tile_changed_per_frame)
+				{
 					tile.SpawnTile(this, lod);
 					num_tile_changed++;
 
@@ -195,5 +225,62 @@ namespace BoxCityTileSystem
 	Tile& Manager::GetTile(const LocalTilePosition& local_tile)
 	{
 		return m_tiles[local_tile.i + local_tile.j * kLocalTileCount];
+	}
+	
+	void Manager::AddTileToLoad(Tile& tile, const LocalTilePosition& local_tile_position, const WorldTilePosition& world_tile_position)
+	{
+		assert(!tile.IsVisible());
+		assert(!tile.IsLoading());
+
+		if (c_use_loading_thread)
+		{
+			tile.AddedToLoadingQueue();
+
+			std::unique_lock<core::Mutex> lock_guard(m_loading_access_mutex);
+
+			//queue tile
+			m_loading_queue.push(LoadingJob{ &tile, local_tile_position, world_tile_position });
+
+			//Notify the loading thread that has work
+			m_loading_queue_condition_variable.notify_one();
+		}
+		else
+		{
+			//Just load it and mark for process
+			tile.BuildTileData(this, local_tile_position, world_tile_position);
+			m_tiles_loaded.exchange(true);
+		}
+	}
+
+	void Manager::LoadingThreadRun(Manager* manager)
+	{
+		std::unique_lock<core::Mutex> lock_guard(manager->m_loading_access_mutex);
+
+		while (!manager->m_loading_thread_quit)
+		{
+			manager->m_loading_queue_condition_variable.wait(lock_guard, [manager]()
+				{
+					return !manager->m_loading_queue.empty() || manager->m_loading_thread_quit;
+				});
+
+			if (!manager->m_loading_queue.empty())
+			{
+				LoadingJob job = manager->m_loading_queue.front();
+				manager->m_loading_queue.pop();
+
+				lock_guard.unlock();
+
+				//Load the tile
+				{
+					assert(job.tile->IsLoading());
+					job.tile->BuildTileData(manager, job.local_tile_position, job.world_tile_position);
+				}
+
+				//Indicate to the tile manager that tiles have been loaded
+				manager->m_tiles_loaded.exchange(true);
+
+				lock_guard.lock();
+			}
+		}
 	}
 }

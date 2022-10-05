@@ -5,6 +5,8 @@
 #include "box_city_tile.h"
 #include <helpers/collision.h>
 #include <bitset>
+#include <queue>
+#include <condition_variable>
 
 namespace render
 {
@@ -118,6 +120,27 @@ namespace BoxCityTileSystem
 		void GenerateTileDescriptors();
 
 		Tile& GetTile(const LocalTilePosition& local_tile);
+
+		//Loading system
+		struct LoadingJob
+		{
+			Tile* tile;
+			LocalTilePosition local_tile_position;
+			WorldTilePosition world_tile_position;
+		};
+
+		std::unique_ptr<std::thread> m_loading_thread;
+		std::mutex m_loading_access_mutex;
+		std::queue<LoadingJob> m_loading_queue;
+		std::condition_variable m_loading_queue_condition_variable;
+		bool m_loading_thread_quit = false;
+		std::atomic_bool m_tiles_loaded = false;
+
+		//Add Tile to Load
+		void AddTileToLoad(Tile& tile, const LocalTilePosition& local_tile_position, const WorldTilePosition& world_tile_position);
+
+		//Loading Thread Run access
+		static void LoadingThreadRun(Manager* manager);
 	};
 }
 

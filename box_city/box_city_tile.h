@@ -122,14 +122,27 @@ namespace BoxCityTileSystem
 		void DespawnTile(Manager* manager);
 		void LodTile(Manager* manager, uint32_t new_lod);
 
-		bool IsVisible() const { return m_visible;}
-		bool IsLoaded() const {	return m_loaded;}
+		bool IsVisible() const { return m_state == State::Visible;}
+		bool IsLoaded() const {	return m_state == State::Loaded || m_state == State::Visible;}
+		bool IsLoading() const { return m_state == State::Loading;}
 		uint32_t CurrentLod() const { return m_lod;}
 		uint32_t GetZoneID() const { return m_zone_id;}
 		helpers::AABB GetBoundingBox() const { return m_bounding_box;}
 		WorldTilePosition GetWorldTilePosition() const { return m_tile_position;}
 
+		//Call to indicate that has been added in the queue for loading
+		void AddedToLoadingQueue();
 	private:
+		enum class State
+		{
+			Unloaded,
+			Loading,
+			Loaded,
+			Visible
+		};
+
+		std::atomic<State> m_state = State::Unloaded;
+
 		constexpr static uint16_t kInvalidTile = static_cast<uint16_t>(-1);
 
 		helpers::AABB m_bounding_box;
@@ -137,12 +150,6 @@ namespace BoxCityTileSystem
 
 		//World time index that represent
 		WorldTilePosition m_tile_position;
-
-		//Load?
-		bool m_loaded = false;
-
-		//Visible
-		bool m_visible = false;
 
 		//Current lod
 		uint32_t m_lod = 0;
@@ -158,6 +165,11 @@ namespace BoxCityTileSystem
 
 		//Vector of the GPU allocation for each lod group
 		std::array<render::AllocHandle, static_cast<size_t>(LODGroup::Count)> m_gpu_allocation;
+
+		void SetState(State new_state)
+		{
+			m_state = new_state;
+		}
 	};
 };
 

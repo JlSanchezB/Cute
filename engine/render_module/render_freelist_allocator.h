@@ -31,6 +31,14 @@ namespace render
 
 		virtual ~FreeListAllocator()
 		{
+			//Deallocate all live allocations
+			for (auto& frame : m_live_deallocations)
+			{
+				for (auto& handle : frame.handles)
+				{
+					m_handle_pool.Free(handle);
+				}
+			}
 		}
 
 		void Init(size_t resource_size)

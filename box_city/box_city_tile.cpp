@@ -124,7 +124,7 @@ namespace BoxCityTileSystem
 						//Calculate local tile
 						LocalTilePosition local_tile = CalculateLocalTileIndex(WorldTilePosition{ ii, jj });
 						const Tile& neighbour_tile = manager->GetTile(local_tile.i, local_tile.j);
-						if (neighbour_tile.m_loaded)
+						if (neighbour_tile.IsLoaded())
 						{
 							collide = neighbour_tile.CollisionBoxVsTile(extended_aabb_box, extended_obb_box);
 						}
@@ -155,8 +155,8 @@ namespace BoxCityTileSystem
 			m_bounding_box.min = glm::min(m_bounding_box.min, extended_aabb_box.min);
 			m_bounding_box.max = glm::max(m_bounding_box.max, extended_aabb_box.max);
 		}
-
-		m_loaded = true;
+		assert(m_state == State::Loaded || m_state == State::Unloaded || m_state == State::Loading);
+		SetState(State::Loaded);
 		m_lod = -1;
 	}
 
@@ -471,10 +471,10 @@ namespace BoxCityTileSystem
 		//LOD 3 has TopBuildings only
 		// 
 		//Depends of the LOD, it spawns the instances the ECS
-		assert(m_loaded);
 
 		LodTile(manager, lod);
-		m_visible = true;
+		assert(m_state == State::Loaded);
+		SetState(State::Visible);
 	}
 
 	void Tile::DespawnLodGroup(Manager* manager, const LODGroup lod_group)
@@ -513,7 +513,8 @@ namespace BoxCityTileSystem
 		DespawnLodGroup(manager, LODGroup::TopPanels);
 		DespawnLodGroup(manager, LODGroup::Rest);
 
-		m_visible = false;
+		assert(m_state == State::Visible);
+		SetState(State::Loaded);
 	}
 
 	void Tile::LodTile(Manager* manager, uint32_t new_lod)
@@ -550,5 +551,10 @@ namespace BoxCityTileSystem
 
 			m_lod = new_lod;
 		}
+	}
+	void Tile::AddedToLoadingQueue()
+	{
+		assert(m_state == State::Unloaded || m_state == State::Loaded);
+		SetState(State::Loading);
 	}
 }
