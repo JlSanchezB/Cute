@@ -64,7 +64,7 @@ public:
 	render::Priority m_box_render_priority;
 
 	//Tile manager
-	BoxCityTileManager m_tile_manager;
+	BoxCityTileSystem::Manager m_tile_manager;
 
 	//Sun direction
 	glm::vec2 m_sun_direction_angles = glm::vec2(45.f, 45.f);
