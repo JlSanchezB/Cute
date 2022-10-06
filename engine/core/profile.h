@@ -6,7 +6,11 @@
 #define PROFILE_H_
 
 #ifndef PROFILE_ENABLE
+#ifdef CUTE_RELEASE
+	#define PROFILE_ENABLE 0
+#else
 	#define PROFILE_ENABLE 1
+#endif
 #endif
 
 #if PROFILE_ENABLE == 1
