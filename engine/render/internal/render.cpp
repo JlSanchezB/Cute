@@ -249,7 +249,7 @@ namespace render
 		}
 	}
 
-	std::pair<std::unique_ptr<Resource>, display::TranstitionState> System::AllocPoolResource(ResourceName resource_name, PoolResourceType type, uint16_t width, uint16_t height, const display::Format& format)
+	std::pair<std::unique_ptr<Resource>, display::TranstitionState> System::AllocPoolResource(ResourceName resource_name, PoolResourceType type, uint16_t width, uint16_t height, const display::Format& format, const float default_depth, const uint8_t default_stencil)
 	{
 		//Look in the pool for one free with the same parameters
 		for (auto& pool_resource : m_pool_resources)
@@ -259,7 +259,9 @@ namespace render
 				&& pool_resource.type == type
 				&& pool_resource.format == format
 				&& pool_resource.width == width
-				&& pool_resource.height == height)
+				&& pool_resource.height == height
+				&& pool_resource.default_depth == default_depth
+				&& pool_resource.default_stencil == default_stencil)
 			{
 				assert(pool_resource.resource.get());
 				//It can be use
@@ -296,6 +298,8 @@ namespace render
 			desc.width = width;
 			desc.height = height;
 			//desc.format = format;
+			desc.default_clear = default_depth;
+			desc.default_stencil = default_stencil;
 			display::DepthBufferHandle handle = display::CreateDepthBuffer(m_device, desc, resource_name.GetValue());
 
 			resource = CreateResourceFromHandle<DepthBufferResource>(handle);
@@ -310,14 +314,14 @@ namespace render
 			if (pool_resource.name == ResourceName())
 			{
 				//Use this slot to add the new resource
-				pool_resource = PoolResource{ {}, resource_name, type, width, height, format, false, m_render_frame_index, access };
+				pool_resource = PoolResource{ {}, resource_name, type, width, height, format, default_depth, default_stencil, false, m_render_frame_index, access};
 
 				return std::make_pair<>(std::move(resource), access);
 			}
 		}
 
 		//Add into the pool
-		m_pool_resources.emplace_back(PoolResource{ {}, resource_name, type, width, height, format, false, m_render_frame_index, access });
+		m_pool_resources.emplace_back(PoolResource{ {}, resource_name, type, width, height, format, default_depth, default_stencil, false, m_render_frame_index, access });
 
 		return std::make_pair<>(std::move(resource), access);
 	}
@@ -1083,7 +1087,7 @@ namespace render
 							uint16_t height = render_context->m_pass_info.height * pool_resource.height_factor / 256;
 
 							//Pass the control to the resource in the resource map
-							auto allocated_pool_resource = AllocPoolResource(pool_resource.name, pool_resource.type, width, height, pool_resource.format);
+							auto allocated_pool_resource = AllocPoolResource(pool_resource.name, pool_resource.type, width, height, pool_resource.format, pool_resource.default_depth, pool_resource.default_stencil);
 							auto resource_info = m_resources_map.Find(pool_resource.name)->get();
 							resource_info->resource = std::move(allocated_pool_resource.first);
 							resource_info->access = allocated_pool_resource.second;

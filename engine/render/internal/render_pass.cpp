@@ -53,6 +53,17 @@ namespace
 			{"D32_FLOAT", display::Format::D32_FLOAT}
 		};
 	};
+
+	template<>
+	struct ConversionTable<display::ClearType>
+	{
+		constexpr static std::pair<const char*, display::ClearType> table[] =
+		{
+			{"Depth", display::ClearType::Depth},
+			{"Stencil", display::ClearType::Stencil},
+			{"DepthStencil", display::ClearType::DepthStencil}
+		};
+	};
 }
 
 namespace render
@@ -184,8 +195,14 @@ namespace render
 							display::Format format;
 							QueryTableAttribute(load_context, dependencies_xml_element, "format", format, AttributeType::NonOptional);
 
+							float default_depth = 1.f;
+							dependencies_xml_element->QueryFloatAttribute("default_depth", &default_depth);
+
+							uint32_t default_stencil = 0;
+							dependencies_xml_element->QueryUnsignedAttribute("default_stencil", &default_stencil);
+
 							//Add resource dependency, so the pass will request the resource to the pool
-							m_resource_pool_dependencies.emplace_back(resource_name, type, pre_condition == "Alloc"_sh32, post_condition == "Free"_sh32, width_factor, heigth_factor, format);
+							m_resource_pool_dependencies.emplace_back(resource_name, type, pre_condition == "Alloc"_sh32, post_condition == "Free"_sh32, width_factor, heigth_factor, format, default_depth, static_cast<uint8_t>(default_stencil));
 
 
 							//Needs to access the resource, it will be empty at the moment, as it is going to get assigned during the pass
@@ -347,7 +364,9 @@ namespace render
 		{
 			stencil_value = stencil_value_read;
 		}
-		
+		clear_type = display::ClearType::Depth;
+		QueryTableAttribute(load_context, load_context.current_xml_element, "type", clear_type, AttributeType::Optional);
+
 		m_depth_stencil_buffer.UpdateName(load_context.GetResourceReference(load_context));
 	}
 	void ClearDepthStencilPass::Render(RenderContext& render_context) const
@@ -356,7 +375,7 @@ namespace render
 		DepthBufferResource* depth_stencil_resource = m_depth_stencil_buffer.Get(render_context);
 		if (depth_stencil_resource)
 		{
-			render_context.GetContext()->ClearDepthStencil(depth_stencil_resource->GetHandle(), depth_value, stencil_value);
+			render_context.GetContext()->ClearDepthStencil(depth_stencil_resource->GetHandle(), clear_type, depth_value, stencil_value);
 		}
 	}
 	void SetRootSignaturePass::Load(LoadContext & load_context)

@@ -93,7 +93,7 @@
   <Pass name="Main">
     <Dependencies>
       <Resource name="StaticGPUMemoryBuffer" pre_condition_state="Ready" access="AllShaderResource"/>
-      <DepthBuffer name="SceneDepth" pre_condition_state="Alloc" post_update_state="Free" access="Depth" format="D32_FLOAT"/>
+      <DepthBuffer name="SceneDepth" pre_condition_state="Alloc" post_update_state="Free" access="Depth" format="D32_FLOAT" default_depth="0.f"/>
       <Resource name="BackBuffer" access="RenderTarget"/>
     </Dependencies>
     <Commands>
@@ -108,7 +108,7 @@
         <Descriptor>DynamicGPUMemoryBuffer</Descriptor>
       </SetDescriptorTable>
 	    <ClearRenderTarget colour="0,0,0,0">BackBuffer</ClearRenderTarget>
-      <ClearDepthStencil depth="0.f">SceneDepth</ClearDepthStencil>
+      <ClearDepthStencil>SceneDepth</ClearDepthStencil>
       <DrawCityBoxItems priority="Box"/>
     </Commands>
   </Pass>

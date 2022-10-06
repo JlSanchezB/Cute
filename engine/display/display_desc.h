@@ -261,6 +261,8 @@ namespace display
 	{
 		uint32_t width = 0;
 		uint32_t height = 0;
+		float default_clear = 1.f;
+		uint8_t default_stencil = 0;
 	};
 
 	struct WeakUnorderedAccessBufferHandleAsShaderResource : WeakUnorderedAccessBufferHandle

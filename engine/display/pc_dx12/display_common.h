@@ -230,6 +230,8 @@ namespace display
 	{
 		ComPtr<ID3D12Resource> resource;
 		D3D12_RESOURCE_STATES current_state;
+		float default_depth;
+		uint8_t default_stencil;
 	};
 	struct VertexBuffer : RingResourceSupport<VertexBufferHandle>
 	{

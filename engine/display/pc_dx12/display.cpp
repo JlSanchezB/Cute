@@ -938,8 +938,11 @@ namespace display
 		auto& depth_buffer = device->Get(handle);
 
 		D3D12_CLEAR_VALUE clear_value;
-		clear_value.DepthStencil = { 1.f, 0 };
+		clear_value.DepthStencil = { depth_buffer_desc.default_clear, depth_buffer_desc.default_stencil };
 		clear_value.Format = DXGI_FORMAT_D32_FLOAT;
+
+		depth_buffer.default_depth = depth_buffer_desc.default_clear;
+		depth_buffer.default_stencil = depth_buffer_desc.default_stencil;
 
 		//Create commited resource
 		if (FAILED(device->m_native_device->CreateCommittedResource(

@@ -153,6 +153,13 @@ namespace display
 		DepthRead,
 		Present
 	};
+
+	enum class ClearType : uint8_t
+	{
+		Depth,
+		Stencil,
+		DepthStencil
+	};
 }
 
 #endif

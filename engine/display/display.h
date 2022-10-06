@@ -181,9 +181,9 @@ namespace display
 
 		//Clear Render Target
 		void ClearRenderTargetColour(const WeakRenderTargetHandle& render_target, const float colour[4]);
-
+		
 		//Clear Depth Stencil
-		void ClearDepthStencil(const WeakDepthBufferHandle& depth_stencil, std::optional<float> depth, std::optional <uint8_t> stencil);
+		void ClearDepthStencil(const WeakDepthBufferHandle& depth_stencil, const ClearType& clear_type, std::optional<float> depth, std::optional <uint8_t> stencil);
 
 		//Set Viewport
 		void SetViewport(const Viewport& viewport);
