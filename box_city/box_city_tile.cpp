@@ -23,6 +23,42 @@ namespace
 		// Overlapping
 		return true;
 	}
+
+	//Parameters that define a zone
+	struct ZoneDescriptor
+	{
+		float length_range_min;
+		float length_range_max;
+		float angle_inc_range_min;
+		float angle_inc_range_max;
+		float size_range_min;
+		float size_range_max;
+		float animation_distance_range_min;
+		float animation_distance_range_max;
+		float animation_frecuency_range_min;
+		float animation_frecuency_range_max;
+		float animation_offset_range_min;
+		float animation_offset_range_max;
+		float static_range;
+		uint32_t num_buildings_generated;
+		float panel_depth_panel;
+		float panel_size_range_min;
+		float panel_size_range_max;
+		uint32_t num_panel_generated;
+		float corridor_size;
+	};
+
+	constexpr uint32_t kNumZoneDescriptors = 6;
+
+	const ZoneDescriptor kZoneDescriptors[kNumZoneDescriptors] =
+	{
+		{50.f, 150.f, -glm::half_pi<float>() * 0.2f, glm::half_pi<float>() * 0.2f, 20.0f, 30.0f, 0.f, 50.f, 0.3f, 1.f, 0.f, 40.f, 10.f, 350, 5.f, 5.f, 15.f, 16, 10.f},
+		{100.f, 250.f, -glm::half_pi<float>() * 0.4f, glm::half_pi<float>() * 0.4f, 15.0f, 25.0f, 0.f, 60.f, 0.3f, 2.f, 0.f, 30.f, 5.f, 250, 5.f, 5.f, 10.f, 24, 5.f},
+		{30.f, 50.f, -glm::half_pi<float>() * 0.7f, glm::half_pi<float>() * 0.7f, 20.0f, 30.0f, 0.f, 20.f, 0.3f, 0.5f, 0.f, 20.f, 5.f, 350, 5.f, 5.f, 20.f, 12, 6.f},
+		{40.f, 60.f, -glm::half_pi<float>() * 0.2f, glm::half_pi<float>() * 0.2f, 20.0f, 60.0f, 0.f, 70.f, 0.6f, 2.f, 0.f, 10.f, 1.f, 350, 5.f, 5.f, 15.f, 8, 10.f},
+		{200.f, 350.f, -glm::half_pi<float>() * 0.1f, glm::half_pi<float>() * 0.1f, 20.0f, 40.0f, 0.f, 50.f, 0.1f, 0.5f, 0.f, 10.f, 2.f, 220, 5.f, 3.f, 8.f, 24, 6.f},
+		{50.f, 250.f, -glm::half_pi<float>() * 0.5f, glm::half_pi<float>() * 0.5f, 20.0f, 70.0f, 0.f, 250.f, 0.05f, 1.f, 0.f, 10.f, 10.f, 350, 5.f, 5.f, 15.f, 16, 10.f}
+	};
 }
 
 namespace BoxCityTileSystem
@@ -47,19 +83,20 @@ namespace BoxCityTileSystem
 	void Tile::BuildTileData(Manager* manager, const LocalTilePosition& local_tile, const WorldTilePosition& world_tile)
 	{
 		std::mt19937 random(static_cast<uint32_t>((100000 + world_tile.i) + (100000 + world_tile.j) * kLocalTileCount));
+		
+		uint32_t descriptor_index = 0;
+		const ZoneDescriptor& zone_descriptor = kZoneDescriptors[descriptor_index];
 
 		std::uniform_real_distribution<float> position_range(0, kTileSize);
 		std::uniform_real_distribution<float> position_range_z(kTileHeightBottom, kTileHeightTop);
-		std::uniform_real_distribution<float> angle_inc_range(-glm::half_pi<float>() * 0.2f, glm::half_pi<float>() * 0.2f);
+		std::uniform_real_distribution<float> angle_inc_range(zone_descriptor.angle_inc_range_min, zone_descriptor.angle_inc_range_max);
 		std::uniform_real_distribution<float> angle_rotation_range(0.f, glm::two_pi<float>());
-		std::uniform_real_distribution<float> length_range(50.f, 150.f);
-		std::uniform_real_distribution<float> size_range(20.0f, 30.0f);
+		std::uniform_real_distribution<float> length_range(zone_descriptor.length_range_min, zone_descriptor.length_range_max);
+		std::uniform_real_distribution<float> size_range(zone_descriptor.size_range_min, zone_descriptor.size_range_max);
 
-		std::uniform_real_distribution<float> range_animation_range(0.f, 50.f);
-		std::uniform_real_distribution<float> frecuency_animation_range(0.3f, 1.f);
-		std::uniform_real_distribution<float> offset_animation_range(0.f, 40.f);
-
-		float static_range_box_city = 10.f;
+		std::uniform_real_distribution<float> range_animation_range(zone_descriptor.animation_distance_range_min, zone_descriptor.animation_distance_range_max);
+		std::uniform_real_distribution<float> frecuency_animation_range(zone_descriptor.animation_frecuency_range_min, zone_descriptor.animation_frecuency_range_max);
+		std::uniform_real_distribution<float> offset_animation_range(zone_descriptor.animation_offset_range_min, zone_descriptor.animation_offset_range_max);
 
 		//Tile positions
 		const float begin_tile_x = world_tile.i * kTileSize;
@@ -76,7 +113,7 @@ namespace BoxCityTileSystem
 		m_level_data[static_cast<size_t>(LODGroup::Rest)].clear();
 
 		//Create boxes
-		for (size_t i = 0; i < 350; ++i)
+		for (size_t i = 0; i < zone_descriptor.num_buildings_generated; ++i)
 		{
 			helpers::OBB obb_box;
 			float size = size_range(random);
@@ -94,7 +131,7 @@ namespace BoxCityTileSystem
 			animated_box.original_position = obb_box.position;
 
 			bool dynamic_box = true;
-			if (animated_box.range < static_range_box_city)
+			if (animated_box.range < zone_descriptor.static_range)
 			{
 				dynamic_box = false;
 			}
@@ -149,7 +186,7 @@ namespace BoxCityTileSystem
 			}
 
 			//Block can be build
-			BuildBlockData(random, obb_box, aabb_box, dynamic_box, animated_box);
+			BuildBlockData(random, obb_box, aabb_box, dynamic_box, animated_box, descriptor_index);
 
 			//Gow zone AABB by the bounding box
 			m_bounding_box.min = glm::min(m_bounding_box.min, extended_aabb_box.min);
@@ -160,10 +197,12 @@ namespace BoxCityTileSystem
 		m_lod = -1;
 	}
 
-	void Tile::BuildBlockData(std::mt19937& random, const helpers::OBB& obb, helpers::AABB& aabb, const bool dynamic_box, const AnimationBox& animated_box)
+	void Tile::BuildBlockData(std::mt19937& random, const helpers::OBB& obb, helpers::AABB& aabb, const bool dynamic_box, const AnimationBox& animated_box, uint32_t descriptor_index)
 	{
+		const ZoneDescriptor& zone_descriptor = kZoneDescriptors[descriptor_index];
+
 		//Just a little smaller, so it has space for the panels
-		const float panel_depth = 5.0f;
+		const float panel_depth = zone_descriptor.panel_depth_panel;
 
 		helpers::OBB updated_obb = obb;
 		updated_obb.extents = updated_obb.extents - glm::vec3(panel_depth, panel_depth, 0.f);
@@ -227,13 +266,13 @@ namespace BoxCityTileSystem
 			const float wall_heigh = updated_obb.extents.z;
 			panels_generated.clear();
 
-			std::uniform_real_distribution<float> panel_size_range(5.f, glm::min(wall_width, 15.f));
+			std::uniform_real_distribution<float> panel_size_range(zone_descriptor.panel_size_range_min, glm::min(wall_width, zone_descriptor.panel_size_range_max));
 
 			//Calculate rotation matrix of the face and position
 			glm::mat3x3 face_rotation = glm::mat3x3(glm::rotate(glm::half_pi<float>(), glm::vec3(1.f, 0.f, 0.f))) * glm::mat3x3(glm::rotate(glm::half_pi<float>() * face, glm::vec3(0.f, 0.f, 1.f))) * updated_obb.rotation;
 			glm::vec3 face_position = updated_obb.position + glm::vec3(0.f, 0.f, wall_width) * face_rotation;
 
-			for (size_t i = 0; i < 16; ++i)
+			for (size_t i = 0; i < zone_descriptor.num_panel_generated; ++i)
 			{
 				glm::vec2 panel_size(panel_size_range(random), panel_size_range(random));
 				std::uniform_real_distribution<float> panel_position_x_range(-wall_width + panel_size.x, wall_width - panel_size.x);

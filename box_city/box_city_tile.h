@@ -113,7 +113,7 @@ namespace BoxCityTileSystem
 
 		//Building logic
 		void BuildTileData(Manager* manager, const LocalTilePosition& local_tile, const WorldTilePosition& world_tile);
-		void BuildBlockData(std::mt19937& random, const helpers::OBB& obb, helpers::AABB& aabb, const bool dynamic_box, const AnimationBox& animated_box);
+		void BuildBlockData(std::mt19937& random, const helpers::OBB& obb, helpers::AABB& aabb, const bool dynamic_box, const AnimationBox& animated_box, const uint32_t descriptor_index = 0);
 
 		//Spawn/Despawn logic
 		void SpawnLodGroup(Manager* manager, const LODGroup lod_group);
