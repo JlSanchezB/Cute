@@ -22,11 +22,17 @@ namespace BoxCityTileSystem
 	constexpr uint32_t kLocalTileCount = 3;
 #endif
 
+	//World Sizes
 	constexpr float kTileSize = 1000.f;
 	constexpr float kTileHeightTop = 250.f;
-	constexpr float kTileHeightBottom = -250.f;
+	constexpr float kTileHeightBottom = -1000.f;
 	constexpr float kTileHeightTopViewRange = 200.f;
 	
+	constexpr uint32_t kNumZonesXY = 500;
+	constexpr uint32_t kNumZonesZ = 4;
+	constexpr float kZoneWorldSizeXY = 10000.f;
+	constexpr float kZoneWorldSizeZ = kTileHeightTop - kTileHeightBottom;
+
 	//Get local tiles index from world tiles
 	inline LocalTilePosition CalculateLocalTileIndex(const WorldTilePosition& world_tile_position)
 	{
@@ -85,6 +91,8 @@ namespace BoxCityTileSystem
 		render::System* GetRenderSystem() { return m_render_system; };
 		render::GPUMemoryRenderModule* GetGPUMemoryRenderModule() { return m_GPU_memory_render_module; };
 
+		//Return a descriptor index for a position, if there is not a descriptor, it is just a gap
+		std::optional<uint32_t> GetZoneDescriptorIndex(const glm::vec3& position);
 	private:
 		//System
 		display::Device* m_device = nullptr;
@@ -120,6 +128,18 @@ namespace BoxCityTileSystem
 		void GenerateTileDescriptors();
 
 		Tile& GetTile(const LocalTilePosition& local_tile);
+
+		//Zone distribution
+		void GenerateZoneDescriptors();
+		
+		//Zone distributions
+		struct ZoneDescriptor
+		{
+			//position inside the zone
+			glm::vec3 position;
+			uint32_t descriptor_index;
+		};
+		std::vector<ZoneDescriptor> m_descriptor_zones;
 
 		//Loading system
 		struct LoadingJob

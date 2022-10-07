@@ -5,6 +5,7 @@
 #include <render/render.h>
 #include <render_module/render_module_gpu_memory.h>
 #include <core/counters.h>
+#include "box_city_descriptors.h"
 
 COUNTER(c_Blocks_Count, "Box City", "Number of Blocks", false);
 COUNTER(c_Panels_Count, "Box City", "Number of Panels", false);
@@ -23,42 +24,6 @@ namespace
 		// Overlapping
 		return true;
 	}
-
-	//Parameters that define a zone
-	struct ZoneDescriptor
-	{
-		float length_range_min;
-		float length_range_max;
-		float angle_inc_range_min;
-		float angle_inc_range_max;
-		float size_range_min;
-		float size_range_max;
-		float animation_distance_range_min;
-		float animation_distance_range_max;
-		float animation_frecuency_range_min;
-		float animation_frecuency_range_max;
-		float animation_offset_range_min;
-		float animation_offset_range_max;
-		float static_range;
-		uint32_t num_buildings_generated;
-		float panel_depth_panel;
-		float panel_size_range_min;
-		float panel_size_range_max;
-		uint32_t num_panel_generated;
-		float corridor_size;
-	};
-
-	constexpr uint32_t kNumZoneDescriptors = 6;
-
-	const ZoneDescriptor kZoneDescriptors[kNumZoneDescriptors] =
-	{
-		{50.f, 150.f, -glm::half_pi<float>() * 0.2f, glm::half_pi<float>() * 0.2f, 20.0f, 30.0f, 0.f, 50.f, 0.3f, 1.f, 0.f, 40.f, 10.f, 350, 5.f, 5.f, 15.f, 16, 10.f},
-		{100.f, 250.f, -glm::half_pi<float>() * 0.4f, glm::half_pi<float>() * 0.4f, 15.0f, 25.0f, 0.f, 60.f, 0.3f, 2.f, 0.f, 30.f, 5.f, 250, 5.f, 5.f, 10.f, 24, 5.f},
-		{30.f, 50.f, -glm::half_pi<float>() * 0.7f, glm::half_pi<float>() * 0.7f, 20.0f, 30.0f, 0.f, 20.f, 0.3f, 0.5f, 0.f, 20.f, 5.f, 350, 5.f, 5.f, 20.f, 12, 6.f},
-		{40.f, 60.f, -glm::half_pi<float>() * 0.2f, glm::half_pi<float>() * 0.2f, 20.0f, 60.0f, 0.f, 70.f, 0.6f, 2.f, 0.f, 10.f, 1.f, 350, 5.f, 5.f, 15.f, 8, 10.f},
-		{200.f, 350.f, -glm::half_pi<float>() * 0.1f, glm::half_pi<float>() * 0.1f, 20.0f, 40.0f, 0.f, 50.f, 0.1f, 0.5f, 0.f, 10.f, 2.f, 220, 5.f, 3.f, 8.f, 24, 6.f},
-		{50.f, 250.f, -glm::half_pi<float>() * 0.5f, glm::half_pi<float>() * 0.5f, 20.0f, 70.0f, 0.f, 250.f, 0.05f, 1.f, 0.f, 10.f, 10.f, 350, 5.f, 5.f, 15.f, 16, 10.f}
-	};
 }
 
 namespace BoxCityTileSystem
@@ -83,21 +48,10 @@ namespace BoxCityTileSystem
 	void Tile::BuildTileData(Manager* manager, const LocalTilePosition& local_tile, const WorldTilePosition& world_tile)
 	{
 		std::mt19937 random(static_cast<uint32_t>((100000 + world_tile.i) + (100000 + world_tile.j) * kLocalTileCount));
-		
-		uint32_t descriptor_index = 0;
-		const ZoneDescriptor& zone_descriptor = kZoneDescriptors[descriptor_index];
 
 		std::uniform_real_distribution<float> position_range(0, kTileSize);
 		std::uniform_real_distribution<float> position_range_z(kTileHeightBottom, kTileHeightTop);
-		std::uniform_real_distribution<float> angle_inc_range(zone_descriptor.angle_inc_range_min, zone_descriptor.angle_inc_range_max);
-		std::uniform_real_distribution<float> angle_rotation_range(0.f, glm::two_pi<float>());
-		std::uniform_real_distribution<float> length_range(zone_descriptor.length_range_min, zone_descriptor.length_range_max);
-		std::uniform_real_distribution<float> size_range(zone_descriptor.size_range_min, zone_descriptor.size_range_max);
-
-		std::uniform_real_distribution<float> range_animation_range(zone_descriptor.animation_distance_range_min, zone_descriptor.animation_distance_range_max);
-		std::uniform_real_distribution<float> frecuency_animation_range(zone_descriptor.animation_frecuency_range_min, zone_descriptor.animation_frecuency_range_max);
-		std::uniform_real_distribution<float> offset_animation_range(zone_descriptor.animation_offset_range_min, zone_descriptor.animation_offset_range_max);
-
+		
 		//Tile positions
 		const float begin_tile_x = world_tile.i * kTileSize;
 		const float begin_tile_y = world_tile.j * kTileSize;
@@ -113,13 +67,35 @@ namespace BoxCityTileSystem
 		m_level_data[static_cast<size_t>(LODGroup::Rest)].clear();
 
 		//Create boxes
-		for (size_t i = 0; i < zone_descriptor.num_buildings_generated; ++i)
+		for (size_t i = 0; i < 350; ++i)
 		{
 			helpers::OBB obb_box;
-			float size = size_range(random);
+			
 			obb_box.position = glm::vec3(begin_tile_x + position_range(random), begin_tile_y + position_range(random), position_range_z(random));
+			std::optional<uint32_t> descriptor_index = manager->GetZoneDescriptorIndex(obb_box.position);
+
+			if (!descriptor_index.has_value())
+			{
+				//It is a corridor
+				continue;
+			}
+
+			const ZoneDescriptor& zone_descriptor = kZoneDescriptors[descriptor_index.value()];
+
+			std::uniform_real_distribution<float> angle_inc_range(zone_descriptor.angle_inc_range_min, zone_descriptor.angle_inc_range_max);
+			std::uniform_real_distribution<float> angle_rotation_range(0.f, glm::two_pi<float>());
+			std::uniform_real_distribution<float> length_range(zone_descriptor.length_range_min, zone_descriptor.length_range_max);
+			std::uniform_real_distribution<float> size_range(zone_descriptor.size_range_min, zone_descriptor.size_range_max);
+
+			std::uniform_real_distribution<float> range_animation_range(zone_descriptor.animation_distance_range_min, zone_descriptor.animation_distance_range_max);
+			std::uniform_real_distribution<float> frecuency_animation_range(zone_descriptor.animation_frecuency_range_min, zone_descriptor.animation_frecuency_range_max);
+			std::uniform_real_distribution<float> offset_animation_range(zone_descriptor.animation_offset_range_min, zone_descriptor.animation_offset_range_max);
+
+
+			float size = size_range(random);
 			obb_box.extents = glm::vec3(size, size, length_range(random));
 			obb_box.rotation = glm::rotate(angle_inc_range(random), glm::vec3(1.f, 0.f, 0.f)) * glm::rotate(angle_rotation_range(random), glm::vec3(0.f, 0.f, 1.f));
+
 
 			helpers::AABB aabb_box;
 			helpers::CalculateAABBFromOBB(aabb_box, obb_box);
@@ -186,7 +162,7 @@ namespace BoxCityTileSystem
 			}
 
 			//Block can be build
-			BuildBlockData(random, obb_box, aabb_box, dynamic_box, animated_box, descriptor_index);
+			BuildBlockData(random, obb_box, aabb_box, dynamic_box, animated_box, descriptor_index.value());
 
 			//Gow zone AABB by the bounding box
 			m_bounding_box.min = glm::min(m_bounding_box.min, extended_aabb_box.min);
@@ -362,6 +338,11 @@ namespace BoxCityTileSystem
 
 		//Size of the GPU allocation
 		size_t gpu_allocation_size = sizeof(GPUBoxInstance) * (lod_group_data.animated_building_data.size() + lod_group_data.building_data.size() + lod_group_data.animated_panel_data.size() + lod_group_data.panel_data.size());
+
+		if (gpu_allocation_size == 0)
+		{
+			return;
+		}
 
 		//Allocate the GPU memory
 		GetLodGPUAllocation(lod_group) = manager->GetGPUMemoryRenderModule()->AllocStaticGPUMemory(manager->GetDevice(), gpu_allocation_size, nullptr, render::GetGameFrameIndex(manager->GetRenderSystem()));
@@ -551,6 +532,8 @@ namespace BoxCityTileSystem
 		DespawnLodGroup(manager, LODGroup::TopBuildings);
 		DespawnLodGroup(manager, LODGroup::TopPanels);
 		DespawnLodGroup(manager, LODGroup::Rest);
+
+		m_lod = -1;
 
 		assert(m_state == State::Visible);
 		SetState(State::Loaded);

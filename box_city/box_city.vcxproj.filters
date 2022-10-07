@@ -47,6 +47,9 @@
     <ClInclude Include="box_city_tile.h">
       <Filter>Source Files</Filter>
     </ClInclude>
+    <ClInclude Include="box_city_descriptors.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Xml Include="box_city_render_passes.xml" />

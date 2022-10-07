@@ -5,6 +5,7 @@
 #include <render_module/render_module_gpu_memory.h>
 #include <core/profile.h>
 #include <core/control_variables.h>
+#include "box_city_descriptors.h"
 
 CONTROL_VARIABLE_BOOL(c_use_loading_thread, true, "BoxCityTileManager", "Use loading thread for loading");
 
@@ -21,6 +22,9 @@ namespace BoxCityTileSystem
 
 		//Build tile descriptors
 		GenerateTileDescriptors();
+
+		//Generate zone descriptors
+		GenerateZoneDescriptors();
 
 		//Create loading thread
 		m_loading_thread.reset( new core::Thread(L"TileLoading Thread", core::ThreadPriority::Background, &LoadingThreadRun, this));
@@ -226,7 +230,94 @@ namespace BoxCityTileSystem
 	{
 		return m_tiles[local_tile.i + local_tile.j * kLocalTileCount];
 	}
-	
+
+	void Manager::GenerateZoneDescriptors()
+	{
+		std::mt19937 random(0);
+
+		m_descriptor_zones.resize(kNumZonesZ * kNumZonesXY * kNumZonesXY);
+
+		//Get random post inside the zone
+		for (size_t i = 0; i < kNumZonesXY; i++)
+		{
+			for (size_t j = 0; j < kNumZonesXY; j++)
+			{
+				for (size_t k = 0; k < kNumZonesZ; k++)
+				{
+					auto& zone = m_descriptor_zones[k + kNumZonesZ * (i + j * kNumZonesXY)];
+
+					zone.descriptor_index = 0;// random() % kNumZoneDescriptors;
+					
+					std::uniform_real_distribution<float> position_x(i * kZoneWorldSizeXY / kNumZonesXY, (i + 1) * kZoneWorldSizeXY / kNumZonesXY);
+					std::uniform_real_distribution<float> position_y(j * kZoneWorldSizeXY / kNumZonesXY, (j + 1) * kZoneWorldSizeXY / kNumZonesXY);
+					std::uniform_real_distribution<float> position_z(kTileHeightBottom, kTileHeightTop);
+					
+					zone.position.x = position_x(random);
+					zone.position.y = position_y(random);
+					zone.position.z = position_z(random);
+				}
+			}
+		}
+
+	}
+
+	std::optional<uint32_t> Manager::GetZoneDescriptorIndex(const glm::vec3& position)
+	{
+		glm::vec3 adjusted_position;
+		adjusted_position.x = fmodf(position.x + 1000.f * kZoneWorldSizeXY, kZoneWorldSizeXY);
+		adjusted_position.y = fmodf(position.y + 1000.f * kZoneWorldSizeXY, kZoneWorldSizeXY);
+		adjusted_position.z = position.z;
+		//Get the current box
+		int32_t i = static_cast<uint32_t>(adjusted_position.x / kZoneWorldSizeXY);
+		int32_t j = static_cast<uint32_t>(adjusted_position.y / kZoneWorldSizeXY);
+		int32_t k = static_cast<uint32_t>(glm::clamp(adjusted_position.z - kTileHeightBottom, 0.f, kZoneWorldSizeZ) / kZoneWorldSizeZ);
+		
+		struct SortData
+		{
+			uint32_t descriptor_index;
+			float distance;
+		};
+		std::array<SortData, 3 * 3 * 3> sort_data;
+		size_t sort_index = 0;
+		//Calculate the two closes zones
+		for (int32_t offset_i = i - 1; offset_i <= i + 1; ++offset_i)
+		{
+			for (int32_t offset_j = j - 1; offset_j <= j + 1; ++offset_j)
+			{
+				for (int32_t offset_k = k - 1; offset_k <= k + 1; ++offset_k)
+				{
+					int32_t box_i = (offset_i + kNumZonesXY) % kNumZonesXY;
+					int32_t box_j = (offset_j + kNumZonesXY) % kNumZonesXY;
+					int32_t box_k = (offset_k + kNumZonesZ) % kNumZonesZ;
+
+					auto& zone = m_descriptor_zones[box_k + kNumZonesZ * (box_i + box_j * kNumZonesXY)];
+
+					sort_data[sort_index].descriptor_index = zone.descriptor_index;
+					sort_data[sort_index].distance = glm::length(adjusted_position - zone.position);
+					sort_index++;
+				}
+			}
+		}
+		
+		//Partial sort only 2 
+		std::partial_sort(sort_data.begin(), sort_data.begin() + 2, sort_data.end(),
+			[](const SortData& a, const SortData& b)
+			{
+				return a.distance < b.distance;
+			});
+
+		//Calculate if it is a gap
+		if (glm::abs(sort_data[0].distance - sort_data[1].distance) <= (kZoneDescriptors[sort_data[0].descriptor_index].corridor_size + kZoneDescriptors[sort_data[1].descriptor_index].corridor_size))
+		{
+			//It is a gap, is not going to work
+			return {};
+		}
+		else
+		{
+			//Return the closest one
+			return sort_data[0].descriptor_index;
+		}
+	}
 	void Manager::AddTileToLoad(Tile& tile, const LocalTilePosition& local_tile_position, const WorldTilePosition& world_tile_position)
 	{
 		assert(!tile.IsVisible());
