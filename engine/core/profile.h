@@ -105,7 +105,7 @@ namespace core
 
 #define PROFILE_DEFINE_MARKER(var, group, colour, name)
 #define PROFILE_SCOPE(group, colour, name)
-#define PROFILE_SCOPE(marker)
+#define PROFILE_SCOPE_MARKER(marker)
 #define PROFILE_SCOPE_GPU(context, group, colour, name)
 #define PROFILE_SCOPE_ARG(group, colour, name,...)
 #define PROFILE_SCOPE_GPU_ARG(context, group, colour, name,...)
