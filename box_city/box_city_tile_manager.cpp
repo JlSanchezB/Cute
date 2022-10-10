@@ -246,11 +246,11 @@ namespace BoxCityTileSystem
 				{
 					auto& zone = m_descriptor_zones[k + kNumZonesZ * (i + j * kNumZonesXY)];
 
-					zone.descriptor_index = 0;// random() % kNumZoneDescriptors;
+					zone.descriptor_index = random() % kNumZoneDescriptors;
 					
-					std::uniform_real_distribution<float> position_x(i * kZoneWorldSizeXY / kNumZonesXY, (i + 1) * kZoneWorldSizeXY / kNumZonesXY);
-					std::uniform_real_distribution<float> position_y(j * kZoneWorldSizeXY / kNumZonesXY, (j + 1) * kZoneWorldSizeXY / kNumZonesXY);
-					std::uniform_real_distribution<float> position_z(kTileHeightBottom, kTileHeightTop);
+					std::uniform_real_distribution<float> position_x((static_cast<float>(i) + 0.1f) * kZoneWorldSizeXY / kNumZonesXY, (static_cast<float>(i) - 0.1f + 1) * kZoneWorldSizeXY / kNumZonesXY);
+					std::uniform_real_distribution<float> position_y((static_cast<float>(j) + 0.1f) * kZoneWorldSizeXY / kNumZonesXY, (static_cast<float>(j) - 0.1f + 1) * kZoneWorldSizeXY / kNumZonesXY);
+					std::uniform_real_distribution<float> position_z(kTileHeightBottom + (static_cast<float>(k) + 0.1f) * kZoneWorldSizeZ / kNumZonesZ, kTileHeightBottom + (static_cast<float>(k) - 0.1f + 1) * kZoneWorldSizeZ / kNumZonesZ);
 					
 					zone.position.x = position_x(random);
 					zone.position.y = position_y(random);
@@ -268,9 +268,9 @@ namespace BoxCityTileSystem
 		adjusted_position.y = fmodf(position.y + 1000.f * kZoneWorldSizeXY, kZoneWorldSizeXY);
 		adjusted_position.z = position.z;
 		//Get the current box
-		int32_t i = static_cast<uint32_t>(adjusted_position.x / kZoneWorldSizeXY);
-		int32_t j = static_cast<uint32_t>(adjusted_position.y / kZoneWorldSizeXY);
-		int32_t k = static_cast<uint32_t>(glm::clamp(adjusted_position.z - kTileHeightBottom, 0.f, kZoneWorldSizeZ) / kZoneWorldSizeZ);
+		int32_t i = static_cast<uint32_t>(kNumZonesXY * adjusted_position.x / kZoneWorldSizeXY);
+		int32_t j = static_cast<uint32_t>(kNumZonesXY * adjusted_position.y / kZoneWorldSizeXY);
+		int32_t k = static_cast<uint32_t>(kNumZonesZ * glm::clamp(adjusted_position.z - kTileHeightBottom, 0.f, kZoneWorldSizeZ) / kZoneWorldSizeZ);
 		
 		struct SortData
 		{
@@ -288,19 +288,27 @@ namespace BoxCityTileSystem
 				{
 					int32_t box_i = (offset_i + kNumZonesXY) % kNumZonesXY;
 					int32_t box_j = (offset_j + kNumZonesXY) % kNumZonesXY;
+
+					if (offset_k < 0 || offset_k > kNumZonesZ)
+						continue;
+
 					int32_t box_k = (offset_k + kNumZonesZ) % kNumZonesZ;
 
 					auto& zone = m_descriptor_zones[box_k + kNumZonesZ * (box_i + box_j * kNumZonesXY)];
 
 					sort_data[sort_index].descriptor_index = zone.descriptor_index;
-					sort_data[sort_index].distance = glm::length(adjusted_position - zone.position);
+
+					//We need to force a same ratio between XY and Z
+					glm::vec3 distance_vector = adjusted_position - zone.position;
+					distance_vector.z *= kZoneXYvsZRatio;
+					sort_data[sort_index].distance = glm::length(distance_vector);
 					sort_index++;
 				}
 			}
 		}
 		
 		//Partial sort only 2 
-		std::partial_sort(sort_data.begin(), sort_data.begin() + 2, sort_data.end(),
+		std::partial_sort(sort_data.begin(), sort_data.begin() + 2, sort_data.begin() + sort_index,
 			[](const SortData& a, const SortData& b)
 			{
 				return a.distance < b.distance;

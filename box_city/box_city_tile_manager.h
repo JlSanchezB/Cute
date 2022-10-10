@@ -28,10 +28,11 @@ namespace BoxCityTileSystem
 	constexpr float kTileHeightBottom = -1000.f;
 	constexpr float kTileHeightTopViewRange = 200.f;
 	
-	constexpr uint32_t kNumZonesXY = 500;
-	constexpr uint32_t kNumZonesZ = 4;
-	constexpr float kZoneWorldSizeXY = 10000.f;
+	constexpr uint32_t kNumZonesXY = 100;
+	constexpr uint32_t kNumZonesZ = 3;
+	constexpr float kZoneWorldSizeXY = 80000.f;
 	constexpr float kZoneWorldSizeZ = kTileHeightTop - kTileHeightBottom;
+	constexpr float kZoneXYvsZRatio = (kZoneWorldSizeXY / kNumZonesXY) / (kZoneWorldSizeZ / kNumZonesZ);
 
 	//Get local tiles index from world tiles
 	inline LocalTilePosition CalculateLocalTileIndex(const WorldTilePosition& world_tile_position)
