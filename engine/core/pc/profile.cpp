@@ -24,6 +24,8 @@ namespace display
 }
 #endif
 
+#if PROFILE_ENABLE == 1
+
 namespace core
 {
 	ProfileMarker::ProfileMarker(const char* group, const char* name, const char* full_name, uint32_t colour)
@@ -112,3 +114,4 @@ namespace core
 		MicroProfileOnThreadCreate(thread_name);
 	}
 }
+#endif

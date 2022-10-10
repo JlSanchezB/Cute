@@ -101,9 +101,18 @@ namespace core
 	class ProfileScope
 	{
 	};
+
+	//Init profiles
+	inline void InitProfiler() {};
+	//Shutdown profiles
+	inline void ShutdownProfiler() {};
+	//Flip profiles
+	inline void FlipProfiler() {};
+	//Set the thread name
+	inline void OnThreadCreate(const char* thread_name) {};
 }
 
-#define PROFILE_DEFINE_MARKER(var, group, colour, name)
+#define PROFILE_DEFINE_MARKER(var, group, colour, name) inline core::ProfileMarker var{};
 #define PROFILE_SCOPE(group, colour, name)
 #define PROFILE_SCOPE_MARKER(marker)
 #define PROFILE_SCOPE_GPU(context, group, colour, name)
