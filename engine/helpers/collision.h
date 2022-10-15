@@ -6,14 +6,38 @@
 #include <ext/glm/mat4x4.hpp>
 #include <ext/glm/gtc/constants.hpp>
 #include <ext/glm/gtc/matrix_access.hpp>
+#include <utility>
 #include "camera.h"
 
 namespace helpers
 {
 	struct AABB
 	{
-		glm::vec3 min;
-		glm::vec3 max;
+		glm::vec3 min = glm::vec3(FLT_MIN, FLT_MIN, FLT_MIN);
+		glm::vec3 max = glm::vec3(FLT_MAX, FLT_MAX, FLT_MAX);
+
+		bool IsValid() const
+		{
+			return min.x > max.x;
+		}
+
+		void Add(const AABB& b)
+		{
+			if (IsValid())
+			{
+				min.x = std::min(min.x, b.min.x);
+				min.y = std::min(min.y, b.min.y);
+				min.z = std::min(min.z, b.min.z);
+				max.x = std::max(max.x, b.max.x);
+				max.y = std::max(max.y, b.max.y);
+				max.z = std::max(max.z, b.max.z);
+			}
+			else
+			{
+				min = b.min;
+				max = b.max;
+			}
+		}
 	};
 
 	struct OBB
