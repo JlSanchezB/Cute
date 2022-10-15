@@ -941,6 +941,9 @@
     <ClInclude Include="core\control_variables.h">
       <Filter>core</Filter>
     </ClInclude>
+    <ClInclude Include="helpers\bvh.h">
+      <Filter>helpers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="display\pc_dx12\display.cpp">
