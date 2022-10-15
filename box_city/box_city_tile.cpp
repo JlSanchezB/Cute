@@ -168,6 +168,10 @@ namespace BoxCityTileSystem
 			m_bounding_box.min = glm::min(m_bounding_box.min, extended_aabb_box.min);
 			m_bounding_box.max = glm::max(m_bounding_box.max, extended_aabb_box.max);
 		}
+
+		//Build the BVH
+		//m_generated_boxes_bvh.Build(m_generated_boxes.data(), static_cast<uint32_t>(m_generated_boxes.size()), m_bounding_box);
+
 		assert(m_state == State::Loaded || m_state == State::Unloaded || m_state == State::Loading);
 		SetState(State::Loaded);
 		m_lod = -1;

@@ -3,6 +3,7 @@
 
 #include "box_city_components.h"
 #include <helpers/collision.h>
+#include <helpers/bvh.h>
 
 namespace render
 {
@@ -156,6 +157,15 @@ namespace BoxCityTileSystem
 
 		//Vector of all the bbox in the tile
 		std::vector<BoxCollision> m_generated_boxes;
+
+		//LBVH for generated boxes, it will help a lot for building the neighbours
+		struct LinearBVHSettings
+		{
+			using IndexType = uint32_t;
+			static void SetLeafIndex(const uint32_t index) {};
+			static helpers::AABB GetAABB(const BoxCollision& box_collision) { return box_collision.aabb; }
+		};
+		helpers::LinearBVH<BoxCollision, LinearBVHSettings> m_generated_boxes_bvh;
 
 		//Vector of precalculated items
 		std::array<LODGroupData, static_cast<size_t>(LODGroup::Count)> m_level_data;
