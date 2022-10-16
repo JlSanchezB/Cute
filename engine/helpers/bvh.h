@@ -65,7 +65,6 @@ namespace helpers
 		{
 			AABB bounds;
 			bool leaf : 1;
-			IndexType num_leafs : 31;
 			union
 			{
 				IndexType right_node;
@@ -82,6 +81,9 @@ namespace helpers
 		//Parent for each node, used to update the parent bounds
 		std::vector<IndexType> m_node_parents;
 
+		//Max depth
+		uint32_t m_max_depth;
+
 		//Struct used for building the BVH
 		struct InstanceInfo
 		{
@@ -96,13 +98,18 @@ namespace helpers
 		};
 
 		//Recursive node building
-		AABB NodeBuild(const IndexType parent_index, InstanceInfo* instance_info, const IndexType instance_offset, const IndexType instance_count);
+		AABB NodeBuild(const IndexType parent_index, std::vector<InstanceInfo>& instances_info, const IndexType instance_first, const IndexType instance_last);
 
 	};
 
 	template<typename INSTANCE, typename SETTINGS>
 	inline void LinearBVH<INSTANCE, SETTINGS>::Build(INSTANCE * const instances, const uint32_t num_instances, const AABB& bounds)
 	{
+		m_leafs.clear();
+		m_leafs_parents.clear();
+		m_nodes.clear();
+		m_node_parents.clear();
+
 		//Collect all the bbox and calculate the morton codes
 		std::vector<InstanceInfo> instances_info;
 		instances_info.reserve(num_instances);
@@ -130,72 +137,93 @@ namespace helpers
 		m_leafs_parents.reserve(num_instances);
 
 		//Build BVH, the first is the root
-		NodeBuild(kInvalidIndex, instances_info.data(), 0, num_instances);
+		NodeBuild(kInvalidIndex, instances_info, 0, num_instances - 1);
 
 		assert(m_leafs.size() == num_instances);
+		assert(m_leafs_parents.size() == num_instances);
+
+		m_max_depth = static_cast<uint32_t>(log2f(static_cast<float>(num_instances)));
 	}
 
 	template<typename INSTANCE, typename SETTINGS>
-	inline AABB LinearBVH<INSTANCE, SETTINGS>::NodeBuild(const IndexType parent_index, InstanceInfo* instances_info, const IndexType instance_offset, const IndexType instance_count)
+	inline AABB LinearBVH<INSTANCE, SETTINGS>::NodeBuild(const IndexType parent_index, std::vector<InstanceInfo>& instances_info, const IndexType instance_first, const IndexType instance_last)
 	{
 		//Reserve a node
 		IndexType node_index = static_cast<IndexType>(m_nodes.size());
 		m_nodes.emplace_back();
 		m_node_parents.push_back(parent_index);
 		Node& node = m_nodes.back();
+		assert(instance_first <= instance_last);
 
-		//Calculate the bbox for the node
-		//Calculate the split instance
-		uint32_t max_common_upper_bits = 0;
-		uint32_t top_morton_code = 0;
-		IndexType split_index = kInvalidIndex;
-		for (IndexType i = instance_offset; i < (instance_offset + instance_count); ++i)
+		if (instance_first == instance_last)
 		{
-			InstanceInfo& instance_info = instances_info[i];
-
-			uint32_t common_upper_bits = CommonUpperBits(instance_info.morton_codes, top_morton_code);
-			if (common_upper_bits > max_common_upper_bits)
-			{
-				top_morton_code = instance_info.morton_codes;
-				max_common_upper_bits = common_upper_bits;
-				split_index = i;
-			}
-		}
-		//If leaf
-		if (split_index == instance_offset)
-		{
-			//Is a leaf
+			//It is a LEAF
 			node.leaf = true;
+
+			const InstanceInfo& instance_info = instances_info[instance_first];
+
+			node.bounds = instance_info.aabb;
 			node.leaf_offset = static_cast<IndexType>(m_leafs.size());
-			node.num_leafs = instance_count;
-			for (IndexType i = instance_offset; i < (instance_offset + instance_count); ++i)
-			{
-				InstanceInfo& instance_info = instances_info[i];
-				//Calculate the bbox of this leaf node
-				node.bounds.Add(instance_info.aabb);
 
-				//Set the leaf index
-				SETTINGS::SetLeafIndex(static_cast<IndexType>(m_leafs.size()));
+			//Set the leaf index
+			SETTINGS::SetLeafIndex(static_cast<IndexType>(m_leafs.size()));
 
-				//Push the leaf
-				m_leafs.push_back(instance_info.instance);
-				m_leafs_parents.push_back(node_index);
-			}
+			//Push the leaf
+			m_leafs.push_back(instance_info.instance);
+			m_leafs_parents.push_back(node_index);
 		}
 		else
 		{
-			//Node
+			//It is a node
+
+			//Calculate the bbox for the node
+			//Calculate the split instance
+
+			uint32_t first_morton_code = instances_info[instance_first].morton_codes;
+			uint32_t last_morton_code = instances_info[instance_last].morton_codes;
+			IndexType split_index = instance_first;
+
+			if (first_morton_code == last_morton_code)
+			{
+				//Same morton code, split in half
+				split_index = (instance_first + instance_last) / 2;
+			}
+			else
+			{
+				uint32_t step = instance_last - instance_first;
+				//Start with the first one
+				uint32_t max_prefix = CommonUpperBits(first_morton_code, last_morton_code);
+
+				//Look for the max common upper bits that shares with the first one
+				//Binary search
+				do
+				{
+					step = (step + 1) >> 1;
+					uint32_t new_split = split_index + step;
+
+					if (new_split < instance_last)
+					{
+						uint32_t split_prefix = CommonUpperBits(first_morton_code, instances_info[new_split].morton_codes);
+						if (split_prefix > max_prefix)
+						{
+							//New split
+							split_index = new_split;
+						}
+					}
+				} while (step > 1);
+			}
+
+			//Create the two child nodes
 			node.leaf = false;
 
 			//Create first node and get the aabb
-			node.bounds = NodeBuild(node_index, instances_info, instance_offset, split_index - instance_offset);
+			node.bounds = NodeBuild(node_index, instances_info, instance_first, split_index);
 
 			//Create second node and add the aabb
 			node.right_node = static_cast<IndexType>(m_nodes.size());
+			node.bounds.Add(NodeBuild(node_index, instances_info, split_index + 1, instance_last));
 
-			node.bounds.Add(NodeBuild(node_index, instances_info, split_index, instance_count - (split_index - instance_offset)));
 		}
-
 		return node.bounds;
 	}
 	template<typename INSTANCE, typename SETTINGS>
@@ -204,6 +232,7 @@ namespace helpers
 	{
 		//Start with the root
 		std::vector<IndexType> node_stack = {0};
+		node_stack.reserve(node_stack);
 
 		while (!node_stack.empty())
 		{

@@ -18,19 +18,15 @@ namespace helpers
 
 		bool IsValid() const
 		{
-			return min.x > max.x;
+			return min.x < max.x;
 		}
 
 		void Add(const AABB& b)
 		{
 			if (IsValid())
 			{
-				min.x = std::min(min.x, b.min.x);
-				min.y = std::min(min.y, b.min.y);
-				min.z = std::min(min.z, b.min.z);
-				max.x = std::max(max.x, b.max.x);
-				max.y = std::max(max.y, b.max.y);
-				max.z = std::max(max.z, b.max.z);
+				min = glm::min(min, b.min);
+				max = glm::max(max, b.max);
 			}
 			else
 			{

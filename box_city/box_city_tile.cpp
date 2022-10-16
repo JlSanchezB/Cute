@@ -153,24 +153,17 @@ namespace BoxCityTileSystem
 			{
 				//Add this one in the current list
 				m_generated_boxes.push_back({ extended_aabb_box, extended_obb_box });
-
-				//Expand the bbox of the time if needed
-				m_bounding_box.max.x = std::max(m_bounding_box.max.x, extended_aabb_box.max.x);
-				m_bounding_box.max.y = std::max(m_bounding_box.max.y, extended_aabb_box.max.y);
-				m_bounding_box.min.x = std::min(m_bounding_box.min.x, extended_aabb_box.min.x);
-				m_bounding_box.min.y = std::min(m_bounding_box.min.y, extended_aabb_box.min.y);
 			}
 
 			//Block can be build
 			BuildBlockData(random, obb_box, aabb_box, dynamic_box, animated_box, descriptor_index.value());
 
 			//Gow zone AABB by the bounding box
-			m_bounding_box.min = glm::min(m_bounding_box.min, extended_aabb_box.min);
-			m_bounding_box.max = glm::max(m_bounding_box.max, extended_aabb_box.max);
+			m_bounding_box.Add(extended_aabb_box);
 		}
 
 		//Build the BVH
-		//m_generated_boxes_bvh.Build(m_generated_boxes.data(), static_cast<uint32_t>(m_generated_boxes.size()), m_bounding_box);
+		m_generated_boxes_bvh.Build(m_generated_boxes.data(), static_cast<uint32_t>(m_generated_boxes.size()), m_bounding_box);
 
 		assert(m_state == State::Loaded || m_state == State::Unloaded || m_state == State::Loading);
 		SetState(State::Loaded);
