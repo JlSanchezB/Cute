@@ -162,11 +162,14 @@ namespace BoxCityTileSystem
 		//LBVH for generated boxes, it will help a lot for building the neighbours
 		struct LinearBVHSettings
 		{
+			std::vector<BoxCollision>& generated_boxes;
 			using IndexType = uint32_t;
-			static void SetLeafIndex(const uint32_t index) {};
-			static helpers::AABB GetAABB(const BoxCollision& box_collision) { return box_collision.aabb; }
+			void SetLeafIndex(const uint32_t index)	{}
+			helpers::AABB GetAABB(const uint32_t& index) { return generated_boxes[index].aabb;}
+
+			LinearBVHSettings(std::vector<BoxCollision>& _generated_boxes): generated_boxes(_generated_boxes) {}
 		};
-		helpers::LinearBVH<BoxCollision, LinearBVHSettings> m_generated_boxes_bvh;
+		helpers::LinearBVH<uint32_t, LinearBVHSettings> m_generated_boxes_bvh;
 
 		//Vector of precalculated items
 		std::array<LODGroupData, static_cast<size_t>(LODGroup::Count)> m_level_data;

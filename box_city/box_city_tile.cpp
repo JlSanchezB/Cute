@@ -6,6 +6,7 @@
 #include <render_module/render_module_gpu_memory.h>
 #include <core/counters.h>
 #include "box_city_descriptors.h"
+#include <numeric>
 
 COUNTER(c_Blocks_Count, "Box City", "Number of Blocks", false);
 COUNTER(c_Panels_Count, "Box City", "Number of Panels", false);
@@ -34,10 +35,10 @@ namespace BoxCityTileSystem
 		if (helpers::CollisionAABBVsAABB(aabb_box, m_bounding_box))
 		{
 			bool collide = false;
-			m_generated_boxes_bvh.Visit(aabb_box, [&](const BoxCollision& box_collision)
+			m_generated_boxes_bvh.Visit(aabb_box, [&](const uint32_t& index)
 				{
 					//Collide, aabb has already tested
-					if (helpers::CollisionOBBVsOBB(box_collision.obb, obb_box))
+					if (helpers::CollisionOBBVsOBB(m_generated_boxes[index].obb, obb_box))
 					{
 						collide = true;
 					}
@@ -183,7 +184,10 @@ namespace BoxCityTileSystem
 		}
 
 		//Build the BVH
-		m_generated_boxes_bvh.Build(m_generated_boxes.data(), static_cast<uint32_t>(m_generated_boxes.size()), m_bounding_box);
+		std::vector<uint32_t> indexes(m_generated_boxes.size());
+		std::iota(indexes.begin(), indexes.end(), 0);
+		LinearBVHSettings bvh_settings(m_generated_boxes);
+		m_generated_boxes_bvh.Build(&bvh_settings, indexes.data(), static_cast<uint32_t>(m_generated_boxes.size()), m_bounding_box);
 
 		assert(m_state == State::Loaded || m_state == State::Unloaded || m_state == State::Loading);
 		SetState(State::Loaded);

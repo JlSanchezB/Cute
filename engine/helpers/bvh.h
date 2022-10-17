@@ -48,7 +48,7 @@ namespace helpers
 		using IndexType = SETTINGS::template IndexType;
 
 		//Build the BVH from an instances array and a bounds
-		void Build(INSTANCE* const instances, uint32_t num_instances, const AABB& bounds);
+		void Build(SETTINGS* settings, INSTANCE* const instances, uint32_t num_instances, const AABB& bounds);
 
 		//Navigate the BVH and call the visitor with each instance that are inside the bounds
 		template <typename VISITOR>
@@ -98,12 +98,12 @@ namespace helpers
 		};
 
 		//Recursive node building
-		AABB NodeBuild(const IndexType parent_index, std::vector<InstanceInfo>& instances_info, IndexType& next_node_index, IndexType& next_leaf_index, const IndexType instance_first, const IndexType instance_last);
+		AABB NodeBuild(SETTINGS* settings, const IndexType parent_index, std::vector<InstanceInfo>& instances_info, IndexType& next_node_index, IndexType& next_leaf_index, const IndexType instance_first, const IndexType instance_last);
 
 	};
 
 	template<typename INSTANCE, typename SETTINGS>
-	inline void LinearBVH<INSTANCE, SETTINGS>::Build(INSTANCE * const instances, const uint32_t num_instances, const AABB& bounds)
+	inline void LinearBVH<INSTANCE, SETTINGS>::Build(SETTINGS* settings, INSTANCE * const instances, const uint32_t num_instances, const AABB& bounds)
 	{
 		m_leafs.clear();
 		m_leafs_parents.clear();
@@ -117,7 +117,7 @@ namespace helpers
 		{
 			const INSTANCE& instance = instances[i];
 			//Get AABB
-			AABB aabb = SETTINGS::GetAABB(instance);
+			AABB aabb = settings->GetAABB(instance);
 			glm::vec3 center = (aabb.min + aabb.max) / 2.f;
 
 			//Move it to 0-1 range
@@ -145,7 +145,7 @@ namespace helpers
 		IndexType next_leaf_index = 0;
 
 		//Build BVH, the first is the root
-		NodeBuild(kInvalidIndex, instances_info, next_node_index, next_leaf_index, 0, num_instances - 1);
+		NodeBuild(settings, kInvalidIndex, instances_info, next_node_index, next_leaf_index, 0, num_instances - 1);
 
 		assert(next_leaf_index == num_instances);
 		assert(next_node_index == num_instances * 2);
@@ -154,7 +154,7 @@ namespace helpers
 	}
 
 	template<typename INSTANCE, typename SETTINGS>
-	inline AABB LinearBVH<INSTANCE, SETTINGS>::NodeBuild(const IndexType parent_index, std::vector<InstanceInfo>& instances_info, IndexType& next_node_index, IndexType& next_leaf_index, const IndexType instance_first, const IndexType instance_last)
+	inline AABB LinearBVH<INSTANCE, SETTINGS>::NodeBuild(SETTINGS* settings, const IndexType parent_index, std::vector<InstanceInfo>& instances_info, IndexType& next_node_index, IndexType& next_leaf_index, const IndexType instance_first, const IndexType instance_last)
 	{
 		//Reserve a node
 		IndexType node_index = next_node_index++;
@@ -186,7 +186,7 @@ namespace helpers
 			node.leaf_offset = leaf_index;
 
 			//Set the leaf index
-			SETTINGS::SetLeafIndex(leaf_index);
+			settings->SetLeafIndex(leaf_index);
 
 			//Push the leaf
 			m_leafs[leaf_index] = instance_info.instance;
@@ -237,11 +237,11 @@ namespace helpers
 			node.leaf = false;
 
 			//Create first node and get the aabb
-			node.bounds = NodeBuild(node_index, instances_info, next_node_index, next_leaf_index, instance_first, split_index);
+			node.bounds = NodeBuild(settings, node_index, instances_info, next_node_index, next_leaf_index, instance_first, split_index);
 
 			//Create second node and add the aabb
 			node.right_node = next_node_index;
-			node.bounds.Add(NodeBuild(node_index, instances_info, next_node_index, next_leaf_index, split_index + 1, instance_last));
+			node.bounds.Add(NodeBuild(settings, node_index, instances_info, next_node_index, next_leaf_index, split_index + 1, instance_last));
 
 		}
 		return node.bounds;
