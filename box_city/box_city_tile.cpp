@@ -28,7 +28,27 @@ namespace
 
 namespace BoxCityTileSystem
 {
-	bool Tile::CollisionBoxVsTile(const helpers::AABB& aabb_box, const helpers::OBB& obb_box) const
+	bool Tile::CollisionBoxVsLoadedTile(const helpers::AABB& aabb_box, const helpers::OBB& obb_box) const
+	{
+		//First, check the bbox of the level
+		if (helpers::CollisionAABBVsAABB(aabb_box, m_bounding_box))
+		{
+			bool collide = false;
+			m_generated_boxes_bvh.Visit(aabb_box, [&](const BoxCollision& box_collision)
+				{
+					//Collide, aabb has already tested
+					if (helpers::CollisionOBBVsOBB(box_collision.obb, obb_box))
+					{
+						collide = true;
+					}
+				});
+
+			return collide;
+		}
+		return false;
+	}
+
+	bool Tile::CollisionBoxVsLoadingTile(const helpers::AABB& aabb_box, const helpers::OBB& obb_box) const
 	{
 		//First, check the bbox of the level
 		if (helpers::CollisionAABBVsAABB(aabb_box, m_bounding_box))
@@ -122,7 +142,7 @@ namespace BoxCityTileSystem
 			helpers::CalculateAABBFromOBB(extended_aabb_box, extended_obb_box);
 
 			//First collision in the tile
-			bool collide = CollisionBoxVsTile(extended_aabb_box, extended_obb_box);
+			bool collide = CollisionBoxVsLoadingTile(extended_aabb_box, extended_obb_box);
 
 
 			//Neigbour calculation, is not perfect as it depends of the loading pattern...
@@ -139,7 +159,7 @@ namespace BoxCityTileSystem
 						const Tile& neighbour_tile = manager->GetTile(local_tile.i, local_tile.j);
 						if (neighbour_tile.IsLoaded())
 						{
-							collide = neighbour_tile.CollisionBoxVsTile(extended_aabb_box, extended_obb_box);
+							collide = neighbour_tile.CollisionBoxVsLoadedTile(extended_aabb_box, extended_obb_box);
 						}
 					}
 				}

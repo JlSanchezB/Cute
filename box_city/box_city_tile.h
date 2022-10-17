@@ -110,7 +110,8 @@ namespace BoxCityTileSystem
 			return m_gpu_allocation[static_cast<size_t>(lod_group)];
 		}
 
-		bool CollisionBoxVsTile(const helpers::AABB& aabb_box, const helpers::OBB& obb_box) const;
+		bool CollisionBoxVsLoadedTile(const helpers::AABB& aabb_box, const helpers::OBB& obb_box) const;
+		bool CollisionBoxVsLoadingTile(const helpers::AABB& aabb_box, const helpers::OBB& obb_box) const;
 
 		//Building logic
 		void BuildTileData(Manager* manager, const LocalTilePosition& local_tile, const WorldTilePosition& world_tile);

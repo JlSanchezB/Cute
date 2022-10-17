@@ -52,7 +52,7 @@ namespace helpers
 
 		//Navigate the BVH and call the visitor with each instance that are inside the bounds
 		template <typename VISITOR>
-		void Visit(const AABB& bounds, VISITOR&& visitor);
+		void Visit(const AABB& bounds, VISITOR&& visitor) const;
 
 	private:
 		constexpr static IndexType kInvalidIndex = static_cast<IndexType>(-1);
@@ -98,7 +98,7 @@ namespace helpers
 		};
 
 		//Recursive node building
-		AABB NodeBuild(const IndexType parent_index, std::vector<InstanceInfo>& instances_info, const IndexType instance_first, const IndexType instance_last);
+		AABB NodeBuild(const IndexType parent_index, std::vector<InstanceInfo>& instances_info, IndexType& next_node_index, IndexType& next_leaf_index, const IndexType instance_first, const IndexType instance_last);
 
 	};
 
@@ -132,27 +132,44 @@ namespace helpers
 				return a.morton_codes < b.morton_codes;
 			});
 
-		//Reserve space for leafs
-		m_leafs.reserve(num_instances);
-		m_leafs_parents.reserve(num_instances);
+		//Resize space for leafs
+		m_leafs.resize(num_instances);
+		m_leafs_parents.resize(num_instances);
+
+		//Reserve space for nodes, it is a binary tree, in the perfect distribution will be twice nodes than leafs
+		//We are going to do a fake node after the root to improve the cache, so 2 * x - 1 + 1
+		m_nodes.resize(num_instances * 2);
+		m_node_parents.resize(num_instances * 2);
+
+		IndexType next_node_index = 0;
+		IndexType next_leaf_index = 0;
 
 		//Build BVH, the first is the root
-		NodeBuild(kInvalidIndex, instances_info, 0, num_instances - 1);
+		NodeBuild(kInvalidIndex, instances_info, next_node_index, next_leaf_index, 0, num_instances - 1);
 
-		assert(m_leafs.size() == num_instances);
-		assert(m_leafs_parents.size() == num_instances);
+		assert(next_leaf_index == num_instances);
+		assert(next_node_index == num_instances * 2);
 
 		m_max_depth = static_cast<uint32_t>(log2f(static_cast<float>(num_instances)));
 	}
 
 	template<typename INSTANCE, typename SETTINGS>
-	inline AABB LinearBVH<INSTANCE, SETTINGS>::NodeBuild(const IndexType parent_index, std::vector<InstanceInfo>& instances_info, const IndexType instance_first, const IndexType instance_last)
+	inline AABB LinearBVH<INSTANCE, SETTINGS>::NodeBuild(const IndexType parent_index, std::vector<InstanceInfo>& instances_info, IndexType& next_node_index, IndexType& next_leaf_index, const IndexType instance_first, const IndexType instance_last)
 	{
 		//Reserve a node
-		IndexType node_index = static_cast<IndexType>(m_nodes.size());
-		m_nodes.emplace_back();
-		m_node_parents.push_back(parent_index);
-		Node& node = m_nodes.back();
+		IndexType node_index = next_node_index++;
+		
+		m_node_parents[node_index] = parent_index;
+
+		//Fake node for better cache after the root node
+		if (node_index == 0)
+		{
+			next_node_index++; 
+		}
+
+		//local copy of the node
+		Node& node = m_nodes[node_index];
+
 		assert(instance_first <= instance_last);
 
 		if (instance_first == instance_last)
@@ -162,15 +179,18 @@ namespace helpers
 
 			const InstanceInfo& instance_info = instances_info[instance_first];
 
+			//Allocate a leaf
+			IndexType leaf_index = next_leaf_index++;
+
 			node.bounds = instance_info.aabb;
-			node.leaf_offset = static_cast<IndexType>(m_leafs.size());
+			node.leaf_offset = leaf_index;
 
 			//Set the leaf index
-			SETTINGS::SetLeafIndex(static_cast<IndexType>(m_leafs.size()));
+			SETTINGS::SetLeafIndex(leaf_index);
 
 			//Push the leaf
-			m_leafs.push_back(instance_info.instance);
-			m_leafs_parents.push_back(node_index);
+			m_leafs[leaf_index] = instance_info.instance;
+			m_leafs_parents[leaf_index] = node_index;
 		}
 		else
 		{
@@ -217,25 +237,30 @@ namespace helpers
 			node.leaf = false;
 
 			//Create first node and get the aabb
-			node.bounds = NodeBuild(node_index, instances_info, instance_first, split_index);
+			node.bounds = NodeBuild(node_index, instances_info, next_node_index, next_leaf_index, instance_first, split_index);
 
 			//Create second node and add the aabb
-			node.right_node = static_cast<IndexType>(m_nodes.size());
-			node.bounds.Add(NodeBuild(node_index, instances_info, split_index + 1, instance_last));
+			node.right_node = next_node_index;
+			node.bounds.Add(NodeBuild(node_index, instances_info, next_node_index, next_leaf_index, split_index + 1, instance_last));
 
 		}
 		return node.bounds;
 	}
 	template<typename INSTANCE, typename SETTINGS>
 	template<typename VISITOR>
-	inline void LinearBVH<INSTANCE, SETTINGS>::Visit(const AABB& bounds, VISITOR&& visitor)
+	inline void LinearBVH<INSTANCE, SETTINGS>::Visit(const AABB& bounds, VISITOR&& visitor) const
 	{
+		assert(!m_leafs.empty());
+		assert(!m_nodes.empty());
+
 		//Start with the root
 		std::vector<IndexType> node_stack = {0};
-		node_stack.reserve(node_stack);
+		node_stack.reserve(m_max_depth);
 
 		while (!node_stack.empty())
 		{
+			assert(node_stack.size() < m_nodes.size());
+
 			//Get a the node index and pop
 			IndexType node_index = node_stack.back();
 			node_stack.pop_back();
@@ -247,14 +272,13 @@ namespace helpers
 				if (node.leaf)
 				{
 					//visit
-					for (IndexType i = node.leaf_offset; i < (node.leaf_offset + node.num_leafs); ++i)
-					{
-						visitor(m_leafs[i]);
-					}
+					visitor(m_leafs[node.leaf_offset]);
 				}
 				else
 				{
 					//Push left and right
+					if (node_index == 0) node_index++; //Fake node for cache aligment in the root node
+
 					node_stack.push_back(node_index + 1);
 					node_stack.push_back(node.right_node);
 				}
