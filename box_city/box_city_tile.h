@@ -160,16 +160,16 @@ namespace BoxCityTileSystem
 		std::vector<BoxCollision> m_generated_boxes;
 
 		//LBVH for generated boxes, it will help a lot for building the neighbours
-		struct LinearBVHSettings
+		struct LinearBVHGeneratedBoxesSettings
 		{
 			std::vector<BoxCollision>& generated_boxes;
 			using IndexType = uint32_t;
-			void SetLeafIndex(const uint32_t index)	{}
+			void SetLeafIndex(uint32_t, uint32_t)	{}
 			helpers::AABB GetAABB(const uint32_t& index) { return generated_boxes[index].aabb;}
 
-			LinearBVHSettings(std::vector<BoxCollision>& _generated_boxes): generated_boxes(_generated_boxes) {}
+			LinearBVHGeneratedBoxesSettings(std::vector<BoxCollision>& _generated_boxes): generated_boxes(_generated_boxes) {}
 		};
-		helpers::LinearBVH<uint32_t, LinearBVHSettings> m_generated_boxes_bvh;
+		helpers::LinearBVH<uint32_t, LinearBVHGeneratedBoxesSettings> m_generated_boxes_bvh;
 
 		//Vector of precalculated items
 		std::array<LODGroupData, static_cast<size_t>(LODGroup::Count)> m_level_data;
@@ -179,6 +179,15 @@ namespace BoxCityTileSystem
 
 		//Vector of the GPU allocation for each lod group
 		std::array<render::AllocHandle, static_cast<size_t>(LODGroup::Count)> m_gpu_allocation;
+
+		//LBVH for building instances
+		struct LinearBVHBuildingSettings
+		{
+			using IndexType = uint32_t;
+			void SetLeafIndex(InstanceReference& instance, uint32_t) {}
+			helpers::AABB GetAABB(const InstanceReference& instance) { return instance.Get<GameDatabase>().Get<AABBBox>(); }
+		};
+		helpers::LinearBVH<InstanceReference, LinearBVHBuildingSettings> m_building_bvh;
 
 		void SetState(State new_state)
 		{

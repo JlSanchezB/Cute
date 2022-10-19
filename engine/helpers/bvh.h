@@ -177,7 +177,7 @@ namespace helpers
 			//It is a LEAF
 			node.leaf = true;
 
-			const InstanceInfo& instance_info = instances_info[instance_first];
+			InstanceInfo& instance_info = instances_info[instance_first];
 
 			//Allocate a leaf
 			IndexType leaf_index = next_leaf_index++;
@@ -186,7 +186,7 @@ namespace helpers
 			node.leaf_offset = leaf_index;
 
 			//Set the leaf index
-			settings->SetLeafIndex(leaf_index);
+			settings->SetLeafIndex(instance_info.instance, leaf_index);
 
 			//Push the leaf
 			m_leafs[leaf_index] = instance_info.instance;

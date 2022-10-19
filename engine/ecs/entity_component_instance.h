@@ -29,6 +29,9 @@ namespace ecs
 		template<typename COMPONENT>
 		constexpr COMPONENT& Get();
 
+		template<typename COMPONENT>
+		constexpr const COMPONENT& Get() const;
+
 		//Is
 		template<typename ENTITY_TYPE>
 		constexpr bool Is() const;
@@ -131,11 +134,19 @@ namespace ecs
 	}
 
 	template<typename DATABASE_DECLARATION>
+	template<typename COMPONENT>
+	constexpr inline const COMPONENT& Instance<DATABASE_DECLARATION>::Get() const
+	{
+		void* data = internal::GetComponentData(DATABASE_DECLARATION::s_database, m_indirection_index, DATABASE_DECLARATION::template ComponentIndex<COMPONENT>());
+
+		return *reinterpret_cast<COMPONENT*>(data);
+	}
+
+	template<typename DATABASE_DECLARATION>
 	template<typename ENTITY_TYPE>
 	inline constexpr bool Instance<DATABASE_DECLARATION>::Is() const
 	{
-		size_t entity_type_index = internal::GetInstanceTypeIndex(DATABASE_DECLARATION::s_database, m_indirection_index);
-		return DATABASE_DECLARATION::template EntityTypeIndex<ENTITY_TYPE>() == entity_type_index;
+		return internal::GetInstanceTypeIndex(DATABASE_DECLARATION::s_database, m_indirection_index) == DATABASE_DECLARATION::template EntityTypeIndex<ENTITY_TYPE>();
 	}
 }
 

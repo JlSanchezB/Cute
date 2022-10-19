@@ -2,8 +2,8 @@
 // Cute engine - Compile time type list container
 //////////////////////////////////////////////////////////////////////////
 
-#ifndef VIRTUAL_ALLOC_H_
-#define VIRTUAL_ALLOC_H_
+#ifndef TYPE_LIST_H_
+#define TYPE_LIST_H_
 
 #include <tuple>
 
@@ -73,4 +73,4 @@ namespace core
 	}
 }
 
-#endif //VIRTUAL_ALLOC_H_
+#endif //TYPE_LIST_H_

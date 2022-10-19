@@ -186,7 +186,7 @@ namespace BoxCityTileSystem
 		//Build the BVH
 		std::vector<uint32_t> indexes(m_generated_boxes.size());
 		std::iota(indexes.begin(), indexes.end(), 0);
-		LinearBVHSettings bvh_settings(m_generated_boxes);
+		LinearBVHGeneratedBoxesSettings bvh_settings(m_generated_boxes);
 		m_generated_boxes_bvh.Build(&bvh_settings, indexes.data(), static_cast<uint32_t>(m_generated_boxes.size()), m_bounding_box);
 
 		assert(m_state == State::Loaded || m_state == State::Unloaded || m_state == State::Loading);
@@ -506,10 +506,9 @@ namespace BoxCityTileSystem
 
 	void Tile::SpawnTile(Manager* manager, uint32_t lod)
 	{
-		//LOD 0 has Rest
-		//LOD 1 has Rest, TopBuildings and TopPanels
-		//LOD 2 has TopBuildings and Top Panels
-		//LOD 3 has TopBuildings only
+		//LOD 0 has Rest, TopBuildings and TopPanels
+		//LOD 1 has TopBuildings and Top Panels
+		//LOD 2 has TopBuildings only
 		// 
 		//Depends of the LOD, it spawns the instances the ECS
 
@@ -593,6 +592,24 @@ namespace BoxCityTileSystem
 			}
 
 			m_lod = new_lod;
+
+			if (m_lod == 0)
+			{
+				//We need to build the bvh buildings
+				LinearBVHBuildingSettings settings;
+				std::vector<InstanceReference> building_instances;
+				for (auto& instances_lod_group : m_instances)
+				{
+					for (auto& instance : instances_lod_group)
+					{
+						if (instance.Is<BoxType>() || instance.Is<AnimatedBoxType>())
+						{
+							building_instances.push_back(instance);
+						}
+					}
+				}
+				m_building_bvh.Build(&settings, building_instances.data(), static_cast<uint32_t>(building_instances.size()), m_bounding_box);
+			}
 		}
 	}
 	void Tile::AddedToLoadingQueue()
