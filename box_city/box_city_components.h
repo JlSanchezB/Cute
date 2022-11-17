@@ -5,6 +5,7 @@
 #include <render/render.h>
 #include <ecs/entity_component_system.h>
 #include <render_module/render_module_gpu_memory.h>
+#include <ext/glm/ext.hpp>
 
 //Components
 struct FlagBox
@@ -18,7 +19,6 @@ struct FlagBox
 };
 
 using AABBBox = helpers::AABB;
-
 using OBBBox = helpers::OBB;
 
 struct AnimationBox
@@ -61,14 +61,38 @@ struct Panel
 {
 };
 
+struct Car
+{
+	glm::vec3 position;
+	glm::quat rotation;
+};
+
+struct CarMovement
+{
+	glm::vec3 lineal_velocity;
+	glm::quat rotation_velocity;
+};
+
+struct CarSettings
+{
+	glm::vec3 size;
+};
+
+struct CarTarget
+{
+	glm::vec3 target;
+	double time_in_target;
+};
+
 //ECS definition
 using BoxType = ecs::EntityType<BoxRender, BoxGPUHandle, OBBBox, AABBBox, FlagBox>;
 using AnimatedBoxType = ecs::EntityType<BoxRender, BoxGPUHandle, OBBBox, AABBBox, AnimationBox, FlagBox>;
 using AttachedPanelType = ecs::EntityType< BoxRender, BoxGPUHandle, OBBBox, AABBBox, FlagBox, Attachment, Panel>;
 using PanelType = ecs::EntityType<BoxRender, BoxGPUHandle, OBBBox, AABBBox, FlagBox, Panel>;
+using CarType = ecs::EntityType<BoxRender, BoxGPUHandle, OBBBox, AABBBox, Car, CarMovement, CarSettings, CarTarget>;
 
-using GameComponents = ecs::ComponentList<BoxRender, BoxGPUHandle, OBBBox, AABBBox, AnimationBox, FlagBox, Attachment>;
-using GameEntityTypes = ecs::EntityTypeList<BoxType, AnimatedBoxType, AttachedPanelType, PanelType>;
+using GameComponents = ecs::ComponentList<BoxRender, BoxGPUHandle, OBBBox, AABBBox, AnimationBox, FlagBox, Attachment, Panel, Car, CarMovement, CarSettings, CarTarget>;
+using GameEntityTypes = ecs::EntityTypeList<BoxType, AnimatedBoxType, AttachedPanelType, PanelType, CarType>;
 
 using GameDatabase = ecs::DatabaseDeclaration<GameComponents, GameEntityTypes>;
 using Instance = ecs::Instance<GameDatabase>;

@@ -281,6 +281,7 @@
     <ClCompile Include="box_city_game.cpp" />
     <ClCompile Include="box_city_tile.cpp" />
     <ClCompile Include="box_city_tile_manager.cpp" />
+    <ClCompile Include="box_city_traffic_manager.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -290,6 +291,7 @@
     <ClInclude Include="box_city_render.h" />
     <ClInclude Include="box_city_tile.h" />
     <ClInclude Include="box_city_tile_manager.h" />
+    <ClInclude Include="box_city_traffic_manager.h" />
     <ClInclude Include="resources.h" />
   </ItemGroup>
   <ItemGroup>

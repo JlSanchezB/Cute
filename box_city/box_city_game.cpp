@@ -92,12 +92,17 @@ void BoxCityGame::OnInit()
 	m_camera.SetNearFar(0.5f, 8000.f);
 
 	m_tile_manager.Init(m_device, m_render_system, m_GPU_memory_render_module);
+
+	m_traffic_system.Init(m_device, m_render_system, m_GPU_memory_render_module);
 }
 	
 void BoxCityGame::OnPrepareDestroy()
 {
 	//Destroy tile manager
 	m_tile_manager.Shutdown();
+
+	//Destroy traffic manager
+	m_traffic_system.Shutdown();
 
 	//Sync the render and the jobs, so we can safe destroy the resources
 	if (m_render_system)
@@ -136,6 +141,9 @@ void BoxCityGame::OnTick(double total_time, float elapsed_time)
 
 	//Update tile manager
 	m_tile_manager.Update(m_camera.GetPosition());
+
+	//Update traffic manager
+	m_traffic_system.Update();
 
 	job::Fence update_fence;
 

@@ -25,6 +25,7 @@
 #include "box_city_components.h"
 #include "box_city_render.h"
 #include "box_city_tile_manager.h"
+#include "box_city_traffic_manager.h"
 
 
 class BoxCityGame : public platform::Game
@@ -65,6 +66,9 @@ public:
 
 	//Tile manager
 	BoxCityTileSystem::Manager m_tile_manager;
+
+	//Traffic manager
+	BoxCityTrafficSystem::Manager m_traffic_system;
 
 	//Sun direction
 	glm::vec2 m_sun_direction_angles = glm::vec2(45.f, 45.f);
