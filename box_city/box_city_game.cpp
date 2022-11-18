@@ -93,7 +93,7 @@ void BoxCityGame::OnInit()
 
 	m_tile_manager.Init(m_device, m_render_system, m_GPU_memory_render_module);
 
-	m_traffic_system.Init(m_device, m_render_system, m_GPU_memory_render_module);
+	m_traffic_system.Init(m_device, m_render_system, m_GPU_memory_render_module, m_camera.GetPosition());
 }
 	
 void BoxCityGame::OnPrepareDestroy()
@@ -143,7 +143,7 @@ void BoxCityGame::OnTick(double total_time, float elapsed_time)
 	m_tile_manager.Update(m_camera.GetPosition());
 
 	//Update traffic manager
-	m_traffic_system.Update();
+	m_traffic_system.Update(m_camera.GetPosition());
 
 	job::Fence update_fence;
 

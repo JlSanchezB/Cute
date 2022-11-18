@@ -89,7 +89,7 @@ using BoxType = ecs::EntityType<BoxRender, BoxGPUHandle, OBBBox, AABBBox, FlagBo
 using AnimatedBoxType = ecs::EntityType<BoxRender, BoxGPUHandle, OBBBox, AABBBox, AnimationBox, FlagBox>;
 using AttachedPanelType = ecs::EntityType< BoxRender, BoxGPUHandle, OBBBox, AABBBox, FlagBox, Attachment, Panel>;
 using PanelType = ecs::EntityType<BoxRender, BoxGPUHandle, OBBBox, AABBBox, FlagBox, Panel>;
-using CarType = ecs::EntityType<BoxRender, BoxGPUHandle, OBBBox, AABBBox, Car, CarMovement, CarSettings, CarTarget>;
+using CarType = ecs::EntityType<BoxGPUHandle, OBBBox, AABBBox, Car, CarMovement, CarSettings, CarTarget>;
 
 using GameComponents = ecs::ComponentList<BoxRender, BoxGPUHandle, OBBBox, AABBBox, AnimationBox, FlagBox, Attachment, Panel, Car, CarMovement, CarSettings, CarTarget>;
 using GameEntityTypes = ecs::EntityTypeList<BoxType, AnimatedBoxType, AttachedPanelType, PanelType, CarType>;
