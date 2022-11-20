@@ -5,6 +5,7 @@
 #include <array>
 #include <core/log.h>
 #include <ext/imgui/imgui.h>
+#include <memory>
 
 namespace
 {

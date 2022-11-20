@@ -2,6 +2,8 @@
 #define BOX_CITY_TRAFFIC_MANAGER_H
 
 #include "box_city_components.h"
+#include <bitset>
+#include "box_city_tile_manager.h"
 
 namespace render
 {
@@ -54,6 +56,27 @@ namespace BoxCityTrafficSystem
 		//Update
 		void Update(const glm::vec3& camera_position);
 
+		//GPU Access
+		render::AllocHandle& GetGPUHandle()
+		{
+			return m_gpu_memory;
+		}
+
+		std::bitset<BoxCityTileSystem::kLocalTileCount* BoxCityTileSystem::kLocalTileCount> GetCameraBitSet(const helpers::Frustum& frustum) const
+		{
+			std::bitset<BoxCityTileSystem::kLocalTileCount* BoxCityTileSystem::kLocalTileCount> ret(false);
+
+			for (auto& tile : m_tiles)
+			{
+				if (tile.m_activated)
+				{
+					ret[tile.m_zone_index] = helpers::CollisionFrustumVsAABB(frustum, tile.m_bounding_box);
+				}
+			}
+
+			return ret;
+		}
+
 	private:
 		//Systems
 		display::Device* m_device = nullptr;
@@ -78,8 +101,14 @@ namespace BoxCityTrafficSystem
 		{
 			bool m_activated = false;
 
+			//Zone index
+			uint32_t m_zone_index;
+
 			//World time index that represent
 			WorldTilePosition m_tile_position;
+
+			//Bounding box of the tile
+			helpers::AABB m_bounding_box;
 		};
 
 		//Tiles
@@ -91,6 +120,14 @@ namespace BoxCityTrafficSystem
 		//Current camera tile position, center of our local tiles
 		WorldTilePosition m_camera_tile_position;
 
+		//GPU memory
+		render::AllocHandle m_gpu_memory;
+
+		//Free GPU slots
+		std::vector<uint16_t> m_free_gpu_slots;
+
+		uint16_t AllocGPUSlot();
+		void DeallocGPUSlot(uint16_t slot);
 	};
 }
 

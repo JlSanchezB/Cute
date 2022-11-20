@@ -4,8 +4,10 @@
 PROFILE_DEFINE_MARKER(g_profile_marker_UpdatePosition, "Main", 0xFFFFAAAA, "BoxUpdate");
 PROFILE_DEFINE_MARKER(g_profile_marker_UpdateAttachments, "Main", 0xFFFFAAAA, "BoxAttachment");
 PROFILE_DEFINE_MARKER(g_profile_marker_Culling, "Main", 0xFFFFAAAA, "BoxCulling");
+PROFILE_DEFINE_MARKER(g_profile_marker_Car_Culling, "Main", 0xFFFFAAAA, "CarCulling");
 
 COUNTER(c_Culled_Boxes, "Box City", "Render Boxes", true);
+COUNTER(c_Culled_Cars, "Box City", "Render Cars", true);
 
 namespace
 {
@@ -249,8 +251,27 @@ void BoxCityGame::OnTick(double total_time, float elapsed_time)
 
 				COUNTER_INC(c_Culled_Boxes);
 			}
-
 		}, m_tile_manager.GetCameraBitSet(m_camera), &g_profile_marker_Culling);
+
+	//Cull cars
+	ecs::AddJobs<GameDatabase, const OBBBox, const AABBBox, const CarGPUIndex>(m_job_system, culling_fence, m_update_job_allocator, 256,
+		[camera = &m_camera, point_of_view = &point_of_view, box_priority = m_box_render_priority, render_system = m_render_system, device = m_device, render_gpu_memory_module = m_GPU_memory_render_module, traffic_manager = &m_traffic_system]
+	(const auto& instance_iterator, const OBBBox& obb_box, const AABBBox& aabb_box, const CarGPUIndex& car_gpu_index)
+		{
+			//Calculate if it is in the camera and has still a gpu memory handle
+			if (helpers::CollisionFrustumVsAABB(*camera, aabb_box) && car_gpu_index.IsValid())
+			{
+				//Calculate sort key, sort key is 24 bits
+				float camera_distance = glm::length(obb_box.position - camera->GetPosition());
+				float camera_distance_01 = glm::clamp(camera_distance, 0.f, camera->GetFarPlane()) / camera->GetFarPlane();
+				uint32_t sort_key = static_cast<uint32_t>(camera_distance_01 * ((1 << 24) - 1));
+
+				//Add this point of view
+				point_of_view->PushRenderItem(box_priority, static_cast<render::SortKey>(sort_key), static_cast<uint32_t>(render_gpu_memory_module->GetStaticGPUMemoryOffset(traffic_manager->GetGPUHandle()) + car_gpu_index.gpu_slot * sizeof(GPUBoxInstance)));
+
+				COUNTER_INC(c_Culled_Cars);
+			}
+		}, m_traffic_system.GetCameraBitSet(m_camera), &g_profile_marker_Car_Culling);
 
 	job::Wait(m_job_system, culling_fence);
 

@@ -1,6 +1,7 @@
 #include "box_city_traffic_manager.h"
 #include <core/profile.h>
 #include "box_city_tile_manager.h"
+#include <render/render.h>
 
 namespace BoxCityTrafficSystem
 {
@@ -16,13 +17,25 @@ namespace BoxCityTrafficSystem
 		//Generate zone descriptors
 		GenerateZoneDescriptors();
 
+		//Allocate GPU memory, num tiles * max num cars
+		m_gpu_memory = m_GPU_memory_render_module->AllocStaticGPUMemory(m_device, 2 * kNumCars * kLocalTileCount * kLocalTileCount * sizeof(GPUBoxInstance), nullptr, render::GetGameFrameIndex(m_render_system));
+
+		//We create all the free slots for the GPU
+		m_free_gpu_slots.resize(2 * kNumCars * kLocalTileCount * kLocalTileCount);
+		for (size_t i = 0; i < 2 * kNumCars * kLocalTileCount * kLocalTileCount; ++i)
+		{
+			m_free_gpu_slots[i] = static_cast<uint16_t>(i);
+		}
+
 		//Create traffic around camera position
 		Update(camera_position);
 	}
 
 	void Manager::Shutdown()
 	{
-
+		//Deallocate GPU memory
+		m_GPU_memory_render_module->DeallocStaticGPUMemory(m_device, m_gpu_memory, render::GetGameFrameIndex(m_render_system));
+		m_free_gpu_slots.clear();
 	}
 
 	void Manager::Update(const glm::vec3& camera_position)
@@ -56,38 +69,113 @@ namespace BoxCityTrafficSystem
 				//Check if the tile has the different world index
 				if ((tile.m_tile_position.i != world_tile.i || tile.m_tile_position.j != world_tile.j))
 				{
-					/*
+					//Tile positions
+					const float begin_tile_x = world_tile.i * kTileSize;
+					const float begin_tile_y = world_tile.j * kTileSize;
+					
+					//Update tile
+					tile.m_tile_position = world_tile;
+					tile.m_zone_index = tile_descriptor.index;
+					tile.m_bounding_box.min = glm::vec3(begin_tile_x, begin_tile_y, BoxCityTileSystem::kTileHeightTop);
+					tile.m_bounding_box.max = glm::vec3(begin_tile_x + kTileSize, begin_tile_y + kTileSize, BoxCityTileSystem::kTileHeightBottom);
+					
+					std::mt19937 random(static_cast<uint32_t>((100000 + world_tile.i) + (100000 + world_tile.j) * kLocalTileCount));
+
+					std::uniform_real_distribution<float> position_range(0, kTileSize);
+					std::uniform_real_distribution<float> position_range_z(BoxCityTileSystem::kTileHeightBottom, BoxCityTileSystem::kTileHeightTop);
+					std::uniform_real_distribution<float> size_range(1.f, 2.f);
+
 					//Tile is getting deactivated or moved
 					if (tile_descriptor.active && tile.m_activated)
 					{
-						std::bitset<kLocalTileCount* kLocalTileCount> bitset(false);
+						std::bitset<BoxCityTileSystem::kLocalTileCount * BoxCityTileSystem::kLocalTileCount> bitset(false);
 						bitset[tile_descriptor.index] = true;
 
 						//Move cars
-						ecs::Process<GameDatabase, Car>([](const auto& instance_iterator, Car& car)
+						ecs::Process<GameDatabase, Car, CarSettings, OBBBox, AABBBox, CarGPUIndex>([&](const auto& instance_iterator, Car& car, CarSettings& car_settings, OBBBox& obb_box_component, AABBBox& aabb_box_component, CarGPUIndex& car_gpu_index)
 							{
-								
+								glm::vec3 position(begin_tile_x + position_range(random), begin_tile_y + position_range(random), position_range_z(random));
+								float size = size_range(random);
+								helpers::OBB obb_box;
+								obb_box.position = position;
+								obb_box.extents = glm::vec3(size, size, size);
+								obb_box.rotation = glm::mat3x3();
+
+								helpers::AABB aabb_box;
+								helpers::CalculateAABBFromOBB(aabb_box, obb_box);
+
+								car.position = position;
+								car_settings.size = glm::vec3(size, size, size);
+								obb_box_component = obb_box;
+								aabb_box_component = aabb_box;
+
+								//Update GPU
+								BoxRender box_render;
+								box_render.colour = glm::vec4(1.f, 1.f, 1.f, 0.f);
+
+								GPUBoxInstance gpu_box_instance;
+								gpu_box_instance.Fill(obb_box);
+								gpu_box_instance.Fill(box_render);
+
+								//Update the GPU memory
+								m_GPU_memory_render_module->UpdateStaticGPUMemory(m_device, m_gpu_memory, &gpu_box_instance, sizeof(GPUBoxInstance), render::GetGameFrameIndex(m_render_system), car_gpu_index.gpu_slot * sizeof(GPUBoxInstance));
 
 							}, bitset);
 					}
 					else if (tile_descriptor.active && !tile.m_activated)
 					{
 						//Create cars
-						Instance instance = ecs::AllocInstance<GameDatabase, CarType>(tile_descriptor.index).
-							Init<>();
+						for (size_t i = 0; i < kNumCars; ++i)
+						{
+							glm::vec3 position(begin_tile_x + position_range(random), begin_tile_y + position_range(random), position_range_z(random));
+							float size = size_range(random);
+							helpers::OBB obb_box;
+							obb_box.position = position;
+							obb_box.extents = glm::vec3(size, size, size);
+							obb_box.rotation = glm::mat3x3(1.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 1.f);
+
+							helpers::AABB aabb_box;
+							helpers::CalculateAABBFromOBB(aabb_box, obb_box);
+
+							//Setup GPU
+							uint16_t gpu_slot = AllocGPUSlot();
+
+							//GPU memory
+							BoxRender box_render;
+							box_render.colour = glm::vec4(1.f, 1.f, 1.f, 0.f);
+
+							GPUBoxInstance gpu_box_instance;
+							gpu_box_instance.Fill(obb_box);
+							gpu_box_instance.Fill(box_render);
+
+							//Update the GPU memory
+							m_GPU_memory_render_module->UpdateStaticGPUMemory(m_device, m_gpu_memory, &gpu_box_instance, sizeof(GPUBoxInstance), render::GetGameFrameIndex(m_render_system), gpu_slot * sizeof(GPUBoxInstance));
+
+							Instance instance = ecs::AllocInstance<GameDatabase, CarType>(tile_descriptor.index)
+								.Init<Car>(position, glm::quat())
+								.Init<CarMovement>(glm::vec3(), glm::quat())
+								.Init<CarSettings>(glm::vec3(size, size, size))
+								.Init<CarTarget>(glm::vec3(), 0.0)
+								.Init<OBBBox>(obb_box)
+								.Init<AABBBox>(aabb_box)
+								.Init<CarGPUIndex>(gpu_slot);
+						}
 					}
-					else //tile descriptor is not active
+					else if (!tile_descriptor.active && tile.m_activated)
 					{
 						//Destroy cars in this tile/zone
-						std::bitset<kLocalTileCount* kLocalTileCount> bitset(false);
+						std::bitset<BoxCityTileSystem::kLocalTileCount* BoxCityTileSystem::kLocalTileCount> bitset(false);
 						bitset[tile_descriptor.index] = true;
 
-						ecs::Process<GameDatabase, Car>([](const auto& instance_iterator, Car& car)
+						ecs::Process<GameDatabase, Car, CarGPUIndex>([manager = this](const auto& instance_iterator, Car& car, CarGPUIndex& car_gpu_index)
 							{
+								//Release GPU
+								manager->DeallocGPUSlot(car_gpu_index.gpu_slot);
+
+								//Release instance
 								instance_iterator.Dealloc();
 							}, bitset);
 					}
-					*/
 				}
 			}
 		}
@@ -132,5 +220,16 @@ namespace BoxCityTrafficSystem
 	Manager::Tile& Manager::GetTile(const LocalTilePosition& local_tile)
 	{
 		return m_tiles[local_tile.i + local_tile.j * kLocalTileCount];
+	}
+	uint16_t Manager::AllocGPUSlot()
+	{
+		assert(!m_free_gpu_slots.empty());
+		uint16_t slot = m_free_gpu_slots.back();
+		m_free_gpu_slots.pop_back();
+		return slot;
+	}
+	void Manager::DeallocGPUSlot(uint16_t slot)
+	{
+		m_free_gpu_slots.push_back(slot);
 	}
 }
