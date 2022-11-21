@@ -65,10 +65,10 @@ namespace BoxCityTileSystem
 		PROFILE_SCOPE("BoxCityTileManager", 0xFFFF77FF, "Update");
 		//Check if the camera is still in the same tile, using some fugde factor
 		constexpr float fudge_factor = 0.05f;
-		float min_x = (-0.5f + m_camera_tile_position.i - fudge_factor) * kTileSize;
-		float min_y = (-0.5f + m_camera_tile_position.j - fudge_factor) * kTileSize;
-		float max_x = (-0.5f + m_camera_tile_position.i + 1 + fudge_factor) * kTileSize;
-		float max_y = (-0.5f + m_camera_tile_position.j + 1 + fudge_factor) * kTileSize;
+		float min_x = (0.5f + m_camera_tile_position.i - fudge_factor) * kTileSize;
+		float min_y = (0.5f + m_camera_tile_position.j - fudge_factor) * kTileSize;
+		float max_x = (0.5f + m_camera_tile_position.i + 1 + fudge_factor) * kTileSize;
+		float max_y = (0.5f + m_camera_tile_position.j + 1 + fudge_factor) * kTileSize;
 
 		//If the camera has move of tile, destroy the tiles out of view and create the new ones
 		bool camera_moved = (camera_position.x < min_x) || (camera_position.y < min_y) || (camera_position.x > max_x) || (camera_position.y > max_y);

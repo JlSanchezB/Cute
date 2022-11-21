@@ -8,7 +8,6 @@ PROFILE_DEFINE_MARKER(g_profile_marker_Car_Culling, "Main", 0xFFFFAAAA, "CarCull
 
 COUNTER(c_Culled_Boxes, "Box City", "Render Boxes", true);
 COUNTER(c_Culled_Cars, "Box City", "Render Cars", true);
-
 namespace
 {
 	struct ViewConstantBuffer
@@ -308,6 +307,7 @@ void BoxCityGame::OnAddImguiMenu()
 			job::SetSingleThreadMode(m_job_system, single_frame_mode);
 		}
 		ImGui::SliderFloat2("Sun Direction", reinterpret_cast<float*>(&m_sun_direction_angles), 0.f, 360.f);
+		m_show_ecs_stats = ImGui::MenuItem("Show ECS stats");
 		ImGui::EndMenu();
 	}
 }
@@ -315,4 +315,27 @@ void BoxCityGame::OnAddImguiMenu()
 void BoxCityGame::OnImguiRender()
 {
 	m_render_passes_loader.RenderImgui();
+
+	if (m_show_ecs_stats)
+	{
+		if (!ImGui::Begin("Show ECS stats", &m_show_ecs_stats))
+		{
+			ImGui::End();
+			return;
+		}
+		ImGui::Text("Num city boxes (%zu)", ecs::GetNumInstances<GameDatabase, BoxType>());
+		ImGui::Text("Num animated city boxes (%zu)", ecs::GetNumInstances<GameDatabase, AnimatedBoxType>());
+		ImGui::Text("Num city panels (%zu)", ecs::GetNumInstances<GameDatabase, PanelType>());
+		ImGui::Text("Num attached city panels (%zu)", ecs::GetNumInstances<GameDatabase, AttachedPanelType>());
+		ImGui::Text("Num cars (%zu)", ecs::GetNumInstances<GameDatabase, CarType>());
+
+		ecs::DatabaseStats database_stats;
+		ecs::GetDatabaseStats<GameDatabase>(database_stats);
+
+		ImGui::Separator();
+		ImGui::Text("Num deferred deletions (%zu)", database_stats.num_deferred_deletions);
+		ImGui::Text("Num deferred moves (%zu)", database_stats.num_deferred_moves);
+
+		ImGui::End();
+	}
 }

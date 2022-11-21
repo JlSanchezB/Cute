@@ -13,7 +13,7 @@ namespace render
 namespace BoxCityTrafficSystem
 {
 	//Number of cars per tile
-	constexpr uint32_t kNumCars = 500;
+	constexpr uint32_t kNumCars = 2500;
 	
 	//Number of tiles, we have a lot less than the city manager
 	constexpr uint32_t kLocalTileCount = 5;
@@ -105,7 +105,7 @@ namespace BoxCityTrafficSystem
 			uint32_t m_zone_index;
 
 			//World time index that represent
-			WorldTilePosition m_tile_position;
+			WorldTilePosition m_tile_position{ std::numeric_limits<int32_t>::min(), std::numeric_limits<int32_t>::min()};
 
 			//Bounding box of the tile
 			helpers::AABB m_bounding_box;

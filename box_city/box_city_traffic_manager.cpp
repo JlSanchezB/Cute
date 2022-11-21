@@ -40,13 +40,13 @@ namespace BoxCityTrafficSystem
 
 	void Manager::Update(const glm::vec3& camera_position)
 	{
-		PROFILE_SCOPE("BoxCityTileManager", 0xFFFF77FF, "Update");
+		PROFILE_SCOPE("BoxCityTrafficManager", 0xFFFF77FF, "Update");
 		//Check if the camera is still in the same tile, using some fugde factor
 		constexpr float fudge_factor = 0.05f;
-		float min_x = (-0.5f + m_camera_tile_position.i - fudge_factor) * kTileSize;
-		float min_y = (-0.5f + m_camera_tile_position.j - fudge_factor) * kTileSize;
-		float max_x = (-0.5f + m_camera_tile_position.i + 1 + fudge_factor) * kTileSize;
-		float max_y = (-0.5f + m_camera_tile_position.j + 1 + fudge_factor) * kTileSize;
+		float min_x = (0.5f + m_camera_tile_position.i - fudge_factor) * kTileSize;
+		float min_y = (0.5f + m_camera_tile_position.j - fudge_factor) * kTileSize;
+		float max_x = (0.5f + m_camera_tile_position.i + 1 + fudge_factor) * kTileSize;
+		float max_y = (0.5f + m_camera_tile_position.j + 1 + fudge_factor) * kTileSize;
 
 		//If the camera has move of tile, destroy the tiles out of view and create the new ones
 		bool camera_moved = (camera_position.x < min_x) || (camera_position.y < min_y) || (camera_position.x > max_x) || (camera_position.y > max_y);
@@ -76,8 +76,8 @@ namespace BoxCityTrafficSystem
 					//Update tile
 					tile.m_tile_position = world_tile;
 					tile.m_zone_index = tile_descriptor.index;
-					tile.m_bounding_box.min = glm::vec3(begin_tile_x, begin_tile_y, BoxCityTileSystem::kTileHeightTop);
-					tile.m_bounding_box.max = glm::vec3(begin_tile_x + kTileSize, begin_tile_y + kTileSize, BoxCityTileSystem::kTileHeightBottom);
+					tile.m_bounding_box.min = glm::vec3(begin_tile_x, begin_tile_y, BoxCityTileSystem::kTileHeightBottom);
+					tile.m_bounding_box.max = glm::vec3(begin_tile_x + kTileSize, begin_tile_y + kTileSize, BoxCityTileSystem::kTileHeightTop);
 					
 					std::mt19937 random(static_cast<uint32_t>((100000 + world_tile.i) + (100000 + world_tile.j) * kLocalTileCount));
 
@@ -91,6 +91,8 @@ namespace BoxCityTrafficSystem
 						std::bitset<BoxCityTileSystem::kLocalTileCount * BoxCityTileSystem::kLocalTileCount> bitset(false);
 						bitset[tile_descriptor.index] = true;
 
+						core::LogInfo("Traffic: Tile Local<%i,%i>, World<%i,%i>, moved", local_tile.i, local_tile.j, world_tile.i, world_tile.j);
+
 						//Move cars
 						ecs::Process<GameDatabase, Car, CarSettings, OBBBox, AABBBox, CarGPUIndex>([&](const auto& instance_iterator, Car& car, CarSettings& car_settings, OBBBox& obb_box_component, AABBBox& aabb_box_component, CarGPUIndex& car_gpu_index)
 							{
@@ -99,7 +101,7 @@ namespace BoxCityTrafficSystem
 								helpers::OBB obb_box;
 								obb_box.position = position;
 								obb_box.extents = glm::vec3(size, size, size);
-								obb_box.rotation = glm::mat3x3();
+								obb_box.rotation = glm::mat3x3(1.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 1.f);
 
 								helpers::AABB aabb_box;
 								helpers::CalculateAABBFromOBB(aabb_box, obb_box);
@@ -111,7 +113,7 @@ namespace BoxCityTrafficSystem
 
 								//Update GPU
 								BoxRender box_render;
-								box_render.colour = glm::vec4(1.f, 1.f, 1.f, 0.f);
+								box_render.colour = glm::vec4(3.f, 3.f, 3.f, 0.f);
 
 								GPUBoxInstance gpu_box_instance;
 								gpu_box_instance.Fill(obb_box);
@@ -124,6 +126,8 @@ namespace BoxCityTrafficSystem
 					}
 					else if (tile_descriptor.active && !tile.m_activated)
 					{
+						core::LogInfo("Traffic: Tile Local<%i,%i>, World<%i,%i>, created", local_tile.i, local_tile.j, world_tile.i, world_tile.j);
+
 						//Create cars
 						for (size_t i = 0; i < kNumCars; ++i)
 						{
@@ -142,7 +146,7 @@ namespace BoxCityTrafficSystem
 
 							//GPU memory
 							BoxRender box_render;
-							box_render.colour = glm::vec4(1.f, 1.f, 1.f, 0.f);
+							box_render.colour = glm::vec4(3.f, 3.f, 3.f, 0.f);
 
 							GPUBoxInstance gpu_box_instance;
 							gpu_box_instance.Fill(obb_box);
@@ -160,9 +164,12 @@ namespace BoxCityTrafficSystem
 								.Init<AABBBox>(aabb_box)
 								.Init<CarGPUIndex>(gpu_slot);
 						}
+
+						tile.m_activated = true;
 					}
 					else if (!tile_descriptor.active && tile.m_activated)
 					{
+						core::LogInfo("Traffic: Tile Local<%i,%i>, World<%i,%i>, destroyed", local_tile.i, local_tile.j, world_tile.i, world_tile.j);
 						//Destroy cars in this tile/zone
 						std::bitset<BoxCityTileSystem::kLocalTileCount* BoxCityTileSystem::kLocalTileCount> bitset(false);
 						bitset[tile_descriptor.index] = true;
@@ -175,6 +182,8 @@ namespace BoxCityTrafficSystem
 								//Release instance
 								instance_iterator.Dealloc();
 							}, bitset);
+
+						tile.m_activated = false;
 					}
 				}
 			}
