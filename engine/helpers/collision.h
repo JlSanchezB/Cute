@@ -34,6 +34,19 @@ namespace helpers
 				max = b.max;
 			}
 		}
+		void Add(const glm::vec3& point)
+		{
+			if (IsValid())
+			{
+				min = glm::min(min, point);
+				max = glm::max(max, point);
+			}
+			else
+			{
+				min = point;
+				max = point;
+			}
+		}
 	};
 
 	struct OBB

@@ -17,6 +17,12 @@ namespace BoxCityTrafficSystem
 		//Generate zone descriptors
 		GenerateZoneDescriptors();
 
+		//Init tiles
+		for (uint32_t i = 0; i < kLocalTileCount * kLocalTileCount; ++i)
+		{
+			m_tiles[i].m_zone_index = i;
+		}
+
 		//Allocate GPU memory, num tiles * max num cars
 		m_gpu_memory = m_GPU_memory_render_module->AllocStaticGPUMemory(m_device, 2 * kNumCars * kLocalTileCount * kLocalTileCount * sizeof(GPUBoxInstance), nullptr, render::GetGameFrameIndex(m_render_system));
 
@@ -28,7 +34,7 @@ namespace BoxCityTrafficSystem
 		}
 
 		//Create traffic around camera position
-		Update(camera_position);
+		Update(camera_position);	
 	}
 
 	void Manager::Shutdown()
@@ -67,7 +73,7 @@ namespace BoxCityTrafficSystem
 				Tile& tile = GetTile(local_tile);
 
 				//Check if the tile has the different world index
-				if ((tile.m_tile_position.i != world_tile.i || tile.m_tile_position.j != world_tile.j))
+				if ((tile.m_tile_position.i != world_tile.i) || (tile.m_tile_position.j != world_tile.j))
 				{
 					//Tile positions
 					const float begin_tile_x = world_tile.i * kTileSize;
@@ -75,22 +81,21 @@ namespace BoxCityTrafficSystem
 					
 					//Update tile
 					tile.m_tile_position = world_tile;
-					tile.m_zone_index = tile_descriptor.index;
 					tile.m_bounding_box.min = glm::vec3(begin_tile_x, begin_tile_y, BoxCityTileSystem::kTileHeightBottom);
 					tile.m_bounding_box.max = glm::vec3(begin_tile_x + kTileSize, begin_tile_y + kTileSize, BoxCityTileSystem::kTileHeightTop);
 					
 					std::mt19937 random(static_cast<uint32_t>((100000 + world_tile.i) + (100000 + world_tile.j) * kLocalTileCount));
 
-					std::uniform_real_distribution<float> position_range(0, kTileSize);
+					std::uniform_real_distribution<float> position_range(0.f, kTileSize);
 					std::uniform_real_distribution<float> position_range_z(BoxCityTileSystem::kTileHeightBottom, BoxCityTileSystem::kTileHeightTop);
 					std::uniform_real_distribution<float> size_range(1.f, 2.f);
 
 					//Tile is getting deactivated or moved
-					if (tile_descriptor.active && tile.m_activated)
+					if (tile.m_activated)
 					{
 						std::bitset<BoxCityTileSystem::kLocalTileCount * BoxCityTileSystem::kLocalTileCount> bitset(false);
-						bitset[tile_descriptor.index] = true;
-
+						bitset[tile.m_zone_index] = true;
+						
 						core::LogInfo("Traffic: Tile Local<%i,%i>, World<%i,%i>, moved", local_tile.i, local_tile.j, world_tile.i, world_tile.j);
 
 						//Move cars
@@ -124,7 +129,7 @@ namespace BoxCityTrafficSystem
 
 							}, bitset);
 					}
-					else if (tile_descriptor.active && !tile.m_activated)
+					else if (!tile.m_activated)
 					{
 						core::LogInfo("Traffic: Tile Local<%i,%i>, World<%i,%i>, created", local_tile.i, local_tile.j, world_tile.i, world_tile.j);
 
@@ -155,7 +160,7 @@ namespace BoxCityTrafficSystem
 							//Update the GPU memory
 							m_GPU_memory_render_module->UpdateStaticGPUMemory(m_device, m_gpu_memory, &gpu_box_instance, sizeof(GPUBoxInstance), render::GetGameFrameIndex(m_render_system), gpu_slot * sizeof(GPUBoxInstance));
 
-							Instance instance = ecs::AllocInstance<GameDatabase, CarType>(tile_descriptor.index)
+							Instance instance = ecs::AllocInstance<GameDatabase, CarType>(tile.m_zone_index)
 								.Init<Car>(position, glm::quat())
 								.Init<CarMovement>(glm::vec3(), glm::quat())
 								.Init<CarSettings>(glm::vec3(size, size, size))
@@ -165,25 +170,8 @@ namespace BoxCityTrafficSystem
 								.Init<CarGPUIndex>(gpu_slot);
 						}
 
+						//Init tile
 						tile.m_activated = true;
-					}
-					else if (!tile_descriptor.active && tile.m_activated)
-					{
-						core::LogInfo("Traffic: Tile Local<%i,%i>, World<%i,%i>, destroyed", local_tile.i, local_tile.j, world_tile.i, world_tile.j);
-						//Destroy cars in this tile/zone
-						std::bitset<BoxCityTileSystem::kLocalTileCount* BoxCityTileSystem::kLocalTileCount> bitset(false);
-						bitset[tile_descriptor.index] = true;
-
-						ecs::Process<GameDatabase, Car, CarGPUIndex>([manager = this](const auto& instance_iterator, Car& car, CarGPUIndex& car_gpu_index)
-							{
-								//Release GPU
-								manager->DeallocGPUSlot(car_gpu_index.gpu_slot);
-
-								//Release instance
-								instance_iterator.Dealloc();
-							}, bitset);
-
-						tile.m_activated = false;
 					}
 				}
 			}
@@ -201,24 +189,6 @@ namespace BoxCityTrafficSystem
 				TileDescriptor tile_descriptor;
 				tile_descriptor.i_offset = i_offset;
 				tile_descriptor.j_offset = j_offset;
-
-				//Calculate the distance to the center
-				float distance = sqrtf(static_cast<float>(i_offset) * static_cast<float>(i_offset) + static_cast<float>(j_offset) * static_cast<float>(j_offset));
-
-				//Calculate normal distance
-				float normalized_distance = distance / static_cast<float>(range);
-
-				//You want a tile only inside the radius
-				if (normalized_distance <= 1.2f)
-				{
-					tile_descriptor.active = true;
-				}
-				else
-				{
-					tile_descriptor.active = false;
-				}
-
-				tile_descriptor.index = static_cast<uint32_t>(m_tile_descriptors.size());
 
 				//This is a valid descriptor tile
 				m_tile_descriptors.push_back(tile_descriptor);

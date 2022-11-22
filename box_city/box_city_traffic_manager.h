@@ -13,7 +13,7 @@ namespace render
 namespace BoxCityTrafficSystem
 {
 	//Number of cars per tile
-	constexpr uint32_t kNumCars = 2500;
+	constexpr uint32_t kNumCars = 2000;
 	
 	//Number of tiles, we have a lot less than the city manager
 	constexpr uint32_t kLocalTileCount = 5;
@@ -85,10 +85,8 @@ namespace BoxCityTrafficSystem
 
 		struct TileDescriptor
 		{
-			bool active; //tiles outside the radius will get deactivated
 			int32_t i_offset; //offset from the center
 			int32_t j_offset; //offset from the center
-			uint32_t index; //index in the kLocalTileCount * kLocalTileCount vector
 		};
 
 		//The tile descriptors are sorted from center
