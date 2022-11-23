@@ -102,12 +102,11 @@ struct CarSettings
 struct CarTarget
 {
 	glm::vec3 target;
-	double time_in_target;
 
 	CarTarget()
 	{
 	};
-	CarTarget(const glm::vec3& _target, double _time_in_target) : target(_target), time_in_target(_time_in_target)
+	CarTarget(const glm::vec3& _target) : target(_target)
 	{
 	};
 };

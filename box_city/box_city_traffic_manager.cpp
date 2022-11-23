@@ -3,6 +3,11 @@
 #include "box_city_tile_manager.h"
 #include <render/render.h>
 
+namespace
+{
+	constexpr float kCarTargetRange = 400.f;
+}
+
 namespace BoxCityTrafficSystem
 {
 	void Manager::Init(display::Device* device, render::System* render_system, render::GPUMemoryRenderModule* GPU_memory_render_module, const glm::vec3& camera_position)
@@ -75,6 +80,15 @@ namespace BoxCityTrafficSystem
 		m_GPU_memory_render_module->UpdateStaticGPUMemory(m_device, m_gpu_memory, &gpu_box_instance, sizeof(GPUBoxInstance), render::GetGameFrameIndex(m_render_system), car_gpu_index.gpu_slot * sizeof(GPUBoxInstance));
 	}
 
+	void Manager::SetupCarTarget(std::mt19937& random, Car& car, CarTarget& car_target)
+	{
+		//Calculate a new position as target
+		std::uniform_real_distribution<float> position_range(-kCarTargetRange, kCarTargetRange);
+		std::uniform_real_distribution<float> position_range_z(BoxCityTileSystem::kTileHeightBottom, BoxCityTileSystem::kTileHeightTop);
+
+		car_target.target = glm::vec3(car.position.x + position_range(random), car.position.y + position_range(random), position_range_z(random));
+	}
+
 	void Manager::Update(const glm::vec3& camera_position)
 	{
 		PROFILE_SCOPE("BoxCityTrafficManager", 0xFFFF77FF, "Update");
@@ -130,10 +144,12 @@ namespace BoxCityTrafficSystem
 						core::LogInfo("Traffic: Tile Local<%i,%i>, World<%i,%i>, moved", local_tile.i, local_tile.j, world_tile.i, world_tile.j);
 
 						//Move cars
-						ecs::Process<GameDatabase, Car, CarSettings, OBBBox, AABBBox, CarGPUIndex>([&](const auto& instance_iterator, Car& car, CarSettings& car_settings, OBBBox& obb_box_component, AABBBox& aabb_box_component, CarGPUIndex& car_gpu_index)
+						ecs::Process<GameDatabase, Car, CarSettings, CarTarget, OBBBox, AABBBox, CarGPUIndex>([&](const auto& instance_iterator, Car& car, CarSettings& car_settings, CarTarget& car_target, OBBBox& obb_box_component, AABBBox& aabb_box_component, CarGPUIndex& car_gpu_index)
 							{
 								SetupCar(tile, random, begin_tile_x, begin_tile_y, position_range, position_range_z, size_range,
 								car, car_settings, obb_box_component, aabb_box_component, car_gpu_index);	
+
+								SetupCarTarget(random, car, car_target);
 							}, bitset);
 					}
 					else if (!tile.m_activated)
@@ -154,11 +170,14 @@ namespace BoxCityTrafficSystem
 
 							SetupCar(tile, random, begin_tile_x, begin_tile_y, position_range, position_range_z, size_range,
 								car, car_settings, obb_box_component, aabb_box_component, car_gpu_index);
+							
+							CarTarget car_target;
+							SetupCarTarget(random, car, car_target);
 
 							Instance instance = ecs::AllocInstance<GameDatabase, CarType>(tile.m_zone_index)
 								.Init<Car>(car)
 								.Init<CarSettings>(car_settings)
-								.Init<CarTarget>(glm::vec3(), 0.0)
+								.Init<CarTarget>(car_target)
 								.Init<OBBBox>(obb_box_component)
 								.Init<AABBBox>(aabb_box_component)
 								.Init<CarGPUIndex>(car_gpu_index);

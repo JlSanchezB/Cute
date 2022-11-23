@@ -120,6 +120,8 @@ namespace BoxCityTrafficSystem
 			std::uniform_real_distribution<float>& position_range, std::uniform_real_distribution<float>& position_range_z, std::uniform_real_distribution<float>& size_range,
 			Car& car, CarSettings& car_settings, OBBBox& obb_component, AABBBox& aabb_component, CarGPUIndex& car_gpu_index);
 
+		void SetupCarTarget(std::mt19937& random, Car& car, CarTarget& car_target);
+
 		//Current camera tile position, center of our local tiles
 		WorldTilePosition m_camera_tile_position;
 
