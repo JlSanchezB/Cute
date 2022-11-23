@@ -66,6 +66,9 @@ struct Car
 	glm::vec3 position;
 	glm::quat rotation;
 
+	Car()
+	{
+	};
 	Car(const glm::vec3& _position, const glm::quat& _rotation) : position(_position), rotation(_rotation)
 	{
 	};
@@ -76,6 +79,9 @@ struct CarMovement
 	glm::vec3 lineal_velocity;
 	glm::quat rotation_velocity;
 
+	CarMovement()
+	{
+	};
 	CarMovement(const glm::vec3& _lineal_velocity, const glm::quat& _rotation_velocity) : lineal_velocity(_lineal_velocity), rotation_velocity(_rotation_velocity)
 	{
 	};
@@ -85,6 +91,9 @@ struct CarSettings
 {
 	glm::vec3 size;
 
+	CarSettings()
+	{
+	};
 	CarSettings(const glm::vec3& _size) : size(_size)
 	{
 	}
@@ -95,6 +104,9 @@ struct CarTarget
 	glm::vec3 target;
 	double time_in_target;
 
+	CarTarget()
+	{
+	};
 	CarTarget(const glm::vec3& _target, double _time_in_target) : target(_target), time_in_target(_time_in_target)
 	{
 	};
@@ -106,10 +118,13 @@ struct CarGPUIndex
 
 	uint16_t gpu_slot = kInvalidSlot;
 
-	CarGPUIndex(uint16_t _gpu_slot) : gpu_slot(_gpu_slot)
+	CarGPUIndex()
 	{
 	}
 
+	CarGPUIndex(uint16_t _gpu_slot) : gpu_slot(_gpu_slot)
+	{
+	};
 	bool IsValid() const
 	{
 		return gpu_slot != kInvalidSlot;

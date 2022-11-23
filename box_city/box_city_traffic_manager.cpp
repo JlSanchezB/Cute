@@ -44,6 +44,37 @@ namespace BoxCityTrafficSystem
 		m_free_gpu_slots.clear();
 	}
 
+	void Manager::SetupCar(Tile& tile, std::mt19937& random, float begin_tile_x, float begin_tile_y,
+		std::uniform_real_distribution<float>& position_range, std::uniform_real_distribution<float>& position_range_z, std::uniform_real_distribution<float>& size_range,
+		Car& car, CarSettings& car_settings, OBBBox& obb_component, AABBBox& aabb_component, CarGPUIndex& car_gpu_index)
+	{
+		glm::vec3 position(begin_tile_x + position_range(random), begin_tile_y + position_range(random), position_range_z(random));
+		float size = size_range(random);
+		helpers::OBB obb_box;
+		obb_box.position = position;
+		obb_box.extents = glm::vec3(size, size, size);
+		obb_box.rotation = glm::mat3x3(1.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 1.f);
+
+		helpers::AABB aabb_box;
+		helpers::CalculateAABBFromOBB(aabb_box, obb_box);
+
+		car.position = position;
+		car_settings.size = glm::vec3(size, size, size);
+		obb_component = obb_box;
+		aabb_component = aabb_box;
+
+		//Update GPU
+		BoxRender box_render;
+		box_render.colour = glm::vec4(3.f, 3.f, 3.f, 0.f);
+
+		GPUBoxInstance gpu_box_instance;
+		gpu_box_instance.Fill(obb_box);
+		gpu_box_instance.Fill(box_render);
+
+		//Update the GPU memory
+		m_GPU_memory_render_module->UpdateStaticGPUMemory(m_device, m_gpu_memory, &gpu_box_instance, sizeof(GPUBoxInstance), render::GetGameFrameIndex(m_render_system), car_gpu_index.gpu_slot * sizeof(GPUBoxInstance));
+	}
+
 	void Manager::Update(const glm::vec3& camera_position)
 	{
 		PROFILE_SCOPE("BoxCityTrafficManager", 0xFFFF77FF, "Update");
@@ -101,32 +132,8 @@ namespace BoxCityTrafficSystem
 						//Move cars
 						ecs::Process<GameDatabase, Car, CarSettings, OBBBox, AABBBox, CarGPUIndex>([&](const auto& instance_iterator, Car& car, CarSettings& car_settings, OBBBox& obb_box_component, AABBBox& aabb_box_component, CarGPUIndex& car_gpu_index)
 							{
-								glm::vec3 position(begin_tile_x + position_range(random), begin_tile_y + position_range(random), position_range_z(random));
-								float size = size_range(random);
-								helpers::OBB obb_box;
-								obb_box.position = position;
-								obb_box.extents = glm::vec3(size, size, size);
-								obb_box.rotation = glm::mat3x3(1.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 1.f);
-
-								helpers::AABB aabb_box;
-								helpers::CalculateAABBFromOBB(aabb_box, obb_box);
-
-								car.position = position;
-								car_settings.size = glm::vec3(size, size, size);
-								obb_box_component = obb_box;
-								aabb_box_component = aabb_box;
-
-								//Update GPU
-								BoxRender box_render;
-								box_render.colour = glm::vec4(3.f, 3.f, 3.f, 0.f);
-
-								GPUBoxInstance gpu_box_instance;
-								gpu_box_instance.Fill(obb_box);
-								gpu_box_instance.Fill(box_render);
-
-								//Update the GPU memory
-								m_GPU_memory_render_module->UpdateStaticGPUMemory(m_device, m_gpu_memory, &gpu_box_instance, sizeof(GPUBoxInstance), render::GetGameFrameIndex(m_render_system), car_gpu_index.gpu_slot * sizeof(GPUBoxInstance));
-
+								SetupCar(tile, random, begin_tile_x, begin_tile_y, position_range, position_range_z, size_range,
+								car, car_settings, obb_box_component, aabb_box_component, car_gpu_index);	
 							}, bitset);
 					}
 					else if (!tile.m_activated)
@@ -136,38 +143,25 @@ namespace BoxCityTrafficSystem
 						//Create cars
 						for (size_t i = 0; i < kNumCars; ++i)
 						{
-							glm::vec3 position(begin_tile_x + position_range(random), begin_tile_y + position_range(random), position_range_z(random));
-							float size = size_range(random);
-							helpers::OBB obb_box;
-							obb_box.position = position;
-							obb_box.extents = glm::vec3(size, size, size);
-							obb_box.rotation = glm::mat3x3(1.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 1.f);
+							Car car;
+							CarSettings car_settings;
+							OBBBox obb_box_component;
+							AABBBox aabb_box_component;
+							CarGPUIndex car_gpu_index;
 
-							helpers::AABB aabb_box;
-							helpers::CalculateAABBFromOBB(aabb_box, obb_box);
+							//Alloc GPU slot
+							car_gpu_index.gpu_slot = AllocGPUSlot();
 
-							//Setup GPU
-							uint16_t gpu_slot = AllocGPUSlot();
-
-							//GPU memory
-							BoxRender box_render;
-							box_render.colour = glm::vec4(3.f, 3.f, 3.f, 0.f);
-
-							GPUBoxInstance gpu_box_instance;
-							gpu_box_instance.Fill(obb_box);
-							gpu_box_instance.Fill(box_render);
-
-							//Update the GPU memory
-							m_GPU_memory_render_module->UpdateStaticGPUMemory(m_device, m_gpu_memory, &gpu_box_instance, sizeof(GPUBoxInstance), render::GetGameFrameIndex(m_render_system), gpu_slot * sizeof(GPUBoxInstance));
+							SetupCar(tile, random, begin_tile_x, begin_tile_y, position_range, position_range_z, size_range,
+								car, car_settings, obb_box_component, aabb_box_component, car_gpu_index);
 
 							Instance instance = ecs::AllocInstance<GameDatabase, CarType>(tile.m_zone_index)
-								.Init<Car>(position, glm::quat())
-								.Init<CarMovement>(glm::vec3(), glm::quat())
-								.Init<CarSettings>(glm::vec3(size, size, size))
+								.Init<Car>(car)
+								.Init<CarSettings>(car_settings)
 								.Init<CarTarget>(glm::vec3(), 0.0)
-								.Init<OBBBox>(obb_box)
-								.Init<AABBBox>(aabb_box)
-								.Init<CarGPUIndex>(gpu_slot);
+								.Init<OBBBox>(obb_box_component)
+								.Init<AABBBox>(aabb_box_component)
+								.Init<CarGPUIndex>(car_gpu_index);
 						}
 
 						//Init tile

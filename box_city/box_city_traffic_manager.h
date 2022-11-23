@@ -115,6 +115,11 @@ namespace BoxCityTrafficSystem
 		//Get tile
 		Tile& GetTile(const LocalTilePosition& local_tile);
 
+		//SetupCar
+		void SetupCar(Tile& tile, std::mt19937& random, float begin_tile_x, float begin_tile_y,
+			std::uniform_real_distribution<float>& position_range, std::uniform_real_distribution<float>& position_range_z, std::uniform_real_distribution<float>& size_range,
+			Car& car, CarSettings& car_settings, OBBBox& obb_component, AABBBox& aabb_component, CarGPUIndex& car_gpu_index);
+
 		//Current camera tile position, center of our local tiles
 		WorldTilePosition m_camera_tile_position;
 
