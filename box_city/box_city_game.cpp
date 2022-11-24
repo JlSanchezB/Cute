@@ -187,7 +187,13 @@ void BoxCityGame::OnTick(double total_time, float elapsed_time)
 			flags.gpu_updated = false;
 		}, m_tile_manager.GetCameraBitSet(m_camera), &g_profile_marker_UpdateAttachments);
 
+	//Update cars
+	job::Fence update_cars_fence;
+	m_traffic_system.UpdateCars(m_job_system, m_update_job_allocator.get(), m_camera, update_cars_fence, elapsed_time);
+
+
 	job::Wait(m_job_system, update_attachments_fence);
+	job::Wait(m_job_system, update_cars_fence);
 
 	render::BeginPrepareRender(m_render_system);
 

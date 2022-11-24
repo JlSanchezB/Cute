@@ -108,11 +108,11 @@ namespace
 	}
 
 	template <typename TYPE>
-	void RenderScalarControlVariable(const core::ControlVariableName& name, TYPE* control_variable, const TYPE& min_range, const TYPE& max_range, const core::ConsoleVariableType& type)
+	void RenderScalarControlVariable(const core::ControlVariableName& name, TYPE* control_variable, const TYPE& min_range, const TYPE& max_range, const core::ConsoleVariableType& type, ImGuiDataType_ imgui_type)
 	{
 		float drag_speed = std::max(0.2f, (static_cast<float>(max_range) - static_cast<float>(min_range)) * 0.0001f);
 		TYPE value = *control_variable;
-		if (ImGui::DragScalar(name.GetValue(), ImGuiDataType_S32, &value, drag_speed, &min_range, &max_range))
+		if (ImGui::DragScalar(name.GetValue(), imgui_type, &value, drag_speed, &min_range, &max_range))
 		{
 			//Changed
 			if (type == core::ConsoleVariableType::Main)
@@ -195,11 +195,11 @@ namespace core
 							{
 								[&](int32_t* variable_ptr)
 								{
-									RenderScalarControlVariable<int32_t>(control_variable.first, variable_ptr, control_variable.second.range_min.value_int32_t, control_variable.second.range_max.value_int32_t, control_variable.second.type);
+									RenderScalarControlVariable<int32_t>(control_variable.first, variable_ptr, control_variable.second.range_min.value_int32_t, control_variable.second.range_max.value_int32_t, control_variable.second.type, ImGuiDataType_S32);
 								},
 								[&](uint32_t* variable_ptr)
 								{
-									RenderScalarControlVariable<uint32_t>(control_variable.first, variable_ptr, control_variable.second.range_min.value_uint32_t, control_variable.second.range_max.value_uint32_t, control_variable.second.type);
+									RenderScalarControlVariable<uint32_t>(control_variable.first, variable_ptr, control_variable.second.range_min.value_uint32_t, control_variable.second.range_max.value_uint32_t, control_variable.second.type, ImGuiDataType_U32);
 								},
 								[&](bool* variable_ptr)
 								{
@@ -219,7 +219,7 @@ namespace core
 								},
 								[&](float* variable_ptr)
 								{
-									RenderScalarControlVariable<float>(control_variable.first, variable_ptr, control_variable.second.range_min.value_float, control_variable.second.range_max.value_float, control_variable.second.type);
+									RenderScalarControlVariable<float>(control_variable.first, variable_ptr, control_variable.second.range_min.value_float, control_variable.second.range_max.value_float, control_variable.second.type, ImGuiDataType_Float);
 								}
 							},
 							control_variable.second.reference);

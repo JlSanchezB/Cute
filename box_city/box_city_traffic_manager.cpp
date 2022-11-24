@@ -2,11 +2,20 @@
 #include <core/profile.h>
 #include "box_city_tile_manager.h"
 #include <render/render.h>
+#include <ecs/entity_component_system.h>
+#include <ecs/zone_bitmask_helper.h>
+#include <core/profile.h>
+#include <job/job.h>
+#include <job/job_helper.h>
+#include <ecs/entity_component_job_helper.h>
+#include <core/control_variables.h>
 
-namespace
-{
-	constexpr float kCarTargetRange = 400.f;
-}
+PROFILE_DEFINE_MARKER(g_profile_marker_Car_Update, "Main", 0xFFFFAAAA, "CarUpdate");
+
+//List of control variables
+CONTROL_VARIABLE(float, c_car_target_range, 1.f, 10000.f, 400.f, "Traffic", "Car target range");
+CONTROL_VARIABLE(float, c_car_velocity, 0.f, 1000.f, 24.f, "Traffic", "Car velocity");
+
 
 namespace BoxCityTrafficSystem
 {
@@ -83,7 +92,7 @@ namespace BoxCityTrafficSystem
 	void Manager::SetupCarTarget(std::mt19937& random, Car& car, CarTarget& car_target)
 	{
 		//Calculate a new position as target
-		std::uniform_real_distribution<float> position_range(-kCarTargetRange, kCarTargetRange);
+		std::uniform_real_distribution<float> position_range(-c_car_target_range, c_car_target_range);
 		std::uniform_real_distribution<float> position_range_z(BoxCityTileSystem::kTileHeightBottom, BoxCityTileSystem::kTileHeightTop);
 
 		car_target.target = glm::vec3(car.position.x + position_range(random), car.position.y + position_range(random), position_range_z(random));
@@ -189,6 +198,48 @@ namespace BoxCityTrafficSystem
 				}
 			}
 		}
+	}
+	
+	thread_local std::mt19937 random_thread_local (std::random_device{}());
+
+	void Manager::UpdateCars(job::System* job_system, job::JobAllocator<1024 * 1024>* job_allocator, const helpers::Camera& camera, job::Fence& update_fence, float elapsed_time)
+	{
+		std::bitset<BoxCityTileSystem::kLocalTileCount* BoxCityTileSystem::kLocalTileCount> full_bitset(0xFFFFFFFF >> (32 - kLocalTileCount * kLocalTileCount));
+
+		std::bitset<BoxCityTileSystem::kLocalTileCount* BoxCityTileSystem::kLocalTileCount> camera_bitset = GetCameraBitSet(camera);
+		//Update the cars in the direction of the target
+		ecs::AddJobs<GameDatabase, Car, CarTarget, CarSettings, OBBBox, AABBBox, CarGPUIndex>(job_system, update_fence, job_allocator, 256,
+			[elapsed_time, camera_bitset, manager = this](const auto& instance_iterator, Car& car, CarTarget& car_target, CarSettings& car_settings, OBBBox& obb_box, AABBBox& aabb_box, CarGPUIndex& car_gpu_index)
+			{
+				//Update position
+				glm::vec3 direction = glm::normalize(car_target.target - car.position);
+
+				car.position = car.position + direction * c_car_velocity * elapsed_time;
+				
+				//Check if it is outside of the tile (change tile or cycle the car)
+
+				//Calculate if it needs retargetting
+				if (glm::length2(car.position - car_target.target) < 10.f)
+				{
+					//Retarget
+					manager->SetupCarTarget(random_thread_local, car, car_target);
+				}
+
+				//Update OOBB and AABB
+				obb_box.position = car.position;
+				helpers::CalculateAABBFromOBB(aabb_box, obb_box);
+
+				//Update GPU if it is in the camera
+				if (camera_bitset[instance_iterator.m_zone_index])
+				{
+					GPUBoxInstance gpu_box_instance;
+					gpu_box_instance.Fill(obb_box);
+
+					//Only the first 3 float4
+					manager->m_GPU_memory_render_module->UpdateStaticGPUMemory(manager->m_device, manager->m_gpu_memory, &gpu_box_instance, 3 * sizeof(glm::vec4), render::GetGameFrameIndex(manager->m_render_system), car_gpu_index.gpu_slot * sizeof(GPUBoxInstance));
+				}
+
+			}, full_bitset, &g_profile_marker_Car_Update);
 	}
 
 	void Manager::GenerateZoneDescriptors()

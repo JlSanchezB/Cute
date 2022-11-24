@@ -2,6 +2,7 @@
 #include "display/display.h"
 #include "render/render_resource.h"
 #include "render/render_helper.h"
+#include <core/profile.h>
 
 namespace render
 {
@@ -204,6 +205,8 @@ namespace render
 
 	void GPUMemoryRenderModule::ExecuteGPUCopy(uint64_t frame_index, display::Context* display_context)
 	{
+		PROFILE_SCOPE("Render", kRenderProfileColour, "ExecuteGPUCopy");
+
 		std::vector<CopyDataCommand> copy_commands;
 
 		m_copy_data_commands[frame_index % kMaxFrames].Visit([&](std::vector<CopyDataCommand>& data)

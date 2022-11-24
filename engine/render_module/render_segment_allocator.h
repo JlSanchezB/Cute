@@ -9,6 +9,7 @@
 #include <job/job_helper.h>
 #include <core/sync.h>
 #include <vector>
+#include <core/profile.h>
 
 namespace render
 {
@@ -117,6 +118,7 @@ namespace render
 
 	inline size_t SegmentAllocator::Alloc(size_t size, uint64_t allocation_frame_index)
 	{
+		PROFILE_SCOPE("Render", kRenderProfileColour, "SegmentAllocator::Alloc");
 		assert(size > 0);
 
 		//Always align the size to 16

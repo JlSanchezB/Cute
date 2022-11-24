@@ -4,6 +4,8 @@
 #include "box_city_components.h"
 #include <bitset>
 #include "box_city_tile_manager.h"
+#include <job/job.h>
+#include <helpers/camera.h>
 
 namespace render
 {
@@ -55,6 +57,9 @@ namespace BoxCityTrafficSystem
 
 		//Update
 		void Update(const glm::vec3& camera_position);
+
+		//Update Cars
+		void UpdateCars(job::System* job_system, job::JobAllocator<1024 * 1024>* job_allocator, const helpers::Camera& camera, job::Fence& update_fence, float elapsed_time);
 
 		//GPU Access
 		render::AllocHandle& GetGPUHandle()
