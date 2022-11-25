@@ -213,10 +213,32 @@ namespace BoxCityTrafficSystem
 			{
 				//Update position
 				glm::vec3 direction = glm::normalize(car_target.target - car.position);
-
+			
 				car.position = car.position + direction * c_car_velocity * elapsed_time;
 				
 				//Check if it is outside of the tile (change tile or cycle the car)
+				WorldTilePosition current_world_tile = manager->GetTile(instance_iterator.m_zone_index).m_tile_position;
+				WorldTilePosition next_world_tile = CalculateWorldPositionToWorldTile(car.position);
+
+				if (current_world_tile.i != next_world_tile.i || current_world_tile.j != next_world_tile.j)
+				{
+					LocalTilePosition next_local_tile = CalculateLocalTileIndex(next_world_tile);
+					uint32_t next_zone_index = CalculateLocalTileToZoneIndex(next_local_tile);
+					//Needs to move
+					instance_iterator.Move(next_zone_index);
+
+					//Check if we need to cycle front-back or left-right, in that case we need to move the target
+					LocalTilePosition last_local_tile = CalculateLocalTileIndex(current_world_tile);
+					//Check it it was a jump
+					if (abs(static_cast<int32_t>(last_local_tile.i) - static_cast<int32_t>(next_local_tile.i)) > 1 ||
+						abs(static_cast<int32_t>(last_local_tile.j) - static_cast<int32_t>(next_local_tile.j)) > 1)
+					{
+						glm::vec3 source_reference(current_world_tile.i * kTileSize, current_world_tile.j * kTileSize, 0.f);
+						glm::vec3 dest_reference(next_world_tile.i * kTileSize, next_world_tile.j * kTileSize, 0.f);
+						//A jump has happen, recalculate the target
+						car_target.target = (car_target.target - source_reference) + dest_reference;
+					}
+				}
 
 				//Calculate if it needs retargetting
 				if (glm::length2(car.position - car_target.target) < 10.f)
@@ -262,7 +284,7 @@ namespace BoxCityTrafficSystem
 
 	Manager::Tile& Manager::GetTile(const LocalTilePosition& local_tile)
 	{
-		return m_tiles[local_tile.i + local_tile.j * kLocalTileCount];
+		return m_tiles[CalculateLocalTileToZoneIndex(local_tile)];
 	}
 	uint16_t Manager::AllocGPUSlot()
 	{

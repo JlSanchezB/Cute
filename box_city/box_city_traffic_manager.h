@@ -51,6 +51,11 @@ namespace BoxCityTrafficSystem
 		return WorldTilePosition{ static_cast<int32_t>(floor((position.x / kTileSize))), static_cast<int32_t>(floor((position.y / kTileSize))) };
 	}
 
+	inline uint32_t CalculateLocalTileToZoneIndex(const LocalTilePosition& local_tile_position)
+	{
+		return local_tile_position.i + local_tile_position.j * kLocalTileCount;
+	}
+
 	class Manager
 	{
 	public:
@@ -124,6 +129,10 @@ namespace BoxCityTrafficSystem
 
 		//Get tile
 		Tile& GetTile(const LocalTilePosition& local_tile);
+		Tile& GetTile(const uint32_t& zone_index)
+		{
+			return m_tiles[zone_index];
+		}
 
 		//SetupCar
 		void SetupCar(Tile& tile, std::mt19937& random, float begin_tile_x, float begin_tile_y,
