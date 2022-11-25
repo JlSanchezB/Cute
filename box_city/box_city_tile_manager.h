@@ -43,6 +43,11 @@ namespace BoxCityTileSystem
 		return LocalTilePosition{ static_cast<uint32_t>((world_tile_position.i + kLocalTileCount * 10000)) % kLocalTileCount, static_cast<uint32_t>((world_tile_position.j + kLocalTileCount * 10000)) % kLocalTileCount };
 	}
 
+	inline WorldTilePosition CalculateWorldPositionToWorldTile(const glm::vec3& position)
+	{
+		return WorldTilePosition{ static_cast<int32_t>(floor((position.x / kTileSize))), static_cast<int32_t>(floor((position.y / kTileSize))) };
+	}
+
 	class Manager
 	{
 	public:

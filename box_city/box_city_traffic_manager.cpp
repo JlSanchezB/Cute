@@ -38,11 +38,11 @@ namespace BoxCityTrafficSystem
 		}
 
 		//Allocate GPU memory, num tiles * max num cars
-		m_gpu_memory = m_GPU_memory_render_module->AllocStaticGPUMemory(m_device, 2 * kNumCars * kLocalTileCount * kLocalTileCount * sizeof(GPUBoxInstance), nullptr, render::GetGameFrameIndex(m_render_system));
+		m_gpu_memory = m_GPU_memory_render_module->AllocStaticGPUMemory(m_device, kNumCars * kLocalTileCount * kLocalTileCount * sizeof(GPUBoxInstance), nullptr, render::GetGameFrameIndex(m_render_system));
 
 		//We create all the free slots for the GPU
-		m_free_gpu_slots.resize(2 * kNumCars * kLocalTileCount * kLocalTileCount);
-		for (size_t i = 0; i < 2 * kNumCars * kLocalTileCount * kLocalTileCount; ++i)
+		m_free_gpu_slots.resize(kNumCars * kLocalTileCount * kLocalTileCount);
+		for (size_t i = 0; i <kNumCars * kLocalTileCount * kLocalTileCount; ++i)
 		{
 			m_free_gpu_slots[i] = static_cast<uint16_t>(i);
 		}
@@ -103,10 +103,10 @@ namespace BoxCityTrafficSystem
 		PROFILE_SCOPE("BoxCityTrafficManager", 0xFFFF77FF, "Update");
 		//Check if the camera is still in the same tile, using some fugde factor
 		constexpr float fudge_factor = 0.05f;
-		float min_x = (0.5f + m_camera_tile_position.i - fudge_factor) * kTileSize;
-		float min_y = (0.5f + m_camera_tile_position.j - fudge_factor) * kTileSize;
-		float max_x = (0.5f + m_camera_tile_position.i + 1 + fudge_factor) * kTileSize;
-		float max_y = (0.5f + m_camera_tile_position.j + 1 + fudge_factor) * kTileSize;
+		float min_x = (m_camera_tile_position.i - fudge_factor) * kTileSize;
+		float min_y = (m_camera_tile_position.j - fudge_factor) * kTileSize;
+		float max_x = (m_camera_tile_position.i + 1 + fudge_factor) * kTileSize;
+		float max_y = (m_camera_tile_position.j + 1 + fudge_factor) * kTileSize;
 
 		//If the camera has move of tile, destroy the tiles out of view and create the new ones
 		bool camera_moved = (camera_position.x < min_x) || (camera_position.y < min_y) || (camera_position.x > max_x) || (camera_position.y > max_y);
@@ -114,7 +114,7 @@ namespace BoxCityTrafficSystem
 		if (camera_moved)
 		{
 			//Update the current camera tile
-			m_camera_tile_position = WorldTilePosition{ static_cast<int32_t>(-0.5f + (camera_position.x / kTileSize)), static_cast<int32_t>(-0.5f + (camera_position.y / kTileSize)) };
+			m_camera_tile_position = CalculateWorldPositionToWorldTile(camera_position);
 			
 			//Check if we need to create/destroy traffic
 			for (auto& tile_descriptor : m_tile_descriptors)
