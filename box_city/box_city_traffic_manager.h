@@ -146,12 +146,6 @@ namespace BoxCityTrafficSystem
 
 		//GPU memory
 		render::AllocHandle m_gpu_memory;
-
-		//Free GPU slots
-		std::vector<uint16_t> m_free_gpu_slots;
-
-		uint16_t AllocGPUSlot();
-		void DeallocGPUSlot(uint16_t slot);
 	};
 }
 

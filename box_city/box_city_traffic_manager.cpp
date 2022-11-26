@@ -40,13 +40,6 @@ namespace BoxCityTrafficSystem
 		//Allocate GPU memory, num tiles * max num cars
 		m_gpu_memory = m_GPU_memory_render_module->AllocStaticGPUMemory(m_device, kNumCars * kLocalTileCount * kLocalTileCount * sizeof(GPUBoxInstance), nullptr, render::GetGameFrameIndex(m_render_system));
 
-		//We create all the free slots for the GPU
-		m_free_gpu_slots.resize(kNumCars * kLocalTileCount * kLocalTileCount);
-		for (size_t i = 0; i <kNumCars * kLocalTileCount * kLocalTileCount; ++i)
-		{
-			m_free_gpu_slots[i] = static_cast<uint16_t>(i);
-		}
-
 		//Create traffic around camera position
 		Update(camera_position);	
 	}
@@ -55,7 +48,6 @@ namespace BoxCityTrafficSystem
 	{
 		//Deallocate GPU memory
 		m_GPU_memory_render_module->DeallocStaticGPUMemory(m_device, m_gpu_memory, render::GetGameFrameIndex(m_render_system));
-		m_free_gpu_slots.clear();
 	}
 
 	void Manager::SetupCar(Tile& tile, std::mt19937& random, float begin_tile_x, float begin_tile_y,
@@ -175,7 +167,7 @@ namespace BoxCityTrafficSystem
 							CarGPUIndex car_gpu_index;
 
 							//Alloc GPU slot
-							car_gpu_index.gpu_slot = AllocGPUSlot();
+							car_gpu_index.gpu_slot = tile.m_zone_index * kNumCars + i;
 
 							SetupCar(tile, random, begin_tile_x, begin_tile_y, position_range, position_range_z, size_range,
 								car, car_settings, obb_box_component, aabb_box_component, car_gpu_index);
@@ -285,16 +277,5 @@ namespace BoxCityTrafficSystem
 	Manager::Tile& Manager::GetTile(const LocalTilePosition& local_tile)
 	{
 		return m_tiles[CalculateLocalTileToZoneIndex(local_tile)];
-	}
-	uint16_t Manager::AllocGPUSlot()
-	{
-		assert(!m_free_gpu_slots.empty());
-		uint16_t slot = m_free_gpu_slots.back();
-		m_free_gpu_slots.pop_back();
-		return slot;
-	}
-	void Manager::DeallocGPUSlot(uint16_t slot)
-	{
-		m_free_gpu_slots.push_back(slot);
 	}
 }
