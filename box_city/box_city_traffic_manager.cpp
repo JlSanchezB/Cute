@@ -167,7 +167,7 @@ namespace BoxCityTrafficSystem
 							CarGPUIndex car_gpu_index;
 
 							//Alloc GPU slot
-							car_gpu_index.gpu_slot = tile.m_zone_index * kNumCars + i;
+							car_gpu_index.gpu_slot = static_cast<uint16_t>(tile.m_zone_index * kNumCars + i);
 
 							SetupCar(tile, random, begin_tile_x, begin_tile_y, position_range, position_range_z, size_range,
 								car, car_settings, obb_box_component, aabb_box_component, car_gpu_index);

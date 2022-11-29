@@ -90,11 +90,23 @@ struct CarMovement
 struct CarSettings
 {
 	glm::vec3 size;
+	float inv_mass;
+	glm::vec3 inv_mass_inertia;
 
 	CarSettings()
 	{
 	};
 	CarSettings(const glm::vec3& _size) : size(_size)
+	{
+	}
+};
+
+struct CarControl
+{
+	float pitch_target;
+	float roll_target;
+	float foward;
+	CarControl()
 	{
 	}
 };
