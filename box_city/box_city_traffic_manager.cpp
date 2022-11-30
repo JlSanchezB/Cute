@@ -9,6 +9,7 @@
 #include <job/job_helper.h>
 #include <ecs/entity_component_job_helper.h>
 #include <core/control_variables.h>
+#include "box_city_car_control.h"
 
 PROFILE_DEFINE_MARKER(g_profile_marker_Car_Update, "Main", 0xFFFFAAAA, "CarUpdate");
 
@@ -52,29 +53,33 @@ namespace BoxCityTrafficSystem
 
 	void Manager::SetupCar(Tile& tile, std::mt19937& random, float begin_tile_x, float begin_tile_y,
 		std::uniform_real_distribution<float>& position_range, std::uniform_real_distribution<float>& position_range_z, std::uniform_real_distribution<float>& size_range,
-		Car& car, CarSettings& car_settings, OBBBox& obb_component, AABBBox& aabb_component, CarGPUIndex& car_gpu_index)
+		Car& car, CarMovement& car_movement, CarSettings& car_settings, OBBBox& obb_component, AABBBox& aabb_component, CarGPUIndex& car_gpu_index)
 	{
 		glm::vec3 position(begin_tile_x + position_range(random), begin_tile_y + position_range(random), position_range_z(random));
 		float size = size_range(random);
-		helpers::OBB obb_box;
-		obb_box.position = position;
-		obb_box.extents = glm::vec3(size, size, size);
-		obb_box.rotation = glm::mat3x3(1.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 1.f);
-
-		helpers::AABB aabb_box;
-		helpers::CalculateAABBFromOBB(aabb_box, obb_box);
-
+		
 		car.position = position;
-		car_settings.size = glm::vec3(size, size, size);
-		obb_component = obb_box;
-		aabb_component = aabb_box;
+		car.rotation = glm::quat(glm::vec3(0.f, 0.f, 0.f));
+		car_movement.lineal_velocity = glm::vec3(0.f, 0.f, 0.f);
+		car_movement.rotation_velocity = glm::quat(glm::vec3(0.f, 0.f, 0.f));
+
+		car_settings.size = glm::vec3(size, size/2.f, size/2.f);
+		car_settings.inv_mass = 1.f / (car_settings.size.x * car_settings.size.y * car_settings.size.z);
+		car_settings.inv_mass_inertia = glm::vec3(1.f / car_settings.size.x, 1.f / car_settings.size.y, 1.f / car_settings.size.z);
+		
+		obb_component.position = position;
+		obb_component.extents = car_settings.size;
+		obb_component.rotation = glm::toMat3(car.rotation);
+
+		helpers::CalculateAABBFromOBB(aabb_component, obb_component);
+	
 
 		//Update GPU
 		BoxRender box_render;
 		box_render.colour = glm::vec4(3.f, 3.f, 3.f, 0.f);
 
 		GPUBoxInstance gpu_box_instance;
-		gpu_box_instance.Fill(obb_box);
+		gpu_box_instance.Fill(obb_component);
 		gpu_box_instance.Fill(box_render);
 
 		//Update the GPU memory
@@ -145,10 +150,10 @@ namespace BoxCityTrafficSystem
 						core::LogInfo("Traffic: Tile Local<%i,%i>, World<%i,%i>, moved", local_tile.i, local_tile.j, world_tile.i, world_tile.j);
 
 						//Move cars
-						ecs::Process<GameDatabase, Car, CarSettings, CarTarget, OBBBox, AABBBox, CarGPUIndex>([&](const auto& instance_iterator, Car& car, CarSettings& car_settings, CarTarget& car_target, OBBBox& obb_box_component, AABBBox& aabb_box_component, CarGPUIndex& car_gpu_index)
+						ecs::Process<GameDatabase, Car, CarMovement, CarSettings, CarTarget, OBBBox, AABBBox, CarGPUIndex>([&](const auto& instance_iterator, Car& car, CarMovement& car_movement, CarSettings& car_settings, CarTarget& car_target, OBBBox& obb_box_component, AABBBox& aabb_box_component, CarGPUIndex& car_gpu_index)
 							{
 								SetupCar(tile, random, begin_tile_x, begin_tile_y, position_range, position_range_z, size_range,
-								car, car_settings, obb_box_component, aabb_box_component, car_gpu_index);	
+								car, car_movement, car_settings, obb_box_component, aabb_box_component, car_gpu_index);
 
 								SetupCarTarget(random, car, car_target);
 							}, bitset);
@@ -161,6 +166,7 @@ namespace BoxCityTrafficSystem
 						for (size_t i = 0; i < kNumCars; ++i)
 						{
 							Car car;
+							CarMovement car_movement;
 							CarSettings car_settings;
 							OBBBox obb_box_component;
 							AABBBox aabb_box_component;
@@ -170,13 +176,14 @@ namespace BoxCityTrafficSystem
 							car_gpu_index.gpu_slot = static_cast<uint16_t>(tile.m_zone_index * kNumCars + i);
 
 							SetupCar(tile, random, begin_tile_x, begin_tile_y, position_range, position_range_z, size_range,
-								car, car_settings, obb_box_component, aabb_box_component, car_gpu_index);
+								car, car_movement, car_settings, obb_box_component, aabb_box_component, car_gpu_index);
 							
 							CarTarget car_target;
 							SetupCarTarget(random, car, car_target);
 
 							Instance instance = ecs::AllocInstance<GameDatabase, CarType>(tile.m_zone_index)
 								.Init<Car>(car)
+								.Init<CarMovement>(car_movement)
 								.Init<CarSettings>(car_settings)
 								.Init<CarTarget>(car_target)
 								.Init<OBBBox>(obb_box_component)
@@ -200,19 +207,30 @@ namespace BoxCityTrafficSystem
 	
 	thread_local std::mt19937 random_thread_local (std::random_device{}());
 
-	void Manager::UpdateCars(job::System* job_system, job::JobAllocator<1024 * 1024>* job_allocator, const helpers::Camera& camera, job::Fence& update_fence, float elapsed_time)
+	void Manager::UpdateCars(platform::Game* game, job::System* job_system, job::JobAllocator<1024 * 1024>* job_allocator, const helpers::Camera& camera, job::Fence& update_fence, float elapsed_time)
 	{
 		std::bitset<BoxCityTileSystem::kLocalTileCount* BoxCityTileSystem::kLocalTileCount> full_bitset(0xFFFFFFFF >> (32 - kLocalTileCount * kLocalTileCount));
 
 		std::bitset<BoxCityTileSystem::kLocalTileCount* BoxCityTileSystem::kLocalTileCount> camera_bitset = GetCameraBitSet(camera);
 		//Update the cars in the direction of the target
-		ecs::AddJobs<GameDatabase, Car, CarTarget, CarSettings, OBBBox, AABBBox, CarGPUIndex>(job_system, update_fence, job_allocator, 256,
-			[elapsed_time, camera_bitset, manager = this](const auto& instance_iterator, Car& car, CarTarget& car_target, CarSettings& car_settings, OBBBox& obb_box, AABBBox& aabb_box, CarGPUIndex& car_gpu_index)
+		ecs::AddJobs<GameDatabase, Car, CarMovement, CarTarget, CarSettings, CarControl, OBBBox, AABBBox, CarGPUIndex>(job_system, update_fence, job_allocator, 256,
+			[elapsed_time, camera_bitset, manager = this, game](const auto& instance_iterator, Car& car, CarMovement& car_movement, CarTarget& car_target, CarSettings& car_settings, CarControl& car_control, OBBBox& obb_box, AABBBox& aabb_box, CarGPUIndex& car_gpu_index)
 			{
 				//Update position
-				glm::vec3 direction = glm::normalize(car_target.target - car.position);
-			
-				car.position = car.position + direction * c_car_velocity * elapsed_time;
+				if (instance_iterator == manager->GetPlayerCar().Get<GameDatabase>() && manager->m_player_control_enable)
+				{
+					//Update control
+					BoxCityCarControl::UpdatePlayerControl(game, car_control, elapsed_time);
+					//Integrate
+					BoxCityCarControl::CalculateForcesAndIntegrateCar(car, car_movement, car_settings, car_control, elapsed_time);
+				}
+				else
+				{
+					//AI car
+					glm::vec3 direction = glm::normalize(car_target.target - car.position);
+					car.position = car.position + direction * c_car_velocity * elapsed_time;
+				}
+				
 				
 				//Check if it is outside of the tile (change tile or cycle the car)
 				WorldTilePosition current_world_tile = manager->GetTile(instance_iterator.m_zone_index).m_tile_position;
@@ -247,6 +265,7 @@ namespace BoxCityTrafficSystem
 
 				//Update OOBB and AABB
 				obb_box.position = car.position;
+				obb_box.rotation = glm::toMat3(car.rotation);
 				helpers::CalculateAABBFromOBB(aabb_box, obb_box);
 
 				//Update GPU if it is in the camera

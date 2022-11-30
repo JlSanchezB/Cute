@@ -143,10 +143,17 @@ void BoxCityGame::OnTick(double total_time, float elapsed_time)
 		if (input_event.type == platform::EventType::KeyDown && input_event.slot == platform::InputSlotState::Key_1)
 		{
 			m_camera_mode = CameraMode::Fly;
+			m_traffic_system.SetPlayerControlEnable(false);
 		}
 		if (input_event.type == platform::EventType::KeyDown && input_event.slot == platform::InputSlotState::Key_2)
 		{
 			m_camera_mode = CameraMode::Car;
+			m_traffic_system.SetPlayerControlEnable(true);
+		}
+		if (input_event.type == platform::EventType::KeyDown && input_event.slot == platform::InputSlotState::Key_3)
+		{
+			m_camera_mode = CameraMode::Car;
+			m_traffic_system.SetPlayerControlEnable(false);
 		}
 	}
 
@@ -218,7 +225,7 @@ void BoxCityGame::OnTick(double total_time, float elapsed_time)
 
 	//Update cars
 	job::Fence update_cars_fence;
-	m_traffic_system.UpdateCars(m_job_system, m_update_job_allocator.get(), *camera, update_cars_fence, elapsed_time);
+	m_traffic_system.UpdateCars(this, m_job_system, m_update_job_allocator.get(), *camera, update_cars_fence, elapsed_time);
 
 
 	job::Wait(m_job_system, update_attachments_fence);

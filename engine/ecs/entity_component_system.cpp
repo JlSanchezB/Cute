@@ -472,6 +472,12 @@ namespace ecs
 			return database->GetComponentData(internal_index, component_index);
 		}
 
+		bool InstanceCompare(Database* database, InstanceIndirectionIndexType a_index, ZoneType b_zone, EntityTypeType b_entity_type, InstanceIndexType b_instance_index)
+		{
+			auto& internal_index = database->AccessInternalInstanceIndex(a_index);
+			return internal_index.zone_index == b_zone && internal_index.entity_type_index == b_entity_type && internal_index.instance_index == b_instance_index;
+		}
+
 		size_t GetInstanceType(Database * database, InstanceIndirectionIndexType indirection_index)
 		{
 			auto instance = database->AccessInternalInstanceIndex(indirection_index);

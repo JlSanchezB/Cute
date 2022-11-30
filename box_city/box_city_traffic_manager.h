@@ -69,7 +69,7 @@ namespace BoxCityTrafficSystem
 		void Update(const glm::vec3& camera_position);
 
 		//Update Cars
-		void UpdateCars(job::System* job_system, job::JobAllocator<1024 * 1024>* job_allocator, const helpers::Camera& camera, job::Fence& update_fence, float elapsed_time);
+		void UpdateCars(platform::Game* game, job::System* job_system, job::JobAllocator<1024 * 1024>* job_allocator, const helpers::Camera& camera, job::Fence& update_fence, float elapsed_time);
 
 		//GPU Access
 		render::AllocHandle& GetGPUHandle()
@@ -95,6 +95,11 @@ namespace BoxCityTrafficSystem
 		InstanceReference GetPlayerCar()
 		{
 			return m_player_car;
+		}
+
+		void SetPlayerControlEnable(bool enable)
+		{
+			m_player_control_enable = enable;
 		}
 
 	private:
@@ -132,6 +137,9 @@ namespace BoxCityTrafficSystem
 		//Player car
 		InstanceReference m_player_car;
 
+		//Player control 
+		bool m_player_control_enable = false;
+
 		//Tiles
 		Tile m_tiles[kLocalTileCount * kLocalTileCount];
 
@@ -145,7 +153,7 @@ namespace BoxCityTrafficSystem
 		//SetupCar
 		void SetupCar(Tile& tile, std::mt19937& random, float begin_tile_x, float begin_tile_y,
 			std::uniform_real_distribution<float>& position_range, std::uniform_real_distribution<float>& position_range_z, std::uniform_real_distribution<float>& size_range,
-			Car& car, CarSettings& car_settings, OBBBox& obb_component, AABBBox& aabb_component, CarGPUIndex& car_gpu_index);
+			Car& car, CarMovement& car_movement, CarSettings& car_settings, OBBBox& obb_component, AABBBox& aabb_component, CarGPUIndex& car_gpu_index);
 
 		void SetupCarTarget(std::mt19937& random, Car& car, CarTarget& car_target);
 

@@ -44,6 +44,9 @@ namespace ecs
 
 		//Get component data
 		void* GetComponentData(Database* database, InstanceIndirectionIndexType index, ComponentType component_index);
+
+		//Compare
+		bool InstanceCompare(Database* database, InstanceIndirectionIndexType a_index, ZoneType b_zone, EntityTypeType b_entity_type, InstanceIndexType b_instance_index);
 	}
 }
 

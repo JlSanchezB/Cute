@@ -50,6 +50,8 @@ namespace ecs
 		}
 
 		friend class InstanceReference;
+		template<typename DATABASE_DECLARATION>
+		friend class InstanceIterator;
 	};
 
 	//Used for having an instance reference inside a component

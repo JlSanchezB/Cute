@@ -305,6 +305,11 @@ namespace ecs
 		{
 			return (m_zone_index != b.m_zone_index || m_entity_type != b.m_entity_type || m_instance_index != b.m_instance_index);
 		}
+
+		bool operator==(const Instance<DATABASE_DECLARATION>& b) const
+		{
+			return internal::InstanceCompare(DATABASE_DECLARATION::s_database, b.m_indirection_index, m_zone_index, m_entity_type, m_instance_index);
+		}
 	};
 
 	namespace internal

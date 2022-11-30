@@ -24,7 +24,7 @@ namespace BoxCityCarControl
 	void UpdatePlayerControl(platform::Game* game, CarControl& car_control, float ellapsed_time);
 
 	//Calculate car forces and apply
-	void CalculateForcesAndIntegrateCar(Car& car, CarMovement& car_movement, CarSettings& car_settings, CarControl& car_control);
+	void CalculateForcesAndIntegrateCar(Car& car, CarMovement& car_movement, CarSettings& car_settings, CarControl& car_control, float elapsed_time);
 }
 
 #endif //BOX_CITY_CAR_CONTROL_H

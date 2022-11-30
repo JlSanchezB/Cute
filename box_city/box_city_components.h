@@ -63,8 +63,8 @@ struct Panel
 
 struct Car
 {
-	glm::vec3 position;
-	glm::quat rotation;
+	glm::vec3 position= glm::vec3(0.f, 0.f, 0.f);
+	glm::quat rotation = glm::quat(glm::vec3(0.f, 0.f, 0.f));
 
 	Car()
 	{
@@ -76,8 +76,8 @@ struct Car
 
 struct CarMovement
 {
-	glm::vec3 lineal_velocity;
-	glm::quat rotation_velocity;
+	glm::vec3 lineal_velocity = glm::vec3(0.f, 0.f, 0.f);
+	glm::quat rotation_velocity = glm::quat(glm::vec3(0.f, 0.f, 0.f));
 
 	CarMovement()
 	{
@@ -96,7 +96,7 @@ struct CarSettings
 	CarSettings()
 	{
 	};
-	CarSettings(const glm::vec3& _size) : size(_size)
+	CarSettings(const glm::vec3& _size, const float mass, const glm::vec3& mass_inertia) : size(_size), inv_mass(1.f / mass), inv_mass_inertia(1.f / mass_inertia.x, 1.f / mass_inertia.y, 1.f / mass_inertia.z)
 	{
 	}
 };
@@ -147,9 +147,9 @@ using BoxType = ecs::EntityType<BoxRender, BoxGPUHandle, OBBBox, AABBBox, FlagBo
 using AnimatedBoxType = ecs::EntityType<BoxRender, BoxGPUHandle, OBBBox, AABBBox, AnimationBox, FlagBox>;
 using AttachedPanelType = ecs::EntityType< BoxRender, BoxGPUHandle, OBBBox, AABBBox, FlagBox, Attachment, Panel>;
 using PanelType = ecs::EntityType<BoxRender, BoxGPUHandle, OBBBox, AABBBox, FlagBox, Panel>;
-using CarType = ecs::EntityType<OBBBox, AABBBox, Car, CarMovement, CarSettings, CarTarget, CarGPUIndex>;
+using CarType = ecs::EntityType<OBBBox, AABBBox, Car, CarMovement, CarSettings, CarTarget, CarControl, CarGPUIndex>;
 
-using GameComponents = ecs::ComponentList<BoxRender, BoxGPUHandle, OBBBox, AABBBox, AnimationBox, FlagBox, Attachment, Panel, Car, CarMovement, CarSettings, CarTarget, CarGPUIndex>;
+using GameComponents = ecs::ComponentList<BoxRender, BoxGPUHandle, OBBBox, AABBBox, AnimationBox, FlagBox, Attachment, Panel, Car, CarMovement, CarSettings, CarTarget, CarGPUIndex, CarControl>;
 using GameEntityTypes = ecs::EntityTypeList<BoxType, AnimatedBoxType, AttachedPanelType, PanelType, CarType>;
 
 using GameDatabase = ecs::DatabaseDeclaration<GameComponents, GameEntityTypes>;
