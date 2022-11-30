@@ -19,17 +19,17 @@ CONTROL_VARIABLE(float, c_car_roll_absorber, 0.f, 1.f, 0.05f, "Car", "Roll Absor
 CONTROL_VARIABLE(float, c_car_foward_factor, 0.f, 10.f, 2.25f, "Car", "Foward factor");
 
 //Pitch control
-CONTROL_VARIABLE(float, c_car_pitch_force, 0.f, 10.f, 0.5f, "Car", "Pitch Force");
+CONTROL_VARIABLE(float, c_car_pitch_force, 0.f, 10.f, 1.0f, "Car", "Pitch Force");
 
 //Roll control
-CONTROL_VARIABLE(float, c_car_roll_force, 0.f, 10.f, 0.5f, "Car", "Roll Force");
+CONTROL_VARIABLE(float, c_car_roll_force, 0.f, 10.f, 1.0f, "Car", "Roll Force");
 
 //Forward
 CONTROL_VARIABLE(float, c_car_foward_force, 0.f, 10000.f, 100.0f, "Car", "Foward Force");
 
 //Friction
 CONTROL_VARIABLE(float, c_car_friction_linear_force, 0.f, 1.f, 0.2f, "Car", "Linear Friction Force");
-CONTROL_VARIABLE(float, c_car_friction_angular_force, 0.f, 1.f, 0.8f, "Car", "Angular Friction Force");
+CONTROL_VARIABLE(float, c_car_friction_angular_force, 0.f, 1.f, 0.2f, "Car", "Angular Friction Force");
 
 
 CONTROL_VARIABLE(float, c_car_camera_distance, 0.f, 100.f, 20.f, "Car", "Camera Distance");
@@ -94,7 +94,7 @@ namespace BoxCityCarControl
 		float car_pitch, car_roll, car_yaw;
 		glm::extractEulerAngleXYZ(glm::mat4x4(car_matrix), car_pitch, car_roll, car_yaw);
 		
-		glm::vec3 front_vector = car_matrix[1];
+		glm::vec3 front_vector = glm::row(car_matrix, 1);
 
 		//Apply pitch target forces
 		{
@@ -122,11 +122,7 @@ namespace BoxCityCarControl
 		//Apply friction
 		{
 			linear_forces -= car_movement.lineal_velocity * glm::clamp(c_car_friction_linear_force * elapsed_time, 0.f, 1.f);
-
-			float car_velocity_pitch, car_velocity_roll, car_velocity_yaw;
-			glm::extractEulerAngleXYZ(glm::mat4x4(car_movement.rotation_velocity), car_velocity_pitch, car_velocity_roll, car_velocity_yaw);
-
-			angular_forces -= glm::vec3(car_velocity_pitch, car_velocity_roll, car_velocity_yaw) * glm::clamp(c_car_friction_angular_force * elapsed_time, 0.f, 1.f);
+			angular_forces -= car_movement.rotation_velocity * glm::clamp(c_car_friction_angular_force * elapsed_time, 0.f, 1.f);
 		}
 
 
@@ -137,14 +133,11 @@ namespace BoxCityCarControl
 		glm::mat3x3 inv_mass_intertia_matrix = glm::scale(car_settings.inv_mass_inertia);
 
 		glm::mat3x3 world_inv_mass_inertial = inv_mass_intertia_matrix * glm::toMat3(car.rotation);
-		glm::quat rotation_force = glm::quat(angular_forces * world_inv_mass_inertial);
-		car_movement.rotation_velocity *= rotation_force;
+		car_movement.rotation_velocity += angular_forces * world_inv_mass_inertial;
 
 		//Integrate position
 		car.position += car_movement.lineal_velocity * elapsed_time;
-		float velocity_pitch, velocity_roll, velocity_yaw;
-		glm::extractEulerAngleXYZ(glm::mat4x4(car_movement.rotation_velocity), velocity_pitch, velocity_roll, velocity_yaw);
-		car.rotation *= glm::quat(glm::vec3(velocity_pitch, velocity_roll, velocity_yaw) * elapsed_time);
+		car.rotation *= glm::quat(car_movement.rotation_velocity * elapsed_time);
 	}
 }
 
