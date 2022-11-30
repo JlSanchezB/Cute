@@ -64,14 +64,19 @@ namespace ecs
 
 		InstanceReference()
 		{
-			m_indirection_index.thread_id = static_cast<uint32_t>(-1);
-			m_indirection_index.index = static_cast<uint32_t>(-1);
+			m_indirection_index.thread_id = InstanceIndirectionIndexType::kInvalidThreadID;
+			m_indirection_index.index = InstanceIndirectionIndexType::kInvalidThreadID;
 		}
 
 		template<typename DATABASE_DECLARATION>
 		InstanceReference(const Instance< DATABASE_DECLARATION>& instance)
 		{
 			m_indirection_index = instance.m_indirection_index;
+		}
+
+		bool IsValid() const
+		{
+			return m_indirection_index.index != InstanceIndirectionIndexType::kInvalidThreadID;
 		}
 	private:
 		InstanceIndirectionIndexType m_indirection_index;

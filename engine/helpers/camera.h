@@ -45,6 +45,13 @@ namespace helpers
 			ZeroOne,
 			OneZero
 		};
+
+		enum class Type
+		{
+			Rotation,
+			Target
+		};
+
 		void UpdateAspectRatio(float aspect_ratio)
 		{
 			m_aspect_ratio = aspect_ratio;
@@ -74,7 +81,7 @@ namespace helpers
 			m_far = far;
 		}
 
-		Camera(const ZRange type) : m_type(type)
+		Camera(const Type type, const ZRange z_range) : m_type(type), m_z_range(z_range)
 		{
 		}
 	protected:
@@ -82,9 +89,11 @@ namespace helpers
 		void UpdateInternalData();
 
 		//Setup
-		ZRange m_type;
+		Type m_type;
+		ZRange m_z_range;
 		glm::vec3 m_position = glm::vec3(0.f, 0.f, 0.f);
-		glm::vec2 m_rotation = glm::vec3(0.f);
+		glm::vec2 m_rotation = glm::vec2(0.f, 0.f);
+		glm::vec3 m_target = glm::vec3(0.f, 0.f, 0.f);
 		glm::vec3 m_up_vector = glm::vec3(0.f, 0.f, 1.f);
 		float m_fov_y = glm::half_pi<float>();
 		float m_aspect_ratio = 1.f;
@@ -106,7 +115,7 @@ namespace helpers
 		//Process input and update the position
 		void Update(platform::Game* game, float ellapsed_time);
 
-		FlyCamera(const Camera::ZRange type) : Camera(type)
+		FlyCamera(const Camera::ZRange z_range) : Camera(Type::Rotation, z_range)
 		{
 		}
 	private: 

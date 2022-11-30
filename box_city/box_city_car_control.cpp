@@ -30,9 +30,22 @@ CONTROL_VARIABLE(float, c_car_foward_force, 0.f, 1.f, 0.0001f, "Car", "Foward Fo
 CONTROL_VARIABLE(float, c_car_friction_force, 0.f, 1.f, 0.1f, "Car", "Friction Force");
 
 
+CONTROL_VARIABLE(float, c_car_camera_distance, 0.f, 100.f, 20.f, "Car", "Camera Distance");
+CONTROL_VARIABLE(float, c_car_camera_up_offset, 0.f, 100.f, 1.f, "Car", "Camera Up Offset");
+CONTROL_VARIABLE(float, c_car_camera_fov, 60.f, 180.f, 90.f, "Car", "Camera Fov");
 
 namespace BoxCityCarControl
 {
+	void CarCamera::Update(platform::Game* game, Car& car, float ellapsed_time)
+	{
+		glm::vec3 camera_offset = glm::vec3(0.f, -c_car_camera_distance, c_car_camera_up_offset) * glm::toMat3(car.rotation);
+		m_position = car.position + camera_offset;
+		m_target = car.position;
+		m_fov_y = glm::radians(c_car_camera_fov);
+
+		UpdateInternalData();
+	}
+
 	void UpdatePlayerControl(platform::Game* game, CarControl& car_control, float ellapsed_time)
 	{
 		//Update pitch from the input

@@ -90,11 +90,12 @@ void BoxCityGame::OnInit()
 	database_desc.num_zones = m_tile_manager.GetNumTiles();
 	ecs::CreateDatabase<GameDatabase>(database_desc);
 
-	m_camera.SetNearFar(0.5f, 8000.f);
+	m_fly_camera.SetNearFar(0.5f, 8000.f);
+	m_car_camera.SetNearFar(0.5f, 8000.f);
 
 	m_tile_manager.Init(m_device, m_render_system, m_GPU_memory_render_module);
 
-	m_traffic_system.Init(m_device, m_render_system, m_GPU_memory_render_module, m_camera.GetPosition());
+	m_traffic_system.Init(m_device, m_render_system, m_GPU_memory_render_module, m_fly_camera.GetPosition());
 }
 	
 void BoxCityGame::OnPrepareDestroy()
@@ -136,15 +137,43 @@ void BoxCityGame::OnTick(double total_time, float elapsed_time)
 
 	//UPDATE GAME
 
-	//Update camera
-	m_camera.UpdateAspectRatio(static_cast<float>(m_width) / static_cast<float>(m_height));
-	m_camera.Update(this, elapsed_time);
+	//Check the camera mode
+	for (auto& input_event : GetInputEvents())
+	{
+		if (input_event.type == platform::EventType::KeyDown && input_event.slot == platform::InputSlotState::Key_1)
+		{
+			m_camera_mode = CameraMode::Fly;
+		}
+		if (input_event.type == platform::EventType::KeyDown && input_event.slot == platform::InputSlotState::Key_2)
+		{
+			m_camera_mode = CameraMode::Car;
+		}
+	}
 
+	//Update camera
+	helpers::Camera* camera = dynamic_cast<helpers::Camera*>(&m_fly_camera);
+	switch (m_camera_mode)
+	{
+	case CameraMode::Fly:
+		camera = dynamic_cast<helpers::Camera*>(&m_fly_camera);
+		m_fly_camera.UpdateAspectRatio(static_cast<float>(m_width) / static_cast<float>(m_height));
+		m_fly_camera.Update(this, elapsed_time);
+		break;
+	case CameraMode::Car:
+		camera = dynamic_cast<helpers::Camera*>(&m_car_camera);
+		m_car_camera.UpdateAspectRatio(static_cast<float>(m_width) / static_cast<float>(m_height));
+		if (m_traffic_system.GetPlayerCar().IsValid())
+		{
+			m_car_camera.Update(this, m_traffic_system.GetPlayerCar().Get<GameDatabase>().Get<Car>(), elapsed_time);
+		}
+		break;
+	}
+	
 	//Update tile manager
-	m_tile_manager.Update(m_camera.GetPosition());
+	m_tile_manager.Update(camera->GetPosition());
 
 	//Update traffic manager
-	m_traffic_system.Update(m_camera.GetPosition());
+	m_traffic_system.Update(camera->GetPosition());
 
 	job::Fence update_fence;
 
@@ -160,7 +189,7 @@ void BoxCityGame::OnTick(double total_time, float elapsed_time)
 
 			//Mark flags to indicate that the GPU needs to update
 			flags.gpu_updated = false;
-		}, m_tile_manager.GetCameraBitSet(m_camera), &g_profile_marker_UpdatePosition);
+		}, m_tile_manager.GetCameraBitSet(*camera), &g_profile_marker_UpdatePosition);
 
 	job::Wait(m_job_system, update_fence);
 
@@ -185,11 +214,11 @@ void BoxCityGame::OnTick(double total_time, float elapsed_time)
 
 			//Mark flags to indicate that the GPU needs to update
 			flags.gpu_updated = false;
-		}, m_tile_manager.GetCameraBitSet(m_camera), &g_profile_marker_UpdateAttachments);
+		}, m_tile_manager.GetCameraBitSet(*camera), &g_profile_marker_UpdateAttachments);
 
 	//Update cars
 	job::Fence update_cars_fence;
-	m_traffic_system.UpdateCars(m_job_system, m_update_job_allocator.get(), m_camera, update_cars_fence, elapsed_time);
+	m_traffic_system.UpdateCars(m_job_system, m_update_job_allocator.get(), *camera, update_cars_fence, elapsed_time);
 
 
 	job::Wait(m_job_system, update_attachments_fence);
@@ -208,7 +237,7 @@ void BoxCityGame::OnTick(double total_time, float elapsed_time)
 	//Update view constant buffer with the camera and the time
 	auto command_offset = render_frame.GetBeginFrameCommandBuffer().Open();
 	ViewConstantBuffer view_constant_buffer;
-	view_constant_buffer.projection_view_matrix = m_camera.GetViewProjectionMatrix();
+	view_constant_buffer.projection_view_matrix = camera->GetViewProjectionMatrix();
 	view_constant_buffer.time = glm::vec4(static_cast<float>(total_time), 0.f, 0.f, 0.f);
 	view_constant_buffer.sun_direction = glm::rotate(glm::radians(m_sun_direction_angles.y), glm::vec3(1.f, 0.f, 0.f)) * glm::rotate(glm::radians(m_sun_direction_angles.x), glm::vec3(0.f, 0.f, 1.f)) * glm::vec4(1.f, 0.f, 0.f, 0.f);
 	render_frame.GetBeginFrameCommandBuffer().UploadResourceBuffer(m_view_constant_buffer, &view_constant_buffer, sizeof(view_constant_buffer));
@@ -226,7 +255,7 @@ void BoxCityGame::OnTick(double total_time, float elapsed_time)
 	//Add task
 	//Cull box city
 	ecs::AddJobs<GameDatabase, const OBBBox, const AABBBox, FlagBox, const BoxGPUHandle>(m_job_system, culling_fence, m_update_job_allocator, 256,
-		[camera = &m_camera, point_of_view = &point_of_view, box_priority = m_box_render_priority, render_system = m_render_system, device = m_device, render_gpu_memory_module = m_GPU_memory_render_module, tile_manager = &m_tile_manager]
+		[camera = camera, point_of_view = &point_of_view, box_priority = m_box_render_priority, render_system = m_render_system, device = m_device, render_gpu_memory_module = m_GPU_memory_render_module, tile_manager = &m_tile_manager]
 	(const auto& instance_iterator, const OBBBox& obb_box, const AABBBox& aabb_box, FlagBox& flags, const BoxGPUHandle& box_gpu_handle)
 		{
 			//Calculate if it is in the camera and has still a gpu memory handle
@@ -256,11 +285,11 @@ void BoxCityGame::OnTick(double total_time, float elapsed_time)
 
 				COUNTER_INC(c_Culled_Boxes);
 			}
-		}, m_tile_manager.GetCameraBitSet(m_camera), &g_profile_marker_Culling);
+		}, m_tile_manager.GetCameraBitSet(*camera), &g_profile_marker_Culling);
 
 	//Cull cars
 	ecs::AddJobs<GameDatabase, const OBBBox, const AABBBox, const CarGPUIndex>(m_job_system, culling_fence, m_update_job_allocator, 256,
-		[camera = &m_camera, point_of_view = &point_of_view, box_priority = m_box_render_priority, render_system = m_render_system, device = m_device, render_gpu_memory_module = m_GPU_memory_render_module, traffic_manager = &m_traffic_system]
+		[camera = camera, point_of_view = &point_of_view, box_priority = m_box_render_priority, render_system = m_render_system, device = m_device, render_gpu_memory_module = m_GPU_memory_render_module, traffic_manager = &m_traffic_system]
 	(const auto& instance_iterator, const OBBBox& obb_box, const AABBBox& aabb_box, const CarGPUIndex& car_gpu_index)
 		{
 			//Calculate if it is in the camera and has still a gpu memory handle
@@ -276,7 +305,7 @@ void BoxCityGame::OnTick(double total_time, float elapsed_time)
 
 				COUNTER_INC(c_Culled_Cars);
 			}
-		}, m_traffic_system.GetCameraBitSet(m_camera), &g_profile_marker_Car_Culling);
+		}, m_traffic_system.GetCameraBitSet(*camera), &g_profile_marker_Car_Culling);
 
 	job::Wait(m_job_system, culling_fence);
 

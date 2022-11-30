@@ -14,6 +14,9 @@ namespace ecs
 	{
 		uint32_t thread_id : 8;
 		uint32_t index : 24;
+
+		static constexpr uint32_t kInvalidThreadID = 0xFF;
+		static constexpr uint32_t kInvalidIndex = 0xFFFFFF;
 	};
 
 

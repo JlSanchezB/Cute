@@ -92,6 +92,11 @@ namespace BoxCityTrafficSystem
 			return ret;
 		}
 
+		InstanceReference GetPlayerCar()
+		{
+			return m_player_car;
+		}
+
 	private:
 		//Systems
 		display::Device* m_device = nullptr;
@@ -123,6 +128,9 @@ namespace BoxCityTrafficSystem
 			//Bounding box of the tile
 			helpers::AABB m_bounding_box;
 		};
+
+		//Player car
+		InstanceReference m_player_car;
 
 		//Tiles
 		Tile m_tiles[kLocalTileCount * kLocalTileCount];

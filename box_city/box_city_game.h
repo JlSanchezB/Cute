@@ -26,7 +26,7 @@
 #include "box_city_render.h"
 #include "box_city_tile_manager.h"
 #include "box_city_traffic_manager.h"
-
+#include "box_city_car_control.h"
 
 class BoxCityGame : public platform::Game
 {
@@ -55,8 +55,17 @@ public:
 	//GPU Memory render module
 	render::GPUMemoryRenderModule* m_GPU_memory_render_module = nullptr;
 
-	//Camera
-	helpers::FlyCamera m_camera = helpers::FlyCamera(helpers::Camera::ZRange::OneZero);
+	//Camera mode
+	enum class CameraMode
+	{
+		Fly,
+		Car
+	};
+
+	//Cameras
+	CameraMode m_camera_mode = CameraMode::Fly;
+	helpers::FlyCamera m_fly_camera = helpers::FlyCamera(helpers::Camera::ZRange::OneZero);
+	BoxCityCarControl::CarCamera m_car_camera = BoxCityCarControl::CarCamera(helpers::Camera::ZRange::OneZero);
 
 	//View constant buffer
 	display::ConstantBufferHandle m_view_constant_buffer;

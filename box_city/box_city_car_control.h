@@ -3,10 +3,22 @@
 
 #include "box_city_components.h"
 #include <core/platform.h>
-
+#include <helpers/camera.h>
 
 namespace BoxCityCarControl
 {
+	//Camera that follows a car
+	class CarCamera : public helpers::Camera
+	{
+	public:
+		//Process input and update the position
+		void Update(platform::Game* game, Car& car, float ellapsed_time);
+
+		CarCamera(const Camera::ZRange z_range) : Camera(Type::Target, z_range)
+		{
+		}
+	private:
+	};
 
 	//Read the player input and update the car
 	void UpdatePlayerControl(platform::Game* game, CarControl& car_control, float ellapsed_time);

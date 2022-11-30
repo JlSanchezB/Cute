@@ -182,6 +182,12 @@ namespace BoxCityTrafficSystem
 								.Init<OBBBox>(obb_box_component)
 								.Init<AABBBox>(aabb_box_component)
 								.Init<CarGPUIndex>(car_gpu_index);
+
+							if (tile.m_zone_index == 0 && i == 0)
+							{
+								//The first car is the player car
+								m_player_car = instance;
+							}
 						}
 
 						//Init tile
