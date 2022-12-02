@@ -64,8 +64,12 @@ namespace BoxCityTrafficSystem
 		car_movement.rotation_velocity = glm::vec3(0.f, 0.f, 0.f);
 
 		car_settings.size = glm::vec3(size, size/2.f, size/2.f);
-		car_settings.inv_mass = 1.f / (car_settings.size.x * car_settings.size.y * car_settings.size.z);
-		car_settings.inv_mass_inertia = glm::vec3(1.f / car_settings.size.x, 1.f / car_settings.size.y, 1.f / car_settings.size.z);
+		float mass = (car_settings.size.x * car_settings.size.y * car_settings.size.z);
+		car_settings.inv_mass = 1.f / mass;
+		car_settings.inv_mass_inertia = glm::vec3(
+			1.f / (0.083f * mass * (car_settings.size.z * car_settings.size.z + car_settings.size.y * car_settings.size.y)),
+			1.f / (0.083f * mass * (car_settings.size.x * car_settings.size.x + car_settings.size.y * car_settings.size.y)),
+			1.f / (0.083f * mass * (car_settings.size.x * car_settings.size.x + car_settings.size.z * car_settings.size.z)));
 		
 		obb_component.position = position;
 		obb_component.extents = car_settings.size;
