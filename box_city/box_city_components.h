@@ -103,8 +103,8 @@ struct CarSettings
 
 struct CarControl
 {
-	float pitch_target;
-	float roll_target;
+	float Y_target;
+	float X_target;
 	float foward;
 	CarControl()
 	{
