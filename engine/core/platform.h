@@ -149,6 +149,13 @@ namespace platform
 		//Focus
 		bool IsFocus() const;
 
+		//Capture/Release mouse
+		void CaptureMouse();
+		void ReleaseMouse();
+
+		//Show Cursor
+		void ShowCursor(bool show);
+
 		//Present 
 		//Needs to be called at the end of each tick
 		//or from the render thread (if any)

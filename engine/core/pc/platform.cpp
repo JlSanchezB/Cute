@@ -720,6 +720,21 @@ namespace platform
 		return GetForegroundWindow() == g_Platform->m_current_hwnd && !ImGui::IsAnyWindowFocused();
 	}
 
+	void Game::CaptureMouse()
+	{
+		SetCapture(g_Platform->m_current_hwnd);
+	}
+
+	void Game::ReleaseMouse()
+	{
+		ReleaseCapture();
+	}
+
+	void Game::ShowCursor(bool show)
+	{
+		::ShowCursor(show);
+	}
+
 	void Game::Present()
 	{
 		{

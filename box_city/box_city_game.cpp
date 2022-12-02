@@ -144,16 +144,22 @@ void BoxCityGame::OnTick(double total_time, float elapsed_time)
 		{
 			m_camera_mode = CameraMode::Fly;
 			m_traffic_system.SetPlayerControlEnable(false);
+			ReleaseMouse();
+			ShowCursor(true);
 		}
 		if (input_event.type == platform::EventType::KeyDown && input_event.slot == platform::InputSlotState::Key_2)
 		{
 			m_camera_mode = CameraMode::Car;
 			m_traffic_system.SetPlayerControlEnable(true);
+			CaptureMouse();
+			ShowCursor(false);
 		}
 		if (input_event.type == platform::EventType::KeyDown && input_event.slot == platform::InputSlotState::Key_3)
 		{
 			m_camera_mode = CameraMode::Car;
 			m_traffic_system.SetPlayerControlEnable(false);
+			ReleaseMouse();
+			ShowCursor(true);
 		}
 	}
 
