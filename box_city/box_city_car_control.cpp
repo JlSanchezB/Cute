@@ -2,7 +2,6 @@
 #include <core/control_variables.h>
 #include <core/platform.h>
 
-#pragma optimize( "", off )
 //List of control variables
 
 //Pitch input
@@ -174,5 +173,3 @@ namespace BoxCityCarControl
 		}
 	}
 }
-
-#pragma optimize( "", on )
