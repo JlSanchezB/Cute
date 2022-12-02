@@ -835,14 +835,16 @@ namespace platform
 			//Calculate time
 			LARGE_INTEGER last_time = g_Platform->m_current_time;
 			QueryPerformanceCounter(&g_Platform->m_current_time);
-			float elapsed_time = static_cast<float>(g_Platform->m_current_time.QuadPart - last_time.QuadPart) / g_Platform->m_frequency.QuadPart;
+			float elapsed_time = static_cast<float>(static_cast<double>(g_Platform->m_current_time.QuadPart - last_time.QuadPart) / static_cast<double>(g_Platform->m_frequency.QuadPart));
 			if (elapsed_time > 0.5f)
 			{
 				core::LogInfo("Timestep was really high (Debugging?), limited to 30fps");
 				elapsed_time = 1.f / 30.f;
 			}
-			g_Platform->m_total_time += elapsed_time;
-			g_Platform->m_last_elapsed_time = elapsed_time;
+			
+			//Smooth the elapsed time, TODO, change to a physic and render ticks
+			g_Platform->m_last_elapsed_time = g_Platform->m_last_elapsed_time * 0.95f + elapsed_time * 0.05f;
+			g_Platform->m_total_time += g_Platform->m_last_elapsed_time;
 
 			{
 				//Capture Controller input and check if it has been more input events
@@ -850,12 +852,12 @@ namespace platform
 			}
 
 			//New frame for imgui
-			imgui_render::NextFrame(g_Platform->m_current_hwnd, elapsed_time);
+			imgui_render::NextFrame(g_Platform->m_current_hwnd, g_Platform->m_last_elapsed_time);
 
 			{
 				PROFILE_SCOPE("Platform", 0xFFFF00FF, "GameTick");
 				//Render
-				game->OnTick(g_Platform->m_total_time, elapsed_time);
+				game->OnTick(g_Platform->m_total_time, g_Platform->m_last_elapsed_time);
 			}
 
 			{
