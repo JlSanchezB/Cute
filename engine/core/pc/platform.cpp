@@ -449,6 +449,40 @@ namespace
 		}
 	}
 
+	bool ProcessInput(MSG& msg)
+	{
+		//Init input
+		InputFrameInit();
+
+		//Exit?
+		bool mark_as_exit = false;
+
+		// Process any messages in the queue.
+		while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
+		{
+			if (msg.message == WM_QUIT)
+			{
+				mark_as_exit = true;
+				break;
+			}
+			else
+			{
+				TranslateMessage(&msg);
+				DispatchMessage(&msg);
+			}
+		}
+
+		if (mark_as_exit)
+		{
+			return true;
+		}
+
+		//Capture Controller input and check if it has been more input events
+		CaptureInput();
+
+		return false;
+	}
+
 	//Windows message handle
 	LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	{
@@ -832,9 +866,9 @@ namespace platform
 		QueryPerformanceCounter(&g_Platform->m_begin_time);
 
 		g_Platform->m_logic_total_time = static_cast<double>(g_Platform->m_begin_time.QuadPart) / static_cast<double>(g_Platform->m_frequency.QuadPart);
-
-		// Main sample loop.
+		
 		MSG msg = {};
+		// Main sample loop.
 		do 
 		{
 			//Update Control variables
@@ -843,32 +877,8 @@ namespace platform
 			//Update counters
 			core::UpdateCountersMain();
 
-			//Init input
-			InputFrameInit();
-
-			//Exit?
-			bool mark_as_exit = false;
-
-			// Process any messages in the queue.
-			while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
-			{
-				if (msg.message == WM_QUIT)
-				{
-					mark_as_exit = true;
-					break;
-				}
-				else
-				{
-					TranslateMessage(&msg);
-					DispatchMessage(&msg);
-				}
-			}
-
-			if (mark_as_exit)
-			{
-				break;
-			}
-
+			bool mark_for_exit = false;
+			
 			//Calculate time
 			LARGE_INTEGER last_time = g_Platform->m_current_time;
 			QueryPerformanceCounter(&g_Platform->m_current_time);
@@ -886,9 +896,11 @@ namespace platform
 				{
 					//Smooth the elapsed time, TODO, change to a physic and render ticks
 					g_Platform->m_last_elapsed_time = g_Platform->m_last_elapsed_time * 0.95f + elapsed_time * 0.05f;
+					
+					if (ProcessInput(msg))
 					{
-						//Capture Controller input and check if it has been more input events
-						CaptureInput();
+						//Mark for exit
+						mark_for_exit = true;
 					}
 				}
 				break;
@@ -905,8 +917,11 @@ namespace platform
 						LARGE_INTEGER begin_logic_tick;
 						QueryPerformanceCounter(&begin_logic_tick);
 
-						//Capture Controller input and check if it has been more input events
-						CaptureInput();
+						if (ProcessInput(msg))
+						{
+							//Mark for exit
+							mark_for_exit = true;
+						}
 
 						//Update interpolated control, new frame and it can update data
 						platform::FrameInterpolationControl::s_frame = (platform::FrameInterpolationControl::s_frame + 1) % 2;
@@ -930,6 +945,12 @@ namespace platform
 						g_Platform->m_last_logic_elapsed_time = static_cast<float>(static_cast<double>(end_logic_tick.QuadPart - begin_logic_tick.QuadPart) / static_cast<double>(g_Platform->m_frequency.QuadPart));
 					}
 				}
+				break;
+			}
+
+			if (mark_for_exit)
+			{
+				//Exit
 				break;
 			}
 
