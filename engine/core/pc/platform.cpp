@@ -114,6 +114,9 @@ namespace
 		//Value used to calculate how much logic time goes between frames
 		double m_logic_time_accumulator = 0.f;
 
+		//Last logic tick elapsed time
+		float m_last_logic_elapsed_time = 0.f;
+
 		//Logic total time, this is the logic one
 		double m_logic_total_time = 0.f;
 
@@ -143,6 +146,10 @@ namespace
 
 		//Imgui counters
 		bool m_imgui_counters_enable = false;
+
+		//Imgui fps smooth
+		float m_imgui_fps = 0.f;
+		float m_imgui_logic_fps = 0.f;
 
 		constexpr std::array<platform::InputSlotState, 256> build_keyboard_conversion()
 		{
@@ -588,7 +595,7 @@ namespace
 		return DefWindowProc(hWnd, message, wParam, lParam);
 	}
 
-	void RenderFPSOverlay(float elapsed_time)
+	void RenderFPSOverlay(Platform* platform)
 	{
 
 		const float distance = 10.0f;
@@ -601,7 +608,13 @@ namespace
 		bool open = true;
 		if (ImGui::Begin("Perf", &open, (corner != -1 ? ImGuiWindowFlags_NoMove : 0) | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav))
 		{
-			ImGui::Text("FPS: %2.1f", 1.f / elapsed_time);
+			platform->m_imgui_fps = platform->m_imgui_fps * 0.95f + (1.f / max(0.001f, platform->m_last_elapsed_time)) * 0.05f;
+			platform->m_imgui_logic_fps = platform->m_imgui_logic_fps * 0.95f + (1.f / max(0.001f, platform->m_last_logic_elapsed_time)) * 0.05f;
+			ImGui::Text("FPS: %3.1f", platform->m_imgui_fps);
+			if (platform->m_update_type == platform::UpdateType::LogicRender)
+			{
+				ImGui::Text("LogicFPS: %3.1f/%3.1f", platform->m_imgui_logic_fps, 1.f / platform->m_fixed_logic_frame_length);
+			}
 		}
 		ImGui::End();
 	}
@@ -639,7 +652,7 @@ namespace
 
 		if (g_Platform->m_imgui_fps_enable)
 		{
-			RenderFPSOverlay(g_Platform->m_last_elapsed_time);
+			RenderFPSOverlay(g_Platform);
 		}
 
 		if (g_Platform->m_imgui_display_stats && g_Platform->m_device)
@@ -889,7 +902,9 @@ namespace platform
 					while (g_Platform->m_logic_time_accumulator >= g_Platform->m_fixed_logic_frame_length)
 					{
 						//We are going to do an update
-						
+						LARGE_INTEGER begin_logic_tick;
+						QueryPerformanceCounter(&begin_logic_tick);
+
 						//Capture Controller input and check if it has been more input events
 						CaptureInput();
 
@@ -908,6 +923,11 @@ namespace platform
 						//Move logic total time and the accumulator
 						g_Platform->m_logic_total_time += g_Platform->m_fixed_logic_frame_length;
 						g_Platform->m_logic_time_accumulator -= g_Platform->m_fixed_logic_frame_length;
+
+						//Calculate the length of the logic
+						LARGE_INTEGER end_logic_tick;
+						QueryPerformanceCounter(&end_logic_tick);
+						g_Platform->m_last_logic_elapsed_time = static_cast<float>(static_cast<double>(end_logic_tick.QuadPart - begin_logic_tick.QuadPart) / static_cast<double>(g_Platform->m_frequency.QuadPart));
 					}
 				}
 				break;

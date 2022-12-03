@@ -45,6 +45,7 @@ public:
 
 	//Job allocator, it needs to be created in the onInit, that means that the job system is not created during the GameConstructor
 	std::unique_ptr<job::JobAllocator<1024 * 1024>> m_update_job_allocator;
+	std::unique_ptr<job::JobAllocator<1024 * 1024>> m_render_job_allocator;
 
 	//Display resources
 	DisplayResource m_display_resources;

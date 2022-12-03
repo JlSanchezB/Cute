@@ -21,7 +21,7 @@ namespace
 void BoxCityGame::OnInit()
 {
 	//Setup the tick to 60fps logic tick and render
-	SetUpdateType(platform::UpdateType::LogicRender, 30.f);
+	SetUpdateType(platform::UpdateType::LogicRender, 60.f);
 
 	display::DeviceInitParams device_init_params;
 
@@ -61,6 +61,7 @@ void BoxCityGame::OnInit()
 
 	//Create Job allocator now that the job system is enabled
 	m_update_job_allocator = std::make_unique<job::JobAllocator<1024 * 1024>>();
+	m_render_job_allocator = std::make_unique<job::JobAllocator<1024 * 1024>>();
 
 	//Create render pass system
 	render::SystemDesc render_system_desc;
@@ -247,6 +248,9 @@ void BoxCityGame::OnLogic(double total_time, float elapsed_time)
 
 void BoxCityGame::OnRender(double total_time, float elapsed_time)
 {
+	//Reset job allocators
+	m_render_job_allocator->Clear();
+
 	render::BeginPrepareRender(m_render_system);
 
 	//Update camera, for rendering
@@ -296,7 +300,7 @@ void BoxCityGame::OnRender(double total_time, float elapsed_time)
 
 	//Add task
 	//Cull box city
-	ecs::AddJobs<GameDatabase, const OBBBox, const AABBBox, FlagBox, const BoxGPUHandle, const InterpolatedPosition>(m_job_system, culling_fence, m_update_job_allocator, 256,
+	ecs::AddJobs<GameDatabase, const OBBBox, const AABBBox, FlagBox, const BoxGPUHandle, const InterpolatedPosition>(m_job_system, culling_fence, m_render_job_allocator, 256,
 		[camera = camera, point_of_view = &point_of_view, box_priority = m_box_render_priority, render_system = m_render_system, device = m_device, render_gpu_memory_module = m_GPU_memory_render_module, tile_manager = &m_tile_manager]
 	(const auto& instance_iterator, const OBBBox& obb_box, const AABBBox& aabb_box, FlagBox& flags, const BoxGPUHandle& box_gpu_handle, const InterpolatedPosition& interpolated_position)
 		{
@@ -334,7 +338,7 @@ void BoxCityGame::OnRender(double total_time, float elapsed_time)
 		}, m_tile_manager.GetCameraBitSet(*camera), &g_profile_marker_Culling);
 
 	//Cull cars
-	ecs::AddJobs<GameDatabase, const OBBBox, const AABBBox, const CarGPUIndex, const Car>(m_job_system, culling_fence, m_update_job_allocator, 256,
+	ecs::AddJobs<GameDatabase, const OBBBox, const AABBBox, const CarGPUIndex, const Car>(m_job_system, culling_fence, m_render_job_allocator, 256,
 		[camera = camera, point_of_view = &point_of_view, box_priority = m_box_render_priority, render_system = m_render_system, device = m_device, render_gpu_memory_module = m_GPU_memory_render_module, traffic_manager = &m_traffic_system]
 	(const auto& instance_iterator, const OBBBox& obb_box, const AABBBox& aabb_box, const CarGPUIndex& car_gpu_index, const Car& car)
 		{
