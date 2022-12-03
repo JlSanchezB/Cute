@@ -6,7 +6,8 @@
 #define USE_PIX_PROFILER
 
 #ifdef USE_MICROPROFILE
-	#define MICROPROFILE_MAX_FRAME_HISTORY (2<<10)
+	#define MICROPROFILE_PER_THREAD_BUFFER_SIZE ((8 * 2048)<<10)
+	#define MICROPROFILE_MAX_FRAME_HISTORY ((8 * 2)<<10)
 	#define MICROPROFILE_IMPL
 	#include <ext/microprofile/microprofile.h>
 #endif
