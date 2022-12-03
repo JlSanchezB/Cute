@@ -944,6 +944,9 @@
     <ClInclude Include="helpers\bvh.h">
       <Filter>helpers</Filter>
     </ClInclude>
+    <ClInclude Include="helpers\interpolated.h">
+      <Filter>helpers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="display\pc_dx12\display.cpp">

@@ -8,6 +8,7 @@
 #include <ext/imgui/imgui.h>
 #include <stdint.h>
 #include <vector>
+#include <helpers/interpolated.h>
 
 namespace display
 {
@@ -133,13 +134,33 @@ namespace platform
 		}
 	};
 
+	struct FrameInterpolationControl
+	{
+		inline static size_t s_frame = 0; 
+		inline static float s_interpolation_value = 0.f;
+		inline static bool s_interpolate_phase = false;
+		inline static bool s_update_phase = false;
+	};
+
+	//Interpolate wraper to use with the platform LogicRender update type
+	template<class DATA>
+	using Interpolate = helpers::Interpolated<DATA, FrameInterpolationControl>;
+
+	enum class UpdateType
+	{
+		Tick, //Each frame just call a OnTick
+		LogicRender //Each frame calls to OnLogic in fixed FPS and OnRender as much as it needs
+	};
+
 	//Virtual interface that implements a game
 	class Game
 	{
 	protected:
 		void SetDevice(display::Device* device);
 		void SetRenderSystem(render::System* render_system);
+		void SetUpdateType(UpdateType update_type, float fixed_logic_framerate);
 	public:
+		
 		//Input
 		void CaptureInput(); //Recapture the input in the midle of the frame if needed
 		bool GetInputSlotState(InputSlotState input_slot) const;
@@ -165,7 +186,9 @@ namespace platform
 		virtual void OnInit() = 0;
 		virtual void OnPrepareDestroy() {}; //In case a job needs to be sync
 		virtual void OnDestroy() = 0;
-		virtual void OnTick(double total_time, float elapsed_time) = 0;
+		virtual void OnTick(double total_time, float elapsed_time) {};
+		virtual void OnLogic(double total_time, float elapsed_time) {};
+		virtual void OnRender(double total_time, float elapsed_time) {};
 		virtual void OnSizeChange(uint32_t width, uint32_t height, bool minimized) = 0;
 		virtual void OnAddImguiMenu() {};
 		virtual void OnImguiRender() {};

@@ -105,7 +105,19 @@ namespace
 		//Begin time
 		LARGE_INTEGER m_begin_time;
 
-		//Total accumulated time
+		//Update type
+		platform::UpdateType m_update_type = platform::UpdateType::Tick;
+
+		//If a logic/render mode is enabled, it is the frame lenght
+		float m_fixed_logic_frame_length;
+
+		//Value used to calculate how much logic time goes between frames
+		double m_logic_time_accumulator = 0.f;
+
+		//Logic total time, this is the logic one
+		double m_logic_total_time = 0.f;
+
+		//Total accumulated time, this is the real one, used for rendering
 		double m_total_time = 0.f;
 
 		//Last elapsed time
@@ -695,6 +707,12 @@ namespace platform
 		g_Platform->m_render_system = render_system;
 	}
 
+	void Game::SetUpdateType(UpdateType update_type, float fixed_logic_framerate)
+	{
+		g_Platform->m_update_type = update_type;
+		g_Platform->m_fixed_logic_frame_length = 1.f / fixed_logic_framerate;
+	}
+
 	void Game::CaptureInput()
 	{
 		::CaptureInput();
@@ -796,6 +814,8 @@ namespace platform
 		QueryPerformanceCounter(&g_Platform->m_current_time);
 		QueryPerformanceCounter(&g_Platform->m_begin_time);
 
+		g_Platform->m_logic_total_time = static_cast<double>(g_Platform->m_begin_time.QuadPart) / static_cast<double>(g_Platform->m_frequency.QuadPart);
+
 		// Main sample loop.
 		MSG msg = {};
 		do 
@@ -835,29 +855,95 @@ namespace platform
 			//Calculate time
 			LARGE_INTEGER last_time = g_Platform->m_current_time;
 			QueryPerformanceCounter(&g_Platform->m_current_time);
+			g_Platform->m_total_time = static_cast<double>(g_Platform->m_current_time.QuadPart) / static_cast<double>(g_Platform->m_frequency.QuadPart);
 			float elapsed_time = static_cast<float>(static_cast<double>(g_Platform->m_current_time.QuadPart - last_time.QuadPart) / static_cast<double>(g_Platform->m_frequency.QuadPart));
 			if (elapsed_time > 0.5f)
 			{
 				core::LogInfo("Timestep was really high (Debugging?), limited to 30fps");
 				elapsed_time = 1.f / 30.f;
 			}
-			
-			//Smooth the elapsed time, TODO, change to a physic and render ticks
-			g_Platform->m_last_elapsed_time = g_Platform->m_last_elapsed_time * 0.95f + elapsed_time * 0.05f;
-			g_Platform->m_total_time += g_Platform->m_last_elapsed_time;
-
+			switch (g_Platform->m_update_type)
 			{
-				//Capture Controller input and check if it has been more input events
-				CaptureInput();
+			//Simple tick, we smooth the framerate just to avoid the irregular updates
+			case platform::UpdateType::Tick:
+				{
+					//Smooth the elapsed time, TODO, change to a physic and render ticks
+					g_Platform->m_last_elapsed_time = g_Platform->m_last_elapsed_time * 0.95f + elapsed_time * 0.05f;
+					{
+						//Capture Controller input and check if it has been more input events
+						CaptureInput();
+					}
+				}
+				break;
+			//We need to check how many logic ticks we need and update the interpolation system if needed
+			case platform::UpdateType::LogicRender:
+				{
+					double logic_time = 0.0;
+
+					//Acumulate the new frame
+					g_Platform->m_logic_time_accumulator += elapsed_time;
+
+					//Executed as much as logic ticks possible with the new frame elapsed time
+					while (g_Platform->m_logic_time_accumulator >= g_Platform->m_fixed_logic_frame_length)
+					{
+						//We are going to do an update
+						
+						//Capture Controller input and check if it has been more input events
+						CaptureInput();
+
+						//Update interpolated control, new frame and it can update data
+						platform::FrameInterpolationControl::s_frame = (platform::FrameInterpolationControl::s_frame + 1) % 2;
+						platform::FrameInterpolationControl::s_update_phase = true;
+
+						{
+							PROFILE_SCOPE("Platform", 0xFFFF00FF, "GameLogic");
+							//Tick logic, with the logic time and the fixed frame lengh
+							game->OnLogic(g_Platform->m_logic_total_time, g_Platform->m_fixed_logic_frame_length);
+						}
+
+						platform::FrameInterpolationControl::s_update_phase = false;
+
+						//Move logic total time and the accumulator
+						g_Platform->m_logic_total_time += g_Platform->m_fixed_logic_frame_length;
+						g_Platform->m_logic_time_accumulator -= g_Platform->m_fixed_logic_frame_length;
+					}
+				}
+				break;
 			}
 
 			//New frame for imgui
 			imgui_render::NextFrame(g_Platform->m_current_hwnd, g_Platform->m_last_elapsed_time);
 
 			{
-				PROFILE_SCOPE("Platform", 0xFFFF00FF, "GameTick");
-				//Render
-				game->OnTick(g_Platform->m_total_time, g_Platform->m_last_elapsed_time);
+				switch (g_Platform->m_update_type)
+				{
+				case platform::UpdateType::Tick:
+					{
+						PROFILE_SCOPE("Platform", 0xFFFF00FF, "GameTick");
+						//Tick
+						game->OnTick(g_Platform->m_total_time, g_Platform->m_last_elapsed_time);
+					}
+					break;
+				case platform::UpdateType::LogicRender:
+				{
+					g_Platform->m_last_elapsed_time = elapsed_time;
+
+					//Update interpolated control, we need a new interpolation value, using the logic time accumulator
+					platform::FrameInterpolationControl::s_interpolation_value = static_cast<float>(g_Platform->m_logic_time_accumulator / g_Platform->m_fixed_logic_frame_length);
+					platform::FrameInterpolationControl::s_interpolate_phase = true;
+
+					{
+						PROFILE_SCOPE("Platform", 0xFFFF00FF, "GameRender");
+
+						//Render
+						game->OnRender(g_Platform->m_total_time, g_Platform->m_last_elapsed_time);
+					}
+
+					platform::FrameInterpolationControl::s_interpolate_phase = false;
+				}
+				break;
+				}
+				
 			}
 
 			{
