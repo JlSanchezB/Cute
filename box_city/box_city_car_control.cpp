@@ -43,11 +43,11 @@ CONTROL_VARIABLE(float, c_car_camera_fov, 60.f, 180.f, 100.f, "Car", "Camera Fov
 
 namespace BoxCityCarControl
 {
-	void CarCamera::Update(platform::Game* game, Car& car, float elapsed_time)
+	void CarCamera::UpdateInterpolated(platform::Game* game, Car& car, float elapsed_time)
 	{
-		glm::mat3x3 car_matrix = glm::toMat3(car.rotation);
-		m_position = car.position - glm::row(car_matrix, 1) * c_car_camera_distance + glm::vec3(0.f, 0.f, c_car_camera_up_offset);
-		m_target = car.position;
+		glm::mat3x3 car_matrix = glm::toMat3(car.rotation.GetInterpolated());
+		m_position = car.position.GetInterpolated() - glm::row(car_matrix, 1) * c_car_camera_distance + glm::vec3(0.f, 0.f, c_car_camera_up_offset);
+		m_target = car.position.GetInterpolated();
 		m_fov_y = glm::radians(c_car_camera_fov);
 
 		UpdateInternalData();
@@ -117,7 +117,7 @@ namespace BoxCityCarControl
 		glm::vec3 linear_forces (0.f, 0.f, 0.f);
 		glm::vec3 angular_forces(0.f, 0.f, 0.f);
 
-		glm::mat3x3 car_matrix = glm::toMat3(car.rotation);
+		glm::mat3x3 car_matrix = glm::toMat3(*car.rotation);
 
 		glm::vec3 car_left_vector = glm::row(car_matrix, 0);
 		glm::vec3 car_front_vector = glm::row(car_matrix, 1);
@@ -165,11 +165,11 @@ namespace BoxCityCarControl
 		car_movement.rotation_velocity += angular_forces * elapsed_time * world_inv_mass_inertial;
 
 		//Integrate position
-		car.position += car_movement.lineal_velocity * elapsed_time;
+		*car.position = car.position.Last() + car_movement.lineal_velocity * elapsed_time;
 		float rotation_angle = glm::length(car_movement.rotation_velocity * elapsed_time);
 		if (rotation_angle > 0.000001f)
 		{
-			car.rotation = glm::normalize(car.rotation * glm::angleAxis(rotation_angle, car_movement.rotation_velocity / rotation_angle));
+			*car.rotation = glm::normalize(car.rotation.Last() * glm::angleAxis(rotation_angle, car_movement.rotation_velocity / rotation_angle));
 		}
 	}
 }

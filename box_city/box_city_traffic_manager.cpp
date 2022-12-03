@@ -58,8 +58,8 @@ namespace BoxCityTrafficSystem
 		glm::vec3 position(begin_tile_x + position_range(random), begin_tile_y + position_range(random), position_range_z(random));
 		float size = size_range(random);
 		
-		car.position = position;
-		car.rotation = glm::quat(glm::vec3(0.f, 0.f, 0.f));
+		car.position.Reset(position);
+		car.rotation.Reset(glm::quat(glm::vec3(0.f, 0.f, 0.f)));
 		car_movement.lineal_velocity = glm::vec3(0.f, 0.f, 0.f);
 		car_movement.rotation_velocity = glm::vec3(0.f, 0.f, 0.f);
 
@@ -73,7 +73,7 @@ namespace BoxCityTrafficSystem
 		
 		obb_component.position = position;
 		obb_component.extents = car_settings.size;
-		obb_component.rotation = glm::toMat3(car.rotation);
+		obb_component.rotation = glm::toMat3(*car.rotation);
 
 		helpers::CalculateAABBFromOBB(aabb_component, obb_component);
 	
@@ -96,7 +96,7 @@ namespace BoxCityTrafficSystem
 		std::uniform_real_distribution<float> position_range(-c_car_target_range, c_car_target_range);
 		std::uniform_real_distribution<float> position_range_z(BoxCityTileSystem::kTileHeightBottom, BoxCityTileSystem::kTileHeightTop);
 
-		car_target.target = glm::vec3(car.position.x + position_range(random), car.position.y + position_range(random), position_range_z(random));
+		car_target.target = glm::vec3((*car.position).x + position_range(random), (*car.position).y + position_range(random), position_range_z(random));
 	}
 
 	void Manager::Update(const glm::vec3& camera_position)
@@ -231,14 +231,14 @@ namespace BoxCityTrafficSystem
 				else
 				{
 					//AI car
-					glm::vec3 direction = glm::normalize(car_target.target - car.position);
-					car.position = car.position + direction * c_car_velocity * elapsed_time;
+					glm::vec3 direction = glm::normalize(car_target.target - *car.position);
+					*car.position = car.position.Last() + direction * c_car_velocity * elapsed_time;
 				}
 				
 				
 				//Check if it is outside of the tile (change tile or cycle the car)
 				WorldTilePosition current_world_tile = manager->GetTile(instance_iterator.m_zone_index).m_tile_position;
-				WorldTilePosition next_world_tile = CalculateWorldPositionToWorldTile(car.position);
+				WorldTilePosition next_world_tile = CalculateWorldPositionToWorldTile(*car.position);
 
 				if (current_world_tile.i != next_world_tile.i || current_world_tile.j != next_world_tile.j)
 				{
@@ -261,26 +261,16 @@ namespace BoxCityTrafficSystem
 				}
 
 				//Calculate if it needs retargetting
-				if (glm::length2(car.position - car_target.target) < 10.f)
+				if (glm::length2(*car.position - car_target.target) < 10.f)
 				{
 					//Retarget
 					manager->SetupCarTarget(random_thread_local, car, car_target);
 				}
 
 				//Update OOBB and AABB
-				obb_box.position = car.position;
-				obb_box.rotation = glm::toMat3(car.rotation);
+				obb_box.position = *car.position;
+				obb_box.rotation = glm::toMat3(*car.rotation);
 				helpers::CalculateAABBFromOBB(aabb_box, obb_box);
-
-				//Update GPU if it is in the camera
-				if (camera_bitset[instance_iterator.m_zone_index])
-				{
-					GPUBoxInstance gpu_box_instance;
-					gpu_box_instance.Fill(obb_box);
-
-					//Only the first 3 float4
-					manager->m_GPU_memory_render_module->UpdateStaticGPUMemory(manager->m_device, manager->m_gpu_memory, &gpu_box_instance, 3 * sizeof(glm::vec4), render::GetGameFrameIndex(manager->m_render_system), car_gpu_index.gpu_slot * sizeof(GPUBoxInstance));
-				}
 
 			}, full_bitset, &g_profile_marker_Car_Update);
 	}

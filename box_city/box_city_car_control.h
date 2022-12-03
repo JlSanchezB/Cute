@@ -11,8 +11,8 @@ namespace BoxCityCarControl
 	class CarCamera : public helpers::Camera
 	{
 	public:
-		//Process input and update the position
-		void Update(platform::Game* game, Car& car, float ellapsed_time);
+		//Process input and update the position during the render, so interpolated
+		void UpdateInterpolated(platform::Game* game, Car& car, float ellapsed_time);
 
 		CarCamera(const Camera::ZRange z_range) : Camera(Type::Target, z_range)
 		{

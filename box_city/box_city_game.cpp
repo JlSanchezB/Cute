@@ -20,6 +20,9 @@ namespace
 
 void BoxCityGame::OnInit()
 {
+	//Setup the tick to 60fps logic tick and render
+	SetUpdateType(platform::UpdateType::LogicRender, 30.f);
+
 	display::DeviceInitParams device_init_params;
 
 #ifdef _DEBUG
@@ -130,7 +133,7 @@ void BoxCityGame::OnDestroy()
 	display::DestroyDevice(m_device);
 }
 
-void BoxCityGame::OnTick(double total_time, float elapsed_time)
+void BoxCityGame::OnLogic(double total_time, float elapsed_time)
 {
 	//Reset job allocators
 	m_update_job_allocator->Clear();
@@ -163,22 +166,16 @@ void BoxCityGame::OnTick(double total_time, float elapsed_time)
 		}
 	}
 
-	//Update camera
+	//Update camera, for logic update
 	helpers::Camera* camera = dynamic_cast<helpers::Camera*>(&m_fly_camera);
+	//It doesn't need to be updated, the last frame is good
 	switch (m_camera_mode)
 	{
 	case CameraMode::Fly:
 		camera = dynamic_cast<helpers::Camera*>(&m_fly_camera);
-		m_fly_camera.UpdateAspectRatio(static_cast<float>(m_width) / static_cast<float>(m_height));
-		m_fly_camera.Update(this, elapsed_time);
 		break;
 	case CameraMode::Car:
 		camera = dynamic_cast<helpers::Camera*>(&m_car_camera);
-		m_car_camera.UpdateAspectRatio(static_cast<float>(m_width) / static_cast<float>(m_height));
-		if (m_traffic_system.GetPlayerCar().IsValid())
-		{
-			m_car_camera.Update(this, m_traffic_system.GetPlayerCar().Get<GameDatabase>().Get<Car>(), elapsed_time);
-		}
 		break;
 	}
 	
@@ -191,11 +188,12 @@ void BoxCityGame::OnTick(double total_time, float elapsed_time)
 	job::Fence update_fence;
 
 	//Update all positions for testing the static gpu memory
-	ecs::AddJobs<GameDatabase, OBBBox, AABBBox, FlagBox, AnimationBox>(m_job_system, update_fence, m_update_job_allocator, 256,
-		[total_time](const auto& instance_iterator, OBBBox& obb_box, AABBBox& aabb_box, FlagBox& flags, AnimationBox& animation_box)
+	ecs::AddJobs<GameDatabase, OBBBox, AABBBox, FlagBox, AnimationBox, InterpolatedPosition>(m_job_system, update_fence, m_update_job_allocator, 256,
+		[total_time](const auto& instance_iterator, OBBBox& obb_box, AABBBox& aabb_box, FlagBox& flags, AnimationBox& animation_box, InterpolatedPosition& interpolated_position)
 		{
 			//Update position
-			obb_box.position = animation_box.original_position + glm::row(obb_box.rotation, 2) * animation_box.range * static_cast<float> (cos(total_time * animation_box.frecuency + animation_box.offset));
+			*interpolated_position.position = animation_box.original_position + glm::row(obb_box.rotation, 2) * animation_box.range * static_cast<float> (cos(total_time * animation_box.frecuency + animation_box.offset));
+			obb_box.position = *interpolated_position.position;
 
 			//Update AABB
 			helpers::CalculateAABBFromOBB(aabb_box, obb_box);
@@ -208,8 +206,8 @@ void BoxCityGame::OnTick(double total_time, float elapsed_time)
 
 	job::Fence update_attachments_fence;
 	//Update attachments
-	ecs::AddJobs<GameDatabase, OBBBox, AABBBox, FlagBox, Attachment>(m_job_system, update_attachments_fence, m_update_job_allocator, 256,
-		[total_time](const auto& instance_iterator, OBBBox& obb_box, AABBBox& aabb_box, FlagBox& flags, Attachment& attachment)
+	ecs::AddJobs<GameDatabase, OBBBox, AABBBox, FlagBox, Attachment, InterpolatedPosition>(m_job_system, update_attachments_fence, m_update_job_allocator, 256,
+		[total_time](const auto& instance_iterator, OBBBox& obb_box, AABBBox& aabb_box, FlagBox& flags, Attachment& attachment, InterpolatedPosition& interpolated_position)
 		{
 			//Get parent matrix
 			OBBBox& parent_obb = attachment.parent.Get<GameDatabase>().Get<OBBBox>();
@@ -218,6 +216,9 @@ void BoxCityGame::OnTick(double total_time, float elapsed_time)
 			box_to_world[3] = glm::vec4(parent_obb.position, 1.f);
 
 			glm::mat4x4 panel_matrix = box_to_world * attachment.parent_to_child;
+
+			//The position is the only one to interpolate
+			*interpolated_position.position = panel_matrix[3];
 
 			obb_box.position = panel_matrix[3];
 			obb_box.rotation = glm::mat3x3(panel_matrix);
@@ -237,7 +238,35 @@ void BoxCityGame::OnTick(double total_time, float elapsed_time)
 	job::Wait(m_job_system, update_attachments_fence);
 	job::Wait(m_job_system, update_cars_fence);
 
+	{
+		PROFILE_SCOPE("ECSTest", 0xFFFF77FF, "DatabaseTick");
+		//Tick database
+		ecs::Tick<GameDatabase>();
+	}
+}
+
+void BoxCityGame::OnRender(double total_time, float elapsed_time)
+{
 	render::BeginPrepareRender(m_render_system);
+
+	//Update camera, for rendering
+	helpers::Camera* camera = dynamic_cast<helpers::Camera*>(&m_fly_camera);
+	switch (m_camera_mode)
+	{
+	case CameraMode::Fly:
+		camera = dynamic_cast<helpers::Camera*>(&m_fly_camera);
+		m_fly_camera.UpdateAspectRatio(static_cast<float>(m_width) / static_cast<float>(m_height));
+		m_fly_camera.Update(this, elapsed_time);
+		break;
+	case CameraMode::Car:
+		camera = dynamic_cast<helpers::Camera*>(&m_car_camera);
+		m_car_camera.UpdateAspectRatio(static_cast<float>(m_width) / static_cast<float>(m_height));
+		if (m_traffic_system.GetPlayerCar().IsValid())
+		{
+			m_car_camera.UpdateInterpolated(this, m_traffic_system.GetPlayerCar().Get<GameDatabase>().Get<Car>(), elapsed_time);
+		}
+		break;
+	}
 
 	//Check if the render passes loader needs to load
 	m_render_passes_loader.Update();
@@ -267,9 +296,9 @@ void BoxCityGame::OnTick(double total_time, float elapsed_time)
 
 	//Add task
 	//Cull box city
-	ecs::AddJobs<GameDatabase, const OBBBox, const AABBBox, FlagBox, const BoxGPUHandle>(m_job_system, culling_fence, m_update_job_allocator, 256,
+	ecs::AddJobs<GameDatabase, const OBBBox, const AABBBox, FlagBox, const BoxGPUHandle, const InterpolatedPosition>(m_job_system, culling_fence, m_update_job_allocator, 256,
 		[camera = camera, point_of_view = &point_of_view, box_priority = m_box_render_priority, render_system = m_render_system, device = m_device, render_gpu_memory_module = m_GPU_memory_render_module, tile_manager = &m_tile_manager]
-	(const auto& instance_iterator, const OBBBox& obb_box, const AABBBox& aabb_box, FlagBox& flags, const BoxGPUHandle& box_gpu_handle)
+	(const auto& instance_iterator, const OBBBox& obb_box, const AABBBox& aabb_box, FlagBox& flags, const BoxGPUHandle& box_gpu_handle, const InterpolatedPosition& interpolated_position)
 		{
 			//Calculate if it is in the camera and has still a gpu memory handle
 			if (helpers::CollisionFrustumVsAABB(*camera, aabb_box) && box_gpu_handle.IsValid())
@@ -280,8 +309,12 @@ void BoxCityGame::OnTick(double total_time, float elapsed_time)
 				//Update GPU if needed, only position
 				if (!flags.gpu_updated)
 				{
+					//We need to interpolate the position of the oobb for rendering
+					OBBBox render_obb = obb_box;
+					render_obb.position = interpolated_position.position.GetInterpolated();
+
 					GPUBoxInstance gpu_box_instance;
-					gpu_box_instance.Fill(obb_box);
+					gpu_box_instance.Fill(render_obb);
 
 					//Only the first 3 float4
 					render_gpu_memory_module->UpdateStaticGPUMemory(device, gpu_handle, &gpu_box_instance, 3 * sizeof(glm::vec4), render::GetGameFrameIndex(render_system), box_gpu_handle.offset_gpu_allocator * sizeof(GPUBoxInstance));
@@ -301,9 +334,9 @@ void BoxCityGame::OnTick(double total_time, float elapsed_time)
 		}, m_tile_manager.GetCameraBitSet(*camera), &g_profile_marker_Culling);
 
 	//Cull cars
-	ecs::AddJobs<GameDatabase, const OBBBox, const AABBBox, const CarGPUIndex>(m_job_system, culling_fence, m_update_job_allocator, 256,
+	ecs::AddJobs<GameDatabase, const OBBBox, const AABBBox, const CarGPUIndex, const Car>(m_job_system, culling_fence, m_update_job_allocator, 256,
 		[camera = camera, point_of_view = &point_of_view, box_priority = m_box_render_priority, render_system = m_render_system, device = m_device, render_gpu_memory_module = m_GPU_memory_render_module, traffic_manager = &m_traffic_system]
-	(const auto& instance_iterator, const OBBBox& obb_box, const AABBBox& aabb_box, const CarGPUIndex& car_gpu_index)
+	(const auto& instance_iterator, const OBBBox& obb_box, const AABBBox& aabb_box, const CarGPUIndex& car_gpu_index, const Car& car)
 		{
 			//Calculate if it is in the camera and has still a gpu memory handle
 			if (helpers::CollisionFrustumVsAABB(*camera, aabb_box) && car_gpu_index.IsValid())
@@ -312,6 +345,18 @@ void BoxCityGame::OnTick(double total_time, float elapsed_time)
 				float camera_distance = glm::length(obb_box.position - camera->GetPosition());
 				float camera_distance_01 = glm::clamp(camera_distance, 0.f, camera->GetFarPlane()) / camera->GetFarPlane();
 				uint32_t sort_key = static_cast<uint32_t>(camera_distance_01 * ((1 << 24) - 1));
+
+				//Calculate the interpolated OBB
+				OBBBox render_box = obb_box;
+				render_box.position = car.position.GetInterpolated();
+				render_box.rotation = glm::toMat3(car.rotation.GetInterpolated());
+
+				//Update GPU
+				GPUBoxInstance gpu_box_instance;
+				gpu_box_instance.Fill(render_box);
+
+				//Only the first 3 float4
+				render_gpu_memory_module->UpdateStaticGPUMemory(device, traffic_manager->GetGPUHandle(), &gpu_box_instance, 3 * sizeof(glm::vec4), render::GetGameFrameIndex(render_system), car_gpu_index.gpu_slot * sizeof(GPUBoxInstance));
 
 				//Add this point of view
 				point_of_view->PushRenderItem(box_priority, static_cast<render::SortKey>(sort_key), static_cast<uint32_t>(render_gpu_memory_module->GetStaticGPUMemoryOffset(traffic_manager->GetGPUHandle()) + car_gpu_index.gpu_slot * sizeof(GPUBoxInstance)));
@@ -324,12 +369,6 @@ void BoxCityGame::OnTick(double total_time, float elapsed_time)
 
 	//Render
 	render::EndPrepareRenderAndSubmit(m_render_system);
-
-	{
-		PROFILE_SCOPE("ECSTest", 0xFFFF77FF, "DatabaseTick");
-		//Tick database
-		ecs::Tick<GameDatabase>();
-	}
 }
 
 void BoxCityGame::OnSizeChange(uint32_t width, uint32_t height, bool minimized)

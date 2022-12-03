@@ -6,6 +6,7 @@
 #include <ecs/entity_component_system.h>
 #include <render_module/render_module_gpu_memory.h>
 #include <ext/glm/ext.hpp>
+#include <core/platform.h>
 
 //Components
 struct FlagBox
@@ -20,6 +21,11 @@ struct FlagBox
 
 using AABBBox = helpers::AABB;
 using OBBBox = helpers::OBB;
+
+struct InterpolatedPosition
+{
+	platform::Interpolated<glm::vec3> position;
+};
 
 struct AnimationBox
 {
@@ -63,13 +69,10 @@ struct Panel
 
 struct Car
 {
-	glm::vec3 position= glm::vec3(0.f, 0.f, 0.f);
-	glm::quat rotation = glm::quat(glm::vec3(0.f, 0.f, 0.f));
+	platform::Interpolated<glm::vec3> position;
+	platform::Interpolated<glm::quat> rotation;
 
 	Car()
-	{
-	};
-	Car(const glm::vec3& _position, const glm::quat& _rotation) : position(_position), rotation(_rotation)
 	{
 	};
 };
@@ -144,12 +147,12 @@ struct CarGPUIndex
 
 //ECS definition
 using BoxType = ecs::EntityType<BoxRender, BoxGPUHandle, OBBBox, AABBBox, FlagBox>;
-using AnimatedBoxType = ecs::EntityType<BoxRender, BoxGPUHandle, OBBBox, AABBBox, AnimationBox, FlagBox>;
-using AttachedPanelType = ecs::EntityType< BoxRender, BoxGPUHandle, OBBBox, AABBBox, FlagBox, Attachment, Panel>;
+using AnimatedBoxType = ecs::EntityType<InterpolatedPosition, BoxRender, BoxGPUHandle, OBBBox, AABBBox, AnimationBox, FlagBox>;
+using AttachedPanelType = ecs::EntityType<InterpolatedPosition, BoxRender, BoxGPUHandle, OBBBox, AABBBox, FlagBox, Attachment, Panel>;
 using PanelType = ecs::EntityType<BoxRender, BoxGPUHandle, OBBBox, AABBBox, FlagBox, Panel>;
 using CarType = ecs::EntityType<OBBBox, AABBBox, Car, CarMovement, CarSettings, CarTarget, CarControl, CarGPUIndex>;
 
-using GameComponents = ecs::ComponentList<BoxRender, BoxGPUHandle, OBBBox, AABBBox, AnimationBox, FlagBox, Attachment, Panel, Car, CarMovement, CarSettings, CarTarget, CarGPUIndex, CarControl>;
+using GameComponents = ecs::ComponentList<InterpolatedPosition, BoxRender, BoxGPUHandle, OBBBox, AABBBox, AnimationBox, FlagBox, Attachment, Panel, Car, CarMovement, CarSettings, CarTarget, CarGPUIndex, CarControl>;
 using GameEntityTypes = ecs::EntityTypeList<BoxType, AnimatedBoxType, AttachedPanelType, PanelType, CarType>;
 
 using GameDatabase = ecs::DatabaseDeclaration<GameComponents, GameEntityTypes>;

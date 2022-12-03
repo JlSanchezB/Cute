@@ -95,7 +95,9 @@ public:
 
 	void OnDestroy() override;
 
-	void OnTick(double total_time, float elapsed_time) override;
+	void OnLogic(double total_time, float elapsed_time) override;
+
+	void OnRender(double total_time, float elapsed_time) override;
 
 	void OnSizeChange(uint32_t width, uint32_t height, bool minimized) override;
 

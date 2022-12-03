@@ -806,6 +806,10 @@ namespace platform
 		//Init profiler system
 		core::InitProfiler();
 		
+		//Init the interpolated system
+		platform::FrameInterpolationControl::s_frame = 0;
+		platform::FrameInterpolationControl::s_update_phase = true;
+
 		//Init callback
 		game->OnInit();
 
@@ -878,8 +882,6 @@ namespace platform
 			//We need to check how many logic ticks we need and update the interpolation system if needed
 			case platform::UpdateType::LogicRender:
 				{
-					double logic_time = 0.0;
-
 					//Acumulate the new frame
 					g_Platform->m_logic_time_accumulator += elapsed_time;
 

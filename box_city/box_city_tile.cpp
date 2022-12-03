@@ -385,13 +385,17 @@ namespace BoxCityTileSystem
 			//Update the GPU memory
 			manager->GetGPUMemoryRenderModule()->UpdateStaticGPUMemory(manager->GetDevice(), GetLodGPUAllocation(lod_group), &gpu_box_instance, sizeof(GPUBoxInstance), render::GetGameFrameIndex(manager->GetRenderSystem()), gpu_offset * sizeof(GPUBoxInstance));
 
+			InterpolatedPosition interpolated_position;
+			interpolated_position.position.Reset(building_data.oob_box.position);
+
 			//Just make it static
 			instances_vector.push_back(ecs::AllocInstance<GameDatabase, AnimatedBoxType>(m_zone_id)
 				.Init<OBBBox>(building_data.oob_box)
 				.Init<AABBBox>(building_data.aabb_box)
 				.Init<BoxRender>(box_render)
 				.Init<AnimationBox>(building_data.animation)
-				.Init<BoxGPUHandle>(gpu_offset, static_cast<uint32_t>(lod_group)));
+				.Init<BoxGPUHandle>(gpu_offset, static_cast<uint32_t>(lod_group))
+				.Init<InterpolatedPosition>(interpolated_position));
 
 			gpu_offset++;
 			COUNTER_INC(c_Blocks_Count);
@@ -467,13 +471,17 @@ namespace BoxCityTileSystem
 			//Update the GPU memory
 			manager->GetGPUMemoryRenderModule()->UpdateStaticGPUMemory(manager->GetDevice(), GetLodGPUAllocation(lod_group), &gpu_box_instance, sizeof(GPUBoxInstance), render::GetGameFrameIndex(manager->GetRenderSystem()), gpu_offset * sizeof(GPUBoxInstance));
 
+			InterpolatedPosition interpolated_position;
+			interpolated_position.position.Reset(panel_data.oob_box.position);
+
 			//Add attached
 			instances_vector.push_back(ecs::AllocInstance<GameDatabase, AttachedPanelType>(m_zone_id)
 				.Init<OBBBox>(panel_data.oob_box)
 				.Init<AABBBox>(panel_data.aabb_box)
 				.Init<BoxRender>(box_render)
 				.Init<Attachment>(attachment)
-				.Init<BoxGPUHandle>(gpu_offset, static_cast<uint32_t>(lod_group)));
+				.Init<BoxGPUHandle>(gpu_offset, static_cast<uint32_t>(lod_group))
+				.Init<InterpolatedPosition>(interpolated_position));
 
 			gpu_offset++;
 			COUNTER_INC(c_Panels_Count);

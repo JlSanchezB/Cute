@@ -144,7 +144,7 @@ namespace platform
 
 	//Interpolate wraper to use with the platform LogicRender update type
 	template<class DATA>
-	using Interpolate = helpers::Interpolated<DATA, FrameInterpolationControl>;
+	using Interpolated = helpers::Interpolated<DATA, FrameInterpolationControl>;
 
 	enum class UpdateType
 	{
