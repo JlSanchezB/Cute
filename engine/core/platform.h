@@ -167,7 +167,9 @@ namespace platform
 		float GetInputSlotValue(InputSlotValue input_slot) const;
 		const std::vector<InputEvent> GetInputEvents() const;
 
-		//Focus
+		// Is the window focus
+		bool IsWindowFocus() const;
+		// It is the game focus, it can be false when IMGUI is enable
 		bool IsFocus() const;
 
 		//Capture/Release mouse

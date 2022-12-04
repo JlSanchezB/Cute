@@ -126,6 +126,12 @@ namespace
 		//Last elapsed time
 		float m_last_elapsed_time = 0.f;
 
+		//Input state
+		bool m_captured_mouse = false;
+
+		//Cursor state
+		bool m_show_cursor = true;
+
 		//Imgui menu enabled
 		bool m_imgui_menu_enable = false;
 
@@ -531,6 +537,29 @@ namespace
 			}
 			return 0;
 		
+		case WM_ACTIVATEAPP:
+		{
+			if (wParam == 0)
+			{
+				//Deactivate
+				if (g_Platform->m_captured_mouse)
+					::ReleaseCapture();
+
+				if (!g_Platform->m_show_cursor)
+					::ShowCursor(true);
+			}
+			else
+			{
+				//Activate
+				if (g_Platform->m_captured_mouse)
+					::SetCapture(g_Platform->m_current_hwnd);
+
+				if (!g_Platform->m_show_cursor)
+					::ShowCursor(false);
+			}
+			
+			break;
+		}
 		case WM_INPUT:
 		{
 			RAWINPUT input_event;
@@ -780,6 +809,11 @@ namespace platform
 		return g_Platform->m_input_events;
 	}
 
+	bool Game::IsWindowFocus() const
+	{
+		return GetForegroundWindow() == g_Platform->m_current_hwnd;
+	}
+
 	bool Game::IsFocus() const
 	{
 		return GetForegroundWindow() == g_Platform->m_current_hwnd && !ImGui::IsAnyWindowFocused();
@@ -787,17 +821,23 @@ namespace platform
 
 	void Game::CaptureMouse()
 	{
+		g_Platform->m_captured_mouse = true;
 		SetCapture(g_Platform->m_current_hwnd);
 	}
 
 	void Game::ReleaseMouse()
 	{
+		g_Platform->m_captured_mouse = false;
 		ReleaseCapture();
 	}
 
 	void Game::ShowCursor(bool show)
 	{
-		::ShowCursor(show);
+		if (g_Platform->m_show_cursor != show)
+		{
+			g_Platform->m_show_cursor = show;
+			::ShowCursor(show);
+		}
 	}
 
 	void Game::Present()
@@ -923,22 +963,24 @@ namespace platform
 							mark_for_exit = true;
 						}
 
-						//Update interpolated control, new frame and it can update data
-						platform::FrameInterpolationControl::s_frame = (platform::FrameInterpolationControl::s_frame + 1) % 2;
-						platform::FrameInterpolationControl::s_update_phase = true;
-
+						if (game->IsWindowFocus())
 						{
-							PROFILE_SCOPE("Platform", 0xFFFF00FF, "GameLogic");
-							//Tick logic, with the logic time and the fixed frame lengh
-							game->OnLogic(g_Platform->m_logic_total_time, g_Platform->m_fixed_logic_frame_length);
+							//Update interpolated control, new frame and it can update data
+							platform::FrameInterpolationControl::s_frame = (platform::FrameInterpolationControl::s_frame + 1) % 2;
+							platform::FrameInterpolationControl::s_update_phase = true;
+
+							{
+								PROFILE_SCOPE("Platform", 0xFFFF00FF, "GameLogic");
+								//Tick logic, with the logic time and the fixed frame lengh
+								game->OnLogic(g_Platform->m_logic_total_time, g_Platform->m_fixed_logic_frame_length);
+							}
+
+							platform::FrameInterpolationControl::s_update_phase = false;
+
+							//Move logic total time and the accumulator
+							g_Platform->m_logic_total_time += g_Platform->m_fixed_logic_frame_length;
+							g_Platform->m_logic_time_accumulator -= g_Platform->m_fixed_logic_frame_length;
 						}
-
-						platform::FrameInterpolationControl::s_update_phase = false;
-
-						//Move logic total time and the accumulator
-						g_Platform->m_logic_total_time += g_Platform->m_fixed_logic_frame_length;
-						g_Platform->m_logic_time_accumulator -= g_Platform->m_fixed_logic_frame_length;
-
 						//Calculate the length of the logic
 						LARGE_INTEGER end_logic_tick;
 						QueryPerformanceCounter(&end_logic_tick);
