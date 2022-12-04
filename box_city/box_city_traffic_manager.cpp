@@ -14,8 +14,7 @@
 PROFILE_DEFINE_MARKER(g_profile_marker_Car_Update, "Main", 0xFFFFAAAA, "CarUpdate");
 
 //List of control variables
-CONTROL_VARIABLE(float, c_car_target_range, 1.f, 10000.f, 400.f, "Traffic", "Car target range");
-CONTROL_VARIABLE(float, c_car_velocity, 0.f, 1000.f, 24.f, "Traffic", "Car velocity");
+CONTROL_VARIABLE(float, c_car_target_range, 1.f, 10000.f, 1000.f, "Traffic", "Car target range");
 
 
 namespace BoxCityTrafficSystem
@@ -222,16 +221,15 @@ namespace BoxCityTrafficSystem
 				{
 					//Update control
 					BoxCityCarControl::UpdatePlayerControl(game, car_control, elapsed_time);
-					//Integrate
-					BoxCityCarControl::CalculateForcesAndIntegrateCar(car, car_movement, car_settings, car_control, elapsed_time);
 				}
 				else
 				{
 					//AI car
-					glm::vec3 direction = glm::normalize(car_target.target - *car.position);
-					*car.position = car.position.Last() + direction * c_car_velocity * elapsed_time;
+					BoxCityCarControl::UpdateAIControl(car_control, car, car_target, elapsed_time);
 				}
 				
+				//Integrate
+				BoxCityCarControl::CalculateForcesAndIntegrateCar(car, car_movement, car_settings, car_control, elapsed_time);
 				
 				//Check if it is outside of the tile (change tile or cycle the car)
 				WorldTilePosition current_world_tile = manager->GetTile(instance_iterator.m_zone_index).m_tile_position;
@@ -258,7 +256,7 @@ namespace BoxCityTrafficSystem
 				}
 
 				//Calculate if it needs retargetting
-				if (glm::length2(*car.position - car_target.target) < 10.f)
+				if (glm::length2(*car.position - car_target.target) < 50.f * 50.f)
 				{
 					//Retarget
 					manager->SetupCarTarget(random_thread_local, car, car_target);

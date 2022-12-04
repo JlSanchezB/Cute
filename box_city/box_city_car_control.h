@@ -21,7 +21,10 @@ namespace BoxCityCarControl
 	};
 
 	//Read the player input and update the car
-	void UpdatePlayerControl(platform::Game* game, CarControl& car_control, float ellapsed_time);
+	void UpdatePlayerControl(platform::Game* game, CarControl& car_control, float elapsed_time);
+
+	//Calculate AI car control
+	void UpdateAIControl(CarControl& car_control, const Car& car, const CarTarget& car_target, float elapsed_time);
 
 	//Calculate car forces and apply
 	void CalculateForcesAndIntegrateCar(Car& car, CarMovement& car_movement, CarSettings& car_settings, CarControl& car_control, float elapsed_time);

@@ -41,6 +41,9 @@ CONTROL_VARIABLE(float, c_car_camera_distance, 0.f, 100.f, 4.5f, "Car", "Camera 
 CONTROL_VARIABLE(float, c_car_camera_up_offset, 0.f, 100.f, 1.f, "Car", "Camera Up Offset");
 CONTROL_VARIABLE(float, c_car_camera_fov, 60.f, 180.f, 100.f, "Car", "Camera Fov");
 
+CONTROL_VARIABLE(float, c_car_ai_forward, 0.f, 1.f, 0.5f, "Car", "Camera AI foward");
+CONTROL_VARIABLE(float, c_car_ai_target_speed, 0.f, 1.f, 5.f, "Car", "Camera AI target speed");
+
 namespace BoxCityCarControl
 {
 	void CarCamera::Update(platform::Game* game, Car& car, float elapsed_time)
@@ -108,6 +111,37 @@ namespace BoxCityCarControl
 			car_control.foward += foward_offset * elapsed_time;
 			car_control.foward = glm::clamp(car_control.foward, 0.f, 1.f);
 		}
+	}
+
+	void UpdateAIControl(CarControl& car_control, const Car& car, const CarTarget& car_target, float elapsed_time)
+	{
+		//Calculate X and Y control for the car
+		car_control.foward = c_car_ai_forward;
+
+		//Calculate the angles between the car direction and they target
+		glm::mat3x3 car_matrix = glm::toMat3(*car.rotation);
+		glm::vec3 car_left = glm::row(car_matrix, 0);
+		glm::vec3 car_front = glm::row(car_matrix, 1);
+		glm::vec3 car_target_direction = glm::normalize(car_target.target - *car.position);
+
+		float target_x = 0.f;
+		float target_y = 0.f;
+		if (glm::dot(car_front, car_target_direction) < 0.f)
+		{
+			//It is behind, needs to rotate
+			target_x = (glm::dot(car_target_direction, car_left)) > 0.f ? -1.f : 1.f;
+		}
+		else
+		{
+			target_x = -glm::dot(car_target_direction, car_left);
+		}
+		target_y = -car_target_direction.z;
+
+		car_control.X_target = glm::mix(car_control.X_target, target_x, glm::clamp(c_car_ai_target_speed * elapsed_time, 0.f, 1.f));
+		car_control.Y_target = glm::mix(car_control.Y_target, target_y, glm::clamp(c_car_ai_target_speed * elapsed_time, 0.f, 1.f));
+
+		car_control.X_target = glm::clamp(car_control.X_target, -c_car_X_range, c_car_X_range);
+		car_control.Y_target = glm::clamp(car_control.Y_target, -c_car_Y_range, c_car_Y_range);
 	}
 
 	void CalculateForcesAndIntegrateCar(Car& car, CarMovement& car_movement, CarSettings& car_settings, CarControl& car_control, float elapsed_time)
