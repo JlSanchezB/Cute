@@ -43,14 +43,12 @@ CONTROL_VARIABLE(float, c_car_camera_fov, 60.f, 180.f, 100.f, "Car", "Camera Fov
 
 namespace BoxCityCarControl
 {
-	void CarCamera::UpdateInterpolated(platform::Game* game, Car& car, float elapsed_time)
+	void CarCamera::Update(platform::Game* game, Car& car, float elapsed_time)
 	{
-		glm::mat3x3 car_matrix = glm::toMat3(car.rotation.GetInterpolated());
-		m_position = car.position.GetInterpolated() - glm::row(car_matrix, 1) * c_car_camera_distance + glm::vec3(0.f, 0.f, c_car_camera_up_offset);
-		m_target = car.position.GetInterpolated();
+		glm::mat3x3 car_matrix = glm::toMat3(*car.rotation);
+		*m_position = *car.position - glm::row(car_matrix, 1) * c_car_camera_distance + glm::vec3(0.f, 0.f, c_car_camera_up_offset);
+		*m_target = *car.position;
 		m_fov_y = glm::radians(c_car_camera_fov);
-
-		UpdateInternalData();
 	}
 
 	void UpdatePlayerControl(platform::Game* game, CarControl& car_control, float elapsed_time)

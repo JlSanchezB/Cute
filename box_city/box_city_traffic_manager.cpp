@@ -20,7 +20,7 @@ CONTROL_VARIABLE(float, c_car_velocity, 0.f, 1000.f, 24.f, "Traffic", "Car veloc
 
 namespace BoxCityTrafficSystem
 {
-	void Manager::Init(display::Device* device, render::System* render_system, render::GPUMemoryRenderModule* GPU_memory_render_module, const glm::vec3& camera_position)
+	void Manager::Init(display::Device* device, render::System* render_system, render::GPUMemoryRenderModule* GPU_memory_render_module)
 	{
 		m_device = device;
 		m_render_system = render_system;
@@ -40,9 +40,6 @@ namespace BoxCityTrafficSystem
 
 		//Allocate GPU memory, num tiles * max num cars
 		m_gpu_memory = m_GPU_memory_render_module->AllocStaticGPUMemory(m_device, kNumCars * kLocalTileCount * kLocalTileCount * sizeof(GPUBoxInstance), nullptr, render::GetGameFrameIndex(m_render_system));
-
-		//Create traffic around camera position
-		Update(camera_position);	
 	}
 
 	void Manager::Shutdown()

@@ -30,20 +30,20 @@ namespace helpers
 	}
 
 	//Process input and update the position
-	void FlyCamera::Update(platform::Game* game, float ellapsed_time)
+	void FlyCamera::Update(platform::Game* game, float elapsed_time)
 	{
 		if (game->IsFocus())
 		{
 			//Read inputs
 			float forward_input = game->GetInputSlotValue(platform::InputSlotValue::ControllerThumbLeftY);
-			if (game->GetInputSlotState(platform::InputSlotState::Up) || game->GetInputSlotState(platform::InputSlotState::Key_W)) forward_input += 1.f * ellapsed_time;
-			if (game->GetInputSlotState(platform::InputSlotState::Down) || game->GetInputSlotState(platform::InputSlotState::Key_S)) forward_input -= 1.f * ellapsed_time;
+			if (game->GetInputSlotState(platform::InputSlotState::Up) || game->GetInputSlotState(platform::InputSlotState::Key_W)) forward_input += 1.f * elapsed_time;
+			if (game->GetInputSlotState(platform::InputSlotState::Down) || game->GetInputSlotState(platform::InputSlotState::Key_S)) forward_input -= 1.f * elapsed_time;
 			float side_input = game->GetInputSlotValue(platform::InputSlotValue::ControllerThumbLeftX);
-			if (game->GetInputSlotState(platform::InputSlotState::Right) || game->GetInputSlotState(platform::InputSlotState::Key_D)) side_input += 1.f * ellapsed_time;
-			if (game->GetInputSlotState(platform::InputSlotState::Left) || game->GetInputSlotState(platform::InputSlotState::Key_A)) side_input -= 1.f * ellapsed_time;
+			if (game->GetInputSlotState(platform::InputSlotState::Right) || game->GetInputSlotState(platform::InputSlotState::Key_D)) side_input += 1.f * elapsed_time;
+			if (game->GetInputSlotState(platform::InputSlotState::Left) || game->GetInputSlotState(platform::InputSlotState::Key_A)) side_input -= 1.f * elapsed_time;
 			float up_input = (game->GetInputSlotValue(platform::InputSlotValue::ControllerRightTrigger) - game->GetInputSlotValue(platform::InputSlotValue::ControllerLeftTrigger));
-			if (game->GetInputSlotState(platform::InputSlotState::PageUp) || game->GetInputSlotState(platform::InputSlotState::Key_Z)) up_input += 1.f * ellapsed_time;
-			if (game->GetInputSlotState(platform::InputSlotState::PageDown) || game->GetInputSlotState(platform::InputSlotState::Key_X)) up_input -= 1.f * ellapsed_time;
+			if (game->GetInputSlotState(platform::InputSlotState::PageUp) || game->GetInputSlotState(platform::InputSlotState::Key_Z)) up_input += 1.f * elapsed_time;
+			if (game->GetInputSlotState(platform::InputSlotState::PageDown) || game->GetInputSlotState(platform::InputSlotState::Key_X)) up_input -= 1.f * elapsed_time;
 
 			if (game->GetInputSlotState(platform::InputSlotState::RightMouseButton))
 			{
@@ -52,8 +52,8 @@ namespace helpers
 			}
 
 			glm::vec2 rotation_input;
-			rotation_input.x = game->GetInputSlotValue(platform::InputSlotValue::ControllerThumbRightX) * ellapsed_time;
-			rotation_input.y = game->GetInputSlotValue(platform::InputSlotValue::ControllerThumbRightY) * ellapsed_time;
+			rotation_input.x = game->GetInputSlotValue(platform::InputSlotValue::ControllerThumbRightX) * elapsed_time;
+			rotation_input.y = game->GetInputSlotValue(platform::InputSlotValue::ControllerThumbRightY) * elapsed_time;
 			if (game->GetInputSlotState(platform::InputSlotState::LeftMouseButton))
 			{
 				rotation_input.x += game->GetInputSlotValue(platform::InputSlotValue::MouseRelativePositionX) * m_mouse_rotate_factor;
@@ -73,7 +73,7 @@ namespace helpers
 			//Calculate position movement
 			glm::vec3 move_speed;
 
-			glm::mat3x3 rot = glm::rotate(m_rotation.y, glm::vec3(1.f, 0.f, 0.f)) * glm::rotate(m_rotation.x, glm::vec3(0.f, 0.f, 1.f));
+			glm::mat3x3 rot = glm::rotate((*m_rotation).y, glm::vec3(1.f, 0.f, 0.f)) * glm::rotate((*m_rotation).x, glm::vec3(0.f, 0.f, 1.f));
 			//Define forward and side
 			glm::vec3 forward = glm::vec3(0.f, 1.f, 0.f) * rot;
 			glm::vec3 side = glm::vec3(1.f, 0.f, 0.f) * rot;
@@ -95,31 +95,29 @@ namespace helpers
 		}
 
 		//Apply
-		m_position += m_move_speed * ellapsed_time;
-		m_rotation += m_rotation_speed * ellapsed_time;
+		*m_position = m_position.Last() + m_move_speed * elapsed_time;
+		*m_rotation = m_rotation.Last() + m_rotation_speed * elapsed_time;
 
-		if (m_rotation.y > glm::radians(85.f)) m_rotation.y = glm::radians(85.f);
-		if (m_rotation.y < glm::radians(-85.f)) m_rotation.y = glm::radians(-85.f);
+		if ((*m_rotation).y > glm::radians(85.f)) (*m_rotation).y = glm::radians(85.f);
+		if ((*m_rotation).y < glm::radians(-85.f)) (*m_rotation).y = glm::radians(-85.f);
 
 		//Apply damp
-		m_move_speed -= m_move_speed * glm::clamp((m_damp_factor * ellapsed_time), 0.f, 1.f);
-		m_rotation_speed -= m_rotation_speed * glm::clamp((m_damp_factor * ellapsed_time), 0.f, 1.f);
-
-		UpdateInternalData();
+		m_move_speed -= m_move_speed * glm::clamp((m_damp_factor * elapsed_time), 0.f, 1.f);
+		m_rotation_speed -= m_rotation_speed * glm::clamp((m_damp_factor * elapsed_time), 0.f, 1.f);
 	}
 
-	void Camera::UpdateInternalData()
+	void Camera::UpdateRender()
 	{
 		//Calculate view to world
 		glm::mat4x4 world_to_view_matrix;
 		switch (m_type)
 		{
 		case Type::Rotation:
-			glm::mat3x3 rot = glm::rotate(m_rotation.y, glm::vec3(1.f, 0.f, 0.f)) * glm::rotate(m_rotation.x, glm::vec3(0.f, 0.f, 1.f));
-			world_to_view_matrix =glm::lookAt(m_position, m_position + glm::vec3(0.f, 1.f, 0.f) * rot, m_up_vector);
+			glm::mat3x3 rot = glm::rotate(m_rotation.GetInterpolated().y, glm::vec3(1.f, 0.f, 0.f)) * glm::rotate(m_rotation.GetInterpolated().x, glm::vec3(0.f, 0.f, 1.f));
+			world_to_view_matrix =glm::lookAt(m_position.GetInterpolated(), m_position.GetInterpolated() + glm::vec3(0.f, 1.f, 0.f) * rot, m_up_vector);
 			break;
 		case Type::Target:
-			world_to_view_matrix = glm::lookAt(m_position, m_target, m_up_vector);
+			world_to_view_matrix = glm::lookAt(m_position.GetInterpolated(), m_target.GetInterpolated(), m_up_vector);
 			break;
 		}	
 

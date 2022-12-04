@@ -53,6 +53,11 @@ namespace helpers
 			assert(CONTROL::s_update_phase);
 			return m_data[CONTROL::s_frame];
 		}
+		const DATA& operator*() const
+		{
+			assert(CONTROL::s_update_phase);
+			return m_data[CONTROL::s_frame];
+		}
 
 		//Retuns last frame update value
 		const DATA& Last() const

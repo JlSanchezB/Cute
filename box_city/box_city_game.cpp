@@ -99,7 +99,7 @@ void BoxCityGame::OnInit()
 
 	m_tile_manager.Init(m_device, m_render_system, m_GPU_memory_render_module);
 
-	m_traffic_system.Init(m_device, m_render_system, m_GPU_memory_render_module, m_fly_camera.GetPosition());
+	m_traffic_system.Init(m_device, m_render_system, m_GPU_memory_render_module);
 }
 	
 void BoxCityGame::OnPrepareDestroy()
@@ -169,14 +169,19 @@ void BoxCityGame::OnLogic(double total_time, float elapsed_time)
 
 	//Update camera, for logic update
 	helpers::Camera* camera = dynamic_cast<helpers::Camera*>(&m_fly_camera);
-	//It doesn't need to be updated, the last frame is good
+	
 	switch (m_camera_mode)
 	{
 	case CameraMode::Fly:
 		camera = dynamic_cast<helpers::Camera*>(&m_fly_camera);
+		m_fly_camera.Update(this, elapsed_time);
 		break;
 	case CameraMode::Car:
 		camera = dynamic_cast<helpers::Camera*>(&m_car_camera);
+		if (m_traffic_system.GetPlayerCar().IsValid())
+		{
+			m_car_camera.Update(this, m_traffic_system.GetPlayerCar().Get<GameDatabase>().Get<Car>(), elapsed_time);
+		}
 		break;
 	}
 	
@@ -253,22 +258,19 @@ void BoxCityGame::OnRender(double total_time, float elapsed_time)
 
 	render::BeginPrepareRender(m_render_system);
 
-	//Update camera, for rendering
+	//Update camera, for rendering just call update render that will interpolate the positions
 	helpers::Camera* camera = dynamic_cast<helpers::Camera*>(&m_fly_camera);
 	switch (m_camera_mode)
 	{
 	case CameraMode::Fly:
 		camera = dynamic_cast<helpers::Camera*>(&m_fly_camera);
 		m_fly_camera.UpdateAspectRatio(static_cast<float>(m_width) / static_cast<float>(m_height));
-		m_fly_camera.Update(this, elapsed_time);
+		m_fly_camera.UpdateRender();
 		break;
 	case CameraMode::Car:
 		camera = dynamic_cast<helpers::Camera*>(&m_car_camera);
 		m_car_camera.UpdateAspectRatio(static_cast<float>(m_width) / static_cast<float>(m_height));
-		if (m_traffic_system.GetPlayerCar().IsValid())
-		{
-			m_car_camera.UpdateInterpolated(this, m_traffic_system.GetPlayerCar().Get<GameDatabase>().Get<Car>(), elapsed_time);
-		}
+		m_car_camera.UpdateRender();
 		break;
 	}
 
@@ -326,7 +328,7 @@ void BoxCityGame::OnRender(double total_time, float elapsed_time)
 				}
 
 				//Calculate sort key, sort key is 24 bits
-				float camera_distance = glm::length(obb_box.position - camera->GetPosition());
+				float camera_distance = glm::length(obb_box.position - camera->GetInterpolatedPosition());
 				float camera_distance_01 = glm::clamp(camera_distance, 0.f, camera->GetFarPlane()) / camera->GetFarPlane();
 				uint32_t sort_key = static_cast<uint32_t>(camera_distance_01 * ((1 << 24) - 1));
 
@@ -346,7 +348,7 @@ void BoxCityGame::OnRender(double total_time, float elapsed_time)
 			if (helpers::CollisionFrustumVsAABB(*camera, aabb_box) && car_gpu_index.IsValid())
 			{
 				//Calculate sort key, sort key is 24 bits
-				float camera_distance = glm::length(obb_box.position - camera->GetPosition());
+				float camera_distance = glm::length(obb_box.position - camera->GetInterpolatedPosition());
 				float camera_distance_01 = glm::clamp(camera_distance, 0.f, camera->GetFarPlane()) / camera->GetFarPlane();
 				uint32_t sort_key = static_cast<uint32_t>(camera_distance_01 * ((1 << 24) - 1));
 

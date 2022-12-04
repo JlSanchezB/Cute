@@ -60,7 +60,7 @@ namespace BoxCityTrafficSystem
 	{
 	public:
 		//Init
-		void Init(display::Device* device, render::System* render_system, render::GPUMemoryRenderModule* GPU_memory_render_module, const glm::vec3& camera_position);
+		void Init(display::Device* device, render::System* render_system, render::GPUMemoryRenderModule* GPU_memory_render_module);
 
 		//Shutdown
 		void Shutdown();

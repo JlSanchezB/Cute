@@ -12,7 +12,7 @@ namespace BoxCityCarControl
 	{
 	public:
 		//Process input and update the position during the render, so interpolated
-		void UpdateInterpolated(platform::Game* game, Car& car, float ellapsed_time);
+		void Update(platform::Game* game, Car& car, float ellapsed_time);
 
 		CarCamera(const Camera::ZRange z_range) : Camera(Type::Target, z_range)
 		{

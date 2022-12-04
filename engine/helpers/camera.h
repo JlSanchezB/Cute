@@ -5,6 +5,7 @@
 #include <ext/glm/vec2.hpp>
 #include <ext/glm/mat4x4.hpp>
 #include <ext/glm/gtc/constants.hpp>
+#include <core/platform.h>
 
 namespace platform
 {
@@ -59,10 +60,6 @@ namespace helpers
 
 		glm::mat4x4 GetViewProjectionMatrix() const;
 
-		glm::vec3 GetPosition() const
-		{
-			return m_position;
-		}
 		float GetNearPlane() const
 		{
 			return m_near;
@@ -73,6 +70,15 @@ namespace helpers
 			return m_far;
 		}
 
+		glm::vec3 GetPosition() const
+		{
+			return *m_position;
+		}
+
+		glm::vec3 GetInterpolatedPosition() const
+		{
+			return m_position.GetInterpolated();
+		}
 
 		//Set near/far
 		void SetNearFar(const float near, const float far)
@@ -81,19 +87,20 @@ namespace helpers
 			m_far = far;
 		}
 
+		//Update matrices for rendering
+		void UpdateRender();
+
 		Camera(const Type type, const ZRange z_range) : m_type(type), m_z_range(z_range)
 		{
 		}
 	protected:
 
-		void UpdateInternalData();
-
 		//Setup
 		Type m_type;
 		ZRange m_z_range;
-		glm::vec3 m_position = glm::vec3(0.f, 0.f, 0.f);
-		glm::vec2 m_rotation = glm::vec2(0.f, 0.f);
-		glm::vec3 m_target = glm::vec3(0.f, 0.f, 0.f);
+		platform::Interpolated<glm::vec3> m_position;
+		platform::Interpolated<glm::vec2> m_rotation;
+		platform::Interpolated<glm::vec3> m_target;
 		glm::vec3 m_up_vector = glm::vec3(0.f, 0.f, 1.f);
 		float m_fov_y = glm::half_pi<float>();
 		float m_aspect_ratio = 1.f;
@@ -113,7 +120,7 @@ namespace helpers
 	{
 	public:
 		//Process input and update the position
-		void Update(platform::Game* game, float ellapsed_time);
+		void Update(platform::Game* game, float elapsed_time);
 
 		FlyCamera(const Camera::ZRange z_range) : Camera(Type::Rotation, z_range)
 		{
