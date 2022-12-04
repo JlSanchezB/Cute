@@ -129,6 +129,9 @@ namespace
 		//Input state
 		bool m_captured_mouse = false;
 
+		//Cursor state for the game
+		bool m_game_show_cursor = true;
+
 		//Cursor state
 		bool m_show_cursor = true;
 
@@ -239,6 +242,18 @@ namespace
 		static constexpr size_t kNumImguiFrames = 5;
 
 		std::array <ImguiCloneFrameData, kNumImguiFrames> m_imgui_draw_data;
+
+		//Update the cursor visibility if needed
+		void UpdateCursorVisibility()
+		{
+			bool visibility = m_game_show_cursor || m_imgui_menu_enable;
+
+			if (visibility != m_show_cursor)
+			{
+				m_show_cursor = visibility;
+				::ShowCursor(m_show_cursor);
+			}
+		}
 	};
 	
 	//Global platform access
@@ -283,6 +298,8 @@ namespace
 			if (keyboard.VKey == VK_OEM_8 && keyboard.Message == WM_KEYDOWN)
 			{
 				g_Platform->m_imgui_menu_enable = !g_Platform->m_imgui_menu_enable;
+				//Enable or hide the cursor, as it can change because imgui
+				g_Platform->UpdateCursorVisibility();
 			}
 			else
 			{
@@ -705,41 +722,41 @@ namespace
 
 				ImGui::EndMainMenuBar();
 			}
-		}
 
-		if (g_Platform->m_imgui_demo_enable)
-		{
-			//Show Imgui demo
-			ImGui::ShowDemoWindow(&g_Platform->m_imgui_demo_enable);
+			if (g_Platform->m_imgui_demo_enable)
+			{
+				//Show Imgui demo
+				ImGui::ShowDemoWindow(&g_Platform->m_imgui_demo_enable);
+			}
+
+			if (g_Platform->m_imgui_display_stats && g_Platform->m_device)
+			{
+				display::DisplayImguiStats(g_Platform->m_device, &g_Platform->m_imgui_display_stats);
+			}
+
+			if (g_Platform->m_imgui_log_enable)
+			{
+				g_Platform->m_imgui_log_enable = core::LogRender();
+			}
+
+			if (g_Platform->m_imgui_control_variables_enable)
+			{
+				g_Platform->m_imgui_control_variables_enable = core::RenderControlVariables();
+			}
+
+			if (g_Platform->m_imgui_counters_enable)
+			{
+				g_Platform->m_imgui_counters_enable = core::RenderCounters();
+			}
+
+			//Render game imgui
+			game->OnImguiRender();
 		}
 
 		if (g_Platform->m_imgui_fps_enable)
 		{
 			RenderFPSOverlay(g_Platform);
 		}
-
-		if (g_Platform->m_imgui_display_stats && g_Platform->m_device)
-		{
-			display::DisplayImguiStats(g_Platform->m_device, &g_Platform->m_imgui_display_stats);
-		}
-
-		if (g_Platform->m_imgui_log_enable)
-		{
-			g_Platform->m_imgui_log_enable = core::LogRender();
-		}
-
-		if (g_Platform->m_imgui_control_variables_enable)
-		{
-			g_Platform->m_imgui_control_variables_enable = core::RenderControlVariables();
-		}
-
-		if (g_Platform->m_imgui_counters_enable)
-		{
-			g_Platform->m_imgui_counters_enable = core::RenderCounters();
-		}
-
-		//Render game imgui
-		game->OnImguiRender();
 	}
 }
 
@@ -833,11 +850,9 @@ namespace platform
 
 	void Game::ShowCursor(bool show)
 	{
-		if (g_Platform->m_show_cursor != show)
-		{
-			g_Platform->m_show_cursor = show;
-			::ShowCursor(show);
-		}
+		g_Platform->m_game_show_cursor = show;
+
+		g_Platform->UpdateCursorVisibility();
 	}
 
 	void Game::Present()
@@ -961,6 +976,7 @@ namespace platform
 						{
 							//Mark for exit
 							mark_for_exit = true;
+							break;
 						}
 
 						if (game->IsWindowFocus())
