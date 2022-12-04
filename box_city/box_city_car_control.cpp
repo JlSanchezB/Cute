@@ -30,15 +30,15 @@ CONTROL_VARIABLE(float, c_car_X_jaw_angular_force, 0.f, 10.f, 0.05f, "Car", "Y J
 CONTROL_VARIABLE(float, c_car_X_linear_force, 0.f, 10.f, 0.01f, "Car", "Y Linear Force");
 
 //Forward
-CONTROL_VARIABLE(float, c_car_foward_force, 0.f, 10000.f, 200.0f, "Car", "Foward Force");
+CONTROL_VARIABLE(float, c_car_foward_force, 0.f, 10000.f, 300.0f, "Car", "Foward Force");
 
 //Friction
 CONTROL_VARIABLE(float, c_car_friction_linear_force, 0.f, 10.f, 1.8f, "Car", "Linear Friction Force");
 CONTROL_VARIABLE(float, c_car_friction_angular_force, 0.f, 10.f, 1.8f, "Car", "Angular Friction Force");
 
 
-CONTROL_VARIABLE(float, c_car_camera_distance, 0.f, 100.f, 11.f, "Car", "Camera Distance");
-CONTROL_VARIABLE(float, c_car_camera_up_offset, 0.f, 100.f, 4.f, "Car", "Camera Up Offset");
+CONTROL_VARIABLE(float, c_car_camera_distance, 0.f, 100.f, 4.5f, "Car", "Camera Distance");
+CONTROL_VARIABLE(float, c_car_camera_up_offset, 0.f, 100.f, 1.f, "Car", "Camera Up Offset");
 CONTROL_VARIABLE(float, c_car_camera_fov, 60.f, 180.f, 100.f, "Car", "Camera Fov");
 
 namespace BoxCityCarControl
