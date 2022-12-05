@@ -1,6 +1,7 @@
 #include "box_city_car_control.h"
 #include <core/control_variables.h>
 #include <core/platform.h>
+#include "box_city_tile_manager.h"
 
 //List of control variables
 
@@ -31,6 +32,7 @@ CONTROL_VARIABLE(float, c_car_X_linear_force, 0.f, 10.f, 0.01f, "Car", "Y Linear
 
 //Forward
 CONTROL_VARIABLE(float, c_car_foward_force, 0.f, 10000.f, 300.0f, "Car", "Foward Force");
+CONTROL_VARIABLE(float, c_car_foward_kill_height_force, 0.f, 100.f, 2.0f, "Car", "Foward Kill Heigth Force");
 
 //Friction
 CONTROL_VARIABLE(float, c_car_friction_linear_force, 0.f, 10.f, 1.8f, "Car", "Linear Friction Force");
@@ -178,7 +180,22 @@ namespace BoxCityCarControl
 		}
 		//Apply forward, it will allow to go up/down and left/right when rolling
 		{
-			linear_forces += car_control.foward * c_car_foward_force * car_front_vector;
+			glm::vec3 foward_force = car_control.foward * c_car_foward_force * car_front_vector;
+
+			//Will up force if it is over the world
+			float distance_top = (*car.position).z - BoxCityTileSystem::kTileHeightTop;
+			if (distance_top > 0.f)
+			{
+				foward_force.z -= distance_top * c_car_foward_kill_height_force;
+			}
+
+			float distance_bottom = (*car.position).z - BoxCityTileSystem::kTileHeightBottom;
+			if (distance_bottom < 0.f)
+			{
+				foward_force.z -= distance_bottom * c_car_foward_kill_height_force;
+			}
+			
+			linear_forces += foward_force;
 		}
 
 		//Apply friction

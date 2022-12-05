@@ -130,10 +130,12 @@ namespace BoxCityTrafficSystem
 					const float begin_tile_x = world_tile.i * kTileSize;
 					const float begin_tile_y = world_tile.j * kTileSize;
 					
+					const float kExtraTopBottomRange = 500.f;
+
 					//Update tile
 					tile.m_tile_position = world_tile;
-					tile.m_bounding_box.min = glm::vec3(begin_tile_x, begin_tile_y, BoxCityTileSystem::kTileHeightBottom);
-					tile.m_bounding_box.max = glm::vec3(begin_tile_x + kTileSize, begin_tile_y + kTileSize, BoxCityTileSystem::kTileHeightTop);
+					tile.m_bounding_box.min = glm::vec3(begin_tile_x, begin_tile_y, BoxCityTileSystem::kTileHeightBottom - kExtraTopBottomRange);
+					tile.m_bounding_box.max = glm::vec3(begin_tile_x + kTileSize, begin_tile_y + kTileSize, BoxCityTileSystem::kTileHeightTop + kExtraTopBottomRange);
 					
 					std::mt19937 random(static_cast<uint32_t>((100000 + world_tile.i) + (100000 + world_tile.j) * kLocalTileCount));
 
