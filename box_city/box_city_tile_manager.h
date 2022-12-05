@@ -99,6 +99,48 @@ namespace BoxCityTileSystem
 
 		//Return a descriptor index for a position, if there is not a descriptor, it is just a gap
 		std::optional<uint32_t> GetZoneDescriptorIndex(const glm::vec3& position);
+
+		template<class VISITOR>
+		void VisitTiles(const helpers::AABB& box, VISITOR&& visitor)
+		{
+			WorldTilePosition min_tile = CalculateWorldPositionToWorldTile(box.min);
+			WorldTilePosition max_tile = CalculateWorldPositionToWorldTile(box.max);
+
+			//Because the tiles can overlap a little, we need to check the neighbourn tiles
+			min_tile.i = glm::clamp(min_tile.i - 1, m_camera_tile_position.i - kLocalTileCount / 2, m_camera_tile_position.i + kLocalTileCount / 2);
+			min_tile.j = glm::clamp(min_tile.j - 1, m_camera_tile_position.j - kLocalTileCount / 2, m_camera_tile_position.j + kLocalTileCount / 2);
+			max_tile.i = glm::clamp(max_tile.i + 1, m_camera_tile_position.i - kLocalTileCount / 2, m_camera_tile_position.i + kLocalTileCount / 2);
+			max_tile.j = glm::clamp(max_tile.j + 1, m_camera_tile_position.j - kLocalTileCount / 2, m_camera_tile_position.j + kLocalTileCount / 2);
+
+			//Loop to all tiles
+			for (int32_t ii = min_tile.i; ii <= max_tile.i; ++ii)
+				for (int32_t jj = min_tile.j; jj <= max_tile.j; ++jj)
+				{
+					WorldTilePosition it{ ii, jj };
+					Tile& tile = GetTile(CalculateLocalTileIndex(it));
+					//Check the collision
+					if (helpers::CollisionAABBVsAABB(tile.GetBoundingBox(), box))
+					{
+						visitor(tile);
+					}
+				}
+
+		}
+
+		//Visit buildings bvh
+		template<class VISITOR>
+		void VisitBuildings(const helpers::AABB& box, VISITOR& visitor)
+		{
+			//Loop to all tiles around the box
+			VisitTiles(box, [&](Tile& tile)
+				{
+					tile.GetBuildingsBVH().Visit(box, [&](const InstanceReference& instance)
+						{
+							//call our visitor with all the instances
+							visitor(instance);
+						});
+				});
+		}
 	private:
 		//System
 		display::Device* m_device = nullptr;

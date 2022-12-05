@@ -132,6 +132,17 @@ namespace BoxCityTileSystem
 		helpers::AABB GetBoundingBox() const { return m_bounding_box;}
 		WorldTilePosition GetWorldTilePosition() const { return m_tile_position;}
 
+		struct LinearBVHBuildingSettings
+		{
+			using IndexType = uint32_t;
+			void SetLeafIndex(InstanceReference& instance, uint32_t) {}
+			helpers::AABB GetAABB(const InstanceReference& instance) { return instance.Get<GameDatabase>().Get<AABBBox>(); }
+		};
+		helpers::LinearBVH<InstanceReference, LinearBVHBuildingSettings>& GetBuildingsBVH()
+		{
+			return m_building_bvh;
+		}
+
 		//Call to indicate that has been added in the queue for loading
 		void AddedToLoadingQueue();
 	private:
@@ -181,12 +192,6 @@ namespace BoxCityTileSystem
 		std::array<render::AllocHandle, static_cast<size_t>(LODGroup::Count)> m_gpu_allocation;
 
 		//LBVH for building instances
-		struct LinearBVHBuildingSettings
-		{
-			using IndexType = uint32_t;
-			void SetLeafIndex(InstanceReference& instance, uint32_t) {}
-			helpers::AABB GetAABB(const InstanceReference& instance) { return instance.Get<GameDatabase>().Get<AABBBox>(); }
-		};
 		helpers::LinearBVH<InstanceReference, LinearBVHBuildingSettings> m_building_bvh;
 
 		void SetState(State new_state)
