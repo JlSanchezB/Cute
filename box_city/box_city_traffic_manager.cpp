@@ -130,7 +130,7 @@ namespace BoxCityTrafficSystem
 					const float begin_tile_x = world_tile.i * kTileSize;
 					const float begin_tile_y = world_tile.j * kTileSize;
 					
-					const float kExtraTopBottomRange = 500.f;
+					const float kExtraTopBottomRange = 200.f;
 
 					//Update tile
 					tile.m_tile_position = world_tile;

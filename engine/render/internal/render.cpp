@@ -941,7 +941,7 @@ namespace render
 					}
 
 					//Last item found
-					sorted_render_items.m_priority_table[priority].second = std::min(render_item_index, num_sorted_render_items - 1);
+					sorted_render_items.m_priority_table[priority].second = (render_item_index - 1);
 				}
 				else
 				{

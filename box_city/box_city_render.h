@@ -39,7 +39,7 @@ public:
 			const size_t begin_render_item = sorted_render_items.m_priority_table[m_priority].first;
 			const size_t end_render_item = sorted_render_items.m_priority_table[m_priority].second;
 
-			if (begin_render_item < end_render_item)
+			if (begin_render_item != -1)
 			{
 				//Allocate a buffer that for each box has an offset to the box data
 				auto* gpu_memory = render::GetModule<render::GPUMemoryRenderModule>(render_context.GetRenderSystem(), "GPUMemory"_sh32);
