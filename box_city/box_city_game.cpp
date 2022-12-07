@@ -238,7 +238,7 @@ void BoxCityGame::OnLogic(double total_time, float elapsed_time)
 
 	//Update cars
 	job::Fence update_cars_fence;
-	m_traffic_system.UpdateCars(this, m_job_system, m_update_job_allocator.get(), *camera, update_cars_fence, elapsed_time);
+	m_traffic_system.UpdateCars(this, m_job_system, m_update_job_allocator.get(), *camera, update_cars_fence, &m_tile_manager, elapsed_time);
 
 
 	job::Wait(m_job_system, update_attachments_fence);

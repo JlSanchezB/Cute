@@ -13,12 +13,12 @@ namespace helpers
 {
 	struct AABB
 	{
-		glm::vec3 min = glm::vec3(FLT_MIN, FLT_MIN, FLT_MIN);
-		glm::vec3 max = glm::vec3(FLT_MAX, FLT_MAX, FLT_MAX);
+		glm::vec3 min = glm::vec3(FLT_MAX, FLT_MAX, FLT_MAX);
+		glm::vec3 max = glm::vec3(FLT_MIN, FLT_MIN, FLT_MIN);
 
 		bool IsValid() const
 		{
-			return min.x < max.x;
+			return min.x <= max.x;
 		}
 
 		void Add(const AABB& b)
@@ -179,6 +179,44 @@ namespace helpers
 		output.min = source.position - half_distance;
 		output.max = source.position + half_distance;
 	}
+
+	inline void CalculateClosestPointsInTwoSegments(const glm::vec3& segment_a_begin, const glm::vec3& segment_a_end,
+		const glm::vec3& segment_b_begin, const glm::vec3& segment_b_end,
+		glm::vec3& segment_a_point, glm::vec3& segment_b_point,
+		float& t_a, float& t_b)
+	{
+		glm::vec3 P1 = segment_a_begin;
+		glm::vec3 P2 = segment_b_begin;
+		glm::vec3 V1 = segment_a_end - segment_a_begin;
+		glm::vec3 V2 = segment_b_end - segment_b_begin;
+		glm::vec3 V21 = P2 - P1;
+
+		float v22 = glm::dot(V2, V2);
+		float v11 = glm::dot(V1, V1);
+		float v21 = glm::dot(V2, V1);
+		float v21_1 = glm::dot(V21, V1);
+		float v21_2 = glm::dot(V21, V2);
+		float denom = v21 * v21 - v22 * v11;
+
+		float s, t;
+		if (glm::abs<float>(denom) < 0.0001f)
+		{
+			s = 0.f;
+			t = (v11 * s - v21_1) / v21;
+		}
+		else
+		{
+			s = (v21_2 * v21 - v22 * v21_1) / denom;
+			t = (-v21_1 * v21 + v11 * v21_2) / denom;
+		}
+
+		t_a = glm::clamp(s, 0.f, 1.f);
+		t_b = glm::clamp(t, 0.f, 1.f);
+
+		segment_a_point = P1 + t_a * V1;
+		segment_b_point = P2 + t_b * V2;
+	}
+
 }
 
 #endif //CAMERA_H
