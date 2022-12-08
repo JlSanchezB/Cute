@@ -46,10 +46,10 @@ CONTROL_VARIABLE(float, c_car_camera_fov, 60.f, 180.f, 100.f, "Car", "Camera Fov
 CONTROL_VARIABLE(float, c_car_ai_forward, 0.f, 1.f, 0.5f, "Car", "Camera AI foward");
 CONTROL_VARIABLE(float, c_car_ai_target_speed, 0.f, 1.f, 5.f, "Car", "Camera AI target speed");
 CONTROL_VARIABLE(float, c_car_ai_avoidance_calculation_distance, 0.f, 10000.f, 1000.f, "Car", "Camera AI avoidance calculation distance");
-CONTROL_VARIABLE(float, c_car_ai_visibility_distance, 0.f, 10.f, 150.f, "Car", "Camera AI visibility distance");
-CONTROL_VARIABLE(float, c_car_ai_visibility_fov, 0.f, 100.f, 60.f, "Car", "Camera AI visibility fov");
+CONTROL_VARIABLE(float, c_car_ai_visibility_distance, 0.f, 10.f, 100.f, "Car", "Camera AI visibility distance");
 CONTROL_VARIABLE(float, c_car_ai_avoidance_extra_distance, 0.f, 1000.f, 20.f, "Car", "Camera AI avoidance extra distance with building");
-CONTROL_VARIABLE(float, c_car_ai_avoidance_top_extra_distance, 0.f, 1000.f, 30.f, "Car", "Camera AI avoidance extra distance with building top building");
+CONTROL_VARIABLE(float, c_car_ai_avoidance_distance_expansion, 0.f, 1000.f, 50.f, "Car", "Camera AI avoidance extra expansion apply to buildings when far");
+CONTROL_VARIABLE(float, c_car_ai_avoidance_slow_factor, 0.f, 1.f, 0.3f, "Car", "Camera AI avoidance slow factor");
 
 namespace BoxCityCarControl
 {
@@ -128,12 +128,12 @@ namespace BoxCityCarControl
 		const glm::vec3 car_top = glm::row(car_matrix, 2);
 		const glm::vec3 car_left_flat = glm::normalize(glm::vec3(car_left.x, car_left.y, 0.f));
 		const glm::vec3 car_position = *car.position;
+		const float car_radius = glm::length2(car_settings.size);
 
 		//Calculate X and Y control for the car
 		car_control.foward = c_car_ai_forward;
 
 		//Calculate avoidance
-		float distance_to_collision = c_car_ai_visibility_distance;
 		glm::vec2 avoidance_target(0.f, 0.f);
 
 		if (glm::distance2(camera_pos, car_position) < c_car_ai_avoidance_calculation_distance * c_car_ai_avoidance_calculation_distance)
@@ -142,19 +142,12 @@ namespace BoxCityCarControl
 
 			//Calculate visibility AABB
 			helpers::AABB car_frustum;
-			car_frustum.Add(car_position);
+			car_frustum.Add(car_position - car_direction * c_car_ai_visibility_distance * 0.05f);
 
-			car_frustum.Add(car_position + car_left * c_car_ai_visibility_distance + car_direction * c_car_ai_visibility_distance);
-			car_frustum.Add(car_position - car_left * c_car_ai_visibility_distance + car_direction * c_car_ai_visibility_distance);
-			car_frustum.Add(car_position + car_top * c_car_ai_visibility_distance + car_direction * c_car_ai_visibility_distance);
-			car_frustum.Add(car_position - car_top * c_car_ai_visibility_distance + car_direction * c_car_ai_visibility_distance);
-
-			//car_frustum.Add(car_position);
-			//float side_distance = glm::sin(c_car_ai_visibility_fov / 2.f) * c_car_ai_visibility_distance;
-			//car_frustum.Add(car_matrix * glm::vec3(side_distance, c_car_ai_visibility_distance, side_distance) + car_position);
-			//car_frustum.Add(car_matrix * glm::vec3(-side_distance, c_car_ai_visibility_distance, side_distance) + car_position);
-			//car_frustum.Add(car_matrix * glm::vec3(side_distance, c_car_ai_visibility_distance, -side_distance) + car_position);
-			//car_frustum.Add(car_matrix * glm::vec3(-side_distance, c_car_ai_visibility_distance, -side_distance) + car_position);
+			car_frustum.Add(car_position + car_left_flat * c_car_ai_visibility_distance + car_direction * c_car_ai_visibility_distance);
+			car_frustum.Add(car_position - car_left_flat * c_car_ai_visibility_distance + car_direction * c_car_ai_visibility_distance);
+			car_frustum.Add(car_position + glm::vec3(0.f, 0.f, 1.f) * c_car_ai_visibility_distance + car_direction * c_car_ai_visibility_distance);
+			car_frustum.Add(car_position - glm::vec3(0.f, 0.f, 1.f) * c_car_ai_visibility_distance + car_direction * c_car_ai_visibility_distance);
 
 			//List all buldings colliding with this visibility AABB
 			manager->VisitBuildings(car_frustum, [&](const InstanceReference& building)
@@ -163,66 +156,64 @@ namespace BoxCityCarControl
 					
 					glm::vec3 box_point, car_point;
 					float box_t, car_t;
-					helpers::CalculateClosestPointsInTwoSegments(car_position - car_direction * (c_car_ai_visibility_distance * 0.05f), car_position + car_direction * (c_car_ai_visibility_distance),
-						avoid_box.position - glm::row(avoid_box.rotation, 2) * (avoid_box.extents.z + c_car_ai_avoidance_top_extra_distance), avoid_box.position + glm::row(avoid_box.rotation, 2) * (avoid_box.extents.z + c_car_ai_avoidance_top_extra_distance),
-						car_point, box_point, car_t, box_t);
 
-					if (car_t == 0.f || car_t == 1.f) return;
-					if (box_t == 0.f || box_t == 1.f) return;
-					if (car_t > distance_to_collision) return; //Nothing more to do
+					//Building top and bottom points
+					const glm::vec3 building_bottom = avoid_box.position - glm::row(avoid_box.rotation, 2) * (avoid_box.extents.z );
+					const glm::vec3 building_top = avoid_box.position + glm::row(avoid_box.rotation, 2) * (avoid_box.extents.z);
 
-					//Calculate distance between the points and check with the wide of the box, that is good for the caps as well
-					if (glm::length2(car_point - box_point) < (glm::pow2(avoid_box.extents.x) + glm::pow2(avoid_box.extents.y) + glm::pow2(car_settings.size.x + c_car_ai_avoidance_extra_distance)))
+					//Avoid buildings in front
 					{
-						//It is going to collide
-						if (car_t < distance_to_collision)
+						helpers::CalculateClosestPointsInTwoSegments(car_position - car_direction * (c_car_ai_visibility_distance * 0.05f), car_position + car_direction * (c_car_ai_visibility_distance),
+							building_bottom, building_top,
+							car_point, box_point, car_t, box_t);
+
+						float expansion = car_t * c_car_ai_avoidance_distance_expansion;
+						//Calculate distance between the points and check with the wide of the box, that is good for the caps as well
+						if (glm::length(car_point - box_point) < (glm::sqrt(glm::pow2(avoid_box.extents.x) + glm::pow2(avoid_box.extents.y)) +  expansion + car_radius + c_car_ai_avoidance_extra_distance))
 						{
+							//It is going to collide
 							//You need to avoid box_point
 							glm::vec3 car_avoid_direction = glm::normalize(box_point - car_position);
 
-							avoidance_target.x = glm::dot(car_avoid_direction, car_left_flat);
-							avoidance_target.x = (glm::sign<float>(avoidance_target.x) - avoidance_target.x) * 20.f;
-							avoidance_target.y = car_avoid_direction.z;
-							avoidance_target.y = (glm::sign<float>(avoidance_target.y) - avoidance_target.y) * 20.f;
+							float xx = glm::dot(car_avoid_direction, car_left_flat);
+							avoidance_target.x += (glm::sign<float>(xx) - xx) * (100.f);
+							float yy = car_avoid_direction.z;
+							avoidance_target.y += (glm::sign<float>(yy) - yy) * (100.f);
 
-							distance_to_collision = car_t;
+							car_control.foward -= c_car_ai_avoidance_slow_factor * (1.f - car_t);
 						}
 					}
+
+
+
 					
 				}
 			);
 		}
 
-		float target_x = 0.f;
-		float target_y = 0.f;
+		float target_x = avoidance_target.x;
+		float target_y = avoidance_target.y;
 
-		if (distance_to_collision != c_car_ai_visibility_distance)
+		//Calculate the angles between the car direction and they target
+		glm::vec3 car_target_direction = glm::normalize(car_target.target - car_position);
+
+		if (glm::dot(car_front, car_target_direction) < 0.f)
 		{
-			target_x = avoidance_target.x;
-			target_y = avoidance_target.y;
+			//It is behind, needs to rotate
+			target_x += (glm::dot(car_target_direction, car_left)) > 0.f ? -1.f : 1.f;
 		}
 		else
 		{
-			//Calculate the angles between the car direction and they target
-			glm::vec3 car_target_direction = glm::normalize(car_target.target - car_position);
-
-			if (glm::dot(car_front, car_target_direction) < 0.f)
-			{
-				//It is behind, needs to rotate
-				target_x = (glm::dot(car_target_direction, car_left)) > 0.f ? -1.f : 1.f;
-			}
-			else
-			{
-				target_x = -glm::dot(car_target_direction, car_left);
-			}
-			target_y = -car_target_direction.z;
+			target_x += -glm::dot(car_target_direction, car_left);
 		}
+		target_y += -car_target_direction.z;
 
 		car_control.X_target = glm::mix(car_control.X_target, target_x, glm::clamp(c_car_ai_target_speed * elapsed_time, 0.f, 1.f));
 		car_control.Y_target = glm::mix(car_control.Y_target, target_y, glm::clamp(c_car_ai_target_speed * elapsed_time, 0.f, 1.f));
 
 		car_control.X_target = glm::clamp(target_x, -c_car_X_range, c_car_X_range);
 		car_control.Y_target = glm::clamp(target_y, -c_car_Y_range, c_car_Y_range);
+		car_control.foward = glm::clamp(car_control.foward, 0.f, 1.f);
 	}
 
 	void CalculateForcesAndIntegrateCar(Car& car, CarMovement& car_movement, CarSettings& car_settings, CarControl& car_control, float elapsed_time)
@@ -230,12 +221,13 @@ namespace BoxCityCarControl
 		glm::vec3 linear_forces (0.f, 0.f, 0.f);
 		glm::vec3 angular_forces(0.f, 0.f, 0.f);
 
-		glm::mat3x3 car_matrix = glm::toMat3(*car.rotation);
+		const glm::mat3x3 car_matrix = glm::toMat3(*car.rotation);
 
-		glm::vec3 car_left_vector = glm::row(car_matrix, 0);
-		glm::vec3 car_front_vector = glm::row(car_matrix, 1);
-		glm::vec3 car_up_vector = glm::row(car_matrix, 2);
-		glm::vec3 up_vector(0.f, 0.f, 1.f);
+		const glm::vec3 car_left_vector = glm::row(car_matrix, 0);
+		const glm::vec3 car_front_vector = glm::row(car_matrix, 1);
+		const glm::vec3 car_up_vector = glm::row(car_matrix, 2);
+		const glm::vec3 up_vector(0.f, 0.f, 1.f);
+		const glm::vec3 car_left_flat = glm::normalize(glm::vec3(car_left_vector.x, car_left_vector.y, 0.f));
 
 		//Apply car Y target forces
 		{
@@ -244,7 +236,7 @@ namespace BoxCityCarControl
 			float diff_angle = target - (glm::angle(car_front_vector, up_vector) - glm::half_pi<float>());
 
 			//Convert it into angular force
-			angular_forces += car_left_vector * diff_angle * c_car_Y_pitch_force;
+			angular_forces += car_left_flat * diff_angle * c_car_Y_pitch_force;
 		}
 		//Apply car X target forces
 		{
@@ -254,8 +246,8 @@ namespace BoxCityCarControl
 
 			//Generate roll forces
 			angular_forces += car_front_vector * diff_angle * c_car_X_roll_angular_force;
-			angular_forces -= car_up_vector * c_car_X_jaw_angular_force * car_control.X_target;
-			linear_forces += glm::vec3(car_left_vector.x, car_left_vector.y, 0.f) * c_car_X_linear_force * car_control.X_target;
+			angular_forces -= up_vector * c_car_X_jaw_angular_force * car_control.X_target;
+			linear_forces += car_left_flat * c_car_X_linear_force * car_control.X_target;
 		}
 		//Apply forward, it will allow to go up/down and left/right when rolling
 		{

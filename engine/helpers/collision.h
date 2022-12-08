@@ -180,6 +180,24 @@ namespace helpers
 		output.max = source.position + half_distance;
 	}
 
+	inline void CalculateProjectionPointToSegment(const glm::vec3& point,
+		const glm::vec3& segment_begin, const glm::vec3& segment_end,
+		float& projected_delta)
+	{
+		glm::vec3 AB = segment_end - segment_begin;
+		float AB_squared = glm::dot(AB, AB);
+		if (AB_squared == 0.f)
+		{
+			projected_delta = 0.f;
+		}
+		else
+		{
+			glm::vec3 Ap = point - segment_begin;
+			float t = glm::dot(Ap, AB) / AB_squared;
+			projected_delta = glm::clamp(projected_delta, 0.f, 1.f);
+		}
+	}
+
 	inline void CalculateClosestPointsInTwoSegments(const glm::vec3& segment_a_begin, const glm::vec3& segment_a_end,
 		const glm::vec3& segment_b_begin, const glm::vec3& segment_b_end,
 		glm::vec3& segment_a_point, glm::vec3& segment_b_point,
