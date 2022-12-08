@@ -14,7 +14,7 @@
 PROFILE_DEFINE_MARKER(g_profile_marker_Car_Update, "Main", 0xFFFFAAAA, "CarUpdate");
 
 //List of control variables
-CONTROL_VARIABLE(float, c_car_target_range, 1.f, 10000.f, 1000.f, "Traffic", "Car target range");
+CONTROL_VARIABLE(float, c_car_target_range, 1.f, 10000.f, 2000.f, "Traffic", "Car target range");
 
 
 namespace BoxCityTrafficSystem
@@ -258,7 +258,7 @@ namespace BoxCityTrafficSystem
 				}
 
 				//Calculate if it needs retargetting
-				if (glm::length2(*car.position - car_target.target) < 50.f * 50.f)
+				if (glm::length2(*car.position - car_target.target) < 100.f * 100.f)
 				{
 					//Retarget
 					manager->SetupCarTarget(random_thread_local, car, car_target);
