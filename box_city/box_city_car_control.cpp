@@ -24,11 +24,12 @@ CONTROL_VARIABLE(float, c_car_foward_keyboard_factor, 0.f, 10.f, 1.25f, "Car", "
 
 //Pitch control
 CONTROL_VARIABLE(float, c_car_Y_pitch_force, 0.f, 10.f, 0.02f, "Car", "Y Pitch Force");
+CONTROL_VARIABLE(float, c_car_Y_pitch_linear_force, 0.f, 10.f, 0.01f, "Car", "Y Pitch Linear Force");
 
 //Roll control
-CONTROL_VARIABLE(float, c_car_X_roll_angular_force, 0.f, 10.f, 0.02f, "Car", "Y Roll Angular Force");
-CONTROL_VARIABLE(float, c_car_X_jaw_angular_force, 0.f, 10.f, 0.05f, "Car", "Y Jaw Angular Force");
-CONTROL_VARIABLE(float, c_car_X_linear_force, 0.f, 10.f, 0.01f, "Car", "Y Linear Force");
+CONTROL_VARIABLE(float, c_car_X_roll_angular_force, 0.f, 10.f, 0.02f, "Car", "X Roll Angular Force");
+CONTROL_VARIABLE(float, c_car_X_jaw_angular_force, 0.f, 10.f, 0.05f, "Car", "X Jaw Angular Force");
+CONTROL_VARIABLE(float, c_car_X_linear_force, 0.f, 10.f, 0.01f, "Car", "X Linear Force");
 
 //Forward
 CONTROL_VARIABLE(float, c_car_foward_force, 0.f, 10000.f, 300.0f, "Car", "Foward Force");
@@ -43,7 +44,8 @@ CONTROL_VARIABLE(float, c_car_camera_distance, 0.f, 100.f, 4.5f, "Car", "Camera 
 CONTROL_VARIABLE(float, c_car_camera_up_offset, 0.f, 100.f, 1.f, "Car", "Camera Up Offset");
 CONTROL_VARIABLE(float, c_car_camera_fov, 60.f, 180.f, 100.f, "Car", "Camera Fov");
 
-CONTROL_VARIABLE(float, c_car_ai_forward, 0.f, 1.f, 0.5f, "Car", "Camera AI foward");
+CONTROL_VARIABLE(float, c_car_ai_forward, 0.f, 1.f, 0.8f, "Car", "Camera AI foward");
+CONTROL_VARIABLE(float, c_car_ai_min_forward, 0.f, 1.f, 0.3f, "Car", "Camera AI min foward");
 CONTROL_VARIABLE(float, c_car_ai_target_speed, 0.f, 1.f, 5.f, "Car", "Camera AI target speed");
 CONTROL_VARIABLE(float, c_car_ai_avoidance_calculation_distance, 0.f, 10000.f, 1000.f, "Car", "Camera AI avoidance calculation distance");
 CONTROL_VARIABLE(float, c_car_ai_visibility_distance, 0.f, 10.f, 100.f, "Car", "Camera AI visibility distance");
@@ -182,13 +184,11 @@ namespace BoxCityCarControl
 
 							car_control.foward -= c_car_ai_avoidance_slow_factor * (1.f - car_t);
 						}
-					}
-
-
-
-					
+					}	
 				}
 			);
+
+			car_control.foward = glm::max(car_control.foward, c_car_ai_min_forward);
 		}
 
 		float target_x = avoidance_target.x;
@@ -237,6 +237,7 @@ namespace BoxCityCarControl
 
 			//Convert it into angular force
 			angular_forces += car_left_flat * diff_angle * c_car_Y_pitch_force;
+			linear_forces += car_up_vector * c_car_Y_pitch_linear_force * car_control.Y_target;
 		}
 		//Apply car X target forces
 		{
