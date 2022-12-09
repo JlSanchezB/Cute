@@ -51,8 +51,10 @@ CONTROL_VARIABLE(float, c_car_ai_avoidance_calculation_distance, 0.f, 10000.f, 1
 CONTROL_VARIABLE(float, c_car_ai_visibility_distance, 0.f, 10.f, 100.f, "Car", "Camera AI visibility distance");
 CONTROL_VARIABLE(float, c_car_ai_avoidance_extra_distance, 0.f, 1000.f, 20.f, "Car", "Camera AI avoidance extra distance with building");
 CONTROL_VARIABLE(float, c_car_ai_avoidance_distance_expansion, 0.f, 1000.f, 50.f, "Car", "Camera AI avoidance extra expansion apply to buildings when far");
-CONTROL_VARIABLE(float, c_car_ai_avoidance_slow_factor, 0.f, 1.f, 0.3f, "Car", "Camera AI avoidance slow factor");
-
+CONTROL_VARIABLE(float, c_car_ai_avoidance_slow_factor, 0.f, 1.f, 0.3f, "Car", "Car AI avoidance slow factor");
+CONTROL_VARIABLE(float, c_car_ai_target_range, 1.f, 10000.f, 2000.f, "Car", "Car AI target range");
+CONTROL_VARIABLE(float, c_car_ai_min_target_range, 1.f, 10000.f, 500.f, "Car", "Car AI min target range");
+CONTROL_VARIABLE(float, c_car_ai_min_target_distance, 1.f, 10000.f, 100.f, "Car", "Car AI min target distance");
 namespace BoxCityCarControl
 {
 	void CarCamera::Update(platform::Game* game, Car& car, float elapsed_time)
@@ -122,7 +124,24 @@ namespace BoxCityCarControl
 		}
 	}
 
-	void UpdateAIControl(CarControl& car_control, const Car& car, const CarMovement& car_movement, const CarSettings& car_settings, const CarTarget& car_target, float elapsed_time, BoxCityTileSystem::Manager* manager, const glm::vec3& camera_pos)
+	void SetupCarTarget(std::mt19937& random, const Car& car, CarTarget& car_target)
+	{
+		//Calculate a new position as target
+		std::uniform_real_distribution<float> position_range(-c_car_ai_target_range + c_car_ai_min_target_range, c_car_ai_target_range - c_car_ai_min_target_range);
+		std::uniform_real_distribution<float> position_range_z(BoxCityTileSystem::kTileHeightBottom, BoxCityTileSystem::kTileHeightTop);
+
+		float range_x = position_range(random);
+		float range_y = position_range(random);
+
+		//Add the min target distance
+		range_x += glm::sign(range_x) * c_car_ai_min_target_range;
+		range_y += glm::sign(range_x) * c_car_ai_min_target_range;
+
+		car_target.target = glm::vec3((*car.position).x + range_x, (*car.position).y + range_y, position_range_z(random));
+
+	}
+
+	void UpdateAIControl(std::mt19937& random, CarControl& car_control, const Car& car, const CarMovement& car_movement, const CarSettings& car_settings, CarTarget& car_target, float elapsed_time, BoxCityTileSystem::Manager* manager, const glm::vec3& camera_pos)
 	{
 		const glm::mat3x3 car_matrix = glm::toMat3(*car.rotation);
 		const glm::vec3 car_left = glm::row(car_matrix, 0);
@@ -193,6 +212,14 @@ namespace BoxCityCarControl
 
 		float target_x = avoidance_target.x;
 		float target_y = avoidance_target.y;
+
+		//Calculate if it needs retargetting
+		if (glm::length2(*car.position - car_target.target) < c_car_ai_min_target_distance * c_car_ai_min_target_distance)
+		{
+			//Retarget
+			SetupCarTarget(random, car, car_target);
+		}
+
 
 		//Calculate the angles between the car direction and they target
 		glm::vec3 car_target_direction = glm::normalize(car_target.target - car_position);

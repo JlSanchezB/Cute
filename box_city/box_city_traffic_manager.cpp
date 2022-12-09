@@ -13,12 +13,10 @@
 
 PROFILE_DEFINE_MARKER(g_profile_marker_Car_Update, "Main", 0xFFFFAAAA, "CarUpdate");
 
-//List of control variables
-CONTROL_VARIABLE(float, c_car_target_range, 1.f, 10000.f, 2000.f, "Traffic", "Car target range");
-
-
 namespace BoxCityTrafficSystem
 {
+	thread_local std::mt19937 random_thread_local(std::random_device{}());
+
 	void Manager::Init(display::Device* device, render::System* render_system, render::GPUMemoryRenderModule* GPU_memory_render_module)
 	{
 		m_device = device;
@@ -86,15 +84,6 @@ namespace BoxCityTrafficSystem
 		m_GPU_memory_render_module->UpdateStaticGPUMemory(m_device, m_gpu_memory, &gpu_box_instance, sizeof(GPUBoxInstance), render::GetGameFrameIndex(m_render_system), car_gpu_index.gpu_slot * sizeof(GPUBoxInstance));
 	}
 
-	void Manager::SetupCarTarget(std::mt19937& random, Car& car, CarTarget& car_target)
-	{
-		//Calculate a new position as target
-		std::uniform_real_distribution<float> position_range(-c_car_target_range, c_car_target_range);
-		std::uniform_real_distribution<float> position_range_z(BoxCityTileSystem::kTileHeightBottom, BoxCityTileSystem::kTileHeightTop);
-
-		car_target.target = glm::vec3((*car.position).x + position_range(random), (*car.position).y + position_range(random), position_range_z(random));
-	}
-
 	void Manager::Update(const glm::vec3& camera_position)
 	{
 		PROFILE_SCOPE("BoxCityTrafficManager", 0xFFFF77FF, "Update");
@@ -157,7 +146,7 @@ namespace BoxCityTrafficSystem
 								SetupCar(tile, random, begin_tile_x, begin_tile_y, position_range, position_range_z, size_range,
 								car, car_movement, car_settings, obb_box_component, aabb_box_component, car_gpu_index);
 
-								SetupCarTarget(random, car, car_target);
+								BoxCityCarControl::SetupCarTarget(random, car, car_target);
 							}, bitset);
 					}
 					else if (!tile.m_activated)
@@ -181,7 +170,7 @@ namespace BoxCityTrafficSystem
 								car, car_movement, car_settings, obb_box_component, aabb_box_component, car_gpu_index);
 							
 							CarTarget car_target;
-							SetupCarTarget(random, car, car_target);
+							BoxCityCarControl::SetupCarTarget(random, car, car_target);
 
 							Instance instance = ecs::AllocInstance<GameDatabase, CarType>(tile.m_zone_index)
 								.Init<Car>(car)
@@ -206,8 +195,6 @@ namespace BoxCityTrafficSystem
 			}
 		}
 	}
-	
-	thread_local std::mt19937 random_thread_local (std::random_device{}());
 
 	void Manager::UpdateCars(platform::Game* game, job::System* job_system, job::JobAllocator<1024 * 1024>* job_allocator, const helpers::Camera& camera, job::Fence& update_fence, BoxCityTileSystem::Manager* tile_manager, float elapsed_time)
 	{
@@ -227,7 +214,7 @@ namespace BoxCityTrafficSystem
 				else
 				{
 					//AI car
-					BoxCityCarControl::UpdateAIControl(car_control, car, car_movement, car_settings, car_target, elapsed_time, tile_manager, camera_position);
+					BoxCityCarControl::UpdateAIControl(random_thread_local, car_control, car, car_movement, car_settings, car_target, elapsed_time, tile_manager, camera_position);
 				}
 				
 				//Integrate
@@ -255,13 +242,6 @@ namespace BoxCityTrafficSystem
 						//A jump has happen, recalculate the target
 						car_target.target = (car_target.target - source_reference) + dest_reference;
 					}
-				}
-
-				//Calculate if it needs retargetting
-				if (glm::length2(*car.position - car_target.target) < 100.f * 100.f)
-				{
-					//Retarget
-					manager->SetupCarTarget(random_thread_local, car, car_target);
 				}
 
 				//Update OOBB and AABB
