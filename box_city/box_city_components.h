@@ -145,14 +145,27 @@ struct CarGPUIndex
 	}
 };
 
+struct CarBuildingsCache
+{
+	struct CachedBuilding
+	{
+		glm::vec3 position;
+		glm::vec3 extent;
+		float size;
+	};
+
+	static constexpr uint32_t kNumCachedBuildings = 4;
+	std::array<CachedBuilding, kNumCachedBuildings> buildings;
+};
+
 //ECS definition
 using BoxType = ecs::EntityType<BoxRender, BoxGPUHandle, OBBBox, AABBBox, FlagBox>;
 using AnimatedBoxType = ecs::EntityType<InterpolatedPosition, BoxRender, BoxGPUHandle, OBBBox, AABBBox, AnimationBox, FlagBox>;
 using AttachedPanelType = ecs::EntityType<InterpolatedPosition, BoxRender, BoxGPUHandle, OBBBox, AABBBox, FlagBox, Attachment, Panel>;
 using PanelType = ecs::EntityType<BoxRender, BoxGPUHandle, OBBBox, AABBBox, FlagBox, Panel>;
-using CarType = ecs::EntityType<OBBBox, AABBBox, Car, CarMovement, CarSettings, CarTarget, CarControl, CarGPUIndex>;
+using CarType = ecs::EntityType<OBBBox, AABBBox, Car, CarMovement, CarSettings, CarTarget, CarControl, CarGPUIndex, CarBuildingsCache>;
 
-using GameComponents = ecs::ComponentList<InterpolatedPosition, BoxRender, BoxGPUHandle, OBBBox, AABBBox, AnimationBox, FlagBox, Attachment, Panel, Car, CarMovement, CarSettings, CarTarget, CarGPUIndex, CarControl>;
+using GameComponents = ecs::ComponentList<InterpolatedPosition, BoxRender, BoxGPUHandle, OBBBox, AABBBox, AnimationBox, FlagBox, Attachment, Panel, Car, CarMovement, CarSettings, CarTarget, CarGPUIndex, CarControl, CarBuildingsCache>;
 using GameEntityTypes = ecs::EntityTypeList<BoxType, AnimatedBoxType, AttachedPanelType, PanelType, CarType>;
 
 using GameDatabase = ecs::DatabaseDeclaration<GameComponents, GameEntityTypes>;

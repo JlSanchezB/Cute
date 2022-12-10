@@ -59,13 +59,15 @@ namespace BoxCityCarControl
 {
 	static bool NeedsUpdate(uint32_t instance_index, uint32_t frame_index, uint32_t frame_rate)
 	{
-		return ((frame_index + instance_index) % frame_rate) == 0;
+		//We divide the instance index by 8 to improve the timeslice cache access, so closest instances will skip frames
+
+		return ((frame_index + instance_index/8) % frame_rate) == 0;
 	}
 
 	static bool NeedsUpdate(uint32_t instance_index, uint32_t frame_index, uint32_t max_frame_rate, float min_range, float max_range, float factor)
 	{
 		float t = glm::clamp((factor - min_range) / (max_range - min_range), 0.f, 1.f);
-		uint32_t frame_rate = static_cast<uint32_t>(t * max_frame_rate);
+		uint32_t frame_rate = static_cast<uint32_t>(glm::ceil(t * max_frame_rate));
 		frame_rate = glm::clamp<uint32_t>(frame_rate, 1, max_frame_rate);
 		return NeedsUpdate(instance_index, frame_index, frame_rate);
 	}
@@ -154,7 +156,7 @@ namespace BoxCityCarControl
 
 	}
 
-	void UpdateAIControl(std::mt19937& random, uint32_t instance_index, CarControl& car_control, const Car& car, const CarMovement& car_movement, const CarSettings& car_settings, CarTarget& car_target, uint32_t frame_index, float elapsed_time, BoxCityTileSystem::Manager* manager, const glm::vec3& camera_pos)
+	void UpdateAIControl(std::mt19937& random, uint32_t instance_index, CarControl& car_control, const Car& car, const CarMovement& car_movement, const CarSettings& car_settings, CarTarget& car_target, CarBuildingsCache& car_buildings_cache, uint32_t frame_index, float elapsed_time, BoxCityTileSystem::Manager* manager, const glm::vec3& camera_pos)
 	{
 		const glm::vec3 car_position = *car.position;
 		float camera_distance = glm::distance(camera_pos, car_position);
@@ -179,26 +181,72 @@ namespace BoxCityCarControl
 		{
 			const glm::vec3 car_direction = glm::normalize(car_movement.lineal_velocity);
 
-			//Calculate visibility AABB
-			helpers::AABB car_frustum;
-			car_frustum.Add(car_position - car_direction * c_car_ai_visibility_distance * 0.05f);
+			//Only update the buildings if needed, each 4 frames
+			if (NeedsUpdate(instance_index, frame_index, 4))
+			{
+				//Calculate visibility AABB
+				helpers::AABB car_frustum;
+				car_frustum.Add(car_position - car_direction * c_car_ai_visibility_distance * 0.05f);
 
-			car_frustum.Add(car_position + car_left_flat * c_car_ai_visibility_distance + car_direction * c_car_ai_visibility_distance);
-			car_frustum.Add(car_position - car_left_flat * c_car_ai_visibility_distance + car_direction * c_car_ai_visibility_distance);
-			car_frustum.Add(car_position + glm::vec3(0.f, 0.f, 1.f) * c_car_ai_visibility_distance + car_direction * c_car_ai_visibility_distance);
-			car_frustum.Add(car_position - glm::vec3(0.f, 0.f, 1.f) * c_car_ai_visibility_distance + car_direction * c_car_ai_visibility_distance);
+				car_frustum.Add(car_position + car_left_flat * c_car_ai_visibility_distance + car_direction * c_car_ai_visibility_distance);
+				car_frustum.Add(car_position - car_left_flat * c_car_ai_visibility_distance + car_direction * c_car_ai_visibility_distance);
+				car_frustum.Add(car_position + glm::vec3(0.f, 0.f, 1.f) * c_car_ai_visibility_distance + car_direction * c_car_ai_visibility_distance);
+				car_frustum.Add(car_position - glm::vec3(0.f, 0.f, 1.f) * c_car_ai_visibility_distance + car_direction * c_car_ai_visibility_distance);
 
-			//List all buldings colliding with this visibility AABB
-			manager->VisitBuildings(car_frustum, [&](const InstanceReference& building)
+				//Collect the top 4 building close the car
+				float building_distances[CarBuildingsCache::kNumCachedBuildings] = {FLT_MAX};
+				for (auto& it : car_buildings_cache.buildings) it.size = 0.f;
+
+				//List all buldings colliding with this visibility AABB
+				manager->VisitBuildings(car_frustum, [&](const InstanceReference& building)
+					{
+						OBBBox& avoid_box = building.Get<GameDatabase>().Get<OBBBox>();
+
+						const glm::vec3 extent = glm::row(avoid_box.rotation, 2) * (avoid_box.extents.z);
+						const glm::vec3 building_bottom = avoid_box.position - extent;
+						const glm::vec3 building_top = avoid_box.position + extent;
+
+						float t;
+						helpers::CalculateProjectionPointToSegment(car_position, building_bottom, building_top, t);
+
+						float distance = glm::distance2(car_position, building_bottom + (building_top - building_bottom) * t);
+
+						//Now check if it needs to be added
+						for (uint32_t i = 0; i < CarBuildingsCache::kNumCachedBuildings; ++i)
+						{
+							if (distance < building_distances[i])
+							{
+								//Needs to be inserted here and displace the rest
+								for (uint32_t j = i; j < CarBuildingsCache::kNumCachedBuildings - 1; ++j)
+								{
+									car_buildings_cache.buildings[j + 1] = car_buildings_cache.buildings[j];
+									building_distances[j + 1] = building_distances[j];
+								}
+
+								//Update the current slot
+								car_buildings_cache.buildings[i].position = avoid_box.position;
+								car_buildings_cache.buildings[i].extent = extent;
+								car_buildings_cache.buildings[i].size = glm::length(glm::vec2(avoid_box.extents.x, avoid_box.extents.y));
+								building_distances[i] = distance;
+
+								break;
+							}
+						}
+					}
+				);
+			}
+
+			//Calculate avoidance with the cached buildings
+			for (auto& building : car_buildings_cache.buildings)
+			{
+				if (building.size > 0.f)
 				{
-					OBBBox& avoid_box = building.Get<GameDatabase>().Get<OBBBox>();
-					
 					glm::vec3 box_point, car_point;
 					float box_t, car_t;
 
 					//Building top and bottom points
-					const glm::vec3 building_bottom = avoid_box.position - glm::row(avoid_box.rotation, 2) * (avoid_box.extents.z );
-					const glm::vec3 building_top = avoid_box.position + glm::row(avoid_box.rotation, 2) * (avoid_box.extents.z);
+					const glm::vec3 building_bottom = building.position - building.extent;
+					const glm::vec3 building_top = building.position + building.extent;
 
 					//Avoid buildings in front
 					{
@@ -208,7 +256,7 @@ namespace BoxCityCarControl
 
 						float expansion = car_t * c_car_ai_avoidance_distance_expansion;
 						//Calculate distance between the points and check with the wide of the box, that is good for the caps as well
-						if (glm::length(car_point - box_point) < (glm::sqrt(glm::pow2(avoid_box.extents.x) + glm::pow2(avoid_box.extents.y)) +  expansion + car_radius + c_car_ai_avoidance_extra_distance))
+						if (glm::length(car_point - box_point) < (building.size + expansion + car_radius + c_car_ai_avoidance_extra_distance))
 						{
 							//It is going to collide
 							//You need to avoid box_point
@@ -221,9 +269,9 @@ namespace BoxCityCarControl
 
 							car_control.foward -= c_car_ai_avoidance_slow_factor * (1.f - car_t);
 						}
-					}	
+					}
 				}
-			);
+			}
 
 			car_control.foward = glm::max(car_control.foward, c_car_ai_min_forward);
 		}

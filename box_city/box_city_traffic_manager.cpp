@@ -202,8 +202,9 @@ namespace BoxCityTrafficSystem
 
 		std::bitset<BoxCityTileSystem::kLocalTileCount* BoxCityTileSystem::kLocalTileCount> camera_bitset = GetCameraBitSet(camera);
 		//Update the cars in the direction of the target
-		ecs::AddJobs<GameDatabase, Car, CarMovement, CarTarget, CarSettings, CarControl, OBBBox, AABBBox, CarGPUIndex>(job_system, update_fence, job_allocator, 256,
-			[elapsed_time, camera_bitset, manager = this, tile_manager = tile_manager, game, camera_position = camera.GetPosition(), frame_index](const auto& instance_iterator, Car& car, CarMovement& car_movement, CarTarget& car_target, CarSettings& car_settings, CarControl& car_control, OBBBox& obb_box, AABBBox& aabb_box, CarGPUIndex& car_gpu_index)
+		ecs::AddJobs<GameDatabase, Car, CarMovement, CarTarget, CarSettings, CarControl, CarBuildingsCache, OBBBox, AABBBox, CarGPUIndex>(job_system, update_fence, job_allocator, 256,
+			[elapsed_time, camera_bitset, manager = this, tile_manager = tile_manager, game, camera_position = camera.GetPosition(), frame_index]
+			(const auto& instance_iterator, Car& car, CarMovement& car_movement, CarTarget& car_target, CarSettings& car_settings, CarControl& car_control, CarBuildingsCache& car_buildings_cache, OBBBox& obb_box, AABBBox& aabb_box, CarGPUIndex& car_gpu_index)
 			{
 				//Update position
 				if (instance_iterator == manager->GetPlayerCar().Get<GameDatabase>() && manager->m_player_control_enable)
@@ -214,7 +215,7 @@ namespace BoxCityTrafficSystem
 				else
 				{
 					//AI car
-					BoxCityCarControl::UpdateAIControl(random_thread_local, instance_iterator.m_instance_index, car_control, car, car_movement, car_settings, car_target, frame_index, elapsed_time, tile_manager, camera_position);
+					BoxCityCarControl::UpdateAIControl(random_thread_local, instance_iterator.m_instance_index, car_control, car, car_movement, car_settings, car_target, car_buildings_cache, frame_index, elapsed_time, tile_manager, camera_position);
 				}
 				
 				//Integrate

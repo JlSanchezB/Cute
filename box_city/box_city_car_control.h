@@ -29,7 +29,7 @@ namespace BoxCityCarControl
 	void UpdatePlayerControl(platform::Game* game, CarControl& car_control, float elapsed_time);
 
 	//Calculate AI car control
-	void UpdateAIControl(std::mt19937& random, uint32_t instance_index, CarControl& car_control, const Car& car, const CarMovement& car_movement, const CarSettings& car_settings, CarTarget& car_target, uint32_t frame_index, float elapsed_time, BoxCityTileSystem::Manager* manager, const glm::vec3& camera_pos);
+	void UpdateAIControl(std::mt19937& random, uint32_t instance_index, CarControl& car_control, const Car& car, const CarMovement& car_movement, const CarSettings& car_settings, CarTarget& car_target, CarBuildingsCache& car_buildings_cache, uint32_t frame_index, float elapsed_time, BoxCityTileSystem::Manager* manager, const glm::vec3& camera_pos);
 
 	//Setup new car target
 	void SetupCarTarget(std::mt19937& random, const Car& car, CarTarget& car_target);
