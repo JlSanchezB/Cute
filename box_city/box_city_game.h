@@ -80,6 +80,9 @@ public:
 	//Traffic manager
 	BoxCityTrafficSystem::Manager m_traffic_system;
 
+	//Frame index
+	uint32_t m_frame_index = 0;
+
 	//Sun direction
 	glm::vec2 m_sun_direction_angles = glm::vec2(45.f, 45.f);
 

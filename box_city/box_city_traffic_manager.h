@@ -69,7 +69,7 @@ namespace BoxCityTrafficSystem
 		void Update(const glm::vec3& camera_position);
 
 		//Update Cars
-		void UpdateCars(platform::Game* game, job::System* job_system, job::JobAllocator<1024 * 1024>* job_allocator, const helpers::Camera& camera, job::Fence& update_fence, BoxCityTileSystem::Manager* tile_manager, float elapsed_time);
+		void UpdateCars(platform::Game* game, job::System* job_system, job::JobAllocator<1024 * 1024>* job_allocator, const helpers::Camera& camera, job::Fence& update_fence, BoxCityTileSystem::Manager* tile_manager, uint32_t frame_index, float elapsed_time);
 
 		//GPU Access
 		render::AllocHandle& GetGPUHandle()

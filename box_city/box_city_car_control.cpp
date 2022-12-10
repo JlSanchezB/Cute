@@ -57,6 +57,19 @@ CONTROL_VARIABLE(float, c_car_ai_min_target_range, 1.f, 10000.f, 500.f, "Car", "
 CONTROL_VARIABLE(float, c_car_ai_min_target_distance, 1.f, 10000.f, 100.f, "Car", "Car AI min target distance");
 namespace BoxCityCarControl
 {
+	static bool NeedsUpdate(uint32_t instance_index, uint32_t frame_index, uint32_t frame_rate)
+	{
+		return ((frame_index + instance_index) % frame_rate) == 0;
+	}
+
+	static bool NeedsUpdate(uint32_t instance_index, uint32_t frame_index, uint32_t max_frame_rate, float min_range, float max_range, float factor)
+	{
+		float t = glm::clamp((factor - min_range) / (max_range - min_range), 0.f, 1.f);
+		uint32_t frame_rate = static_cast<uint32_t>(t * max_frame_rate);
+		frame_rate = glm::clamp<uint32_t>(frame_rate, 1, max_frame_rate);
+		return NeedsUpdate(instance_index, frame_index, frame_rate);
+	}
+
 	void CarCamera::Update(platform::Game* game, Car& car, float elapsed_time)
 	{
 		glm::mat3x3 car_matrix = glm::toMat3(*car.rotation);
@@ -141,14 +154,19 @@ namespace BoxCityCarControl
 
 	}
 
-	void UpdateAIControl(std::mt19937& random, CarControl& car_control, const Car& car, const CarMovement& car_movement, const CarSettings& car_settings, CarTarget& car_target, float elapsed_time, BoxCityTileSystem::Manager* manager, const glm::vec3& camera_pos)
+	void UpdateAIControl(std::mt19937& random, uint32_t instance_index, CarControl& car_control, const Car& car, const CarMovement& car_movement, const CarSettings& car_settings, CarTarget& car_target, uint32_t frame_index, float elapsed_time, BoxCityTileSystem::Manager* manager, const glm::vec3& camera_pos)
 	{
+		const glm::vec3 car_position = *car.position;
+		float camera_distance = glm::distance(camera_pos, car_position);
+
+		//We timeslice the update by the distance to the camera
+		if (!NeedsUpdate(instance_index, frame_index, 8, 500.f, 3000.f, camera_distance)) return;
+
 		const glm::mat3x3 car_matrix = glm::toMat3(*car.rotation);
 		const glm::vec3 car_left = glm::row(car_matrix, 0);
 		const glm::vec3 car_front = glm::row(car_matrix, 1);
 		const glm::vec3 car_top = glm::row(car_matrix, 2);
 		const glm::vec3 car_left_flat = glm::normalize(glm::vec3(car_left.x, car_left.y, 0.f));
-		const glm::vec3 car_position = *car.position;
 		const float car_radius = glm::length2(car_settings.size);
 
 		//Calculate X and Y control for the car
