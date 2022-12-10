@@ -159,17 +159,17 @@ namespace BoxCityCarControl
 	void UpdateAIControl(std::mt19937& random, uint32_t instance_index, CarControl& car_control, const Car& car, const CarMovement& car_movement, const CarSettings& car_settings, CarTarget& car_target, CarBuildingsCache& car_buildings_cache, uint32_t frame_index, float elapsed_time, BoxCityTileSystem::Manager* manager, const glm::vec3& camera_pos)
 	{
 		const glm::vec3 car_position = *car.position;
-		float camera_distance = glm::distance(camera_pos, car_position);
+		float camera_distance2 = glm::distance2(camera_pos, car_position);
 
 		//We timeslice the update by the distance to the camera
-		if (!NeedsUpdate(instance_index, frame_index, 8, 500.f, 3000.f, camera_distance)) return;
+		if (!NeedsUpdate(instance_index, frame_index, 8, 500.f, 3000.f, glm::fastSqrt(camera_distance2))) return;
 
 		const glm::mat3x3 car_matrix = glm::toMat3(*car.rotation);
 		const glm::vec3 car_left = glm::row(car_matrix, 0);
 		const glm::vec3 car_front = glm::row(car_matrix, 1);
 		const glm::vec3 car_top = glm::row(car_matrix, 2);
 		const glm::vec3 car_left_flat = glm::normalize(glm::vec3(car_left.x, car_left.y, 0.f));
-		const float car_radius = glm::length2(car_settings.size);
+		const float car_radius = glm::fastLength(car_settings.size);
 
 		//Calculate X and Y control for the car
 		car_control.foward = c_car_ai_forward;
@@ -177,7 +177,7 @@ namespace BoxCityCarControl
 		//Calculate avoidance
 		glm::vec2 avoidance_target(0.f, 0.f);
 
-		if (glm::distance2(camera_pos, car_position) < c_car_ai_avoidance_calculation_distance * c_car_ai_avoidance_calculation_distance)
+		if (camera_distance2 < c_car_ai_avoidance_calculation_distance * c_car_ai_avoidance_calculation_distance)
 		{
 			const glm::vec3 car_direction = glm::normalize(car_movement.lineal_velocity);
 
@@ -226,7 +226,7 @@ namespace BoxCityCarControl
 								//Update the current slot
 								car_buildings_cache.buildings[i].position = avoid_box.position;
 								car_buildings_cache.buildings[i].extent = extent;
-								car_buildings_cache.buildings[i].size = glm::length(glm::vec2(avoid_box.extents.x, avoid_box.extents.y));
+								car_buildings_cache.buildings[i].size = glm::fastLength(glm::vec2(avoid_box.extents.x, avoid_box.extents.y));
 								building_distances[i] = distance;
 
 								break;
@@ -256,7 +256,7 @@ namespace BoxCityCarControl
 
 						float expansion = car_t * c_car_ai_avoidance_distance_expansion;
 						//Calculate distance between the points and check with the wide of the box, that is good for the caps as well
-						if (glm::length(car_point - box_point) < (building.size + expansion + car_radius + c_car_ai_avoidance_extra_distance))
+						if (glm::length2(car_point - box_point) < glm::pow2(building.size + expansion + c_car_ai_avoidance_extra_distance + car_radius))
 						{
 							//It is going to collide
 							//You need to avoid box_point
