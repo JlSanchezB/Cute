@@ -46,7 +46,6 @@ CONTROL_VARIABLE(float, c_car_camera_fov, 60.f, 180.f, 100.f, "Car", "Camera Fov
 
 CONTROL_VARIABLE(float, c_car_ai_forward, 0.f, 1.f, 0.8f, "Car", "Camera AI foward");
 CONTROL_VARIABLE(float, c_car_ai_min_forward, 0.f, 1.f, 0.3f, "Car", "Camera AI min foward");
-CONTROL_VARIABLE(float, c_car_ai_target_speed, 0.f, 1.f, 5.f, "Car", "Camera AI target speed");
 CONTROL_VARIABLE(float, c_car_ai_avoidance_calculation_distance, 0.f, 10000.f, 1000.f, "Car", "Camera AI avoidance calculation distance");
 CONTROL_VARIABLE(float, c_car_ai_visibility_distance, 0.f, 10.f, 100.f, "Car", "Camera AI visibility distance");
 CONTROL_VARIABLE(float, c_car_ai_avoidance_extra_distance, 0.f, 1000.f, 20.f, "Car", "Camera AI avoidance extra distance with building");
@@ -301,9 +300,7 @@ namespace BoxCityCarControl
 		}
 		target_y += -car_target_direction.z;
 
-		car_control.X_target = glm::mix(car_control.X_target, target_x, glm::clamp(c_car_ai_target_speed * elapsed_time, 0.f, 1.f));
-		car_control.Y_target = glm::mix(car_control.Y_target, target_y, glm::clamp(c_car_ai_target_speed * elapsed_time, 0.f, 1.f));
-
+		//Update targets
 		car_control.X_target = glm::clamp(target_x, -c_car_X_range, c_car_X_range);
 		car_control.Y_target = glm::clamp(target_y, -c_car_Y_range, c_car_Y_range);
 		car_control.foward = glm::clamp(car_control.foward, 0.f, 1.f);
