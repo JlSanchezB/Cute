@@ -306,11 +306,8 @@ namespace BoxCityCarControl
 		car_control.foward = glm::clamp(car_control.foward, 0.f, 1.f);
 	}
 
-	void CalculateForcesAndIntegrateCar(Car& car, CarMovement& car_movement, CarSettings& car_settings, CarControl& car_control, float elapsed_time)
+	void CalculateControlForces(Car& car, CarMovement& car_movement, CarSettings& car_settings, CarControl& car_control, float elapsed_time, glm::vec3& linear_forces, glm::vec3& angular_forces)
 	{
-		glm::vec3 linear_forces (0.f, 0.f, 0.f);
-		glm::vec3 angular_forces(0.f, 0.f, 0.f);
-
 		const glm::mat3x3 car_matrix = glm::toMat3(*car.rotation);
 
 		const glm::vec3 car_left_vector = glm::row(car_matrix, 0);
@@ -360,15 +357,36 @@ namespace BoxCityCarControl
 			linear_forces += foward_force;
 		}
 
+
 		//Apply friction
 		{
 			linear_forces -= car_movement.lineal_velocity * glm::clamp(c_car_friction_linear_force * elapsed_time, 0.f, 1.f) / elapsed_time;
 			angular_forces -= car_movement.rotation_velocity * glm::clamp(c_car_friction_angular_force * elapsed_time, 0.f, 1.f) / elapsed_time;
 		}
 
+	}
+	void CalculateCollisionForces(BoxCityTileSystem::Manager* manager, const glm::vec3& camera_pos, AABBBox& aabb, OBBBox& obb, glm::vec3& linear_forces, glm::vec3& angular_forces)
+	{
+		if (glm::distance2(obb.position, camera_pos) < c_car_ai_avoidance_calculation_distance * c_car_ai_avoidance_calculation_distance)
+		{
+			manager->VisitBuildings(aabb, [&](const InstanceReference& building)
+				{
+					OBBBox building_box = building.Get<GameDatabase>().Get<OBBBox>();
+
+					//helpers::CollisionReturn collision_return;
+					if (helpers::CollisionOBBVsOBB(obb, building_box))
+					{
+						linear_forces += glm::normalize(obb.position - building_box.position) * 2000.f;
+					}
+				});
+			}
+	}
+	void IntegrateCar(Car& car, CarMovement& car_movement, const CarSettings& car_settings, const glm::vec3& linear_forces, const glm::vec3& angular_forces, float elapsed_time)
+	{
+		const glm::mat3x3 car_matrix = glm::toMat3(*car.rotation);
 
 		//Integrate velocity
-		car_movement.lineal_velocity +=  linear_forces * car_settings.inv_mass * elapsed_time;
+		car_movement.lineal_velocity += linear_forces * car_settings.inv_mass * elapsed_time;
 
 		//Calculate world inertia mass
 		glm::mat3x3 inertia_matrix = glm::scale(car_settings.inv_mass_inertia);

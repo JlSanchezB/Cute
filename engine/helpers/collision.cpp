@@ -131,12 +131,28 @@ namespace helpers
 			normal(n), distance(d) { }
 	};
 
+	inline std::array<float, 9> GetRotationArray(const OBB& obb)
+	{
+		std::array<float, 9> ret;
+		ret[0] = obb.rotation[0][0];
+		ret[1] = obb.rotation[1][0];
+		ret[2] = obb.rotation[2][0];
+		ret[3] = obb.rotation[0][1];
+		ret[4] = obb.rotation[1][1];
+		ret[5] = obb.rotation[2][1];
+		ret[6] = obb.rotation[0][2];
+		ret[7] = obb.rotation[1][2];
+		ret[8] = obb.rotation[2][2];
+		
+		return ret;
+	}
+
 	inline Interval GetInterval(const OBB& obb, const glm::vec3& axis) {
 		glm::vec3 vertex[8];
 
 		glm::vec3 C = obb.position;	// OBB Center
 		glm::vec3 E = obb.extents;		// OBB Extents
-		const float* o = (const float*)&obb.rotation;
+		std::array<float, 9> o = GetRotationArray(obb);
 		glm::vec3 A[] = {			// OBB Axis
 			glm::vec3(o[0], o[1], o[2]),
 			glm::vec3(o[3], o[4], o[5]),
@@ -179,10 +195,7 @@ namespace helpers
 		float max = glm::max(i1.max, i2.max);
 		float length = max - min;
 
-		if (outShouldFlip != 0)
-		{
-			outShouldFlip = (i2.min < i1.min);
-		}
+		outShouldFlip = (i2.min < i1.min);
 
 		return (len1 + len2) - length;
 	}
@@ -190,7 +203,7 @@ namespace helpers
 	inline std::array<Plane, 6> GetPlanes(const OBB& obb) {
 		glm::vec3 c = obb.position;	// OBB Center
 		glm::vec3 e = obb.extents;		// OBB Extents
-		const float* o = (const float*)&obb.rotation;
+		std::array<float, 9> o = GetRotationArray(obb);
 		glm::vec3 a[] = {			// OBB Axis
 			glm::vec3(o[0], o[1], o[2]),
 			glm::vec3(o[3], o[4], o[5]),
@@ -215,9 +228,9 @@ namespace helpers
 		float nA = glm::dot(plane.normal, line.start);
 		float nAB = glm::dot(plane.normal, ab);
 
-		auto CMP = [](float x, float y) {return (glm::abs(x - y) <= FLT_EPSILON * glm::max(1.0f, glm::max(glm::abs(x), glm::abs(y)))); };
+		auto CMP = [](float x, float y) -> bool {return (glm::abs(x - y) <= FLT_EPSILON * glm::max(1.0f, glm::max(glm::abs(x), glm::abs(y)))); };
 
-		if (CMP(nAB, 0)) {
+		if (CMP(nAB, 0.f)) {
 			return false;
 		}
 
@@ -235,7 +248,8 @@ namespace helpers
 		glm::vec3 dir = point - obb.position;
 
 		for (int i = 0; i < 3; ++i) {
-			const float* orientation = &((const float*)&obb.rotation)[i * 3];
+			std::array<float, 9> o = GetRotationArray(obb);
+			const float* orientation = &o[i * 3];
 			glm::vec3 axis(orientation[0], orientation[1], orientation[2]);
 
 			float distance = glm::dot(dir, axis);
@@ -275,7 +289,7 @@ namespace helpers
 
 		glm::vec3 C = obb.position;	// OBB Center
 		glm::vec3 E = obb.extents;		// OBB Extents
-		const float* o = (const float*)&obb.rotation;
+		std::array<float, 9> o = GetRotationArray(obb);
 		glm::vec3 A[] = {			// OBB Axis
 			glm::vec3(o[0], o[1], o[2]),
 			glm::vec3(o[3], o[4], o[5]),
@@ -319,8 +333,8 @@ namespace helpers
 			return false;
 		}
 
-		const float* o1 = (const float*)&obb1.rotation;
-		const float* o2 = (const float*)&obb2.rotation;
+		std::array<float, 9> o1 = GetRotationArray(obb1);
+		std::array<float, 9> o2 = GetRotationArray(obb2);
 
 		glm::vec3 test[15] = {
 			glm::vec3(o1[0], o1[1], o1[2]),
@@ -361,7 +375,7 @@ namespace helpers
 			}
 		}
 
-		if (hitNormal == 0) {
+		if (hitNormal == nullptr) {
 			return false;
 		}
 		glm::vec3 axis = glm::normalize(*hitNormal);
