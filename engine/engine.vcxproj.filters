@@ -1036,6 +1036,9 @@
     <ClCompile Include="core\pc\sync.cpp">
       <Filter>core</Filter>
     </ClCompile>
+    <ClCompile Include="helpers\collision.cpp">
+      <Filter>helpers</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="tools\compile_shader.bat">
