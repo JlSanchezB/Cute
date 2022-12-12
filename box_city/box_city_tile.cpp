@@ -176,8 +176,8 @@ namespace BoxCityTileSystem
 				m_generated_boxes.push_back({ extended_aabb_box, extended_obb_box });
 			}
 
-			//Block can be build
-			BuildBlockData(random, obb_box, aabb_box, dynamic_box, animated_box, descriptor_index.value());
+			//Block can be build, the aabb will be the extended one of it is an animated box
+			BuildBlockData(random, obb_box, (dynamic_box) ? extended_aabb_box : aabb_box, dynamic_box, animated_box, descriptor_index.value());
 
 			//Gow zone AABB by the bounding box
 			m_bounding_box.Add(extended_aabb_box);
@@ -606,6 +606,8 @@ namespace BoxCityTileSystem
 				//We need to build the bvh buildings
 				LinearBVHBuildingSettings settings;
 				std::vector<InstanceReference> building_instances;
+				building_instances.reserve(m_generated_boxes.size());
+
 				for (auto& instances_lod_group : m_instances)
 				{
 					for (auto& instance : instances_lod_group)

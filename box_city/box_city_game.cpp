@@ -194,15 +194,12 @@ void BoxCityGame::OnLogic(double total_time, float elapsed_time)
 	job::Fence update_fence;
 
 	//Update all positions for testing the static gpu memory
-	ecs::AddJobs<GameDatabase, OBBBox, AABBBox, FlagBox, AnimationBox, InterpolatedPosition>(m_job_system, update_fence, m_update_job_allocator, 256,
-		[total_time](const auto& instance_iterator, OBBBox& obb_box, AABBBox& aabb_box, FlagBox& flags, AnimationBox& animation_box, InterpolatedPosition& interpolated_position)
+	ecs::AddJobs<GameDatabase, OBBBox, FlagBox, AnimationBox, InterpolatedPosition>(m_job_system, update_fence, m_update_job_allocator, 256,
+		[total_time](const auto& instance_iterator, OBBBox& obb_box, FlagBox& flags, AnimationBox& animation_box, InterpolatedPosition& interpolated_position)
 		{
-			//Update position
+			//Update position in the OBB, AABB represent the extended version, so it doesn't need to be updated
 			*interpolated_position.position = animation_box.original_position + glm::row(obb_box.rotation, 2) * animation_box.range * static_cast<float> (cos(total_time * animation_box.frecuency + animation_box.offset));
 			obb_box.position = *interpolated_position.position;
-
-			//Update AABB
-			helpers::CalculateAABBFromOBB(aabb_box, obb_box);
 
 			//Mark flags to indicate that the GPU needs to update
 			flags.gpu_updated = false;
