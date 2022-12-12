@@ -54,6 +54,20 @@ namespace helpers
 		template <typename VISITOR>
 		void Visit(const AABB& bounds, VISITOR&& visitor) const;
 
+		//Clear
+		void Clear()
+		{
+			m_leafs.clear();
+			m_leafs_parents.clear();
+			m_nodes.clear();
+			m_node_parents.clear();
+			m_max_depth = 0;
+		}
+
+		bool IsValid() const
+		{
+			return m_leafs.size() > 0;
+		}
 	private:
 		constexpr static IndexType kInvalidIndex = static_cast<IndexType>(-1);
 		

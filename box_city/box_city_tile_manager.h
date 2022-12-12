@@ -141,11 +141,14 @@ namespace BoxCityTileSystem
 			//Loop to all tiles around the box
 			VisitTiles(box, [&](Tile& tile)
 				{
-					tile.GetBuildingsBVH().Visit(box, [&](const InstanceReference& instance)
-						{
-							//call our visitor with all the instances
-							visitor(instance);
-						});
+					if (tile.GetBuildingsBVH().IsValid())
+					{
+						tile.GetBuildingsBVH().Visit(box, [&](const InstanceReference& instance)
+							{
+								//call our visitor with all the instances
+								visitor(instance);
+							});
+					}
 				});
 		}
 	private:

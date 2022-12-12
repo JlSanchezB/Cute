@@ -249,6 +249,9 @@ namespace BoxCityTileSystem
 				parent_index = static_cast<uint32_t>(GetLodGroupData(LODGroup::Rest).animated_building_data.size() - 1);
 			}
 		}
+		assert(updated_obb.extents.x > 0.f);
+		assert(updated_obb.extents.y > 0.f);
+		assert(updated_obb.extents.z > 0.f);
 		//Create panels in each side of the box
 
 		//Matrix used for the attachments
@@ -619,6 +622,10 @@ namespace BoxCityTileSystem
 					}
 				}
 				m_building_bvh.Build(&settings, building_instances.data(), static_cast<uint32_t>(building_instances.size()), m_bounding_box);
+			}
+			else
+			{
+				m_building_bvh.Clear();
 			}
 		}
 	}
