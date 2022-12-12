@@ -135,7 +135,7 @@ namespace helpers
 	struct CollisionReturn
 	{
 		glm::vec3 normal = glm::vec3(0.f, 0.f, 0.f);
-		float depth = 0.f;
+		float depth = FLT_MAX;
 		std::vector<glm::vec3> contacts = {};
 	};
 	bool CollisionFeaturesOBBvsOBB(const OBB& obb1, const OBB& obb2, CollisionReturn& collision_return);

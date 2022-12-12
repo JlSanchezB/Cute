@@ -38,10 +38,10 @@ namespace BoxCityCarControl
 	void CalculateControlForces(Car& car, CarMovement& car_movement, CarSettings& car_settings, CarControl& car_control, float elapsed_time, glm::vec3& linear_forces, glm::vec3& angular_forces);
 
 	//Calculate car forces from collision
-	void CalculateCollisionForces(BoxCityTileSystem::Manager* manager, const glm::vec3& camera_pos, AABBBox& aabb, OBBBox& obb, glm::vec3& linear_forces, glm::vec3& angular_forces);
+	void CalculateCollisionForces(BoxCityTileSystem::Manager* manager, const glm::vec3& camera_pos, AABBBox& aabb, OBBBox& obb, glm::vec3& linear_forces, glm::vec3& angular_forces, glm::vec3& position_offset);
 	
 	//Integrate forces
-	void IntegrateCar(Car& car, CarMovement& car_movement, const CarSettings& car_settings, const glm::vec3& linear_forces, const glm::vec3& angular_forces, float elapsed_time);
+	void IntegrateCar(Car& car, CarMovement& car_movement, const CarSettings& car_settings, const glm::vec3& linear_forces, const glm::vec3& angular_forces, const glm::vec3& position_offset, float elapsed_time);
 }
 
 #endif //BOX_CITY_CAR_CONTROL_H

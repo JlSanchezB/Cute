@@ -365,7 +365,7 @@ namespace BoxCityCarControl
 		}
 
 	}
-	void CalculateCollisionForces(BoxCityTileSystem::Manager* manager, const glm::vec3& camera_pos, AABBBox& aabb, OBBBox& obb, glm::vec3& linear_forces, glm::vec3& angular_forces)
+	void CalculateCollisionForces(BoxCityTileSystem::Manager* manager, const glm::vec3& camera_pos, AABBBox& aabb, OBBBox& obb, glm::vec3& linear_forces, glm::vec3& angular_forces, glm::vec3& position_offset)
 	{
 		if (glm::distance2(obb.position, camera_pos) < c_car_ai_avoidance_calculation_distance * c_car_ai_avoidance_calculation_distance)
 		{
@@ -373,15 +373,16 @@ namespace BoxCityCarControl
 				{
 					OBBBox building_box = building.Get<GameDatabase>().Get<OBBBox>();
 
-					//helpers::CollisionReturn collision_return;
-					if (helpers::CollisionOBBVsOBB(obb, building_box))
+					helpers::CollisionReturn collision_return;
+					if (helpers::CollisionFeaturesOBBvsOBB(obb, building_box, collision_return))
 					{
-						linear_forces += glm::normalize(obb.position - building_box.position) * 2000.f;
+						//linear_forces += -collision_return.normal * 2000.f;
+						position_offset -= collision_return.normal * collision_return.depth;
 					}
 				});
 			}
 	}
-	void IntegrateCar(Car& car, CarMovement& car_movement, const CarSettings& car_settings, const glm::vec3& linear_forces, const glm::vec3& angular_forces, float elapsed_time)
+	void IntegrateCar(Car& car, CarMovement& car_movement, const CarSettings& car_settings, const glm::vec3& linear_forces, const glm::vec3& angular_forces, const glm::vec3& position_offset, float elapsed_time)
 	{
 		const glm::mat3x3 car_matrix = glm::toMat3(*car.rotation);
 
@@ -394,7 +395,7 @@ namespace BoxCityCarControl
 		car_movement.rotation_velocity += angular_forces * elapsed_time * world_inv_mass_inertial;
 
 		//Integrate position
-		*car.position = car.position.Last() + car_movement.lineal_velocity * elapsed_time;
+		*car.position = car.position.Last() + car_movement.lineal_velocity * elapsed_time + position_offset;
 		float rotation_angle = glm::length(car_movement.rotation_velocity * elapsed_time);
 		if (rotation_angle > 0.000001f)
 		{

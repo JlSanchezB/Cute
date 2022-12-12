@@ -221,12 +221,13 @@ namespace BoxCityTrafficSystem
 				//Calculate forces
 				glm::vec3 linear_forces(0.f, 0.f, 0.f);
 				glm::vec3 angular_forces(0.f, 0.f, 0.f);
+				glm::vec3 position_offset(0.f, 0.f, 0.f);
 
 				BoxCityCarControl::CalculateControlForces(car, car_movement, car_settings, car_control, elapsed_time, linear_forces, angular_forces);
-				BoxCityCarControl::CalculateCollisionForces(tile_manager, camera_position, aabb_box, obb_box, linear_forces, angular_forces);
+				BoxCityCarControl::CalculateCollisionForces(tile_manager, camera_position, aabb_box, obb_box, linear_forces, angular_forces, position_offset);
 
 				//Integrate
-				BoxCityCarControl::IntegrateCar(car, car_movement, car_settings, linear_forces, angular_forces, elapsed_time);
+				BoxCityCarControl::IntegrateCar(car, car_movement, car_settings, linear_forces, angular_forces, position_offset, elapsed_time);
 				
 				//Check if it is outside of the tile (change tile or cycle the car)
 				WorldTilePosition current_world_tile = manager->GetTile(instance_iterator.m_zone_index).m_tile_position;

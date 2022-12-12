@@ -326,7 +326,7 @@ namespace helpers
 
 	bool CollisionFeaturesOBBvsOBB(const OBB& obb1, const OBB& obb2, CollisionReturn& collision_return)
 	{
-		CollisionReturn ret;
+		collision_return = {};
 
 		if (glm::distance(obb1.position, obb2.position) > (glm::length(obb1.extents) + glm::length(obb2.extents)))
 		{
@@ -366,44 +366,48 @@ namespace helpers
 			if (depth <= 0.0f) {
 				return false;
 			}
-			else if (depth < ret.depth) {
-				if (shouldFlip) {
+			else if (depth < collision_return.depth)
+			{
+				if (shouldFlip)
+				{
 					test[i] = test[i] * -1.0f;
 				}
-				ret.depth = depth;
+				collision_return.depth = depth;
 				hitNormal = &test[i];
 			}
 		}
 
-		if (hitNormal == nullptr) {
+		if (hitNormal == nullptr)
+		{
 			return false;
 		}
+
 		glm::vec3 axis = glm::normalize(*hitNormal);
 
 		std::vector<glm::vec3> c1 = ClipEdgesToOBB(GetEdges(obb2), obb1);
 		std::vector<glm::vec3> c2 = ClipEdgesToOBB(GetEdges(obb1), obb2);
-		ret.contacts.reserve(c1.size() + c2.size());
-		ret.contacts.insert(ret.contacts.end(), c1.begin(), c1.end());
-		ret.contacts.insert(ret.contacts.end(), c2.begin(), c2.end());
+		collision_return.contacts.reserve(c1.size() + c2.size());
+		collision_return.contacts.insert(collision_return.contacts.end(), c1.begin(), c1.end());
+		collision_return.contacts.insert(collision_return.contacts.end(), c2.begin(), c2.end());
 
 		Interval i = GetInterval(obb1, axis);
-		float distance = (i.max - i.min) * 0.5f - ret.depth * 0.5f;
+		float distance = (i.max - i.min) * 0.5f - collision_return.depth * 0.5f;
 		glm::vec3 pointOnPlane = obb1.position + axis * distance;
 
-		for (int32_t i = (int32_t)(ret.contacts.size() - 1); i >= 0; --i) {
-			glm::vec3 contact = ret.contacts[i];
-			ret.contacts[i] = contact + (axis * glm::dot(axis, pointOnPlane - contact));
+		for (int32_t i = (int32_t)(collision_return.contacts.size() - 1); i >= 0; --i) {
+			glm::vec3 contact = collision_return.contacts[i];
+			collision_return.contacts[i] = contact + (axis * glm::dot(axis, pointOnPlane - contact));
 
 			// This bit is in the "There is more" section of the book
-			for (int32_t j = (int32_t)(ret.contacts.size() - 1); j > i; --j) {
-				if (glm::length2(ret.contacts[j] - ret.contacts[i]) < 0.0001f) {
-					ret.contacts.erase(ret.contacts.begin() + j);
+			for (int32_t j = (int32_t)(collision_return.contacts.size() - 1); j > i; --j) {
+				if (glm::length2(collision_return.contacts[j] - collision_return.contacts[i]) < 0.0001f) {
+					collision_return.contacts.erase(collision_return.contacts.begin() + j);
 					break;
 				}
 			}
 		}
 
-		ret.normal = axis;
+		collision_return.normal = axis;
 
 		return true;
 	}
