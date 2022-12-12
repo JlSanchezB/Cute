@@ -301,9 +301,9 @@ void BoxCityGame::OnRender(double total_time, float elapsed_time)
 
 	//Add task
 	//Cull box city
-	ecs::AddJobs<GameDatabase, const OBBBox, const AABBBox, FlagBox, const BoxGPUHandle, const InterpolatedPosition>(m_job_system, culling_fence, m_render_job_allocator, 256,
+	ecs::AddJobs<GameDatabase, const OBBBox, const AABBBox, FlagBox, const BoxGPUHandle>(m_job_system, culling_fence, m_render_job_allocator, 256,
 		[camera = camera, point_of_view = &point_of_view, box_priority = m_box_render_priority, render_system = m_render_system, device = m_device, render_gpu_memory_module = m_GPU_memory_render_module, tile_manager = &m_tile_manager]
-	(const auto& instance_iterator, const OBBBox& obb_box, const AABBBox& aabb_box, FlagBox& flags, const BoxGPUHandle& box_gpu_handle, const InterpolatedPosition& interpolated_position)
+	(const auto& instance_iterator, const OBBBox& obb_box, const AABBBox& aabb_box, FlagBox& flags, const BoxGPUHandle& box_gpu_handle)
 		{
 			//Calculate if it is in the camera and has still a gpu memory handle
 			if (helpers::CollisionFrustumVsAABB(*camera, aabb_box) && box_gpu_handle.IsValid())
@@ -312,11 +312,11 @@ void BoxCityGame::OnRender(double total_time, float elapsed_time)
 				render::AllocHandle& gpu_handle = tile_manager->GetGPUHandle(instance_iterator.m_zone_index, box_gpu_handle.lod_group);
 
 				//Update GPU if needed, only position
-				if (!flags.gpu_updated)
+				if (!flags.gpu_updated && instance_iterator.Contain<InterpolatedPosition>())
 				{
 					//We need to interpolate the position of the oobb for rendering
 					OBBBox render_obb = obb_box;
-					render_obb.position = interpolated_position.position.GetInterpolated();
+					render_obb.position = instance_iterator.Get<InterpolatedPosition>().position.GetInterpolated();
 
 					GPUBoxInstance gpu_box_instance;
 					gpu_box_instance.Fill(render_obb);
