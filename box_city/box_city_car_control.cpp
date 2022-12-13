@@ -43,7 +43,7 @@ CONTROL_VARIABLE(float, c_car_friction_angular_force, 0.f, 10.f, 1.8f, "Car", "A
 CONTROL_VARIABLE(float, c_car_camera_distance, 0.f, 100.f, 4.5f, "Car", "Camera Distance");
 CONTROL_VARIABLE(float, c_car_camera_up_offset, 0.f, 100.f, 1.f, "Car", "Camera Up Offset");
 CONTROL_VARIABLE(float, c_car_camera_fov, 60.f, 180.f, 100.f, "Car", "Camera Fov");
-CONTROL_VARIABLE(float, c_car_camera_speed, 0.f, 200.f, 100.f, "Car", "Camera Speed");
+CONTROL_VARIABLE(float, c_car_camera_speed, 0.f, 200.f, 30.f, "Car", "Camera Speed");
 
 CONTROL_VARIABLE(float, c_car_ai_forward, 0.f, 1.f, 0.8f, "Car", "Camera AI foward");
 CONTROL_VARIABLE(float, c_car_ai_min_forward, 0.f, 1.f, 0.3f, "Car", "Camera AI min foward");
