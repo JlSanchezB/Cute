@@ -43,6 +43,7 @@ CONTROL_VARIABLE(float, c_car_friction_angular_force, 0.f, 10.f, 1.8f, "Car", "A
 CONTROL_VARIABLE(float, c_car_camera_distance, 0.f, 100.f, 4.5f, "Car", "Camera Distance");
 CONTROL_VARIABLE(float, c_car_camera_up_offset, 0.f, 100.f, 1.f, "Car", "Camera Up Offset");
 CONTROL_VARIABLE(float, c_car_camera_fov, 60.f, 180.f, 100.f, "Car", "Camera Fov");
+CONTROL_VARIABLE(float, c_car_camera_speed, 0.f, 200.f, 100.f, "Car", "Camera Speed");
 
 CONTROL_VARIABLE(float, c_car_ai_forward, 0.f, 1.f, 0.8f, "Car", "Camera AI foward");
 CONTROL_VARIABLE(float, c_car_ai_min_forward, 0.f, 1.f, 0.3f, "Car", "Camera AI min foward");
@@ -74,7 +75,7 @@ namespace BoxCityCarControl
 	void CarCamera::Update(platform::Game* game, Car& car, float elapsed_time)
 	{
 		glm::mat3x3 car_matrix = glm::toMat3(*car.rotation);
-		*m_position = *car.position - glm::row(car_matrix, 1) * c_car_camera_distance + glm::vec3(0.f, 0.f, c_car_camera_up_offset);
+		*m_position = glm::mix(*m_position, *car.position - glm::row(car_matrix, 1) * c_car_camera_distance + glm::vec3(0.f, 0.f, c_car_camera_up_offset), glm::clamp(elapsed_time * c_car_camera_speed, 0.f, 1.f));
 		*m_target = *car.position;
 		m_fov_y = glm::radians(c_car_camera_fov);
 	}
@@ -371,6 +372,9 @@ namespace BoxCityCarControl
 		{
 			manager->VisitBuildings(aabb, [&](const InstanceReference& building)
 				{
+					assert(building.IsValid());
+					assert(building.Get<GameDatabase>().Is<BoxType>() || building.Get<GameDatabase>().Is<AnimatedBoxType>());
+
 					OBBBox building_box = building.Get<GameDatabase>().Get<OBBBox>();
 
 					helpers::CollisionReturn collision_return;

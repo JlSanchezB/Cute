@@ -174,14 +174,9 @@ void BoxCityGame::OnLogic(double total_time, float elapsed_time)
 	{
 	case CameraMode::Fly:
 		camera = dynamic_cast<helpers::Camera*>(&m_fly_camera);
-		m_fly_camera.Update(this, elapsed_time);
 		break;
 	case CameraMode::Car:
 		camera = dynamic_cast<helpers::Camera*>(&m_car_camera);
-		if (m_traffic_system.GetPlayerCar().IsValid())
-		{
-			m_car_camera.Update(this, m_traffic_system.GetPlayerCar().Get<GameDatabase>().Get<Car>(), elapsed_time);
-		}
 		break;
 	}
 	
@@ -240,6 +235,20 @@ void BoxCityGame::OnLogic(double total_time, float elapsed_time)
 
 	job::Wait(m_job_system, update_attachments_fence);
 	job::Wait(m_job_system, update_cars_fence);
+
+	//Update camera for the render frame or next logic update
+	switch (m_camera_mode)
+	{
+	case CameraMode::Fly:
+		m_fly_camera.Update(this, elapsed_time);
+		break;
+	case CameraMode::Car:
+		if (m_traffic_system.GetPlayerCar().IsValid())
+		{
+			m_car_camera.Update(this, m_traffic_system.GetPlayerCar().Get<GameDatabase>().Get<Car>(), elapsed_time);
+		}
+		break;
+	}
 
 	{
 		PROFILE_SCOPE("ECSTest", 0xFFFF77FF, "DatabaseTick");
