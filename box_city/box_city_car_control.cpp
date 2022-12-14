@@ -29,12 +29,12 @@ CONTROL_VARIABLE(float, c_car_foward_keyboard_factor, 0.f, 10.f, 1.25f, "Car", "
 
 //Pitch control
 CONTROL_VARIABLE(float, c_car_Y_pitch_force, 0.f, 10.f, 0.02f, "Car", "Y Pitch Force");
-CONTROL_VARIABLE(float, c_car_Y_pitch_linear_force, 0.f, 10.f, 0.01f, "Car", "Y Pitch Linear Force");
+CONTROL_VARIABLE(float, c_car_Y_pitch_linear_force, 0.f, 10.f, 0.03f, "Car", "Y Pitch Linear Force");
 
 //Roll control
 CONTROL_VARIABLE(float, c_car_X_roll_angular_force, 0.f, 10.f, 0.02f, "Car", "X Roll Angular Force");
 CONTROL_VARIABLE(float, c_car_X_jaw_angular_force, 0.f, 10.f, 0.05f, "Car", "X Jaw Angular Force");
-CONTROL_VARIABLE(float, c_car_X_linear_force, 0.f, 10.f, 0.01f, "Car", "X Linear Force");
+CONTROL_VARIABLE(float, c_car_X_linear_force, 0.f, 10.f, 0.03f, "Car", "X Linear Force");
 
 //Forward
 CONTROL_VARIABLE(float, c_car_foward_force, 0.f, 10000.f, 300.0f, "Car", "Foward Force");
@@ -50,16 +50,16 @@ CONTROL_VARIABLE(float, c_car_camera_up_offset, 0.f, 100.f, 1.f, "Car", "Camera 
 CONTROL_VARIABLE(float, c_car_camera_fov, 60.f, 180.f, 100.f, "Car", "Camera Fov");
 CONTROL_VARIABLE(float, c_car_camera_speed, 0.f, 200.f, 30.f, "Car", "Camera Speed");
 
-CONTROL_VARIABLE(float, c_car_ai_forward, 0.f, 1.f, 0.8f, "Car", "Camera AI foward");
-CONTROL_VARIABLE(float, c_car_ai_min_forward, 0.f, 1.f, 0.3f, "Car", "Camera AI min foward");
+CONTROL_VARIABLE(float, c_car_ai_forward, 0.f, 1.f, 0.6f, "Car", "Camera AI foward");
+CONTROL_VARIABLE(float, c_car_ai_min_forward, 0.f, 1.f, 0.2f, "Car", "Camera AI min foward");
 CONTROL_VARIABLE(float, c_car_ai_avoidance_calculation_distance, 0.f, 10000.f, 1000.f, "Car", "Camera AI avoidance calculation distance");
 CONTROL_VARIABLE(float, c_car_ai_visibility_distance, 0.f, 10.f, 100.f, "Car", "Camera AI visibility distance");
-CONTROL_VARIABLE(float, c_car_ai_avoidance_extra_distance, 0.f, 1000.f, 20.f, "Car", "Camera AI avoidance extra distance with building");
-CONTROL_VARIABLE(float, c_car_ai_avoidance_distance_expansion, 0.f, 1000.f, 50.f, "Car", "Camera AI avoidance extra expansion apply to buildings when far");
+CONTROL_VARIABLE(float, c_car_ai_avoidance_extra_distance, 0.f, 1000.f, 5.f, "Car", "Camera AI avoidance extra distance with building");
+CONTROL_VARIABLE(float, c_car_ai_avoidance_distance_expansion, 0.f, 1000.f, 10.f, "Car", "Camera AI avoidance extra expansion apply to buildings when far");
 CONTROL_VARIABLE(float, c_car_ai_avoidance_slow_factor, 0.f, 1.f, 0.3f, "Car", "Car AI avoidance slow factor");
 CONTROL_VARIABLE(float, c_car_ai_target_range, 1.f, 10000.f, 2000.f, "Car", "Car AI target range");
 CONTROL_VARIABLE(float, c_car_ai_min_target_range, 1.f, 10000.f, 500.f, "Car", "Car AI min target range");
-CONTROL_VARIABLE(float, c_car_ai_min_target_distance, 1.f, 10000.f, 100.f, "Car", "Car AI min target distance");
+CONTROL_VARIABLE(float, c_car_ai_min_target_distance, 1.f, 10000.f, 150.f, "Car", "Car AI min target distance");
 
 namespace BoxCityCarControl
 {

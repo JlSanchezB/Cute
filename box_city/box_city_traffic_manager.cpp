@@ -362,7 +362,7 @@ namespace BoxCityTrafficSystem
 		std::mt19937 random(0);
 
 		const glm::vec3 grid_size = glm::vec3(kTrafficTargetSizeXY, kTrafficTargetSizeXY, kTrafficTargetSizeZ);
-		std::uniform_real_distribution<float> position_offset(0.5f, 0.5f);
+		std::uniform_real_distribution<float> position_offset(0.33f, 0.66f);
 
 		//For each tile
 		for (uint32_t i = 0; i < kTrafficTargetCountXY; ++i)
