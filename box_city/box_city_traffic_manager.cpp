@@ -26,6 +26,9 @@ namespace BoxCityTrafficSystem
 		m_camera_tile_position.i = std::numeric_limits<int32_t>::max();
 		m_camera_tile_position.j = std::numeric_limits<int32_t>::max();
 
+		//Generate traffic targets
+		GenerateTrafficTarget();
+
 		//Generate zone descriptors
 		GenerateZoneDescriptors();
 
@@ -146,7 +149,7 @@ namespace BoxCityTrafficSystem
 								SetupCar(tile, random, begin_tile_x, begin_tile_y, position_range, position_range_z, size_range,
 								car, car_movement, car_settings, obb_box_component, aabb_box_component, car_gpu_index);
 
-								BoxCityCarControl::SetupCarTarget(random, car, car_target);
+								BoxCityCarControl::SetupCarTarget(random, this, car, car_target);
 							}, bitset);
 					}
 					else if (!tile.m_activated)
@@ -170,7 +173,7 @@ namespace BoxCityTrafficSystem
 								car, car_movement, car_settings, obb_box_component, aabb_box_component, car_gpu_index);
 							
 							CarTarget car_target;
-							BoxCityCarControl::SetupCarTarget(random, car, car_target);
+							BoxCityCarControl::SetupCarTarget(random, this, car, car_target);
 
 							Instance instance = ecs::AllocInstance<GameDatabase, CarType>(tile.m_zone_index)
 								.Init<Car>(car)
@@ -215,7 +218,7 @@ namespace BoxCityTrafficSystem
 				else
 				{
 					//AI car
-					BoxCityCarControl::UpdateAIControl(random_thread_local, instance_iterator.m_instance_index, car_control, car, car_movement, car_settings, car_target, car_buildings_cache, frame_index, elapsed_time, tile_manager, camera_position);
+					BoxCityCarControl::UpdateAIControl(random_thread_local, instance_iterator.m_instance_index, car_control, car, car_movement, car_settings, car_target, car_buildings_cache, frame_index, elapsed_time, tile_manager, manager,  camera_position);
 				}
 				
 				//Calculate forces
@@ -246,10 +249,11 @@ namespace BoxCityTrafficSystem
 					if (abs(static_cast<int32_t>(last_local_tile.i) - static_cast<int32_t>(next_local_tile.i)) > 1 ||
 						abs(static_cast<int32_t>(last_local_tile.j) - static_cast<int32_t>(next_local_tile.j)) > 1)
 					{
-						glm::vec3 source_reference(current_world_tile.i * kTileSize, current_world_tile.j * kTileSize, 0.f);
-						glm::vec3 dest_reference(next_world_tile.i * kTileSize, next_world_tile.j * kTileSize, 0.f);
+						//glm::vec3 source_reference(current_world_tile.i * kTileSize, current_world_tile.j * kTileSize, 0.f);
+						//glm::vec3 dest_reference(next_world_tile.i * kTileSize, next_world_tile.j * kTileSize, 0.f);
 						//A jump has happen, recalculate the target
-						car_target.target = (car_target.target - source_reference) + dest_reference;
+						//car_target.target = (car_target.target - source_reference) + dest_reference;
+						BoxCityCarControl::SetupCarTarget(random_thread_local, manager, car, car_target);
 					}
 				}
 
@@ -282,5 +286,134 @@ namespace BoxCityTrafficSystem
 	Manager::Tile& Manager::GetTile(const LocalTilePosition& local_tile)
 	{
 		return m_tiles[CalculateLocalTileToZoneIndex(local_tile)];
+	}
+
+	glm::vec3 Manager::GetNextTrafficTarget(std::mt19937& random, glm::vec3 position) const
+	{
+		//Calculate the grid for the current position
+		int32_t world_i = static_cast<int32_t>(floor((position.x / kTrafficTargetSizeXY)));
+		int32_t world_j = static_cast<int32_t>(floor((position.y / kTrafficTargetSizeXY)));
+		int32_t world_k = static_cast<int32_t>(floor((position.z - BoxCityTileSystem::kTileHeightBottom) / kTrafficTargetSizeZ));
+		world_k = glm::clamp<int32_t>(world_k, 0, kTrafficTargetCountZ - 1);
+
+		uint32_t local_i = static_cast<uint32_t>((world_i + 1000000) % kTrafficTargetCountXY);
+		uint32_t local_j = static_cast<uint32_t>((world_j + 1000000) % kTrafficTargetCountXY);
+		uint32_t local_k = static_cast<uint32_t>(world_k);
+
+		const TrafficTarget& taffic_target = m_traffic_target_grid.Get(local_i, local_j, local_k);
+
+		//Calculate the next grid, using one of the out connections
+		uint32_t num_out = 0;
+		std::array<size_t, 6> out_array;
+		for (size_t i = 0; i < 6; ++i)
+		{
+			if (taffic_target.out[i])
+			{
+				out_array[num_out++] = i;
+			}
+		}
+
+		//Select the out line
+		int32_t next_world_i = world_i;
+		int32_t next_world_j = world_j;
+		int32_t next_world_k = world_k;
+		size_t next_tile = random() % 6;
+		switch (static_cast<TrafficTargetDirection>(next_tile))
+		{
+		case TrafficTargetDirection::Xinc:
+			next_world_i++;
+			break;
+		case TrafficTargetDirection::Xdec:
+			next_world_i--;
+			break;
+		case TrafficTargetDirection::Yinc:
+			next_world_j++;
+			break;
+		case TrafficTargetDirection::Ydec:
+			next_world_j--;
+			break;
+		case TrafficTargetDirection::Zinc:
+			next_world_k++;
+			break;
+		case TrafficTargetDirection::Zdec:
+			next_world_k--;
+			break;
+		}
+
+		next_world_k = glm::clamp<int32_t>(next_world_k, 0, kTrafficTargetCountZ - 1);
+		assert(next_world_k >= 0 && next_world_k < kTrafficTargetCountZ); //No conection can wrap
+
+		//Now to calculate the local
+		uint32_t next_local_i = static_cast<uint32_t>((next_world_i + 1000000) % kTrafficTargetCountXY);
+		uint32_t next_local_j = static_cast<uint32_t>((next_world_j + 1000000) % kTrafficTargetCountXY);
+		uint32_t next_local_k = static_cast<uint32_t>(next_world_k);
+
+		const TrafficTarget& next_taffic_target = m_traffic_target_grid.Get(next_local_i, next_local_j, next_local_k);
+
+		//The position is between zero and SizeXY
+		int32_t offset_i = ((next_world_i < 0) ? (next_world_i / static_cast<int32_t>(kTrafficTargetCountXY)) - 1 : next_world_i / kTrafficTargetCountXY);
+		int32_t offset_j = ((next_world_j < 0) ? (next_world_j / static_cast<int32_t>(kTrafficTargetCountXY)) - 1 : next_world_j / kTrafficTargetCountXY);
+
+		return glm::vec3(kTrafficTargetSizeXY * kTrafficTargetCountXY * offset_i + next_taffic_target.position.x, kTrafficTargetSizeXY * kTrafficTargetCountXY * offset_i + next_taffic_target.position.y, next_taffic_target.position.z);
+	}
+
+	void Manager::GenerateTrafficTarget()
+	{
+		std::mt19937 random(0);
+
+		const glm::vec3 grid_size = glm::vec3(kTrafficTargetSizeXY, kTrafficTargetSizeXY, kTrafficTargetSizeZ);
+		std::uniform_real_distribution<float> position_offset(0.5f, 0.5f);
+
+		//For each tile
+		for (uint32_t i = 0; i < kTrafficTargetCountXY; ++i)
+			for (uint32_t j = 0; j < kTrafficTargetCountXY; ++j)
+				for (uint32_t k = 0; k < kTrafficTargetCountZ; ++k)
+				{
+					TrafficTarget& traffic_target = m_traffic_target_grid.Get(i, j, k);
+
+					//Calculate position
+					traffic_target.position = grid_size * glm::vec3(i, j, k) + grid_size * glm::vec3(position_offset(random), position_offset(random), position_offset(random)) + glm::vec3(0.f, 0.f, BoxCityTileSystem::kTileHeightBottom);
+					
+					//We only check incX,Y,Z and we update the next tiles
+					traffic_target.GetOut(TrafficTargetDirection::Xinc) = (random() > random.max()/2);
+					traffic_target.GetOut(TrafficTargetDirection::Yinc) = (random() > random.max()/2);
+					if (traffic_target.GetOut(TrafficTargetDirection::Xinc) == traffic_target.GetOut(TrafficTargetDirection::Yinc))
+					{
+						traffic_target.GetOut(TrafficTargetDirection::Zinc) = !traffic_target.GetOut(TrafficTargetDirection::Xinc);
+					}
+					else
+					{
+						traffic_target.GetOut(TrafficTargetDirection::Zinc) = (random() > random.max() / 2);
+					}
+
+					if (k == (kTrafficTargetCountZ - 1)) traffic_target.GetOut(TrafficTargetDirection::Zinc) = false;
+
+					//Check if nothing goes out
+					if (!traffic_target.GetOut(TrafficTargetDirection::Xinc) && !traffic_target.GetOut(TrafficTargetDirection::Yinc) && !traffic_target.GetOut(TrafficTargetDirection::Zinc))
+					{
+						//We need to do some 
+						traffic_target.GetOut(TrafficTargetDirection::Xinc) = true;
+					}
+
+
+					//Now to update the next tiles
+					TrafficTarget& traffic_target_x_1 = m_traffic_target_grid.Get((i + 1) % kTrafficTargetCountXY, j, k);
+					traffic_target_x_1.GetOut(TrafficTargetDirection::Xdec) = !traffic_target.GetOut(TrafficTargetDirection::Xinc);
+
+					TrafficTarget& traffic_target_y_1 = m_traffic_target_grid.Get(i, (j + 1) % kTrafficTargetCountXY, k);
+					traffic_target_y_1.GetOut(TrafficTargetDirection::Ydec) = !traffic_target.GetOut(TrafficTargetDirection::Yinc);
+
+					if (k < kTrafficTargetCountZ - 1)
+					{
+						TrafficTarget& traffic_target_z_1 = m_traffic_target_grid.Get(i, j, (k + 1) % kTrafficTargetCountZ);
+						traffic_target_z_1.GetOut(TrafficTargetDirection::Zdec) = !traffic_target.GetOut(TrafficTargetDirection::Zinc);
+					}
+					else
+					{
+						// No conexion
+						assert(traffic_target.GetOut(TrafficTargetDirection::Zinc) == false);
+					}
+
+				}
 	}
 }

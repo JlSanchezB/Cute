@@ -6,6 +6,7 @@
 #include "box_city_tile_manager.h"
 #include <job/job.h>
 #include <helpers/camera.h>
+#include <helpers/grid3D.h>
 
 namespace render
 {
@@ -22,6 +23,12 @@ namespace BoxCityTrafficSystem
 
 	//World size
 	constexpr float kTileSize = 1000.f;
+
+	//Traffic system
+	constexpr uint32_t kTrafficTargetCountXY = 20;
+	constexpr uint32_t kTrafficTargetCountZ = 4;
+	constexpr float kTrafficTargetSizeXY = 1500.f;
+	constexpr float kTrafficTargetSizeZ = (BoxCityTileSystem::kTileHeightTop - BoxCityTileSystem::kTileHeightBottom) / kTrafficTargetCountZ;
 
 	//Represent a local tile position
 	struct LocalTilePosition
@@ -102,6 +109,8 @@ namespace BoxCityTrafficSystem
 			m_player_control_enable = enable;
 		}
 
+		glm::vec3 GetNextTrafficTarget(std::mt19937& random, glm::vec3 position) const;
+
 	private:
 		//Systems
 		display::Device* m_device = nullptr;
@@ -162,6 +171,27 @@ namespace BoxCityTrafficSystem
 
 		//GPU memory
 		render::AllocHandle m_gpu_memory;
+
+		//3d Grid with the traffic target system
+		enum class TrafficTargetDirection
+		{
+			Xinc,
+			Xdec,
+			Yinc,
+			Ydec,
+			Zinc,
+			Zdec
+		};
+		struct TrafficTarget
+		{
+			glm::vec3 position;
+			bool out[6] = {false}; //Direction conected
+
+			bool& GetOut(TrafficTargetDirection direction) { return out[static_cast<size_t>(direction)];}
+		};
+		helpers::Grid3D<TrafficTarget, kTrafficTargetCountXY, kTrafficTargetCountXY, kTrafficTargetCountZ> m_traffic_target_grid;
+
+		void GenerateTrafficTarget();
 	};
 }
 

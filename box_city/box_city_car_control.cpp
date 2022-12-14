@@ -2,8 +2,13 @@
 #include <core/control_variables.h>
 #include <core/platform.h>
 #include "box_city_tile_manager.h"
+#include "box_city_traffic_manager.h"
 
 //List of control variables
+
+CONTROL_VARIABLE_BOOL(c_car_ai_avoidance_enable, true, "Car", "Car AI avoidance enabled");
+CONTROL_VARIABLE_BOOL(c_car_ai_targeting_enable, true, "Car", "Car AI targeting enabled");
+CONTROL_VARIABLE_BOOL(c_car_collision_enable, true, "Car", "Car collision enabled");
 
 //Pitch input
 CONTROL_VARIABLE(float, c_car_Y_range, 0.f, 1.f, 0.7f, "Car", "Y Range");
@@ -55,6 +60,7 @@ CONTROL_VARIABLE(float, c_car_ai_avoidance_slow_factor, 0.f, 1.f, 0.3f, "Car", "
 CONTROL_VARIABLE(float, c_car_ai_target_range, 1.f, 10000.f, 2000.f, "Car", "Car AI target range");
 CONTROL_VARIABLE(float, c_car_ai_min_target_range, 1.f, 10000.f, 500.f, "Car", "Car AI min target range");
 CONTROL_VARIABLE(float, c_car_ai_min_target_distance, 1.f, 10000.f, 100.f, "Car", "Car AI min target distance");
+
 namespace BoxCityCarControl
 {
 	static bool NeedsUpdate(uint32_t instance_index, uint32_t frame_index, uint32_t frame_rate)
@@ -139,9 +145,10 @@ namespace BoxCityCarControl
 		}
 	}
 
-	void SetupCarTarget(std::mt19937& random, const Car& car, CarTarget& car_target)
+	void SetupCarTarget(std::mt19937& random, BoxCityTrafficSystem::Manager* manager, const Car& car, CarTarget& car_target)
 	{
-		//Calculate a new position as target
+		/*
+		//Calculate a new position as target for rogue
 		std::uniform_real_distribution<float> position_range(-c_car_ai_target_range + c_car_ai_min_target_range, c_car_ai_target_range - c_car_ai_min_target_range);
 		std::uniform_real_distribution<float> position_range_z(BoxCityTileSystem::kTileHeightBottom, BoxCityTileSystem::kTileHeightTop);
 
@@ -153,10 +160,12 @@ namespace BoxCityCarControl
 		range_y += glm::sign(range_x) * c_car_ai_min_target_range;
 
 		car_target.target = glm::vec3((*car.position).x + range_x, (*car.position).y + range_y, position_range_z(random));
+		*/
 
+		car_target.target = manager->GetNextTrafficTarget(random, *car.position);
 	}
 
-	void UpdateAIControl(std::mt19937& random, uint32_t instance_index, CarControl& car_control, const Car& car, const CarMovement& car_movement, const CarSettings& car_settings, CarTarget& car_target, CarBuildingsCache& car_buildings_cache, uint32_t frame_index, float elapsed_time, BoxCityTileSystem::Manager* manager, const glm::vec3& camera_pos)
+	void UpdateAIControl(std::mt19937& random, uint32_t instance_index, CarControl& car_control, const Car& car, const CarMovement& car_movement, const CarSettings& car_settings, CarTarget& car_target, CarBuildingsCache& car_buildings_cache, uint32_t frame_index, float elapsed_time, BoxCityTileSystem::Manager* tile_manager, BoxCityTrafficSystem::Manager* traffic_manager, const glm::vec3& camera_pos)
 	{
 		const glm::vec3 car_position = *car.position;
 		float camera_distance2 = glm::distance2(camera_pos, car_position);
@@ -176,8 +185,8 @@ namespace BoxCityCarControl
 
 		//Calculate avoidance
 		glm::vec2 avoidance_target(0.f, 0.f);
-
-		if (camera_distance2 < c_car_ai_avoidance_calculation_distance * c_car_ai_avoidance_calculation_distance)
+	
+		if (c_car_ai_avoidance_enable && camera_distance2 < c_car_ai_avoidance_calculation_distance * c_car_ai_avoidance_calculation_distance)
 		{
 			const glm::vec3 car_direction = glm::normalize(car_movement.lineal_velocity);
 
@@ -198,7 +207,7 @@ namespace BoxCityCarControl
 				for (auto& it : car_buildings_cache.buildings) it.size = 0.f;
 
 				//List all buldings colliding with this visibility AABB
-				manager->VisitBuildings(car_frustum, [&](const InstanceReference& building)
+				tile_manager->VisitBuildings(car_frustum, [&](const InstanceReference& building)
 					{
 						OBBBox& avoid_box = building.Get<GameDatabase>().Get<OBBBox>();
 
@@ -275,7 +284,7 @@ namespace BoxCityCarControl
 
 			car_control.foward = glm::max(car_control.foward, c_car_ai_min_forward);
 		}
-
+		
 		float target_x = avoidance_target.x;
 		float target_y = avoidance_target.y;
 
@@ -283,23 +292,25 @@ namespace BoxCityCarControl
 		if (glm::length2(*car.position - car_target.target) < c_car_ai_min_target_distance * c_car_ai_min_target_distance)
 		{
 			//Retarget
-			SetupCarTarget(random, car, car_target);
+			SetupCarTarget(random, traffic_manager, car, car_target);
 		}
 
-
-		//Calculate the angles between the car direction and they target
-		glm::vec3 car_target_direction = glm::normalize(car_target.target - car_position);
-
-		if (glm::dot(car_front, car_target_direction) < 0.f)
+		if (c_car_ai_targeting_enable)
 		{
-			//It is behind, needs to rotate
-			target_x += (glm::dot(car_target_direction, car_left)) > 0.f ? -1.f : 1.f;
+			//Calculate the angles between the car direction and they target
+			glm::vec3 car_target_direction = glm::normalize(car_target.target - car_position);
+
+			if (glm::dot(car_front, car_target_direction) < 0.f)
+			{
+				//It is behind, needs to rotate
+				target_x += (glm::dot(car_target_direction, car_left)) > 0.f ? -1.f : 1.f;
+			}
+			else
+			{
+				target_x += -glm::dot(car_target_direction, car_left);
+			}
+			target_y += -car_target_direction.z;
 		}
-		else
-		{
-			target_x += -glm::dot(car_target_direction, car_left);
-		}
-		target_y += -car_target_direction.z;
 
 		//Update targets
 		car_control.X_target = glm::clamp(target_x, -c_car_X_range, c_car_X_range);
@@ -368,7 +379,7 @@ namespace BoxCityCarControl
 	}
 	void CalculateCollisionForces(BoxCityTileSystem::Manager* manager, const glm::vec3& camera_pos, AABBBox& aabb, OBBBox& obb, glm::vec3& linear_forces, glm::vec3& angular_forces, glm::vec3& position_offset)
 	{
-		if (glm::distance2(obb.position, camera_pos) < c_car_ai_avoidance_calculation_distance * c_car_ai_avoidance_calculation_distance)
+		if (c_car_collision_enable && glm::distance2(obb.position, camera_pos) < c_car_ai_avoidance_calculation_distance * c_car_ai_avoidance_calculation_distance)
 		{
 			manager->VisitBuildings(aabb, [&](const InstanceReference& building)
 				{
