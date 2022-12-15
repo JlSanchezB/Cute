@@ -53,9 +53,12 @@ CONTROL_VARIABLE(float, c_car_camera_speed, 0.f, 200.f, 30.f, "Car", "Camera Spe
 CONTROL_VARIABLE(float, c_car_ai_forward, 0.f, 1.f, 0.6f, "Car", "Camera AI foward");
 CONTROL_VARIABLE(float, c_car_ai_min_forward, 0.f, 1.f, 0.2f, "Car", "Camera AI min foward");
 CONTROL_VARIABLE(float, c_car_ai_avoidance_calculation_distance, 0.f, 10000.f, 1000.f, "Car", "Camera AI avoidance calculation distance");
-CONTROL_VARIABLE(float, c_car_ai_visibility_distance, 0.f, 10.f, 100.f, "Car", "Camera AI visibility distance");
-CONTROL_VARIABLE(float, c_car_ai_avoidance_extra_distance, 0.f, 1000.f, 5.f, "Car", "Camera AI avoidance extra distance with building");
-CONTROL_VARIABLE(float, c_car_ai_avoidance_distance_expansion, 0.f, 1000.f, 10.f, "Car", "Camera AI avoidance extra expansion apply to buildings when far");
+CONTROL_VARIABLE(float, c_car_ai_visibility_distance, 0.f, 10.f, 150.f, "Car", "Camera AI visibility distance");
+CONTROL_VARIABLE(float, c_car_ai_visibility_side_distance, 0.f, 10.f, 80.f, "Car", "Camera AI visibility side distance");
+CONTROL_VARIABLE(float, c_car_ai_avoidance_extra_distance, 0.f, 1000.f, 15.f, "Car", "Camera AI avoidance extra distance with building");
+CONTROL_VARIABLE(float, c_car_ai_avoidance_distance_expansion, 0.f, 1000.f, 80.f, "Car", "Camera AI avoidance extra expansion apply to buildings when far");
+CONTROL_VARIABLE(float, c_car_ai_avoidance_reaction_factor, 0.f, 10.f, 1.2f, "Car", "Car AI avoidance reaction factor");
+CONTROL_VARIABLE(float, c_car_ai_avoidance_reaction_power, 0.f, 10.f, 0.8f, "Car", "Car AI avoidance reaction power");
 CONTROL_VARIABLE(float, c_car_ai_avoidance_slow_factor, 0.f, 1.f, 0.3f, "Car", "Car AI avoidance slow factor");
 CONTROL_VARIABLE(float, c_car_ai_target_range, 1.f, 10000.f, 2000.f, "Car", "Car AI target range");
 CONTROL_VARIABLE(float, c_car_ai_min_target_range, 1.f, 10000.f, 500.f, "Car", "Car AI min target range");
@@ -185,7 +188,7 @@ namespace BoxCityCarControl
 
 		//Calculate avoidance
 		glm::vec2 avoidance_target(0.f, 0.f);
-	
+		float avoidance_factor = 0.f;
 		if (c_car_ai_avoidance_enable && camera_distance2 < c_car_ai_avoidance_calculation_distance * c_car_ai_avoidance_calculation_distance)
 		{
 			const glm::vec3 car_direction = glm::normalize(car_movement.lineal_velocity);
@@ -197,10 +200,10 @@ namespace BoxCityCarControl
 				helpers::AABB car_frustum;
 				car_frustum.Add(car_position - car_direction * c_car_ai_visibility_distance * 0.05f);
 
-				car_frustum.Add(car_position + car_left_flat * c_car_ai_visibility_distance + car_direction * c_car_ai_visibility_distance);
-				car_frustum.Add(car_position - car_left_flat * c_car_ai_visibility_distance + car_direction * c_car_ai_visibility_distance);
-				car_frustum.Add(car_position + glm::vec3(0.f, 0.f, 1.f) * c_car_ai_visibility_distance + car_direction * c_car_ai_visibility_distance);
-				car_frustum.Add(car_position - glm::vec3(0.f, 0.f, 1.f) * c_car_ai_visibility_distance + car_direction * c_car_ai_visibility_distance);
+				car_frustum.Add(car_position + glm::vec3(0.f, 0.f, 1.f) * c_car_ai_visibility_side_distance + car_left_flat * c_car_ai_visibility_side_distance + car_direction * c_car_ai_visibility_distance);
+				car_frustum.Add(car_position + glm::vec3(0.f, 0.f, 1.f) * c_car_ai_visibility_side_distance - car_left_flat * c_car_ai_visibility_side_distance + car_direction * c_car_ai_visibility_distance);
+				car_frustum.Add(car_position - glm::vec3(0.f, 0.f, 1.f) * c_car_ai_visibility_side_distance + car_left_flat * c_car_ai_visibility_side_distance + car_direction * c_car_ai_visibility_distance);
+				car_frustum.Add(car_position - glm::vec3(0.f, 0.f, 1.f) * c_car_ai_visibility_side_distance - car_left_flat * c_car_ai_visibility_side_distance + car_direction * c_car_ai_visibility_distance);
 
 				//Collect the top 4 building close the car
 				float building_distances[CarBuildingsCache::kNumCachedBuildings] = {FLT_MAX};
@@ -259,7 +262,7 @@ namespace BoxCityCarControl
 
 					//Avoid buildings in front
 					{
-						helpers::CalculateClosestPointsInTwoSegments(car_position - car_direction * (c_car_ai_visibility_distance * 0.05f), car_position + car_direction * (c_car_ai_visibility_distance),
+						helpers::CalculateClosestPointsInTwoSegments(car_position, car_position + car_direction * (c_car_ai_visibility_distance),
 							building_bottom, building_top,
 							car_point, box_point, car_t, box_t);
 
@@ -272,11 +275,17 @@ namespace BoxCityCarControl
 							glm::vec3 car_avoid_direction = glm::normalize(box_point - car_position);
 
 							float xx = glm::dot(car_avoid_direction, car_left_flat);
-							avoidance_target.x += (glm::sign<float>(xx) - xx) * (100.f);
+							xx = (glm::sign<float>(xx) - xx) * c_car_ai_avoidance_reaction_factor;
+							xx = glm::sign(xx) * glm::pow(glm::abs(xx), c_car_ai_avoidance_reaction_power);
+							avoidance_target.x += xx;
 							float yy = car_avoid_direction.z;
-							avoidance_target.y += (glm::sign<float>(yy) - yy) * (100.f);
+							yy = (glm::sign<float>(yy) - yy) * c_car_ai_avoidance_reaction_factor;
+							yy = glm::sign(yy) * glm::pow(glm::abs(yy), c_car_ai_avoidance_reaction_power);
+							avoidance_target.y += yy;
 
 							car_control.foward -= c_car_ai_avoidance_slow_factor * (1.f - car_t);
+
+							avoidance_factor = glm::max(avoidance_factor, 1.f - car_t);
 						}
 					}
 				}
@@ -297,19 +306,21 @@ namespace BoxCityCarControl
 
 		if (c_car_ai_targeting_enable)
 		{
+			float avoidance_adjusted = glm::pow((1.f - avoidance_factor), 0.5f);
+
 			//Calculate the angles between the car direction and they target
 			glm::vec3 car_target_direction = glm::normalize(car_target.target - car_position);
 
 			if (glm::dot(car_front, car_target_direction) < 0.f)
 			{
 				//It is behind, needs to rotate
-				target_x += (glm::dot(car_target_direction, car_left)) > 0.f ? -1.f : 1.f;
+				target_x += ((glm::dot(car_target_direction, car_left)) > 0.f ? -1.f : 1.f) * avoidance_adjusted;
 			}
 			else
 			{
 				target_x += -glm::dot(car_target_direction, car_left);
 			}
-			target_y += -car_target_direction.z;
+			target_y += -car_target_direction.z * avoidance_adjusted;
 		}
 
 		//Update targets

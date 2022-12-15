@@ -25,9 +25,9 @@ namespace BoxCityTrafficSystem
 	constexpr float kTileSize = 1000.f;
 
 	//Traffic system
-	constexpr uint32_t kTrafficTargetCountXY = 20;
+	constexpr uint32_t kTrafficTargetCountXY = 32;
 	constexpr uint32_t kTrafficTargetCountZ = 4;
-	constexpr float kTrafficTargetSizeXY = 1500.f;
+	constexpr float kTrafficTargetSizeXY = 1000.f;
 	constexpr float kTrafficTargetSizeZ = (BoxCityTileSystem::kTileHeightTop - BoxCityTileSystem::kTileHeightBottom) / kTrafficTargetCountZ;
 
 	//Represent a local tile position

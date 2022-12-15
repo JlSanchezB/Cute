@@ -317,7 +317,7 @@ namespace BoxCityTrafficSystem
 		int32_t next_world_i = world_i;
 		int32_t next_world_j = world_j;
 		int32_t next_world_k = world_k;
-		size_t next_tile = random() % 6;
+		size_t next_tile = out_array[random() % num_out];
 		switch (static_cast<TrafficTargetDirection>(next_tile))
 		{
 		case TrafficTargetDirection::Xinc:
@@ -340,7 +340,7 @@ namespace BoxCityTrafficSystem
 			break;
 		}
 
-		next_world_k = glm::clamp<int32_t>(next_world_k, 0, kTrafficTargetCountZ - 1);
+		//next_world_k = glm::clamp<int32_t>(next_world_k, 0, kTrafficTargetCountZ - 1);
 		assert(next_world_k >= 0 && next_world_k < kTrafficTargetCountZ); //No conection can wrap
 
 		//Now to calculate the local
