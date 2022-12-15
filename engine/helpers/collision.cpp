@@ -411,4 +411,28 @@ namespace helpers
 
 		return true;
 	}
+	glm::vec3 CalculateClosestPointToOBB(const glm::vec3& point, const OBB& obb)
+	{
+		glm::vec3 result = obb.position;
+		glm::vec3 dir = point - obb.position;
+
+		for (int i = 0; i < 3; ++i) {
+			std::array<float, 9> o = GetRotationArray(obb);
+			const float* orientation = &o[i * 3];
+			glm::vec3 axis(orientation[0], orientation[1], orientation[2]);
+
+			float distance = glm::dot(dir, axis);
+
+			if (distance > obb.extents[i]) {
+				distance = obb.extents[i];
+			}
+			if (distance < -obb.extents[i]) {
+				distance = -obb.extents[i];
+			}
+
+			result = result + (axis * distance);
+		}
+
+		return result;
+	}
 }

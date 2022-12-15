@@ -189,6 +189,52 @@ namespace BoxCityTileSystem
 		LinearBVHGeneratedBoxesSettings bvh_settings(m_generated_boxes);
 		m_generated_boxes_bvh.Build(&bvh_settings, indexes.data(), static_cast<uint32_t>(m_generated_boxes.size()), m_bounding_box);
 
+		std::uniform_real_distribution<float> target_position_offset(0.2f, 0.8f);
+		
+		//Calculate the target positions
+		constexpr  float kTargetRadius = 50.f;
+		for (uint32_t i = 0; i < 16; i++)
+		{
+			uint32_t x = i % 2;
+			uint32_t y = i / 2;
+			uint32_t z = i / 4;
+
+			//Try x times and get the best result
+			float best_distance = 0.f;
+			glm::vec3 best_point;
+
+			for (size_t test = 0; test < 25; ++test)
+			{
+				//Get a random position
+				glm::vec3 possible_position = glm::vec3(begin_tile_x + (x * 0.5f + target_position_offset(random) * 0.5f) * kTileSize,
+					begin_tile_y + (y * 0.5f + target_position_offset(random) * 0.5f) * kTileSize,
+					kTileHeightBottom + (kTileHeightTop - kTileHeightBottom) * (y * 0.25f + target_position_offset(random) * 0.25f));
+
+				if (test == 0) best_point = possible_position;
+
+				//Check for radius of 50.f
+				helpers::AABB aabb;
+				aabb.min = possible_position - glm::vec3(kTargetRadius / 2.f, kTargetRadius / 2.f, kTargetRadius / 2.f);
+				aabb.max = possible_position + glm::vec3(kTargetRadius / 2.f, kTargetRadius / 2.f, kTargetRadius / 2.f);
+
+				m_generated_boxes_bvh.Visit(aabb, [manager = this, &possible_position, &best_distance, &best_point](const uint32_t& index)
+					{
+						//Collide, aabb has already tested
+						glm::vec3 closest_position = helpers::CalculateClosestPointToOBB(possible_position, manager->m_generated_boxes[index].obb);
+						
+						float distance2 = glm::distance2(possible_position, closest_position);
+						if (distance2 > best_distance)
+						{
+							best_distance = distance2;
+							best_point = possible_position;
+						}
+					});
+			}
+
+			//We should have the best posible target
+			m_target_positions[i] = best_point;	
+		}
+
 		assert(m_state == State::Loaded || m_state == State::Unloaded || m_state == State::Loading);
 		SetState(State::Loaded);
 		m_lod = -1;

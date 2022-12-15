@@ -194,6 +194,9 @@ namespace BoxCityTileSystem
 		//LBVH for building instances
 		helpers::LinearBVH<InstanceReference, LinearBVHBuildingSettings> m_building_bvh;
 
+		//Each tile has 16 target positions
+		std::array<glm::vec3, 2 * 2 * 4> m_target_positions;
+
 		void SetState(State new_state)
 		{
 			m_state = new_state;
