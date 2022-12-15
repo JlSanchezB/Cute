@@ -151,6 +151,9 @@ namespace BoxCityTileSystem
 					}
 				});
 		}
+
+		bool GetNextTrafficTarget(std::mt19937& random, const glm::vec3& position, glm::vec3& next_target) const;
+
 	private:
 		//System
 		display::Device* m_device = nullptr;
@@ -186,6 +189,7 @@ namespace BoxCityTileSystem
 		void GenerateTileDescriptors();
 
 		Tile& GetTile(const LocalTilePosition& local_tile);
+		const Tile& GetTile(const LocalTilePosition& local_tile) const;
 
 		//Zone distribution
 		void GenerateZoneDescriptors();

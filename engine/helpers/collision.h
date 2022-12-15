@@ -140,7 +140,7 @@ namespace helpers
 	};
 	bool CollisionFeaturesOBBvsOBB(const OBB& obb1, const OBB& obb2, CollisionReturn& collision_return);
 
-	glm::vec3 CalculateClosestPointToOBB(const glm::vec3& point, const OBB& obb);
+	glm::vec3 CalculateClosestPointToOBB(const glm::vec3& point, const OBB& obb, bool& inside);
 }
 
 #endif //COLLISION_H_

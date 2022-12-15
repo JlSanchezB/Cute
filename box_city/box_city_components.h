@@ -117,7 +117,7 @@ struct CarControl
 struct CarTarget
 {
 	glm::vec3 target;
-
+	bool target_valid = false;
 	CarTarget()
 	{
 	};

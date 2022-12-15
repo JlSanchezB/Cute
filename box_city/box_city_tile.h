@@ -145,6 +145,8 @@ namespace BoxCityTileSystem
 
 		//Call to indicate that has been added in the queue for loading
 		void AddedToLoadingQueue();
+
+		glm::vec3 GetTrafficTargetPosition(uint32_t i, uint32_t j, uint32_t k) const;
 	private:
 		enum class State
 		{

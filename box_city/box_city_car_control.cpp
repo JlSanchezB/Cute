@@ -62,7 +62,9 @@ CONTROL_VARIABLE(float, c_car_ai_avoidance_reaction_power, 0.f, 10.f, 0.8f, "Car
 CONTROL_VARIABLE(float, c_car_ai_avoidance_slow_factor, 0.f, 1.f, 0.3f, "Car", "Car AI avoidance slow factor");
 CONTROL_VARIABLE(float, c_car_ai_target_range, 1.f, 10000.f, 2000.f, "Car", "Car AI target range");
 CONTROL_VARIABLE(float, c_car_ai_min_target_range, 1.f, 10000.f, 500.f, "Car", "Car AI min target range");
-CONTROL_VARIABLE(float, c_car_ai_min_target_distance, 1.f, 10000.f, 150.f, "Car", "Car AI min target distance");
+CONTROL_VARIABLE(float, c_car_ai_min_target_distance, 1.f, 10000.f, 100.f, "Car", "Car AI min target distance");
+CONTROL_VARIABLE(float, c_car_ai_close_target_distance, 1.f, 10000.f, 200.f, "Car", "Car AI close target distance");
+CONTROL_VARIABLE(float, c_car_ai_close_target_distance_slow, 0.f, 1.f, 0.5f, "Car", "Car AI close target distance slow");
 
 namespace BoxCityCarControl
 {
@@ -148,7 +150,7 @@ namespace BoxCityCarControl
 		}
 	}
 
-	void SetupCarTarget(std::mt19937& random, BoxCityTrafficSystem::Manager* manager, const Car& car, CarTarget& car_target)
+	void SetupCarTarget(std::mt19937& random, BoxCityTileSystem::Manager* manager, const Car& car, CarTarget& car_target)
 	{
 		/*
 		//Calculate a new position as target for rogue
@@ -165,7 +167,7 @@ namespace BoxCityCarControl
 		car_target.target = glm::vec3((*car.position).x + range_x, (*car.position).y + range_y, position_range_z(random));
 		*/
 
-		car_target.target = manager->GetNextTrafficTarget(random, *car.position);
+		car_target.target_valid = manager->GetNextTrafficTarget(random, *car.position, car_target.target);
 	}
 
 	void UpdateAIControl(std::mt19937& random, uint32_t instance_index, CarControl& car_control, const Car& car, const CarMovement& car_movement, const CarSettings& car_settings, CarTarget& car_target, CarBuildingsCache& car_buildings_cache, uint32_t frame_index, float elapsed_time, BoxCityTileSystem::Manager* tile_manager, BoxCityTrafficSystem::Manager* traffic_manager, const glm::vec3& camera_pos)
@@ -298,13 +300,14 @@ namespace BoxCityCarControl
 		float target_y = avoidance_target.y;
 
 		//Calculate if it needs retargetting
-		if (glm::length2(*car.position - car_target.target) < c_car_ai_min_target_distance * c_car_ai_min_target_distance)
+		float target_distance2 = glm::length2(*car.position - car_target.target);
+		if (target_distance2 < c_car_ai_min_target_distance * c_car_ai_min_target_distance || !car_target.target_valid)
 		{
 			//Retarget
-			SetupCarTarget(random, traffic_manager, car, car_target);
+			SetupCarTarget(random, tile_manager, car, car_target);
 		}
 
-		if (c_car_ai_targeting_enable)
+		if (c_car_ai_targeting_enable && car_target.target_valid)
 		{
 			float avoidance_adjusted = glm::pow((1.f - avoidance_factor), 0.5f);
 
@@ -314,13 +317,19 @@ namespace BoxCityCarControl
 			if (glm::dot(car_front, car_target_direction) < 0.f)
 			{
 				//It is behind, needs to rotate
-				target_x += ((glm::dot(car_target_direction, car_left)) > 0.f ? -1.f : 1.f) * avoidance_adjusted;
+				target_x += ((glm::dot(car_target_direction, car_left_flat)) > 0.f ? -1.f : 1.f) * avoidance_adjusted;
 			}
 			else
 			{
-				target_x += -glm::dot(car_target_direction, car_left);
+				target_x += -glm::dot(car_target_direction, car_left_flat);
 			}
 			target_y += -car_target_direction.z * avoidance_adjusted;
+
+			if (target_distance2 < c_car_ai_close_target_distance * c_car_ai_close_target_distance)
+			{
+				//Reduce speed for improving targeting
+				car_control.foward -= c_car_ai_close_target_distance_slow * (1.f - glm::clamp(target_distance2 / c_car_ai_close_target_distance * c_car_ai_close_target_distance, 0.f, 1.f));
+			}
 		}
 
 		//Update targets

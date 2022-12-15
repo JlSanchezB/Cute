@@ -184,7 +184,7 @@ void BoxCityGame::OnLogic(double total_time, float elapsed_time)
 	m_tile_manager.Update(camera->GetPosition());
 
 	//Update traffic manager
-	m_traffic_system.Update(camera->GetPosition());
+	m_traffic_system.Update(&m_tile_manager, camera->GetPosition());
 
 	job::Fence update_fence;
 

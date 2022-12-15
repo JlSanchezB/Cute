@@ -166,6 +166,57 @@ namespace BoxCityTileSystem
 		return m_tiles[zoneID].GetLodGPUAllocation(static_cast<LODGroup>(lod_group));
 	}
 
+	bool Manager::GetNextTrafficTarget(std::mt19937& random, const glm::vec3& position, glm::vec3& next_target) const
+	{
+		//Calculate the current tile
+		int32_t offset_i = static_cast<int32_t>(floor(2.f * (position.x / kTileSize)));
+		int32_t offset_j = static_cast<int32_t>(floor(2.f * (position.y / kTileSize)));
+		int32_t offset_k = static_cast<int32_t>(floor(4.f * (position.z - kTileHeightBottom) / (kTileHeightTop - kTileHeightBottom)));
+		offset_k = glm::clamp<int32_t>(offset_k, 0, 3);
+
+
+		//Add the offset
+		switch (random() % 6)
+		{
+		case 0:
+			offset_i++;
+			break;
+		case 1:
+			offset_j++;
+			break;
+		case 2:
+			offset_k++;
+			break;
+		case 3:
+			offset_i--;
+			break;
+		case 4:
+			offset_j--;
+			break;
+		case 5:
+			offset_k--;
+			break;
+		}
+		offset_k = glm::clamp<int32_t>(offset_k, 0, 3);
+
+		//Calculate the current target inside the tile
+		WorldTilePosition world_tile_position{ offset_i / 2, offset_j / 2 };
+
+		//Get tile
+		const Tile& tile = GetTile(CalculateLocalTileIndex(world_tile_position));
+		
+		if (!tile.IsLoaded()) return false;
+
+		//Get offset inside the tile
+		uint32_t x = static_cast<uint32_t>(glm::abs(offset_i) % 2);
+		uint32_t y = static_cast<uint32_t>(glm::abs(offset_j) % 2);
+		uint32_t z = static_cast<uint32_t>(offset_k);
+		
+		//Get the position
+		next_target = tile.GetTrafficTargetPosition(x, y, z);
+		return true;
+	}
+
 	void Manager::GenerateTileDescriptors()
 	{
 		//We create all the tile descriptors
@@ -227,6 +278,11 @@ namespace BoxCityTileSystem
 	}
 
 	Tile& Manager::GetTile(const LocalTilePosition& local_tile)
+	{
+		return m_tiles[local_tile.i + local_tile.j * kLocalTileCount];
+	}
+
+	const Tile& Manager::GetTile(const LocalTilePosition& local_tile) const
 	{
 		return m_tiles[local_tile.i + local_tile.j * kLocalTileCount];
 	}

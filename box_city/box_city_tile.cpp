@@ -189,26 +189,26 @@ namespace BoxCityTileSystem
 		LinearBVHGeneratedBoxesSettings bvh_settings(m_generated_boxes);
 		m_generated_boxes_bvh.Build(&bvh_settings, indexes.data(), static_cast<uint32_t>(m_generated_boxes.size()), m_bounding_box);
 
-		std::uniform_real_distribution<float> target_position_offset(0.2f, 0.8f);
+		std::uniform_real_distribution<float> target_position_offset(0.4f, 0.6f);
 		
 		//Calculate the target positions
-		constexpr  float kTargetRadius = 50.f;
-		for (uint32_t i = 0; i < 16; i++)
+		constexpr  float kTargetRadius = 200.f;
+		for (uint32_t j = 0; j < 16; j++)
 		{
-			uint32_t x = i % 2;
-			uint32_t y = i / 2;
-			uint32_t z = i / 4;
+			uint32_t x = j % 2;
+			uint32_t y = (j % 4) / 2;
+			uint32_t z = j / 4;
 
 			//Try x times and get the best result
 			float best_distance = 0.f;
 			glm::vec3 best_point;
 
-			for (size_t test = 0; test < 25; ++test)
+			for (size_t test = 0; test < 100; ++test)
 			{
 				//Get a random position
-				glm::vec3 possible_position = glm::vec3(begin_tile_x + (x * 0.5f + target_position_offset(random) * 0.5f) * kTileSize,
-					begin_tile_y + (y * 0.5f + target_position_offset(random) * 0.5f) * kTileSize,
-					kTileHeightBottom + (kTileHeightTop - kTileHeightBottom) * (y * 0.25f + target_position_offset(random) * 0.25f));
+				glm::vec3 possible_position = glm::vec3(begin_tile_x + (static_cast<float>(x) * 0.5f + target_position_offset(random) * 0.5f) * kTileSize,
+					begin_tile_y + (static_cast<float>(y) * 0.5f + target_position_offset(random) * 0.5f) * kTileSize,
+					kTileHeightBottom + (kTileHeightTop - kTileHeightBottom) * (static_cast<float>(z) * 0.25f + target_position_offset(random) * 0.25f));
 
 				if (test == 0) best_point = possible_position;
 
@@ -217,22 +217,32 @@ namespace BoxCityTileSystem
 				aabb.min = possible_position - glm::vec3(kTargetRadius / 2.f, kTargetRadius / 2.f, kTargetRadius / 2.f);
 				aabb.max = possible_position + glm::vec3(kTargetRadius / 2.f, kTargetRadius / 2.f, kTargetRadius / 2.f);
 
-				m_generated_boxes_bvh.Visit(aabb, [manager = this, &possible_position, &best_distance, &best_point](const uint32_t& index)
+				bool found = false;
+				m_generated_boxes_bvh.Visit(aabb, [&](const uint32_t& index)
 					{
+						found = true;
 						//Collide, aabb has already tested
-						glm::vec3 closest_position = helpers::CalculateClosestPointToOBB(possible_position, manager->m_generated_boxes[index].obb);
+						bool inside;
+						glm::vec3 closest_position = helpers::CalculateClosestPointToOBB(possible_position, m_generated_boxes[index].obb, inside);
 						
 						float distance2 = glm::distance2(possible_position, closest_position);
-						if (distance2 > best_distance)
+						if (!inside && distance2 > best_distance)
 						{
 							best_distance = distance2;
 							best_point = possible_position;
 						}
 					});
+
+				if (!found)
+				{
+					//This position is perfect, no collision with any building
+					best_point = possible_position;
+					break;
+				}
 			}
 
 			//We should have the best posible target
-			m_target_positions[i] = best_point;	
+			m_target_positions[j] = best_point;	
 		}
 
 		assert(m_state == State::Loaded || m_state == State::Unloaded || m_state == State::Loading);
@@ -679,5 +689,9 @@ namespace BoxCityTileSystem
 	{
 		assert(m_state == State::Unloaded || m_state == State::Loaded);
 		SetState(State::Loading);
+	}
+	glm::vec3 Tile::GetTrafficTargetPosition(uint32_t i, uint32_t j, uint32_t k) const
+	{
+		return m_target_positions[i + j * 2 + k * 4];
 	}
 }

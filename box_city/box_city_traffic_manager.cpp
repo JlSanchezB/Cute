@@ -87,7 +87,7 @@ namespace BoxCityTrafficSystem
 		m_GPU_memory_render_module->UpdateStaticGPUMemory(m_device, m_gpu_memory, &gpu_box_instance, sizeof(GPUBoxInstance), render::GetGameFrameIndex(m_render_system), car_gpu_index.gpu_slot * sizeof(GPUBoxInstance));
 	}
 
-	void Manager::Update(const glm::vec3& camera_position)
+	void Manager::Update(BoxCityTileSystem::Manager* tile_manager, const glm::vec3& camera_position)
 	{
 		PROFILE_SCOPE("BoxCityTrafficManager", 0xFFFF77FF, "Update");
 		//Check if the camera is still in the same tile, using some fugde factor
@@ -149,7 +149,7 @@ namespace BoxCityTrafficSystem
 								SetupCar(tile, random, begin_tile_x, begin_tile_y, position_range, position_range_z, size_range,
 								car, car_movement, car_settings, obb_box_component, aabb_box_component, car_gpu_index);
 
-								BoxCityCarControl::SetupCarTarget(random, this, car, car_target);
+								BoxCityCarControl::SetupCarTarget(random, tile_manager, car, car_target);
 							}, bitset);
 					}
 					else if (!tile.m_activated)
@@ -173,7 +173,7 @@ namespace BoxCityTrafficSystem
 								car, car_movement, car_settings, obb_box_component, aabb_box_component, car_gpu_index);
 							
 							CarTarget car_target;
-							BoxCityCarControl::SetupCarTarget(random, this, car, car_target);
+							BoxCityCarControl::SetupCarTarget(random, tile_manager, car, car_target);
 
 							Instance instance = ecs::AllocInstance<GameDatabase, CarType>(tile.m_zone_index)
 								.Init<Car>(car)
@@ -253,7 +253,7 @@ namespace BoxCityTrafficSystem
 						//glm::vec3 dest_reference(next_world_tile.i * kTileSize, next_world_tile.j * kTileSize, 0.f);
 						//A jump has happen, recalculate the target
 						//car_target.target = (car_target.target - source_reference) + dest_reference;
-						BoxCityCarControl::SetupCarTarget(random_thread_local, manager, car, car_target);
+						BoxCityCarControl::SetupCarTarget(random_thread_local, tile_manager, car, car_target);
 					}
 				}
 

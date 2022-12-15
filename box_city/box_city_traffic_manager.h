@@ -73,7 +73,7 @@ namespace BoxCityTrafficSystem
 		void Shutdown();
 
 		//Update
-		void Update(const glm::vec3& camera_position);
+		void Update(BoxCityTileSystem::Manager* tile_manager, const glm::vec3& camera_position);
 
 		//Update Cars
 		void UpdateCars(platform::Game* game, job::System* job_system, job::JobAllocator<1024 * 1024>* job_allocator, const helpers::Camera& camera, job::Fence& update_fence, BoxCityTileSystem::Manager* tile_manager, uint32_t frame_index, float elapsed_time);
