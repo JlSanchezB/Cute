@@ -6,9 +6,9 @@
 
 //List of control variables
 
-CONTROL_VARIABLE_BOOL(c_car_ai_avoidance_enable, true, "Car", "Car AI avoidance enabled");
+CONTROL_VARIABLE_BOOL(c_car_ai_avoidance_enable, false, "Car", "Car AI avoidance enabled");
 CONTROL_VARIABLE_BOOL(c_car_ai_targeting_enable, true, "Car", "Car AI targeting enabled");
-CONTROL_VARIABLE_BOOL(c_car_collision_enable, true, "Car", "Car collision enabled");
+CONTROL_VARIABLE_BOOL(c_car_collision_enable, false, "Car", "Car collision enabled");
 
 //Pitch input
 CONTROL_VARIABLE(float, c_car_Y_range, 0.f, 1.f, 0.7f, "Car", "Y Range");
@@ -178,14 +178,9 @@ namespace BoxCityCarControl
 		car_target.target_valid = manager->GetNextTrafficTarget(random, *car.position, car_target.target);
 		if (car_target.target_valid)
 		{
-			car_target.last_target = car_target.target;
-		}
-		else
-		{
-			car_target.target = *car.position;
+			car_target.last_target = last_target;
 		}
 	}
-
 	void UpdateAIControl(std::mt19937& random, uint32_t instance_index, CarControl& car_control, const Car& car, const CarMovement& car_movement, const CarSettings& car_settings, CarTarget& car_target, CarBuildingsCache& car_buildings_cache, uint32_t frame_index, float elapsed_time, BoxCityTileSystem::Manager* tile_manager, BoxCityTrafficSystem::Manager* traffic_manager, const glm::vec3& camera_pos)
 	{
 		const glm::vec3 car_position = *car.position;
@@ -236,10 +231,9 @@ namespace BoxCityCarControl
 						const glm::vec3 building_bottom = avoid_box.position - extent;
 						const glm::vec3 building_top = avoid_box.position + extent;
 
-						float t;
-						helpers::CalculateProjectionPointToSegment(car_position, building_bottom, building_top, t);
+						glm::vec3 closest_point = helpers::CalculateClosestPointToSegment(car_position, building_bottom, building_top);
 
-						float distance = glm::distance2(car_position, building_bottom + (building_top - building_bottom) * t);
+						float distance = glm::distance2(car_position, closest_point);
 
 						//Now check if it needs to be added
 						for (uint32_t i = 0; i < CarBuildingsCache::kNumCachedBuildings; ++i)
@@ -326,24 +320,9 @@ namespace BoxCityCarControl
 			float avoidance_adjusted = glm::pow((1.f - avoidance_factor), 0.5f);
 
 			//Calculate the angles between the car direction and they target
-			float t;
-			helpers::CalculateProjectionPointToSegment(car_position, car_target.last_target, car_target.target, t);
-			glm::vec3 car_target_direction;
+			glm::vec3 car_in_target_line = helpers::CalculateClosestPointToSegment(car_position, car_target.last_target, car_target.target);
+			glm::vec3 car_target_direction = glm::normalize(glm::mix(car_target.target, car_in_target_line, 0.75f) - car_position);
 
-			//Distance to the target like
-			glm::vec3 car_in_target_line = car_target.last_target + (car_target.target - car_target.last_target) * t;
-			float distance_to_target_line = glm::distance(car_position, car_in_target_line);
-
-			if (distance_to_target_line < 5.f)
-			{
-				//Target the target
-				glm::vec3 car_target_direction = glm::normalize(car_target.target - car_position);
-			}
-			else
-			{
-				//Target the line
-				car_target_direction = glm::normalize(car_in_target_line - car_position);
-			}
 			
 			if (glm::dot(car_front, car_target_direction) < 0.f)
 			{

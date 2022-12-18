@@ -210,6 +210,7 @@ namespace BoxCityTileSystem
 					begin_tile_y + (static_cast<float>(y) * 0.5f + target_position_offset(random) * 0.5f) * kTileSize,
 					kTileHeightBottom + (kTileHeightTop - kTileHeightBottom) * (static_cast<float>(z) * 0.25f + target_position_offset(random) * 0.25f));
 
+				best_point = possible_position;
 				if (test == 0) best_point = possible_position;
 
 				//Check for radius of 50.f
@@ -222,12 +223,9 @@ namespace BoxCityTileSystem
 					{
 						found = true;
 						const helpers::OBB& obb = m_generated_boxes[index].obb;
-						float t;
 						glm::vec3 top = obb.position + glm::row(obb.rotation, 2) * obb.extents.z;
 						glm::vec3 bottom = obb.position - glm::row(obb.rotation, 2) * obb.extents.z;
-						helpers::CalculateProjectionPointToSegment(possible_position, bottom, top, t);
-
-						glm::vec3 closest_point = bottom + (top - bottom) * t;
+						glm::vec3 closest_point = helpers::CalculateClosestPointToSegment(possible_position, bottom, top);
 						
 						float distance2 = glm::distance2(possible_position, closest_point);
 						if (distance2 > best_distance)

@@ -45,6 +45,12 @@ namespace helpers
 				max = point;
 			}
 		}
+
+		bool Inside(const glm::vec3& point) const
+		{
+			return min.x <= point.x && min.y <= point.y && min.y <= point.y &&
+				max.x >= point.x && max.y >= point.y && max.y >= point.y;
+		}
 	};
 
 	struct OBB
@@ -77,22 +83,18 @@ namespace helpers
 		output.max = source.position + half_distance;
 	}
 
-	inline void CalculateProjectionPointToSegment(const glm::vec3& point,
-		const glm::vec3& segment_begin, const glm::vec3& segment_end,
-		float& projected_delta)
+	inline glm::vec3 CalculateClosestPointToSegment(const glm::vec3& point,
+		const glm::vec3& segment_begin, const glm::vec3& segment_end)
 	{
-		glm::vec3 AB = segment_end - segment_begin;
-		float AB_squared = glm::dot(AB, AB);
-		if (AB_squared == 0.f)
-		{
-			projected_delta = 0.f;
-		}
-		else
-		{
-			glm::vec3 Ap = point - segment_begin;
-			float t = glm::dot(Ap, AB) / AB_squared;
-			projected_delta = glm::clamp(projected_delta, 0.f, 1.f);
-		}
+		glm::vec3 lVec = segment_end - segment_begin; // Line Vector
+		// Project "point" onto the "Line Vector", computing:
+		// closest(t) = start + t * (end - start)
+		// T is how far along the line the projected point is
+		float t = glm::dot(point - segment_begin, lVec) / glm::dot(lVec, lVec);
+		// Clamp t to the 0 to 1 range
+		t = glm::clamp(t, 0.f, 1.f);
+		// Return projected position of t
+		return segment_begin + lVec * t;
 	}
 
 	inline void CalculateClosestPointsInTwoSegments(const glm::vec3& segment_a_begin, const glm::vec3& segment_a_end,

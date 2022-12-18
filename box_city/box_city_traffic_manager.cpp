@@ -249,12 +249,14 @@ namespace BoxCityTrafficSystem
 					if (abs(static_cast<int32_t>(last_local_tile.i) - static_cast<int32_t>(next_local_tile.i)) > 1 ||
 						abs(static_cast<int32_t>(last_local_tile.j) - static_cast<int32_t>(next_local_tile.j)) > 1)
 					{
-						//glm::vec3 source_reference(current_world_tile.i * kTileSize, current_world_tile.j * kTileSize, 0.f);
-						//glm::vec3 dest_reference(next_world_tile.i * kTileSize, next_world_tile.j * kTileSize, 0.f);
+						glm::vec3 source_reference(current_world_tile.i * kTileSize, current_world_tile.j * kTileSize, 0.f);
+						glm::vec3 dest_reference(next_world_tile.i * kTileSize, next_world_tile.j * kTileSize, 0.f);
 						//A jump has happen, recalculate the target
-						//car_target.target = (car_target.target - source_reference) + dest_reference;
-						BoxCityCarControl::SetupCarTarget(random_thread_local, tile_manager, car, car_target, true);
+						car_target.target = (car_target.target - source_reference) + dest_reference;
+						car_target.last_target = (car_target.last_target - source_reference) + dest_reference;
 					}
+
+					//assert(manager->GetTile(next_local_tile).m_bounding_box.Inside(*car.position));
 				}
 
 				//Update OOBB and AABB

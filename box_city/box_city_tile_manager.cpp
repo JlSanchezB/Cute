@@ -200,7 +200,7 @@ namespace BoxCityTileSystem
 		offset_k = glm::clamp<int32_t>(offset_k, 0, 3);
 
 		//Calculate the current target inside the tile
-		WorldTilePosition world_tile_position{ offset_i / 2, offset_j / 2 };
+		WorldTilePosition world_tile_position{ (offset_i < 0) ? (offset_i - 1) / 2: offset_i / 2, (offset_j < 0) ? (offset_j - 1) / 2: offset_j / 2 };
 
 		//Get tile
 		const Tile& tile = GetTile(CalculateLocalTileIndex(world_tile_position));
@@ -208,12 +208,14 @@ namespace BoxCityTileSystem
 		if (!tile.IsLoaded()) return false;
 
 		//Get offset inside the tile
-		uint32_t x = static_cast<uint32_t>(glm::abs(offset_i) % 2);
-		uint32_t y = static_cast<uint32_t>(glm::abs(offset_j) % 2);
+		uint32_t x = static_cast<uint32_t>((offset_i + 1000000) % 2);
+		uint32_t y = static_cast<uint32_t>((offset_j + 1000000) % 2);
 		uint32_t z = static_cast<uint32_t>(offset_k);
 		
 		//Get the position
 		next_target = tile.GetTrafficTargetPosition(x, y, z);
+
+		assert(glm::distance(glm::vec2(next_target), glm::vec2(position)) < 1000.f);
 		return true;
 	}
 
