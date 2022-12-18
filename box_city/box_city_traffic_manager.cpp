@@ -149,7 +149,7 @@ namespace BoxCityTrafficSystem
 								SetupCar(tile, random, begin_tile_x, begin_tile_y, position_range, position_range_z, size_range,
 								car, car_movement, car_settings, obb_box_component, aabb_box_component, car_gpu_index);
 
-								BoxCityCarControl::SetupCarTarget(random, tile_manager, car, car_target);
+								BoxCityCarControl::SetupCarTarget(random, tile_manager, car, car_target, true);
 							}, bitset);
 					}
 					else if (!tile.m_activated)
@@ -173,7 +173,7 @@ namespace BoxCityTrafficSystem
 								car, car_movement, car_settings, obb_box_component, aabb_box_component, car_gpu_index);
 							
 							CarTarget car_target;
-							BoxCityCarControl::SetupCarTarget(random, tile_manager, car, car_target);
+							BoxCityCarControl::SetupCarTarget(random, tile_manager, car, car_target, true);
 
 							Instance instance = ecs::AllocInstance<GameDatabase, CarType>(tile.m_zone_index)
 								.Init<Car>(car)
@@ -253,7 +253,7 @@ namespace BoxCityTrafficSystem
 						//glm::vec3 dest_reference(next_world_tile.i * kTileSize, next_world_tile.j * kTileSize, 0.f);
 						//A jump has happen, recalculate the target
 						//car_target.target = (car_target.target - source_reference) + dest_reference;
-						BoxCityCarControl::SetupCarTarget(random_thread_local, tile_manager, car, car_target);
+						BoxCityCarControl::SetupCarTarget(random_thread_local, tile_manager, car, car_target, true);
 					}
 				}
 

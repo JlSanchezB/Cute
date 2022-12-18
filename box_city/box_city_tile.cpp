@@ -189,10 +189,10 @@ namespace BoxCityTileSystem
 		LinearBVHGeneratedBoxesSettings bvh_settings(m_generated_boxes);
 		m_generated_boxes_bvh.Build(&bvh_settings, indexes.data(), static_cast<uint32_t>(m_generated_boxes.size()), m_bounding_box);
 
-		std::uniform_real_distribution<float> target_position_offset(0.4f, 0.6f);
+		std::uniform_real_distribution<float> target_position_offset(0.2f, 0.8f);
 		
 		//Calculate the target positions
-		constexpr  float kTargetRadius = 200.f;
+		constexpr  float kTargetRadius = 400.f;
 		for (uint32_t j = 0; j < 16; j++)
 		{
 			uint32_t x = j % 2;
@@ -221,12 +221,16 @@ namespace BoxCityTileSystem
 				m_generated_boxes_bvh.Visit(aabb, [&](const uint32_t& index)
 					{
 						found = true;
-						//Collide, aabb has already tested
-						bool inside;
-						glm::vec3 closest_position = helpers::CalculateClosestPointToOBB(possible_position, m_generated_boxes[index].obb, inside);
+						const helpers::OBB& obb = m_generated_boxes[index].obb;
+						float t;
+						glm::vec3 top = obb.position + glm::row(obb.rotation, 2) * obb.extents.z;
+						glm::vec3 bottom = obb.position - glm::row(obb.rotation, 2) * obb.extents.z;
+						helpers::CalculateProjectionPointToSegment(possible_position, bottom, top, t);
+
+						glm::vec3 closest_point = bottom + (top - bottom) * t;
 						
-						float distance2 = glm::distance2(possible_position, closest_position);
-						if (!inside && distance2 > best_distance)
+						float distance2 = glm::distance2(possible_position, closest_point);
+						if (distance2 > best_distance)
 						{
 							best_distance = distance2;
 							best_point = possible_position;

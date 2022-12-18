@@ -29,12 +29,12 @@ CONTROL_VARIABLE(float, c_car_foward_keyboard_factor, 0.f, 10.f, 1.25f, "Car", "
 
 //Pitch control
 CONTROL_VARIABLE(float, c_car_Y_pitch_force, 0.f, 10.f, 0.02f, "Car", "Y Pitch Force");
-CONTROL_VARIABLE(float, c_car_Y_pitch_linear_force, 0.f, 10.f, 0.03f, "Car", "Y Pitch Linear Force");
+CONTROL_VARIABLE(float, c_car_Y_pitch_linear_force, 0.f, 10.f, 0.00f, "Car", "Y Pitch Linear Force");
 
 //Roll control
 CONTROL_VARIABLE(float, c_car_X_roll_angular_force, 0.f, 10.f, 0.02f, "Car", "X Roll Angular Force");
 CONTROL_VARIABLE(float, c_car_X_jaw_angular_force, 0.f, 10.f, 0.05f, "Car", "X Jaw Angular Force");
-CONTROL_VARIABLE(float, c_car_X_linear_force, 0.f, 10.f, 0.03f, "Car", "X Linear Force");
+CONTROL_VARIABLE(float, c_car_X_linear_force, 0.f, 10.f, 0.00f, "Car", "X Linear Force");
 
 //Forward
 CONTROL_VARIABLE(float, c_car_foward_force, 0.f, 10000.f, 300.0f, "Car", "Foward Force");
@@ -59,10 +59,10 @@ CONTROL_VARIABLE(float, c_car_ai_avoidance_extra_distance, 0.f, 1000.f, 15.f, "C
 CONTROL_VARIABLE(float, c_car_ai_avoidance_distance_expansion, 0.f, 1000.f, 80.f, "Car", "Camera AI avoidance extra expansion apply to buildings when far");
 CONTROL_VARIABLE(float, c_car_ai_avoidance_reaction_factor, 0.f, 10.f, 1.2f, "Car", "Car AI avoidance reaction factor");
 CONTROL_VARIABLE(float, c_car_ai_avoidance_reaction_power, 0.f, 10.f, 0.8f, "Car", "Car AI avoidance reaction power");
-CONTROL_VARIABLE(float, c_car_ai_avoidance_slow_factor, 0.f, 1.f, 0.3f, "Car", "Car AI avoidance slow factor");
+CONTROL_VARIABLE(float, c_car_ai_avoidance_slow_factor, 0.f, 1.f, 0.0f, "Car", "Car AI avoidance slow factor");
 CONTROL_VARIABLE(float, c_car_ai_target_range, 1.f, 10000.f, 2000.f, "Car", "Car AI target range");
 CONTROL_VARIABLE(float, c_car_ai_min_target_range, 1.f, 10000.f, 500.f, "Car", "Car AI min target range");
-CONTROL_VARIABLE(float, c_car_ai_min_target_distance, 1.f, 10000.f, 100.f, "Car", "Car AI min target distance");
+CONTROL_VARIABLE(float, c_car_ai_min_target_distance, 1.f, 10000.f, 50.f, "Car", "Car AI min target distance");
 CONTROL_VARIABLE(float, c_car_ai_close_target_distance, 1.f, 10000.f, 200.f, "Car", "Car AI close target distance");
 CONTROL_VARIABLE(float, c_car_ai_close_target_distance_slow, 0.f, 1.f, 0.5f, "Car", "Car AI close target distance slow");
 
@@ -150,7 +150,7 @@ namespace BoxCityCarControl
 		}
 	}
 
-	void SetupCarTarget(std::mt19937& random, BoxCityTileSystem::Manager* manager, const Car& car, CarTarget& car_target)
+	void SetupCarTarget(std::mt19937& random, BoxCityTileSystem::Manager* manager, const Car& car, CarTarget& car_target, bool reset)
 	{
 		/*
 		//Calculate a new position as target for rogue
@@ -166,8 +166,24 @@ namespace BoxCityCarControl
 
 		car_target.target = glm::vec3((*car.position).x + range_x, (*car.position).y + range_y, position_range_z(random));
 		*/
-
+		glm::vec3 last_target;
+		if (reset)
+		{
+			last_target = *car.position;
+		}
+		else
+		{
+			last_target = car_target.target;
+		}
 		car_target.target_valid = manager->GetNextTrafficTarget(random, *car.position, car_target.target);
+		if (car_target.target_valid)
+		{
+			car_target.last_target = car_target.target;
+		}
+		else
+		{
+			car_target.target = *car.position;
+		}
 	}
 
 	void UpdateAIControl(std::mt19937& random, uint32_t instance_index, CarControl& car_control, const Car& car, const CarMovement& car_movement, const CarSettings& car_settings, CarTarget& car_target, CarBuildingsCache& car_buildings_cache, uint32_t frame_index, float elapsed_time, BoxCityTileSystem::Manager* tile_manager, BoxCityTrafficSystem::Manager* traffic_manager, const glm::vec3& camera_pos)
@@ -292,8 +308,6 @@ namespace BoxCityCarControl
 					}
 				}
 			}
-
-			car_control.foward = glm::max(car_control.foward, c_car_ai_min_forward);
 		}
 		
 		float target_x = avoidance_target.x;
@@ -312,16 +326,35 @@ namespace BoxCityCarControl
 			float avoidance_adjusted = glm::pow((1.f - avoidance_factor), 0.5f);
 
 			//Calculate the angles between the car direction and they target
-			glm::vec3 car_target_direction = glm::normalize(car_target.target - car_position);
+			float t;
+			helpers::CalculateProjectionPointToSegment(car_position, car_target.last_target, car_target.target, t);
+			glm::vec3 car_target_direction;
 
+			//Distance to the target like
+			glm::vec3 car_in_target_line = car_target.last_target + (car_target.target - car_target.last_target) * t;
+			float distance_to_target_line = glm::distance(car_position, car_in_target_line);
+
+			if (distance_to_target_line < 5.f)
+			{
+				//Target the target
+				glm::vec3 car_target_direction = glm::normalize(car_target.target - car_position);
+			}
+			else
+			{
+				//Target the line
+				car_target_direction = glm::normalize(car_in_target_line - car_position);
+			}
+			
 			if (glm::dot(car_front, car_target_direction) < 0.f)
 			{
 				//It is behind, needs to rotate
 				target_x += ((glm::dot(car_target_direction, car_left_flat)) > 0.f ? -1.f : 1.f) * avoidance_adjusted;
+				car_control.foward -= c_car_ai_close_target_distance_slow;
 			}
 			else
 			{
 				target_x += -glm::dot(car_target_direction, car_left_flat);
+				car_control.foward -= c_car_ai_close_target_distance_slow * glm::abs(glm::dot(car_target_direction, car_left_flat));
 			}
 			target_y += -car_target_direction.z * avoidance_adjusted;
 
@@ -331,6 +364,7 @@ namespace BoxCityCarControl
 				car_control.foward -= c_car_ai_close_target_distance_slow * (1.f - glm::clamp(target_distance2 / c_car_ai_close_target_distance * c_car_ai_close_target_distance, 0.f, 1.f));
 			}
 		}
+		car_control.foward = glm::max(car_control.foward, c_car_ai_min_forward);
 
 		//Update targets
 		car_control.X_target = glm::clamp(target_x, -c_car_X_range, c_car_X_range);
