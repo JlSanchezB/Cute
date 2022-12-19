@@ -62,7 +62,7 @@ CONTROL_VARIABLE(float, c_car_ai_avoidance_reaction_power, 0.f, 10.f, 0.8f, "Car
 CONTROL_VARIABLE(float, c_car_ai_avoidance_slow_factor, 0.f, 1.f, 0.0f, "Car", "Car AI avoidance slow factor");
 CONTROL_VARIABLE(float, c_car_ai_target_range, 1.f, 10000.f, 2000.f, "Car", "Car AI target range");
 CONTROL_VARIABLE(float, c_car_ai_min_target_range, 1.f, 10000.f, 500.f, "Car", "Car AI min target range");
-CONTROL_VARIABLE(float, c_car_ai_min_target_distance, 1.f, 10000.f, 50.f, "Car", "Car AI min target distance");
+CONTROL_VARIABLE(float, c_car_ai_min_target_distance, 1.f, 10000.f, 100.f, "Car", "Car AI min target distance");
 CONTROL_VARIABLE(float, c_car_ai_close_target_distance, 1.f, 10000.f, 200.f, "Car", "Car AI close target distance");
 CONTROL_VARIABLE(float, c_car_ai_close_target_distance_slow, 0.f, 1.f, 0.5f, "Car", "Car AI close target distance slow");
 
@@ -180,6 +180,8 @@ namespace BoxCityCarControl
 		{
 			car_target.last_target = last_target;
 		}
+
+		assert(reset || !car_target.target_valid || glm::distance(glm::vec2(*car.position), glm::vec2(car_target.target)) < 1000.f);
 	}
 	void UpdateAIControl(std::mt19937& random, uint32_t instance_index, CarControl& car_control, const Car& car, const CarMovement& car_movement, const CarSettings& car_settings, CarTarget& car_target, CarBuildingsCache& car_buildings_cache, uint32_t frame_index, float elapsed_time, BoxCityTileSystem::Manager* tile_manager, BoxCityTrafficSystem::Manager* traffic_manager, const glm::vec3& camera_pos)
 	{
@@ -309,6 +311,8 @@ namespace BoxCityCarControl
 
 		//Calculate if it needs retargetting
 		float target_distance2 = glm::length2(*car.position - car_target.target);
+		assert(!car_target.target_valid || target_distance2 < 1000.f * 1000.f);
+
 		if (target_distance2 < c_car_ai_min_target_distance * c_car_ai_min_target_distance || !car_target.target_valid)
 		{
 			//Retarget
@@ -321,8 +325,9 @@ namespace BoxCityCarControl
 
 			//Calculate the angles between the car direction and they target
 			glm::vec3 car_in_target_line = helpers::CalculateClosestPointToSegment(car_position, car_target.last_target, car_target.target);
-			glm::vec3 car_target_direction = glm::normalize(glm::mix(car_target.target, car_in_target_line, 0.75f) - car_position);
+			glm::vec3 car_target_direction = glm::normalize(glm::mix(car_target.target, car_in_target_line, 0.85f) - car_position);
 
+			assert(glm::all(glm::isfinite(car_in_target_line)));
 			
 			if (glm::dot(car_front, car_target_direction) < 0.f)
 			{
@@ -350,7 +355,6 @@ namespace BoxCityCarControl
 		car_control.Y_target = glm::clamp(target_y, -c_car_Y_range, c_car_Y_range);
 		car_control.foward = glm::clamp(car_control.foward, 0.f, 1.f);
 	}
-
 	void CalculateControlForces(Car& car, CarMovement& car_movement, CarSettings& car_settings, CarControl& car_control, float elapsed_time, glm::vec3& linear_forces, glm::vec3& angular_forces)
 	{
 		const glm::mat3x3 car_matrix = glm::toMat3(*car.rotation);
@@ -402,13 +406,14 @@ namespace BoxCityCarControl
 			linear_forces += foward_force;
 		}
 
-
 		//Apply friction
 		{
 			linear_forces -= car_movement.lineal_velocity * glm::clamp(c_car_friction_linear_force * elapsed_time, 0.f, 1.f) / elapsed_time;
 			angular_forces -= car_movement.rotation_velocity * glm::clamp(c_car_friction_angular_force * elapsed_time, 0.f, 1.f) / elapsed_time;
 		}
 
+		assert(glm::all(glm::isfinite(linear_forces)));
+		assert(glm::all(glm::isfinite(angular_forces)));
 	}
 	void CalculateCollisionForces(BoxCityTileSystem::Manager* manager, const glm::vec3& camera_pos, AABBBox& aabb, OBBBox& obb, glm::vec3& linear_forces, glm::vec3& angular_forces, glm::vec3& position_offset)
 	{
@@ -428,19 +433,23 @@ namespace BoxCityCarControl
 						position_offset -= collision_return.normal * collision_return.depth;
 					}
 				});
-			}
+		}
 	}
 	void IntegrateCar(Car& car, CarMovement& car_movement, const CarSettings& car_settings, const glm::vec3& linear_forces, const glm::vec3& angular_forces, const glm::vec3& position_offset, float elapsed_time)
 	{
+		assert(glm::all(glm::isfinite(car.position.Last())));
+
 		const glm::mat3x3 car_matrix = glm::toMat3(*car.rotation);
 
 		//Integrate velocity
 		car_movement.lineal_velocity += linear_forces * car_settings.inv_mass * elapsed_time;
+		assert(glm::all(glm::isfinite(car_movement.lineal_velocity)));
 
 		//Calculate world inertia mass
 		glm::mat3x3 inertia_matrix = glm::scale(car_settings.inv_mass_inertia);
 		glm::mat3x3 world_inv_mass_inertial = car_matrix * inertia_matrix * glm::inverse(car_matrix);
 		car_movement.rotation_velocity += angular_forces * elapsed_time * world_inv_mass_inertial;
+		assert(glm::all(glm::isfinite(car_movement.rotation_velocity)));
 
 		//Integrate position
 		*car.position = car.position.Last() + car_movement.lineal_velocity * elapsed_time + position_offset;
@@ -449,5 +458,7 @@ namespace BoxCityCarControl
 		{
 			*car.rotation = glm::normalize(car.rotation.Last() * glm::angleAxis(rotation_angle, car_movement.rotation_velocity / rotation_angle));
 		}
+
+		assert(glm::all(glm::isfinite(*car.position)));
 	}
 }

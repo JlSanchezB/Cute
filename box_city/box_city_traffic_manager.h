@@ -109,8 +109,6 @@ namespace BoxCityTrafficSystem
 			m_player_control_enable = enable;
 		}
 
-		glm::vec3 GetNextTrafficTarget(std::mt19937& random, glm::vec3 position) const;
-
 	private:
 		//Systems
 		display::Device* m_device = nullptr;
@@ -171,27 +169,6 @@ namespace BoxCityTrafficSystem
 
 		//GPU memory
 		render::AllocHandle m_gpu_memory;
-
-		//3d Grid with the traffic target system
-		enum class TrafficTargetDirection
-		{
-			Xinc,
-			Xdec,
-			Yinc,
-			Ydec,
-			Zinc,
-			Zdec
-		};
-		struct TrafficTarget
-		{
-			glm::vec3 position;
-			bool out[6] = {false}; //Direction conected
-
-			bool& GetOut(TrafficTargetDirection direction) { return out[static_cast<size_t>(direction)];}
-		};
-		helpers::Grid3D<TrafficTarget, kTrafficTargetCountXY, kTrafficTargetCountXY, kTrafficTargetCountZ> m_traffic_target_grid;
-
-		void GenerateTrafficTarget();
 	};
 }
 

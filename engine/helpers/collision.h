@@ -46,10 +46,10 @@ namespace helpers
 			}
 		}
 
-		bool Inside(const glm::vec3& point) const
+		bool Inside(const glm::vec3& point, float offset = 0.f) const
 		{
-			return min.x <= point.x && min.y <= point.y && min.y <= point.y &&
-				max.x >= point.x && max.y >= point.y && max.y >= point.y;
+			return (min.x - offset) <= point.x && (min.y - offset) <= point.y && (min.z - offset) <= point.z &&
+				(max.x + offset) >= point.x && (max.y + offset) >= point.y && (max.z + offset) >= point.z;
 		}
 	};
 
@@ -87,6 +87,8 @@ namespace helpers
 		const glm::vec3& segment_begin, const glm::vec3& segment_end)
 	{
 		glm::vec3 lVec = segment_end - segment_begin; // Line Vector
+		if (glm::length2(lVec) < FLT_EPSILON) return segment_begin;
+
 		// Project "point" onto the "Line Vector", computing:
 		// closest(t) = start + t * (end - start)
 		// T is how far along the line the projected point is
