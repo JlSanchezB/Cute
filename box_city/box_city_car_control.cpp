@@ -11,14 +11,14 @@ CONTROL_VARIABLE_BOOL(c_car_ai_targeting_enable, true, "Car", "Car AI targeting 
 CONTROL_VARIABLE_BOOL(c_car_collision_enable, false, "Car", "Car collision enabled");
 
 //Pitch input
-CONTROL_VARIABLE(float, c_car_Y_range, 0.f, 1.f, 0.7f, "Car", "Y Range");
+CONTROL_VARIABLE(float, c_car_Y_range, 0.f, 1.f, 0.9f, "Car", "Y Range");
 CONTROL_VARIABLE(float, c_car_Y_mouse_factor, 0.f, 10.f, 0.2f, "Car", "Y Mouse Factor");
 CONTROL_VARIABLE(float, c_car_Y_keyboard_factor, 0.f, 10.f, 2.0f, "Car", "Y Keyboard Factor");
 CONTROL_VARIABLE_BOOL(c_car_inverse_Y, false, "Car", "Y Inverse");
 CONTROL_VARIABLE(float, c_car_Y_absorber, 0.f, 1.f, 0.15f, "Car", "Y Absorber");
 
 //Roll input
-CONTROL_VARIABLE(float, c_car_X_range, 0.f, 1.f, 0.5f, "Car", "X Range");
+CONTROL_VARIABLE(float, c_car_X_range, 0.f, 1.f, 0.8f, "Car", "X Range");
 CONTROL_VARIABLE(float, c_car_X_mouse_factor, 0.f, 10.f, 0.2f, "Car", "X Mouse Factor");
 CONTROL_VARIABLE(float, c_car_X_keyboard_factor, 0.f, 10.f, 2.f, "Car", "X Keyboard Factor");
 CONTROL_VARIABLE(float, c_car_X_absorber, 0.f, 1.f, 0.15f, "Car", "X Absorber");
@@ -37,13 +37,15 @@ CONTROL_VARIABLE(float, c_car_X_jaw_angular_force, 0.f, 10.f, 0.05f, "Car", "X J
 CONTROL_VARIABLE(float, c_car_X_linear_force, 0.f, 10.f, 0.00f, "Car", "X Linear Force");
 
 //Forward
-CONTROL_VARIABLE(float, c_car_foward_force, 0.f, 10000.f, 300.0f, "Car", "Foward Force");
+CONTROL_VARIABLE(float, c_car_foward_force, 0.f, 10000.f, 200.0f, "Car", "Foward Force");
 CONTROL_VARIABLE(float, c_car_foward_kill_height_force, 0.f, 100.f, 2.0f, "Car", "Foward Kill Heigth Force");
 
 //Friction
-CONTROL_VARIABLE(float, c_car_friction_linear_force, 0.f, 10.f, 1.8f, "Car", "Linear Friction Force");
+CONTROL_VARIABLE(float, c_car_friction_linear_force, 0.f, 10.f, 1.4f, "Car", "Linear Friction Force");
 CONTROL_VARIABLE(float, c_car_friction_angular_force, 0.f, 10.f, 1.8f, "Car", "Angular Friction Force");
 
+//Aerodynamic forces
+CONTROL_VARIABLE(float, c_car_aerodynamic_linear_force, 0.f, 10.f, 1.5f, "Car", "Linear Aerodynamic Force");
 
 CONTROL_VARIABLE(float, c_car_camera_distance, 0.f, 100.f, 4.5f, "Car", "Camera Distance");
 CONTROL_VARIABLE(float, c_car_camera_up_offset, 0.f, 100.f, 1.f, "Car", "Camera Up Offset");
@@ -409,6 +411,17 @@ namespace BoxCityCarControl
 		{
 			linear_forces -= car_movement.lineal_velocity * glm::clamp(c_car_friction_linear_force * elapsed_time, 0.f, 1.f) / elapsed_time;
 			angular_forces -= car_movement.rotation_velocity * glm::clamp(c_car_friction_angular_force * elapsed_time, 0.f, 1.f) / elapsed_time;
+		}
+
+		//Apply aerodynamic forces
+		if (glm::length2(car_movement.lineal_velocity) > 0.001f)
+		{
+			float aerodynamic_factor = glm::abs(glm::dot(car_front_vector, car_movement.lineal_velocity));
+
+			//Remove linear velocity in the direction of the car
+			linear_forces -= glm::normalize(car_movement.lineal_velocity) * glm::clamp(c_car_aerodynamic_linear_force * elapsed_time, 0.f, 1.f) / elapsed_time;
+			//Add same force to the direction of the car
+			linear_forces += car_front_vector * glm::clamp(c_car_aerodynamic_linear_force * elapsed_time, 0.f, 1.f) / elapsed_time;
 		}
 
 		assert(glm::all(glm::isfinite(linear_forces)));
