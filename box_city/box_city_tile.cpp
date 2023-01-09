@@ -87,8 +87,26 @@ namespace BoxCityTileSystem
 		m_level_data[static_cast<size_t>(LODGroup::TopPanels)].clear();
 		m_level_data[static_cast<size_t>(LODGroup::Rest)].clear();
 
+		//Calculate the target positions for traffic
+		constexpr float kTargetRadius = 50.f;
+		std::uniform_real_distribution<float> target_position_offset(0.1f, 0.9f);
+		for (uint32_t j = 0; j < 16; j++)
+		{
+			uint32_t x = j % 2;
+			uint32_t y = (j % 4) / 2;
+			uint32_t z = j / 4;
+
+			//Get a random position
+			glm::vec3 position = glm::vec3(begin_tile_x + (static_cast<float>(x) * 0.5f + target_position_offset(random) * 0.5f) * kTileSize,
+				begin_tile_y + (static_cast<float>(y) * 0.5f + target_position_offset(random) * 0.5f) * kTileSize,
+				kTileHeightBottom + (kTileHeightTop - kTileHeightBottom) * (static_cast<float>(z) * 0.25f + target_position_offset(random) * 0.25f));
+
+			m_target_positions[j] = position;
+		}
+
+
 		//Create boxes
-		for (size_t i = 0; i < 350; ++i)
+		for (size_t i = 0; i < 450; ++i)
 		{
 			helpers::OBB obb_box;
 			
@@ -142,8 +160,21 @@ namespace BoxCityTileSystem
 			helpers::AABB extended_aabb_box;
 			helpers::CalculateAABBFromOBB(extended_aabb_box, extended_obb_box);
 
+			//Collide with a target position
+			bool collide = false;
+			for (auto& target_position : m_target_positions)
+			{
+				//Calculate distance between the closest position and the target position, needs to be over kTargetRadius
+				bool inside;
+				glm::vec3 closest_point = helpers::CalculateClosestPointToOBB(target_position, extended_obb_box, inside);
+				collide = (glm::distance2(closest_point, target_position) < kTargetRadius * kTargetRadius);
+				if (collide) break;
+			}
+			if (collide) continue;
+
 			//First collision in the tile
-			bool collide = CollisionBoxVsLoadingTile(extended_aabb_box, extended_obb_box);
+			collide = CollisionBoxVsLoadingTile(extended_aabb_box, extended_obb_box);
+			if (collide) continue;
 
 
 			//Neigbour calculation, is not perfect as it depends of the loading pattern...
@@ -188,64 +219,6 @@ namespace BoxCityTileSystem
 		std::iota(indexes.begin(), indexes.end(), 0);
 		LinearBVHGeneratedBoxesSettings bvh_settings(m_generated_boxes);
 		m_generated_boxes_bvh.Build(&bvh_settings, indexes.data(), static_cast<uint32_t>(m_generated_boxes.size()), m_bounding_box);
-
-		std::uniform_real_distribution<float> target_position_offset(0.2f, 0.8f);
-		
-		//Calculate the target positions
-		constexpr  float kTargetRadius = 400.f;
-		for (uint32_t j = 0; j < 16; j++)
-		{
-			uint32_t x = j % 2;
-			uint32_t y = (j % 4) / 2;
-			uint32_t z = j / 4;
-
-			//Try x times and get the best result
-			float best_distance = 0.f;
-			glm::vec3 best_point;
-
-			for (size_t test = 0; test < 100; ++test)
-			{
-				//Get a random position
-				glm::vec3 possible_position = glm::vec3(begin_tile_x + (static_cast<float>(x) * 0.5f + target_position_offset(random) * 0.5f) * kTileSize,
-					begin_tile_y + (static_cast<float>(y) * 0.5f + target_position_offset(random) * 0.5f) * kTileSize,
-					kTileHeightBottom + (kTileHeightTop - kTileHeightBottom) * (static_cast<float>(z) * 0.25f + target_position_offset(random) * 0.25f));
-
-				best_point = possible_position;
-				if (test == 0) best_point = possible_position;
-
-				//Check for radius of 50.f
-				helpers::AABB aabb;
-				aabb.min = possible_position - glm::vec3(kTargetRadius / 2.f, kTargetRadius / 2.f, kTargetRadius / 2.f);
-				aabb.max = possible_position + glm::vec3(kTargetRadius / 2.f, kTargetRadius / 2.f, kTargetRadius / 2.f);
-
-				bool found = false;
-				m_generated_boxes_bvh.Visit(aabb, [&](const uint32_t& index)
-					{
-						found = true;
-						const helpers::OBB& obb = m_generated_boxes[index].obb;
-						glm::vec3 top = obb.position + glm::row(obb.rotation, 2) * obb.extents.z;
-						glm::vec3 bottom = obb.position - glm::row(obb.rotation, 2) * obb.extents.z;
-						glm::vec3 closest_point = helpers::CalculateClosestPointToSegment(possible_position, bottom, top);
-						
-						float distance2 = glm::distance2(possible_position, closest_point);
-						if (distance2 > best_distance)
-						{
-							best_distance = distance2;
-							best_point = possible_position;
-						}
-					});
-
-				if (!found)
-				{
-					//This position is perfect, no collision with any building
-					best_point = possible_position;
-					break;
-				}
-			}
-
-			//We should have the best posible target
-			m_target_positions[j] = best_point;	
-		}
 
 		assert(m_state == State::Loaded || m_state == State::Unloaded || m_state == State::Loading);
 		SetState(State::Loaded);

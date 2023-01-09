@@ -215,7 +215,7 @@ namespace BoxCityTileSystem
 		//Get the position
 		next_target = tile.GetTrafficTargetPosition(x, y, z);
 
-		assert(glm::distance(glm::vec2(next_target), glm::vec2(position)) < 1000.f);
+		assert(glm::distance(glm::vec2(next_target), glm::vec2(position)) < 2000.f);
 		return true;
 	}
 
