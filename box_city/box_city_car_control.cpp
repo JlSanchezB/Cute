@@ -341,7 +341,7 @@ namespace BoxCityCarControl
 			{
 				target_x += -glm::dot(car_target_direction, car_left_flat) * avoidance_adjusted;
 			}
-			target_y += -car_target_direction.z * avoidance_adjusted;
+			target_y += -glm::dot(car_target_direction, car_top) * avoidance_adjusted;
 
 			if (target_distance2 < c_car_ai_close_target_distance * c_car_ai_close_target_distance)
 			{
