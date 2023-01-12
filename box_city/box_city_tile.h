@@ -147,6 +147,7 @@ namespace BoxCityTileSystem
 		void AddedToLoadingQueue();
 
 		glm::vec3 GetTrafficTargetPosition(uint32_t i, uint32_t j, uint32_t k) const;
+		glm::vec3 GetTrafficNextTargetPosition(uint32_t i, uint32_t j, uint32_t k, uint32_t random) const;
 	private:
 		enum class State
 		{
@@ -197,7 +198,12 @@ namespace BoxCityTileSystem
 		helpers::LinearBVH<InstanceReference, LinearBVHBuildingSettings> m_building_bvh;
 
 		//Each tile has 16 target positions
-		std::array<glm::vec3, 2 * 2 * 4> m_target_positions;
+		struct Target
+		{
+			glm::vec3 position;
+			std::array<glm::vec3, 6> next_position;
+		};
+		std::array<Target, 2 * 2 * 4> m_traffic_targets;
 
 		void SetState(State new_state)
 		{

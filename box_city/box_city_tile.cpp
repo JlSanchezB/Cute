@@ -66,6 +66,33 @@ namespace BoxCityTileSystem
 		return false;
 	}
 
+	//Fills the target positions for a tile, the tile doesn't need to be loaded
+	inline void FillTargetPositions(const WorldTilePosition& world_tile, std::array<glm::vec3, 16>& target_positions)
+	{
+		std::mt19937 random(static_cast<uint32_t>((100000 + world_tile.i) + (100000 + world_tile.j) * kLocalTileCount));
+		
+		//Tile positions
+		const float begin_tile_x = world_tile.i * kTileSize;
+		const float begin_tile_y = world_tile.j * kTileSize;
+
+		std::uniform_real_distribution<float> position_range(0, kTileSize);
+		std::uniform_real_distribution<float> position_range_z(kTileHeightBottom, kTileHeightTop);
+		std::uniform_real_distribution<float> target_position_offset(0.1f, 0.9f);
+		for (uint32_t j = 0; j < 16; j++)
+		{
+			uint32_t x = j % 2;
+			uint32_t y = (j % 4) / 2;
+			uint32_t z = j / 4;
+
+			//Get a random position
+			glm::vec3 position = glm::vec3(begin_tile_x + (static_cast<float>(x) * 0.5f + target_position_offset(random) * 0.5f) * kTileSize,
+				begin_tile_y + (static_cast<float>(y) * 0.5f + target_position_offset(random) * 0.5f) * kTileSize,
+				kTileHeightBottom + (kTileHeightTop - kTileHeightBottom) * (static_cast<float>(z) * 0.25f + target_position_offset(random) * 0.25f));
+
+			target_positions[j] = position;
+		}
+	}
+
 	void Tile::BuildTileData(Manager* manager, const LocalTilePosition& local_tile, const WorldTilePosition& world_tile)
 	{
 		std::mt19937 random(static_cast<uint32_t>((100000 + world_tile.i) + (100000 + world_tile.j) * kLocalTileCount));
@@ -88,20 +115,52 @@ namespace BoxCityTileSystem
 		m_level_data[static_cast<size_t>(LODGroup::Rest)].clear();
 
 		//Calculate the target positions for traffic
-		constexpr float kTargetRadius = 50.f;
-		std::uniform_real_distribution<float> target_position_offset(0.1f, 0.9f);
+		std::array< std::array<glm::vec3, 16>, 9> target_positions;
+
+		FillTargetPositions(world_tile, target_positions[4]);
+		FillTargetPositions(WorldTilePosition{ world_tile.i, world_tile.j + 1 }, target_positions[7]);
+		FillTargetPositions(WorldTilePosition{ world_tile.i, world_tile.j - 1 }, target_positions[1]);
+		FillTargetPositions(WorldTilePosition{ world_tile.i + 1, world_tile.j}, target_positions[5]);
+		FillTargetPositions(WorldTilePosition{ world_tile.i - 1, world_tile.j}, target_positions[3]);
+
 		for (uint32_t j = 0; j < 16; j++)
 		{
-			uint32_t x = j % 2;
-			uint32_t y = (j % 4) / 2;
-			uint32_t z = j / 4;
+			m_traffic_targets[j].position = target_positions[4][j];
 
-			//Get a random position
-			glm::vec3 position = glm::vec3(begin_tile_x + (static_cast<float>(x) * 0.5f + target_position_offset(random) * 0.5f) * kTileSize,
-				begin_tile_y + (static_cast<float>(y) * 0.5f + target_position_offset(random) * 0.5f) * kTileSize,
-				kTileHeightBottom + (kTileHeightTop - kTileHeightBottom) * (static_cast<float>(z) * 0.25f + target_position_offset(random) * 0.25f));
+			for (uint32_t k = 0; k < 6; k++)
+			{
+				// 2,2 is the middle 
+				int32_t world_i = 2 + j % 2;
+				int32_t world_j = 2 + (j % 4) / 2;
+				int32_t world_k = j / 4;
 
-			m_target_positions[j] = position;
+				switch (k)
+				{
+				case 0: world_k++; break; //UP
+				case 1: world_k--; break; //DOWN
+				case 2: world_i--; break; //LEFT
+				case 3: world_i++; break; //RIGHT
+				case 4: world_j--; break; //FAR
+				case 5: world_j++; break; //CLOSE
+				}
+				if (world_k > 3) world_k = 3;
+				if (world_k < 0) world_k = 0;
+
+				//Calculate the next target	
+				uint32_t tile_i = world_i / 2;
+				uint32_t tile_j = world_j / 2;
+
+				assert(!(tile_i == 0 && tile_j == 0));
+				assert(!(tile_i == 2 && tile_j == 0));
+				assert(!(tile_i == 0 && tile_j == 2));
+				assert(!(tile_i == 2 && tile_j == 2));
+
+				uint32_t offset_i = world_i % 2;
+				uint32_t offset_j = world_j % 2;
+				uint32_t offset_k = world_k;
+
+				m_traffic_targets[j].next_position[k] = target_positions[tile_i + tile_j * 3][offset_i + offset_j * 2 + offset_k * 4];
+			}
 		}
 
 
@@ -162,12 +221,14 @@ namespace BoxCityTileSystem
 
 			//Collide with a target position
 			bool collide = false;
-			for (auto& target_position : m_target_positions)
+			constexpr float kTargetCleanRadius = 50.f;
+			for (auto& traffic_targets : m_traffic_targets)
 			{
+				auto& target_position = traffic_targets.position;
 				//Calculate distance between the closest position and the target position, needs to be over kTargetRadius
 				bool inside;
 				glm::vec3 closest_point = helpers::CalculateClosestPointToOBB(target_position, extended_obb_box, inside);
-				collide = (glm::distance2(closest_point, target_position) < kTargetRadius * kTargetRadius);
+				collide = (glm::distance2(closest_point, target_position) < kTargetCleanRadius * kTargetCleanRadius);
 				if (collide) break;
 			}
 			if (collide) continue;
@@ -667,6 +728,10 @@ namespace BoxCityTileSystem
 	}
 	glm::vec3 Tile::GetTrafficTargetPosition(uint32_t i, uint32_t j, uint32_t k) const
 	{
-		return m_target_positions[i + j * 2 + k * 4];
+		return m_traffic_targets[i + j * 2 + k * 4].position;
+	}
+	glm::vec3 Tile::GetTrafficNextTargetPosition(uint32_t i, uint32_t j, uint32_t k, uint32_t random) const
+	{
+		return m_traffic_targets[i + j * 2 + k * 4].next_position[random % 6];
 	}
 }

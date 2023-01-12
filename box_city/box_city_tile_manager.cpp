@@ -174,31 +174,6 @@ namespace BoxCityTileSystem
 		int32_t offset_k = static_cast<int32_t>(floor(4.f * (position.z - kTileHeightBottom) / (kTileHeightTop - kTileHeightBottom)));
 		offset_k = glm::clamp<int32_t>(offset_k, 0, 3);
 
-
-		//Add the offset
-		switch (random() % 6)
-		{
-		case 0:
-			offset_i++;
-			break;
-		case 1:
-			offset_j++;
-			break;
-		case 2:
-			offset_k++;
-			break;
-		case 3:
-			offset_i--;
-			break;
-		case 4:
-			offset_j--;
-			break;
-		case 5:
-			offset_k--;
-			break;
-		}
-		offset_k = glm::clamp<int32_t>(offset_k, 0, 3);
-
 		//Calculate the current target inside the tile
 		WorldTilePosition world_tile_position{ (offset_i < 0) ? (offset_i - 1) / 2: offset_i / 2, (offset_j < 0) ? (offset_j - 1) / 2: offset_j / 2 };
 
@@ -213,7 +188,7 @@ namespace BoxCityTileSystem
 		uint32_t z = static_cast<uint32_t>(offset_k);
 		
 		//Get the position
-		next_target = tile.GetTrafficTargetPosition(x, y, z);
+		next_target = tile.GetTrafficNextTargetPosition(x, y, z, random());
 
 		assert(glm::distance(glm::vec2(next_target), glm::vec2(position)) < 2000.f);
 		return true;
