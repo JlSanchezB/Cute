@@ -6,7 +6,7 @@
 
 //List of control variables
 
-CONTROL_VARIABLE_BOOL(c_car_ai_avoidance_enable, false, "Car", "Car AI avoidance enabled");
+CONTROL_VARIABLE_BOOL(c_car_ai_avoidance_enable, true, "Car", "Car AI avoidance enabled");
 CONTROL_VARIABLE_BOOL(c_car_ai_targeting_enable, true, "Car", "Car AI targeting enabled");
 CONTROL_VARIABLE_BOOL(c_car_collision_enable, false, "Car", "Car collision enabled");
 
@@ -53,14 +53,14 @@ CONTROL_VARIABLE(float, c_car_camera_fov, 60.f, 180.f, 100.f, "Car", "Camera Fov
 CONTROL_VARIABLE(float, c_car_camera_speed, 0.f, 200.f, 30.f, "Car", "Camera Speed");
 
 CONTROL_VARIABLE(float, c_car_ai_forward, 0.f, 1.f, 0.2f, "Car", "Camera AI foward");
-CONTROL_VARIABLE(float, c_car_ai_min_forward, 0.f, 1.f, 0.01f, "Car", "Camera AI min foward");
+CONTROL_VARIABLE(float, c_car_ai_min_forward, 0.f, 1.f, 0.05f, "Car", "Camera AI min foward");
 CONTROL_VARIABLE(float, c_car_ai_avoidance_calculation_distance, 0.f, 10000.f, 1000.f, "Car", "Camera AI avoidance calculation distance");
-CONTROL_VARIABLE(float, c_car_ai_visibility_distance, 0.f, 10.f, 150.f, "Car", "Camera AI visibility distance");
-CONTROL_VARIABLE(float, c_car_ai_visibility_side_distance, 0.f, 10.f, 80.f, "Car", "Camera AI visibility side distance");
+CONTROL_VARIABLE(float, c_car_ai_visibility_distance, 0.f, 10.f, 80.f, "Car", "Camera AI visibility distance");
+CONTROL_VARIABLE(float, c_car_ai_visibility_side_distance, 0.f, 10.f, 30.f, "Car", "Camera AI visibility side distance");
 CONTROL_VARIABLE(float, c_car_ai_avoidance_extra_distance, 0.f, 1000.f, 15.f, "Car", "Camera AI avoidance extra distance with building");
-CONTROL_VARIABLE(float, c_car_ai_avoidance_distance_expansion, 0.f, 1000.f, 80.f, "Car", "Camera AI avoidance extra expansion apply to buildings when far");
-CONTROL_VARIABLE(float, c_car_ai_avoidance_reaction_factor, 0.f, 10.f, 1.2f, "Car", "Car AI avoidance reaction factor");
-CONTROL_VARIABLE(float, c_car_ai_avoidance_reaction_power, 0.f, 10.f, 0.8f, "Car", "Car AI avoidance reaction power");
+CONTROL_VARIABLE(float, c_car_ai_avoidance_distance_expansion, 0.f, 1000.f, 20.f, "Car", "Camera AI avoidance extra expansion apply to buildings when far");
+CONTROL_VARIABLE(float, c_car_ai_avoidance_reaction_factor, 0.f, 10.f, 0.8f, "Car", "Car AI avoidance reaction factor");
+CONTROL_VARIABLE(float, c_car_ai_avoidance_reaction_power, 0.f, 10.f, 1.0f, "Car", "Car AI avoidance reaction power");
 CONTROL_VARIABLE(float, c_car_ai_avoidance_slow_factor, 0.f, 1.f, 0.0f, "Car", "Car AI avoidance slow factor");
 CONTROL_VARIABLE(float, c_car_ai_target_range, 1.f, 10000.f, 2000.f, "Car", "Car AI target range");
 CONTROL_VARIABLE(float, c_car_ai_min_target_range, 1.f, 10000.f, 500.f, "Car", "Car AI min target range");
@@ -199,7 +199,7 @@ namespace BoxCityCarControl
 		const glm::vec3 car_top = glm::row(car_matrix, 2);
 		const glm::vec3 car_left_flat = glm::normalize(glm::vec3(car_left.x, car_left.y, 0.f));
 		const float car_radius = glm::fastLength(car_settings.size);
-
+		const glm::vec3 car_top_flat = car_top - glm::dot(car_left_flat, car_top) * car_left_flat;
 		//Calculate X and Y control for the car
 		car_control.foward = c_car_ai_forward;
 
@@ -294,7 +294,7 @@ namespace BoxCityCarControl
 							xx = (glm::sign<float>(xx) - xx) * c_car_ai_avoidance_reaction_factor;
 							xx = glm::sign(xx) * glm::pow(glm::abs(xx), c_car_ai_avoidance_reaction_power);
 							avoidance_target.x += xx;
-							float yy = car_avoid_direction.z;
+							float yy = glm::dot(car_avoid_direction, car_top_flat);
 							yy = (glm::sign<float>(yy) - yy) * c_car_ai_avoidance_reaction_factor;
 							yy = glm::sign(yy) * glm::pow(glm::abs(yy), c_car_ai_avoidance_reaction_power);
 							avoidance_target.y += yy;
@@ -323,7 +323,7 @@ namespace BoxCityCarControl
 
 		if (c_car_ai_targeting_enable && car_target.target_valid)
 		{
-			float avoidance_adjusted = glm::pow((1.f - avoidance_factor), 0.5f);
+			float avoidance_adjusted = (1.f - avoidance_factor);
 
 			//Calculate the angles between the car direction and they target
 			glm::vec3 car_in_target_line = helpers::CalculateClosestPointToSegment(car_position, car_target.last_target, car_target.target);
@@ -341,7 +341,7 @@ namespace BoxCityCarControl
 			{
 				target_x += -glm::dot(car_target_direction, car_left_flat) * avoidance_adjusted;
 			}
-			target_y += -glm::dot(car_target_direction, car_top) * avoidance_adjusted;
+			target_y += -glm::dot(car_target_direction, car_top_flat) * avoidance_adjusted;
 
 			if (target_distance2 < c_car_ai_close_target_distance * c_car_ai_close_target_distance)
 			{
