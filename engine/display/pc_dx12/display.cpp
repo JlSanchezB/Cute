@@ -785,8 +785,10 @@ namespace display
 	{
 		PipelineStateHandle handle = device->m_pipeline_state_pool.Alloc();
 
+		auto& pipeline_state = device->Get(handle);
+
 		//Fill the DX12 structs using our data, keep it for reloading
-		D3D12_GRAPHICS_PIPELINE_STATE_DESC& DX12_pipeline_state_desc = device->Get(handle).graphics_pipeline_desc;
+		D3D12_GRAPHICS_PIPELINE_STATE_DESC DX12_pipeline_state_desc = { 0 };
 
 		std::vector<D3D12_INPUT_ELEMENT_DESC> input_elements(kMaxNumInputLayoutElements);
 		for (size_t i = 0; i < pipeline_state_desc.input_layout.num_elements; i++)
@@ -822,6 +824,7 @@ namespace display
 			SetLastErrorMessage(device, "Error compiling pixel shader in graphics pipeline state <%s>", name);
 			return PipelineStateHandle();
 		}
+
 		DX12_pipeline_state_desc.PS.pShaderBytecode = pixel_shader_blob.data();
 		DX12_pipeline_state_desc.PS.BytecodeLength = pixel_shader_blob.size();
 		
@@ -886,14 +889,29 @@ namespace display
 		DX12_pipeline_state_desc.SampleDesc.Count = static_cast<UINT>(pipeline_state_desc.sample_count);
 
 		//Create pipeline state
-		if (FAILED(device->m_native_device->CreateGraphicsPipelineState(&DX12_pipeline_state_desc, IID_PPV_ARGS(&device->Get(handle).resource))))
+		if (FAILED(device->m_native_device->CreateGraphicsPipelineState(&DX12_pipeline_state_desc, IID_PPV_ARGS(&pipeline_state))))
 		{
 			device->m_pipeline_state_pool.Free(handle);
 			SetLastErrorMessage(device, "Error creating graphics pipeline state <%s>", name);
 			return PipelineStateHandle();
 		}
 
-		SetObjectName(device->Get(handle).resource.Get(), name);
+		SetObjectName(pipeline_state.Get(), name);
+		
+		//Create the reload data
+		PipelineReloadData reload_data;
+		reload_data.handle = handle;
+		reload_data.name = name;
+		reload_data.pipeline_desc = DX12_pipeline_state_desc;
+		if (pipeline_state_desc.vertex_shader.file_name)
+		{
+			reload_data.filenames.emplace_back(pipeline_state_desc.vertex_shader.file_name, std::filesystem::last_write_time(pipeline_state_desc.vertex_shader.file_name));
+		}
+		if (pipeline_state_desc.pixel_shader.file_name && pipeline_state_desc.pixel_shader.file_name != pipeline_state_desc.vertex_shader.file_name)
+		{
+			reload_data.filenames.emplace_back(pipeline_state_desc.vertex_shader.file_name, std::filesystem::last_write_time(pipeline_state_desc.vertex_shader.file_name));
+		}
+		device->m_pipeline_reload_data.push_back(reload_data);
 
 		return handle;
 	}
@@ -907,8 +925,10 @@ namespace display
 	{
 		PipelineStateHandle handle = device->m_pipeline_state_pool.Alloc();
 
+		auto& pipeline_state = device->Get(handle);
+
 		//Fill the DX12 structs using our data, keep it for reloading
-		D3D12_COMPUTE_PIPELINE_STATE_DESC DX12_pipeline_state_desc = device->Get(handle).compute_pipeline_desc;
+		D3D12_COMPUTE_PIPELINE_STATE_DESC DX12_pipeline_state_desc = { 0 };
 
 		DX12_pipeline_state_desc.pRootSignature = device->Get(compute_pipeline_state_desc.root_signature).resource.Get();
 
@@ -919,19 +939,30 @@ namespace display
 			SetLastErrorMessage(device, "Error compiling compute shader in compute pipeline state <%s>", name);
 			return PipelineStateHandle();
 		}
-
+		
 		DX12_pipeline_state_desc.CS.pShaderBytecode = shader_blob.data();
 		DX12_pipeline_state_desc.CS.BytecodeLength = shader_blob.size();
 
 		//Create pipeline state
-		if (FAILED(device->m_native_device->CreateComputePipelineState(&DX12_pipeline_state_desc, IID_PPV_ARGS(&device->Get(handle).resource))))
+		if (FAILED(device->m_native_device->CreateComputePipelineState(&DX12_pipeline_state_desc, IID_PPV_ARGS(&pipeline_state))))
 		{
 			device->m_pipeline_state_pool.Free(handle);
 			SetLastErrorMessage(device, "Error creating compute pipeline state <%s>", name);
 			return PipelineStateHandle();
 		}
 
-		SetObjectName(device->Get(handle).resource.Get(), name);
+		SetObjectName(pipeline_state.Get(), name);
+		
+		//Create the reload data
+		PipelineReloadData reload_data;
+		reload_data.handle = handle;
+		reload_data.name = name;
+		reload_data.pipeline_desc = DX12_pipeline_state_desc;
+		if (compute_pipeline_state_desc.compute_shader.file_name)
+		{
+			reload_data.filenames.emplace_back(compute_pipeline_state_desc.compute_shader.file_name, std::filesystem::last_write_time(compute_pipeline_state_desc.compute_shader.file_name));
+		}
+		device->m_pipeline_reload_data.push_back(reload_data);
 
 		return handle;
 	}
@@ -939,6 +970,63 @@ namespace display
 	void DestroyComputePipelineState(Device * device, PipelineStateHandle & handle)
 	{
 		device->m_pipeline_state_pool.Free(handle);
+	}
+
+	void ReloadUpdatedShaders(Device* device)
+	{
+		/*
+		//List all the pipeline states and check if they need to reload
+		for (auto& reload_pipeline : device->m_pipeline_reload_data)
+		{
+			//Check files
+			bool updated = false;
+			for (auto& filenames : reload_pipeline.filenames)
+			{
+				if (filenames.second < std::filesystem::last_write_time(filenames.first))
+				{
+					updated = true;
+				}
+			}
+
+			if (updated)
+			{
+				std::visit(
+					overloaded
+					{
+						[&](D3D12_GRAPHICS_PIPELINE_STATE_DESC& graphics_pipeline_desc)
+						{
+
+						},
+						[&](D3D12_COMPUTE_PIPELINE_STATE_DESC& compute_pipeline_desc)
+						{
+							std::vector<char> shader_blob;
+							if (CompileShader(device, reload_pipeline.filenames[0].first.c_str(), shader_blob))
+							{
+								compute_pipeline_desc.CS.pShaderBytecode = shader_blob.data();
+								compute_pipeline_desc.CS.BytecodeLength = shader_blob.size();
+
+								ComPtr<ID3D12PipelineState> new_pipeline_state;
+								if (FAILED(device->m_native_device->CreateComputePipelineState(&compute_pipeline_desc, IID_PPV_ARGS(&pipeline_state))))
+								{
+									core::LogWarning("Error reloading compute pipeline state <%s>, keeping last working one", reload_pipeline.name.c_str());
+								}
+								else
+								{
+									core::LogInfo("Reloading compute pipeline state <%s>", reload_pipeline.name.c_str());
+									device->Get(reload_pipeline.handle).Swap(new_pipeline_state);
+								}
+							}
+							else
+							{
+								core::LogWarning("Error reloading compute pipeline state <%s>, keeping last working one", reload_pipeline.name.c_str());
+							}
+
+							
+						}
+					}, reload_pipeline.pipeline_desc);
+			}
+		}
+		*/
 	}
 
 	//Create render target

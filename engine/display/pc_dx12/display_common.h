@@ -20,6 +20,7 @@
 #include <wrl.h>
 #include <shellapi.h>
 #include <bitset>
+#include <filesystem>
 
 using namespace DirectX;
 
@@ -217,14 +218,16 @@ namespace display
 		ComPtr<ID3D12RootSignature> resource;
 		RootSignatureDesc desc;
 	};
-	struct PipelineState
+	struct PipelineState : ComPtr<ID3D12PipelineState>
 	{
-		ComPtr<ID3D12PipelineState> resource;
-		union
-		{
-			D3D12_GRAPHICS_PIPELINE_STATE_DESC graphics_pipeline_desc;
-			D3D12_COMPUTE_PIPELINE_STATE_DESC compute_pipeline_desc;
-		};
+	};
+
+	struct PipelineReloadData
+	{
+		WeakPipelineStateHandle handle;
+		std::variant<D3D12_GRAPHICS_PIPELINE_STATE_DESC, D3D12_COMPUTE_PIPELINE_STATE_DESC> pipeline_desc;
+		std::string name;
+		std::vector<std::pair<std::string, std::filesystem::file_time_type> > filenames;
 	};
 
 	struct RenderTarget : RingResourceSupport<RenderTargetHandle>
@@ -333,6 +336,9 @@ namespace display
 		GraphicDescriptorHandlePool<ShaderResourceHandle> m_shader_resource_pool;
 		GraphicDescriptorHandleFreeList<DescriptorTableHandle> m_descriptor_table_pool;
 		GraphicDescriptorHandleFreeList<SamplerDescriptorTableHandle> m_sampler_descriptor_table_pool;
+
+		//Reload data for pipeline states
+		std::vector<PipelineReloadData> m_pipeline_reload_data;
 
 		//Accesor to the resources (we need a specialitation for each type)
 		template<typename HANDLE>

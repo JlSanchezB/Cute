@@ -77,6 +77,9 @@ namespace display
 	//Destroy compute pipeline state
 	void DestroyComputePipelineState(Device* device, PipelineStateHandle& handle);
 
+	//Reload updated shaders
+	void ReloadUpdatedShaders(Device* device);
+
 	//Create vertex buffer
 	VertexBufferHandle CreateVertexBuffer(Device* device, const VertexBufferDesc& vertex_buffer_desc, const char* name = nullptr);
 	//Destroy vertex buffer
