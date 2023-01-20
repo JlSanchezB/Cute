@@ -767,9 +767,12 @@ namespace render
 	void System::SubmitRender()
 	{
 		PROFILE_SCOPE("Render", kRenderProfileColour, "Submit");
-
-		//Reset job allocators
-		m_job_allocator->Clear();
+		
+		if (m_job_system)
+		{
+			//Reset job allocators
+			m_job_allocator->Clear();
+		}
 
 		//Render thread
 		display::BeginFrame(m_device);

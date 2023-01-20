@@ -83,22 +83,15 @@ namespace render
 					}\
 				};";
 
-			std::vector<char> compute_shader;
-
-			display::CompileShaderDesc compile_shader_desc;
-			compile_shader_desc.code = shader_code;
-			compile_shader_desc.entry_point = "copy_data";
-			compile_shader_desc.target = "cs_5_0";
-
-			display::CompileShader(device, compile_shader_desc, compute_shader);
-
 			//Create pipeline state
 			display::ComputePipelineStateDesc pipeline_state_desc;
 			pipeline_state_desc.root_signature = m_copy_data_compute_root_signature;
 
-			//Add shaders
-			pipeline_state_desc.compute_shader.data = reinterpret_cast<void*>(compute_shader.data());
-			pipeline_state_desc.compute_shader.size = compute_shader.size();
+			pipeline_state_desc.compute_shader.name = "CopyDataCompute";
+			pipeline_state_desc.compute_shader.shader_code = shader_code;
+			pipeline_state_desc.compute_shader.entry_point = "copy_data";
+			pipeline_state_desc.compute_shader.target = "cs_5_0";
+
 
 			//Create
 			m_copy_data_compute_pipeline_state = display::CreateComputePipelineState(device, pipeline_state_desc, "Copy Data Compute");

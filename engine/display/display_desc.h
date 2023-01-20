@@ -133,18 +133,22 @@ namespace display
 		std::array <RenderTargetBlendDesc, kMaxNumRenderTargets> render_target_blend;
 	};
 
-	struct ShaderDesc
+	struct CompileShaderDesc
 	{
-		const void* data = nullptr;
-		size_t size = 0;
+		const char* file_name = nullptr; //filename has priority
+		const char* shader_code = nullptr;
+		const char* entry_point = nullptr;
+		const char* target = nullptr;
+		const char* name = nullptr;
+		std::vector < std::pair<const char*, const char*>> defines;
 	};
 
 	struct PipelineStateDesc
 	{
 		WeakRootSignatureHandle root_signature;
 		
-		ShaderDesc vertex_shader;
-		ShaderDesc pixel_shader;
+		CompileShaderDesc vertex_shader;
+		CompileShaderDesc pixel_shader;
 		
 		InputLayoutDesc input_layout;
 		RasterizationDesc rasteritation_state;
@@ -167,7 +171,7 @@ namespace display
 	{
 		WeakRootSignatureHandle root_signature;
 
-		ShaderDesc compute_shader;
+		CompileShaderDesc compute_shader;
 	};
 
 	struct Viewport
@@ -324,15 +328,6 @@ namespace display
 		uint32_t index_count = 0;
 		uint32_t base_vertex = 0;
 		PrimitiveTopology primitive_topology = PrimitiveTopology::TriangleList;
-	};
-
-	struct CompileShaderDesc
-	{
-		const char* code = nullptr;
-		const char* entry_point = nullptr;
-		const char* target = nullptr;
-		const char* name = nullptr;
-		std::vector < std::pair<const char*, const char*>> defines;
 	};
 
 	struct ExecuteComputeDesc

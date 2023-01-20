@@ -30,38 +30,8 @@
             <Input semantic_name="POSITION" semantic_index="0" format="R32G32B32A32_FLOAT" input_slot="0"/>
             <Input semantic_name="TEXCOORD" semantic_index="0" format="R32G32_FLOAT" input_slot="0" aligned_offset="16"/>
           </InputLayouts>
-          <Shader pixelshader_entry="ps_main" vertexshader_entry="vs_main" target="5_0">
-            struct GameConstant
-            {
-            float4 time;
-            };
-
-            Texture2D texture_test : t0;
-            SamplerState static_sampler : s1;
-            GameConstant game_constant : c0;
-
-            struct PSInput
-            {
-            float4 position : SV_POSITION;
-            float2 tex : TEXCOORD0;
-            };
-
-            PSInput vs_main(float4 position : POSITION, float2 tex : TEXCOORD0)
-            {
-            PSInput result;
-
-            result.position = position;
-            result.tex = tex;
-
-            return result;
-            }
-
-            float4 ps_main(PSInput input) : SV_TARGET
-            {
-            float2 wave_tex = input.tex + 0.01f * float2(cos(10.f * (game_constant.time.x + input.tex.x)), sin(10.f * (game_constant.time.x + input.tex.y)));
-            return texture_test.Sample(static_sampler, wave_tex);
-            }
-          </Shader>
+          <PixelShader entry_point="ps_main" target="ps_5_0">render_to_texture.hlsl</PixelShader>
+          <VertexShader entry_point="vs_main" target="vs_5_0">render_to_texture.hlsl</VertexShader>
           <Rasterization/>
           <RenderTargets>
             <RenderTarget format="R8G8B8A8_UNORM"/>
@@ -93,38 +63,8 @@
             <Input semantic_name="POSITION" semantic_index="0" format="R32G32B32A32_FLOAT" input_slot="0"/>
             <Input semantic_name="TEXCOORD" semantic_index="0" format="R32G32_FLOAT" input_slot="0" aligned_offset="16"/>
           </InputLayouts>
-          <Shader pixelshader_entry="ps_main" vertexshader_entry="vs_main" target="5_0">
-            struct GameConstant
-            {
-              float4 time;
-            };
-          
-            Texture2D texture_test : t0;
-            SamplerState static_sampler : s1;
-            GameConstant game_constant : c0;
-
-            struct PSInput
-            {
-              float4 position : SV_POSITION;
-              float2 tex : TEXCOORD0;
-            };
-
-            PSInput vs_main(float4 position : POSITION, float2 tex : TEXCOORD0)
-            {
-              PSInput result;
-
-              result.position = position;
-              result.tex = tex;
-
-              return result;
-            }
-
-            float4 ps_main(PSInput input) : SV_TARGET
-            {
-              float2 wave_tex = input.tex + 0.01f * float2(cos(10.f * (game_constant.time.x + input.tex.x)), sin(10.f * (game_constant.time.x + input.tex.y)));
-              return texture_test.Sample(static_sampler, wave_tex);
-            }
-          </Shader>
+          <PixelShader entry_point="ps_main" target="ps_5_0">render_to_texture.hlsl</PixelShader>
+          <VertexShader entry_point="vs_main" target="vs_5_0">render_to_texture.hlsl</VertexShader>
           <Rasterization/>
           <RenderTargets>
             <RenderTarget format="R8G8B8A8_UNORM"/>

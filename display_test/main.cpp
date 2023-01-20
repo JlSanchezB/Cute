@@ -166,10 +166,6 @@ public:
 
 		//Pipeline state
 		{
-			//Read pixel and vertex shader
-			std::vector<char> pixel_shader_buffer = ReadFileToBuffer("texture_shader_ps.fxo");
-			std::vector<char> vertex_shader_buffer = ReadFileToBuffer("texture_shader_vs.fxo");
-
 			//Create pipeline state
 			display::PipelineStateDesc pipeline_state_desc;
 			pipeline_state_desc.root_signature = m_test_1.m_root_signature;
@@ -181,11 +177,13 @@ public:
 
 
 			//Add shaders
-			pipeline_state_desc.pixel_shader.data = reinterpret_cast<void*>(pixel_shader_buffer.data());
-			pipeline_state_desc.pixel_shader.size = pixel_shader_buffer.size();
-
-			pipeline_state_desc.vertex_shader.data = reinterpret_cast<void*>(vertex_shader_buffer.data());
-			pipeline_state_desc.vertex_shader.size = vertex_shader_buffer.size();
+			pipeline_state_desc.vertex_shader.file_name = "texture_shader.hlsl";
+			pipeline_state_desc.vertex_shader.target = "vs_5_0";
+			pipeline_state_desc.vertex_shader.entry_point = "vs_main";
+		
+			pipeline_state_desc.pixel_shader.file_name = "texture_shader.hlsl";
+			pipeline_state_desc.pixel_shader.target = "ps_5_0";
+			pipeline_state_desc.pixel_shader.entry_point = "ps_main";
 
 			//Add render targets
 			pipeline_state_desc.num_render_targets = 1;
@@ -292,10 +290,6 @@ public:
 
 		//Pipeline state
 		{
-			//Read pixel and vertex shader
-			std::vector<char> pixel_shader_buffer = ReadFileToBuffer("constant_buffer_shader_ps.fxo");
-			std::vector<char> vertex_shader_buffer = ReadFileToBuffer("constant_buffer_shader_vs.fxo");
-
 			//Create pipeline state
 			display::PipelineStateDesc pipeline_state_desc;
 			pipeline_state_desc.root_signature = m_test_2.m_root_signature;
@@ -304,13 +298,14 @@ public:
 			pipeline_state_desc.input_layout.elements[0] = display::InputElementDesc("POSITION", 0, display::Format::R32G32B32A32_FLOAT, 0, 0);
 			pipeline_state_desc.input_layout.num_elements = 1;
 
-
 			//Add shaders
-			pipeline_state_desc.pixel_shader.data = reinterpret_cast<void*>(pixel_shader_buffer.data());
-			pipeline_state_desc.pixel_shader.size = pixel_shader_buffer.size();
+			pipeline_state_desc.vertex_shader.file_name = "constant_buffer_shader.hlsl";
+			pipeline_state_desc.vertex_shader.target = "vs_5_0";
+			pipeline_state_desc.vertex_shader.entry_point = "vs_main";
 
-			pipeline_state_desc.vertex_shader.data = reinterpret_cast<void*>(vertex_shader_buffer.data());
-			pipeline_state_desc.vertex_shader.size = vertex_shader_buffer.size();
+			pipeline_state_desc.pixel_shader.file_name = "constant_buffer_shader.hlsl";
+			pipeline_state_desc.pixel_shader.target = "ps_5_0";
+			pipeline_state_desc.pixel_shader.entry_point = "ps_main";
 
 			//Add render targets
 			pipeline_state_desc.num_render_targets = 1;
@@ -396,10 +391,6 @@ public:
 
 		//Pipeline state
 		{
-			//Read pixel and vertex shader
-			std::vector<char> pixel_shader_buffer = ReadFileToBuffer("instance_shader_ps.fxo");
-			std::vector<char> vertex_shader_buffer = ReadFileToBuffer("instance_shader_vs.fxo");
-
 			//Create pipeline state
 			display::PipelineStateDesc pipeline_state_desc;
 			pipeline_state_desc.root_signature = m_test_3.m_root_signature;
@@ -411,11 +402,13 @@ public:
 
 
 			//Add shaders
-			pipeline_state_desc.pixel_shader.data = reinterpret_cast<void*>(pixel_shader_buffer.data());
-			pipeline_state_desc.pixel_shader.size = pixel_shader_buffer.size();
+			pipeline_state_desc.vertex_shader.file_name = "instance_shader.hlsl";
+			pipeline_state_desc.vertex_shader.target = "vs_5_0";
+			pipeline_state_desc.vertex_shader.entry_point = "vs_main";
 
-			pipeline_state_desc.vertex_shader.data = reinterpret_cast<void*>(vertex_shader_buffer.data());
-			pipeline_state_desc.vertex_shader.size = vertex_shader_buffer.size();
+			pipeline_state_desc.pixel_shader.file_name = "instance_shader.hlsl";
+			pipeline_state_desc.pixel_shader.target = "ps_5_0";
+			pipeline_state_desc.pixel_shader.entry_point = "ps_main";
 
 			//Add render targets
 			pipeline_state_desc.num_render_targets = 1;
@@ -484,36 +477,23 @@ public:
 					return input.color;\
 				}";
 
-			std::vector<char> vertex_shader;
-			std::vector<char> pixel_shader;
-
-			display::CompileShaderDesc compile_shader_desc;
-			compile_shader_desc.code = shader_code;
-			compile_shader_desc.entry_point = "main_vs";
-			compile_shader_desc.target = "vs_5_0";
-			display::CompileShader(m_device, compile_shader_desc, vertex_shader);
-
-			compile_shader_desc.code = shader_code;
-			compile_shader_desc.entry_point = "main_ps";
-			compile_shader_desc.target = "ps_5_0";
-			display::CompileShader(m_device, compile_shader_desc, pixel_shader);
-
-
+			
 			//Create pipeline state
 			display::PipelineStateDesc pipeline_state_desc;
 			pipeline_state_desc.root_signature = m_test_4.m_root_signature;
 
+			pipeline_state_desc.vertex_shader.shader_code = shader_code;
+			pipeline_state_desc.vertex_shader.entry_point = "main_vs";
+			pipeline_state_desc.vertex_shader.target = "vs_5_0";
+
+			pipeline_state_desc.pixel_shader.shader_code = shader_code;
+			pipeline_state_desc.pixel_shader.entry_point = "main_ps";
+			pipeline_state_desc.pixel_shader.target = "ps_5_0";
+
+
 			//Add input layouts
 			pipeline_state_desc.input_layout.elements[0] = display::InputElementDesc("POSITION", 0, display::Format::R32G32B32A32_FLOAT, 0, 0);
 			pipeline_state_desc.input_layout.num_elements = 1;
-
-
-			//Add shaders
-			pipeline_state_desc.pixel_shader.data = reinterpret_cast<void*>(pixel_shader.data());
-			pipeline_state_desc.pixel_shader.size = pixel_shader.size();
-
-			pipeline_state_desc.vertex_shader.data = reinterpret_cast<void*>(vertex_shader.data());
-			pipeline_state_desc.vertex_shader.size = vertex_shader.size();
 
 			//Add render targets
 			pipeline_state_desc.num_render_targets = 1;
@@ -557,24 +537,16 @@ public:
 					compute_params[thread.x].w = 0.5f + 0.5f * quad;\
 				}";
 
-			std::vector<char> compute_shader;
-
-			display::CompileShaderDesc compile_shader_desc;
-			compile_shader_desc.code = shader_code;
-			compile_shader_desc.entry_point = "fill_positions";
-			compile_shader_desc.target = "cs_5_0";
-
-			compile_shader_desc.defines.emplace_back("NUM_QUADS", "10");
-
-			display::CompileShader(m_device, compile_shader_desc, compute_shader);
-
 			//Create pipeline state
 			display::ComputePipelineStateDesc pipeline_state_desc;
 			pipeline_state_desc.root_signature = m_test_4.m_compute_root_signature;
 
-			//Add shaders
-			pipeline_state_desc.compute_shader.data = reinterpret_cast<void*>(compute_shader.data());
-			pipeline_state_desc.compute_shader.size = compute_shader.size();
+			pipeline_state_desc.compute_shader.shader_code = shader_code;
+			pipeline_state_desc.compute_shader.entry_point = "fill_positions";
+			pipeline_state_desc.compute_shader.target = "cs_5_0";
+
+			pipeline_state_desc.compute_shader.defines.emplace_back("NUM_QUADS", "10");
+
 
 			//Create
 			m_test_4.m_compute_pipeline_state = display::CreateComputePipelineState(m_device, pipeline_state_desc, "compute driven update");

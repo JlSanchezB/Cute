@@ -68,5 +68,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+    <None Include="box_rendering.hlsl" />
   </ItemGroup>
 </Project>

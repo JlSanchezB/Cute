@@ -460,49 +460,40 @@ namespace render
 					xml_element_input = xml_element_input->NextSiblingElement();
 				}
 			}
-			else if (CheckNodeName(xml_element_root, "Shader"))
+			else if (CheckNodeName(xml_element_root, "VertexShader"))
 			{
-				const char* pixel_shader_entry = xml_element_root->Attribute("pixelshader_entry");
-				const char* vertex_shader_entry = xml_element_root->Attribute("vertexshader_entry");
-				const char* target_postfix = xml_element_root->Attribute("target");
+				const char* entry_point = xml_element_root->Attribute("entry_point");
+				const char* target = xml_element_root->Attribute("target");
 
-				if (pixel_shader_entry && target_postfix)
+				if (entry_point && target)
 				{
-					//Compile shader
-					char target[128] = "ps_";
-					strcat_s(target, target_postfix);
-					display::CompileShaderDesc compile_shader_desc;
-					compile_shader_desc.code = xml_element_root->GetText();
-					compile_shader_desc.entry_point = pixel_shader_entry;
-					compile_shader_desc.target = target;
-					if (!display::CompileShader(load_context.device, compile_shader_desc, pixel_shader))
-					{
-						AddError(load_context, "Error compile shader for pipeline state <%s>, errors: <%s>", load_context.name, display::GetLastErrorMessage(load_context.device));
-					}
-					else
-					{
-						pipeline_state_desc.pixel_shader.data = pixel_shader.data();
-						pipeline_state_desc.pixel_shader.size = pixel_shader.size();
-					}
+					pipeline_state_desc.vertex_shader.file_name = xml_element_root->GetText();
+					pipeline_state_desc.vertex_shader.target = target;
+					pipeline_state_desc.vertex_shader.entry_point = entry_point;
+					pipeline_state_desc.vertex_shader.name = load_context.name;
 				}
-				if (vertex_shader_entry && target_postfix)
+				else
 				{
-					//Compile shader
-					char target[128] = "vs_";
-					strcat_s(target, target_postfix);
-					display::CompileShaderDesc compile_shader_desc;
-					compile_shader_desc.code = xml_element_root->GetText();
-					compile_shader_desc.entry_point = vertex_shader_entry;
-					compile_shader_desc.target = target;
-					if (!display::CompileShader(load_context.device, compile_shader_desc, vertex_shader))
-					{
-						AddError(load_context, "Error compile shader for pipeline state <%s>, errors: <%s>", load_context.name, display::GetLastErrorMessage(load_context.device));
-					}
-					else
-					{
-						pipeline_state_desc.vertex_shader.data = vertex_shader.data();
-						pipeline_state_desc.vertex_shader.size = vertex_shader.size();
-					}
+					AddError(load_context, "Entry point or target missing in VertexShader in pipeline state <%s>", load_context.name);
+					return;
+				}
+			}
+			else if (CheckNodeName(xml_element_root, "PixelShader"))
+			{
+				const char* entry_point = xml_element_root->Attribute("entry_point");
+				const char* target = xml_element_root->Attribute("target");
+
+				if (entry_point && target)
+				{
+					pipeline_state_desc.pixel_shader.file_name = xml_element_root->GetText();
+					pipeline_state_desc.pixel_shader.target = target;
+					pipeline_state_desc.pixel_shader.entry_point = entry_point;
+					pipeline_state_desc.pixel_shader.name = load_context.name;
+				}
+				else
+				{
+					AddError(load_context, "Entry point or target missing in PixelShader in pipeline state <%s>", load_context.name);
+					return;
 				}
 			}
 			else if (CheckNodeName(xml_element_root, "Rasterization"))

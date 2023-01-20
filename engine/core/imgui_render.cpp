@@ -178,34 +178,26 @@ void imgui_render::CreateResources(display::Device * device)
                return out_col; \
             }";
 
-	std::vector<char> vertex_shader;
-	std::vector<char> pixel_shader;
-
-	display::CompileShaderDesc compile_shader_desc;
-	compile_shader_desc.code = vertex_shader_code;
-	compile_shader_desc.entry_point= "main";
-	compile_shader_desc.target = "vs_5_0";
-	display::CompileShader(device, compile_shader_desc, vertex_shader);
-
-	compile_shader_desc.code = pixel_shader_code;
-	compile_shader_desc.target = "ps_5_0";
-	display::CompileShader(device, compile_shader_desc, pixel_shader);
-
 	//Create pipeline state
 	display::PipelineStateDesc pipeline_state_desc;
 	pipeline_state_desc.root_signature = g_rootsignature;
+
+	//Shader code
+	pipeline_state_desc.vertex_shader.name = "imgui";
+	pipeline_state_desc.vertex_shader.shader_code = vertex_shader_code;
+	pipeline_state_desc.vertex_shader.entry_point= "main";
+	pipeline_state_desc.vertex_shader.target = "vs_5_0";
+
+	pipeline_state_desc.pixel_shader.name = "imgui";
+	pipeline_state_desc.pixel_shader.shader_code = pixel_shader_code;
+	pipeline_state_desc.pixel_shader.entry_point = "main";
+	pipeline_state_desc.pixel_shader.target = "ps_5_0";
 
 	//Add input layouts
 	pipeline_state_desc.input_layout.elements[0] = display::InputElementDesc("POSITION", 0, display::Format::R32G32_FLOAT, 0, 0);
 	pipeline_state_desc.input_layout.elements[1] = display::InputElementDesc("TEXCOORD", 0, display::Format::R32G32_FLOAT, 0, 8);
 	pipeline_state_desc.input_layout.elements[2] = display::InputElementDesc("COLOR", 0, display::Format::R8G8B8A8_UNORM, 0, 16);
 	pipeline_state_desc.input_layout.num_elements = 3;
-
-	pipeline_state_desc.pixel_shader.data = reinterpret_cast<void*>(pixel_shader.data());
-	pipeline_state_desc.pixel_shader.size = pixel_shader.size();
-
-	pipeline_state_desc.vertex_shader.data = reinterpret_cast<void*>(vertex_shader.data());
-	pipeline_state_desc.vertex_shader.size = vertex_shader.size();
 
 	pipeline_state_desc.rasteritation_state.cull_mode = display::CullMode::None;
 

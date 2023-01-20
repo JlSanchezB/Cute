@@ -3,6 +3,7 @@
 #include <utility>
 #include <locale.h>
 #include <core/profile.h>
+#include <fstream>
 
 namespace display
 {
@@ -736,11 +737,26 @@ namespace display
 
 		DX12_pipeline_state_desc.pRootSignature = device->Get(pipeline_state_desc.root_signature).resource.Get();
 
-		DX12_pipeline_state_desc.VS.pShaderBytecode = pipeline_state_desc.vertex_shader.data;
-		DX12_pipeline_state_desc.VS.BytecodeLength = pipeline_state_desc.vertex_shader.size;
+		std::vector<char> vertex_shader_blob;
+		if (!CompileShader(device, pipeline_state_desc.vertex_shader, vertex_shader_blob))
+		{
+			device->m_pipeline_state_pool.Free(handle);
+			SetLastErrorMessage(device, "Error compiling vertex shader in graphics pipeline state <%s>", name);
+			return PipelineStateHandle();
+		}
 
-		DX12_pipeline_state_desc.PS.pShaderBytecode = pipeline_state_desc.pixel_shader.data;
-		DX12_pipeline_state_desc.PS.BytecodeLength = pipeline_state_desc.pixel_shader.size;		
+		DX12_pipeline_state_desc.VS.pShaderBytecode = vertex_shader_blob.data();
+		DX12_pipeline_state_desc.VS.BytecodeLength = vertex_shader_blob.size();
+
+		std::vector<char> pixel_shader_blob;
+		if (!CompileShader(device, pipeline_state_desc.pixel_shader, pixel_shader_blob))
+		{
+			device->m_pipeline_state_pool.Free(handle);
+			SetLastErrorMessage(device, "Error compiling pixel shader in graphics pipeline state <%s>", name);
+			return PipelineStateHandle();
+		}
+		DX12_pipeline_state_desc.PS.pShaderBytecode = pixel_shader_blob.data();
+		DX12_pipeline_state_desc.PS.BytecodeLength = pixel_shader_blob.size();
 		
 		D3D12_RASTERIZER_DESC rasterizer_state;
 		rasterizer_state.FillMode = Convert(pipeline_state_desc.rasteritation_state.fill_mode);
@@ -828,8 +844,17 @@ namespace display
 		D3D12_COMPUTE_PIPELINE_STATE_DESC DX12_pipeline_state_desc = {};
 
 		DX12_pipeline_state_desc.pRootSignature = device->Get(compute_pipeline_state_desc.root_signature).resource.Get();
-		DX12_pipeline_state_desc.CS.pShaderBytecode = compute_pipeline_state_desc.compute_shader.data;
-		DX12_pipeline_state_desc.CS.BytecodeLength = compute_pipeline_state_desc.compute_shader.size;
+
+		std::vector<char> shader_blob;
+		if (!CompileShader(device, compute_pipeline_state_desc.compute_shader, shader_blob))
+		{
+			device->m_pipeline_state_pool.Free(handle);
+			SetLastErrorMessage(device, "Error compiling compute shader in compute pipeline state <%s>", name);
+			return PipelineStateHandle();
+		}
+
+		DX12_pipeline_state_desc.CS.pShaderBytecode = shader_blob.data();
+		DX12_pipeline_state_desc.CS.BytecodeLength = shader_blob.size();
 
 		//Create pipeline state
 		if (FAILED(device->m_native_device->CreateComputePipelineState(&DX12_pipeline_state_desc, IID_PPV_ARGS(&device->Get(handle)))))
@@ -849,7 +874,26 @@ namespace display
 		device->m_pipeline_state_pool.Free(handle);
 	}
 
-	bool CompileShader(Device * device, const CompileShaderDesc & compile_shader_desc, std::vector<char>& shader_blob)
+	inline std::vector<char> ReadFileToBuffer(const char* file)
+	{
+		std::ifstream root_signature_file(file, std::ios::binary | std::ios::ate);
+		if (root_signature_file.good())
+		{
+			std::streamsize size = root_signature_file.tellg();
+			root_signature_file.seekg(0, std::ios::beg);
+
+			std::vector<char> buffer(size);
+			root_signature_file.read(buffer.data(), size);
+
+			return buffer;
+		}
+		else
+		{
+			return std::vector<char>(0);
+		}
+	}
+
+	bool CompileShader(Device* device, const CompileShaderDesc& compile_shader_desc, std::vector<char>& shader_blob)
 	{
 		ComPtr<ID3DBlob> blob;
 		ComPtr<ID3DBlob> errors;
@@ -864,7 +908,25 @@ namespace display
 			defines.get()[compile_shader_desc.defines.size()].Definition = nullptr;
 		}
 
-		auto hr = D3DCompile(compile_shader_desc.code, strlen(compile_shader_desc.code), compile_shader_desc.name, defines.get(), NULL, compile_shader_desc.entry_point, compile_shader_desc.target, 0, 0, &blob, &errors);
+		HRESULT hr;
+		if (compile_shader_desc.file_name)
+		{
+			//Use the file name
+			std::vector<char> source_shader_blob;
+			source_shader_blob = ReadFileToBuffer(compile_shader_desc.file_name);
+			hr = D3DCompile(source_shader_blob.data(), source_shader_blob.size(), compile_shader_desc.name, defines.get(), NULL, compile_shader_desc.entry_point, compile_shader_desc.target, 0, 0, &blob, &errors);
+		}
+		else if (compile_shader_desc.shader_code)
+		{
+			//Use the shader code
+			hr = D3DCompile(compile_shader_desc.shader_code, strnlen_s(compile_shader_desc.shader_code, 512 * 1024), compile_shader_desc.name, defines.get(), NULL, compile_shader_desc.entry_point, compile_shader_desc.target, 0, 0, &blob, &errors);
+		}
+		else
+		{
+			//Error compiling
+			SetLastErrorMessage(device, "Error compiling shader <%s>, filename or shader_code was not defined", compile_shader_desc.name);
+			return false;
+		}
 		if (SUCCEEDED(hr))
 		{
 			shader_blob.resize(blob->GetBufferSize());

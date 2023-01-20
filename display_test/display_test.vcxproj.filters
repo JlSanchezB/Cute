@@ -23,21 +23,19 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="colour_shader.hlsl">
-      <Filter>Assets</Filter>
-    </CustomBuild>
-    <CustomBuild Include="texture_shader.hlsl">
-      <Filter>Assets</Filter>
-    </CustomBuild>
-    <CustomBuild Include="constant_buffer_shader.hlsl">
-      <Filter>Assets</Filter>
-    </CustomBuild>
-    <CustomBuild Include="instance_shader.hlsl">
-      <Filter>Assets</Filter>
-    </CustomBuild>
-  </ItemGroup>
-  <ItemGroup>
     <CopyFileToFolders Include="texture.dds">
+      <Filter>Assets</Filter>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="colour_shader.hlsl">
+      <Filter>Assets</Filter>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="constant_buffer_shader.hlsl">
+      <Filter>Assets</Filter>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="instance_shader.hlsl">
+      <Filter>Assets</Filter>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="texture_shader.hlsl">
       <Filter>Assets</Filter>
     </CopyFileToFolders>
   </ItemGroup>

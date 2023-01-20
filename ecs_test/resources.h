@@ -49,37 +49,24 @@ struct DisplayResource
 					return float4(0.f, alpha, 0.f, alpha);\
 				}";
 
-		std::vector<char> vertex_shader;
-		std::vector<char> pixel_shader;
-
-		display::CompileShaderDesc compile_shader_desc;
-		compile_shader_desc.code = shader_code;
-		compile_shader_desc.entry_point = "main_vs";
-		compile_shader_desc.target = "vs_5_1";
-		display::CompileShader(device, compile_shader_desc, vertex_shader);
-
-		compile_shader_desc.code = shader_code;
-		compile_shader_desc.entry_point = "main_ps";
-		compile_shader_desc.target = "ps_5_1";
-		display::CompileShader(device, compile_shader_desc, pixel_shader);
-
-
+	
 		//Create pipeline state
 		display::PipelineStateDesc pipeline_state_desc;
 		pipeline_state_desc.root_signature = m_root_signature;
+
+		pipeline_state_desc.vertex_shader.shader_code = shader_code;
+		pipeline_state_desc.vertex_shader.entry_point = "main_vs";
+		pipeline_state_desc.vertex_shader.target = "vs_5_1";
+
+		pipeline_state_desc.pixel_shader.shader_code = shader_code;
+		pipeline_state_desc.pixel_shader.entry_point = "main_ps";
+		pipeline_state_desc.pixel_shader.target = "ps_5_1";
+
 
 		//Add input layouts
 		pipeline_state_desc.input_layout.elements[0] = display::InputElementDesc("POSITION", 0, display::Format::R32G32_FLOAT, 0, 0);
 		pipeline_state_desc.input_layout.elements[1] = display::InputElementDesc("TEXCOORD", 0, display::Format::R32G32B32A32_FLOAT, 1, 0, display::InputType::Instance);
 		pipeline_state_desc.input_layout.num_elements = 2;
-
-
-		//Add shaders
-		pipeline_state_desc.pixel_shader.data = reinterpret_cast<void*>(pixel_shader.data());
-		pipeline_state_desc.pixel_shader.size = pixel_shader.size();
-
-		pipeline_state_desc.vertex_shader.data = reinterpret_cast<void*>(vertex_shader.data());
-		pipeline_state_desc.vertex_shader.size = vertex_shader.size();
 
 		//Add render targets
 		pipeline_state_desc.num_render_targets = 1;
@@ -120,22 +107,13 @@ struct DisplayResource
 				}";
 
 
-		compile_shader_desc.code = gazelle_shader_code;
-		compile_shader_desc.entry_point = "main_vs";
-		compile_shader_desc.target = "vs_5_1";
-		display::CompileShader(device, compile_shader_desc, vertex_shader);
+		pipeline_state_desc.vertex_shader.shader_code = gazelle_shader_code;
+		pipeline_state_desc.vertex_shader.entry_point = "main_vs";
+		pipeline_state_desc.vertex_shader.target = "vs_5_1";
 
-		compile_shader_desc.code = gazelle_shader_code;
-		compile_shader_desc.entry_point = "main_ps";
-		compile_shader_desc.target = "ps_5_1";
-		display::CompileShader(device, compile_shader_desc, pixel_shader);
-
-		//Add shaders
-		pipeline_state_desc.pixel_shader.data = reinterpret_cast<void*>(pixel_shader.data());
-		pipeline_state_desc.pixel_shader.size = pixel_shader.size();
-
-		pipeline_state_desc.vertex_shader.data = reinterpret_cast<void*>(vertex_shader.data());
-		pipeline_state_desc.vertex_shader.size = vertex_shader.size();
+		pipeline_state_desc.pixel_shader.shader_code = gazelle_shader_code;
+		pipeline_state_desc.pixel_shader.entry_point = "main_ps";
+		pipeline_state_desc.pixel_shader.target = "ps_5_1";
 
 		//Create
 		m_gazelle_pipeline_state = display::CreatePipelineState(device, pipeline_state_desc, "Gazelle");
@@ -172,22 +150,13 @@ struct DisplayResource
 				}";
 
 
-		compile_shader_desc.code = lion_shader_code;
-		compile_shader_desc.entry_point = "main_vs";
-		compile_shader_desc.target = "vs_5_1";
-		display::CompileShader(device, compile_shader_desc, vertex_shader);
+		pipeline_state_desc.vertex_shader.shader_code = lion_shader_code;
+		pipeline_state_desc.vertex_shader.entry_point = "main_vs";
+		pipeline_state_desc.vertex_shader.target = "vs_5_1";
 
-		compile_shader_desc.code = lion_shader_code;
-		compile_shader_desc.entry_point = "main_ps";
-		compile_shader_desc.target = "ps_5_1";
-		display::CompileShader(device, compile_shader_desc, pixel_shader);
-
-		//Add shaders
-		pipeline_state_desc.pixel_shader.data = reinterpret_cast<void*>(pixel_shader.data());
-		pipeline_state_desc.pixel_shader.size = pixel_shader.size();
-
-		pipeline_state_desc.vertex_shader.data = reinterpret_cast<void*>(vertex_shader.data());
-		pipeline_state_desc.vertex_shader.size = vertex_shader.size();
+		pipeline_state_desc.pixel_shader.shader_code = lion_shader_code;
+		pipeline_state_desc.pixel_shader.entry_point = "main_ps";
+		pipeline_state_desc.pixel_shader.target = "ps_5_1";
 
 		//Create
 		m_lion_pipeline_state = display::CreatePipelineState(device, pipeline_state_desc, "Lion");

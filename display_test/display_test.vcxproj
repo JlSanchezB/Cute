@@ -266,7 +266,7 @@
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="colour_shader.hlsl">
+    <CopyFileToFolders Include="colour_shader.hlsl">
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">5.0</ShaderModel>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">5.0</ShaderModel>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Development|Win32'">5.0</ShaderModel>
@@ -292,13 +292,13 @@
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)%(Filename)_ps.fxo;$(OutDir)%(Filename)_vs.fxo;%(Outputs)</Outputs>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Development|x64'">$(OutDir)%(Filename)_ps.fxo;$(OutDir)%(Filename)_vs.fxo;%(Outputs)</Outputs>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Test|x64'">$(OutDir)%(Filename)_ps.fxo;$(OutDir)%(Filename)_vs.fxo;%(Outputs)</Outputs>
-    </CustomBuild>
+    </CopyFileToFolders>
   </ItemGroup>
   <ItemGroup>
     <CopyFileToFolders Include="texture.dds" />
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="texture_shader.hlsl">
+    <CopyFileToFolders Include="texture_shader.hlsl">
       <FileType>Document</FileType>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../engine/tools/compile_shader.bat %(Identity) "$(OutDir)%(Filename)"</Command>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../engine/tools/compile_shader.bat %(Identity) "$(OutDir)%(Filename)"</Command>
@@ -316,10 +316,10 @@
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)%(Filename)_ps.fxo;$(OutDir)%(Filename)_vs.fxo;%(Outputs)</Outputs>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Development|x64'">$(OutDir)%(Filename)_ps.fxo;$(OutDir)%(Filename)_vs.fxo;%(Outputs)</Outputs>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Test|x64'">$(OutDir)%(Filename)_ps.fxo;$(OutDir)%(Filename)_vs.fxo;%(Outputs)</Outputs>
-    </CustomBuild>
+    </CopyFileToFolders>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="constant_buffer_shader.hlsl">
+    <CopyFileToFolders Include="constant_buffer_shader.hlsl">
       <FileType>Document</FileType>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../engine/tools/compile_shader.bat %(Identity) "$(OutDir)%(Filename)"</Command>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../engine/tools/compile_shader.bat %(Identity) "$(OutDir)%(Filename)"</Command>
@@ -337,10 +337,10 @@
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)%(Filename)_ps.fxo;$(OutDir)%(Filename)_vs.fxo;%(Outputs)</Outputs>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Development|x64'">$(OutDir)%(Filename)_ps.fxo;$(OutDir)%(Filename)_vs.fxo;%(Outputs)</Outputs>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Test|x64'">$(OutDir)%(Filename)_ps.fxo;$(OutDir)%(Filename)_vs.fxo;%(Outputs)</Outputs>
-    </CustomBuild>
+    </CopyFileToFolders>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="instance_shader.hlsl">
+    <CopyFileToFolders Include="instance_shader.hlsl">
       <FileType>Document</FileType>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../engine/tools/compile_shader.bat %(Identity) "$(OutDir)%(Filename)"</Command>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../engine/tools/compile_shader.bat %(Identity) "$(OutDir)%(Filename)"</Command>
@@ -358,7 +358,7 @@
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)%(Filename)_ps.fxo;$(OutDir)%(Filename)_vs.fxo;%(Outputs)</Outputs>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Development|x64'">$(OutDir)%(Filename)_ps.fxo;$(OutDir)%(Filename)_vs.fxo;%(Outputs)</Outputs>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Test|x64'">$(OutDir)%(Filename)_ps.fxo;$(OutDir)%(Filename)_vs.fxo;%(Outputs)</Outputs>
-    </CustomBuild>
+    </CopyFileToFolders>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
