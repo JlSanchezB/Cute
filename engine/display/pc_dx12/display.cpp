@@ -714,6 +714,73 @@ namespace display
 		device->m_root_signature_pool.Free(root_signature_handle);
 	}
 
+	static std::vector<char> ReadFileToBuffer(const char* file)
+	{
+		std::ifstream root_signature_file(file, std::ios::binary | std::ios::ate);
+		if (root_signature_file.good())
+		{
+			std::streamsize size = root_signature_file.tellg();
+			root_signature_file.seekg(0, std::ios::beg);
+
+			std::vector<char> buffer(size);
+			root_signature_file.read(buffer.data(), size);
+
+			return buffer;
+		}
+		else
+		{
+			return std::vector<char>(0);
+		}
+	}
+
+	static bool CompileShader(Device* device, const CompileShaderDesc& compile_shader_desc, std::vector<char>& shader_blob)
+	{
+		ComPtr<ID3DBlob> blob;
+		ComPtr<ID3DBlob> errors;
+
+		std::unique_ptr<D3D_SHADER_MACRO[]> defines;
+		if (compile_shader_desc.defines.size() > 0)
+		{
+			defines = std::make_unique<D3D_SHADER_MACRO[]>(compile_shader_desc.defines.size() + 1);
+			memcpy(defines.get(), compile_shader_desc.defines.data(), sizeof(D3D_SHADER_MACRO) * compile_shader_desc.defines.size());
+			//Add null terminated
+			defines.get()[compile_shader_desc.defines.size()].Name = nullptr;
+			defines.get()[compile_shader_desc.defines.size()].Definition = nullptr;
+		}
+
+		HRESULT hr;
+		if (compile_shader_desc.file_name)
+		{
+			//Use the file name
+			std::vector<char> source_shader_blob;
+			source_shader_blob = ReadFileToBuffer(compile_shader_desc.file_name);
+			hr = D3DCompile(source_shader_blob.data(), source_shader_blob.size(), compile_shader_desc.name, defines.get(), NULL, compile_shader_desc.entry_point, compile_shader_desc.target, 0, 0, &blob, &errors);
+		}
+		else if (compile_shader_desc.shader_code)
+		{
+			//Use the shader code
+			hr = D3DCompile(compile_shader_desc.shader_code, strnlen_s(compile_shader_desc.shader_code, 512 * 1024), compile_shader_desc.name, defines.get(), NULL, compile_shader_desc.entry_point, compile_shader_desc.target, 0, 0, &blob, &errors);
+		}
+		else
+		{
+			//Error compiling
+			SetLastErrorMessage(device, "Error compiling shader <%s>, filename or shader_code was not defined", compile_shader_desc.name);
+			return false;
+		}
+		if (SUCCEEDED(hr))
+		{
+			shader_blob.resize(blob->GetBufferSize());
+			memcpy(shader_blob.data(), blob->GetBufferPointer(), blob->GetBufferSize());
+			return true;
+		}
+		else
+		{
+			//Error compiling
+			SetLastErrorMessage(device, "Error compiling shader <%s> errors <%s>", compile_shader_desc.name, errors->GetBufferPointer());
+			return false;
+		}
+	}
+
 	PipelineStateHandle CreatePipelineState(Device * device, const PipelineStateDesc & pipeline_state_desc, const char* name)
 	{
 		PipelineStateHandle handle = device->m_pipeline_state_pool.Alloc();
@@ -872,73 +939,6 @@ namespace display
 	void DestroyComputePipelineState(Device * device, PipelineStateHandle & handle)
 	{
 		device->m_pipeline_state_pool.Free(handle);
-	}
-
-	inline std::vector<char> ReadFileToBuffer(const char* file)
-	{
-		std::ifstream root_signature_file(file, std::ios::binary | std::ios::ate);
-		if (root_signature_file.good())
-		{
-			std::streamsize size = root_signature_file.tellg();
-			root_signature_file.seekg(0, std::ios::beg);
-
-			std::vector<char> buffer(size);
-			root_signature_file.read(buffer.data(), size);
-
-			return buffer;
-		}
-		else
-		{
-			return std::vector<char>(0);
-		}
-	}
-
-	bool CompileShader(Device* device, const CompileShaderDesc& compile_shader_desc, std::vector<char>& shader_blob)
-	{
-		ComPtr<ID3DBlob> blob;
-		ComPtr<ID3DBlob> errors;
-
-		std::unique_ptr<D3D_SHADER_MACRO[]> defines;
-		if (compile_shader_desc.defines.size() > 0)
-		{
-			defines = std::make_unique<D3D_SHADER_MACRO[]>(compile_shader_desc.defines.size() + 1);
-			memcpy(defines.get(), compile_shader_desc.defines.data(), sizeof(D3D_SHADER_MACRO) * compile_shader_desc.defines.size());
-			//Add null terminated
-			defines.get()[compile_shader_desc.defines.size()].Name = nullptr;
-			defines.get()[compile_shader_desc.defines.size()].Definition = nullptr;
-		}
-
-		HRESULT hr;
-		if (compile_shader_desc.file_name)
-		{
-			//Use the file name
-			std::vector<char> source_shader_blob;
-			source_shader_blob = ReadFileToBuffer(compile_shader_desc.file_name);
-			hr = D3DCompile(source_shader_blob.data(), source_shader_blob.size(), compile_shader_desc.name, defines.get(), NULL, compile_shader_desc.entry_point, compile_shader_desc.target, 0, 0, &blob, &errors);
-		}
-		else if (compile_shader_desc.shader_code)
-		{
-			//Use the shader code
-			hr = D3DCompile(compile_shader_desc.shader_code, strnlen_s(compile_shader_desc.shader_code, 512 * 1024), compile_shader_desc.name, defines.get(), NULL, compile_shader_desc.entry_point, compile_shader_desc.target, 0, 0, &blob, &errors);
-		}
-		else
-		{
-			//Error compiling
-			SetLastErrorMessage(device, "Error compiling shader <%s>, filename or shader_code was not defined", compile_shader_desc.name);
-			return false;
-		}
-		if (SUCCEEDED(hr))
-		{
-			shader_blob.resize(blob->GetBufferSize());
-			memcpy(shader_blob.data(), blob->GetBufferPointer(), blob->GetBufferSize());
-			return true;
-		}
-		else
-		{
-			//Error compiling
-			SetLastErrorMessage(device, "Error compiling shader <%s> errors <%s>", compile_shader_desc.name, errors->GetBufferPointer());
-			return false;
-		}
 	}
 
 	//Create render target
