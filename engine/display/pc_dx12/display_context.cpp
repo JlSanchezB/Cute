@@ -93,7 +93,7 @@ namespace display
 
 		auto& pipeline_state = device->Get(pipeline_state_handle);
 
-		command_list->SetPipelineState(pipeline_state.Get());
+		command_list->SetPipelineState(pipeline_state.resource.Get());
 	}
 	void Context::SetVertexBuffers(uint8_t start_slot_index, uint8_t num_vertex_buffers, WeakVertexBufferHandle * vertex_buffer_handles)
 	{

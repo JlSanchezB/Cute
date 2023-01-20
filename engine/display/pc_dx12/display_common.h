@@ -217,8 +217,14 @@ namespace display
 		ComPtr<ID3D12RootSignature> resource;
 		RootSignatureDesc desc;
 	};
-	struct PipelineState : ComPtr<ID3D12PipelineState>
+	struct PipelineState
 	{
+		ComPtr<ID3D12PipelineState> resource;
+		union
+		{
+			D3D12_GRAPHICS_PIPELINE_STATE_DESC graphics_pipeline_desc;
+			D3D12_COMPUTE_PIPELINE_STATE_DESC compute_pipeline_desc;
+		};
 	};
 
 	struct RenderTarget : RingResourceSupport<RenderTargetHandle>

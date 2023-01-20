@@ -785,8 +785,8 @@ namespace display
 	{
 		PipelineStateHandle handle = device->m_pipeline_state_pool.Alloc();
 
-		//Fill the DX12 structs using our data
-		D3D12_GRAPHICS_PIPELINE_STATE_DESC DX12_pipeline_state_desc = {};
+		//Fill the DX12 structs using our data, keep it for reloading
+		D3D12_GRAPHICS_PIPELINE_STATE_DESC& DX12_pipeline_state_desc = device->Get(handle).graphics_pipeline_desc;
 
 		std::vector<D3D12_INPUT_ELEMENT_DESC> input_elements(kMaxNumInputLayoutElements);
 		for (size_t i = 0; i < pipeline_state_desc.input_layout.num_elements; i++)
@@ -886,14 +886,14 @@ namespace display
 		DX12_pipeline_state_desc.SampleDesc.Count = static_cast<UINT>(pipeline_state_desc.sample_count);
 
 		//Create pipeline state
-		if (FAILED(device->m_native_device->CreateGraphicsPipelineState(&DX12_pipeline_state_desc, IID_PPV_ARGS(&device->Get(handle)))))
+		if (FAILED(device->m_native_device->CreateGraphicsPipelineState(&DX12_pipeline_state_desc, IID_PPV_ARGS(&device->Get(handle).resource))))
 		{
 			device->m_pipeline_state_pool.Free(handle);
 			SetLastErrorMessage(device, "Error creating graphics pipeline state <%s>", name);
 			return PipelineStateHandle();
 		}
 
-		SetObjectName(device->Get(handle).Get(), name);
+		SetObjectName(device->Get(handle).resource.Get(), name);
 
 		return handle;
 	}
@@ -907,8 +907,8 @@ namespace display
 	{
 		PipelineStateHandle handle = device->m_pipeline_state_pool.Alloc();
 
-		//Fill the DX12 structs using our data
-		D3D12_COMPUTE_PIPELINE_STATE_DESC DX12_pipeline_state_desc = {};
+		//Fill the DX12 structs using our data, keep it for reloading
+		D3D12_COMPUTE_PIPELINE_STATE_DESC DX12_pipeline_state_desc = device->Get(handle).compute_pipeline_desc;
 
 		DX12_pipeline_state_desc.pRootSignature = device->Get(compute_pipeline_state_desc.root_signature).resource.Get();
 
@@ -924,14 +924,14 @@ namespace display
 		DX12_pipeline_state_desc.CS.BytecodeLength = shader_blob.size();
 
 		//Create pipeline state
-		if (FAILED(device->m_native_device->CreateComputePipelineState(&DX12_pipeline_state_desc, IID_PPV_ARGS(&device->Get(handle)))))
+		if (FAILED(device->m_native_device->CreateComputePipelineState(&DX12_pipeline_state_desc, IID_PPV_ARGS(&device->Get(handle).resource))))
 		{
 			device->m_pipeline_state_pool.Free(handle);
 			SetLastErrorMessage(device, "Error creating compute pipeline state <%s>", name);
 			return PipelineStateHandle();
 		}
 
-		SetObjectName(device->Get(handle).Get(), name);
+		SetObjectName(device->Get(handle).resource.Get(), name);
 
 		return handle;
 	}
