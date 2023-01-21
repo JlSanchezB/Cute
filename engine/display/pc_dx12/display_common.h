@@ -221,13 +221,102 @@ namespace display
 	struct PipelineState : ComPtr<ID3D12PipelineState>
 	{
 	};
+	struct PipelineReloadShaderData
+	{
+		std::string file_name;
+		std::string entry_point;
+		std::string target;
+		std::string name;
+		std::vector < std::pair<std::string, std::string>> defines;
+		std::filesystem::file_time_type timestamp;
 
+		PipelineReloadShaderData()
+		{
+		}
+
+		//Capture the compule shader desc for the reloading
+		void Capture(const CompileShaderDesc& shader_descriptor)
+		{
+			if (shader_descriptor.file_name == nullptr)
+			{
+				//Nothing to as it is a shader blob, reloading is not going to work
+				file_name = "";
+				return;
+			}
+			file_name = shader_descriptor.file_name;
+			entry_point = shader_descriptor.entry_point;
+			target = shader_descriptor.target;
+			name = shader_descriptor.name;
+			for (size_t i = 0; i < shader_descriptor.defines.size(); ++i)
+			{
+				defines[i] = std::make_pair(shader_descriptor.defines[i].first, shader_descriptor.defines[i].second);
+			}
+
+			UpdateTimeStamp();
+		}
+
+		//Converts the captured data to a compile shader desc
+		CompileShaderDesc GetCompileShaderDescriptor()
+		{
+			CompileShaderDesc ret;
+
+			ret.file_name = file_name.c_str();
+			ret.shader_code = nullptr;
+			ret.entry_point = entry_point.c_str();
+			ret.target = target.c_str();
+			ret.name = name.c_str();
+			for (size_t i = 0; i < defines.size(); ++i)
+			{
+				ret.defines[i] = std::make_pair(defines[i].first.c_str(), defines[i].second.c_str());
+			}
+
+			return ret;
+		}
+
+		bool NeedsUpdate() const
+		{
+			if (file_name == "") return false; //It was a blob shader
+			return timestamp < std::filesystem::last_write_time(file_name.c_str());
+		}
+
+		void UpdateTimeStamp()
+		{
+			timestamp = std::filesystem::last_write_time(file_name.c_str());
+		}
+	};
 	struct PipelineReloadData
 	{
 		WeakPipelineStateHandle handle;
 		std::variant<D3D12_GRAPHICS_PIPELINE_STATE_DESC, D3D12_COMPUTE_PIPELINE_STATE_DESC> pipeline_desc;
 		std::string name;
-		std::vector<std::pair<std::string, std::filesystem::file_time_type> > filenames;
+		std::vector<D3D12_INPUT_ELEMENT_DESC> input_elements;
+		std::vector<std::string> semantic_names;
+		WeakRootSignatureHandle root_signature_handle;
+
+		PipelineReloadShaderData VertexShaderCompileReloadData;
+		PipelineReloadShaderData PixelShaderCompileReloadData;
+		PipelineReloadShaderData ComputeShaderCompileReloadData;
+
+		PipelineReloadData(const char* _name, WeakPipelineStateHandle _handle, const PipelineStateDesc& pipeline_state_desc, const D3D12_GRAPHICS_PIPELINE_STATE_DESC _pipeline_desc, std::vector<D3D12_INPUT_ELEMENT_DESC> _input_elements)
+		{
+			handle = _handle;
+			name = _name;
+			pipeline_desc = _pipeline_desc;
+			input_elements = _input_elements;
+			for (size_t i = 0; i < input_elements.size(); i++) semantic_names.push_back(input_elements[i].SemanticName);
+			root_signature_handle = pipeline_state_desc.root_signature;
+			VertexShaderCompileReloadData.Capture(pipeline_state_desc.vertex_shader);
+			PixelShaderCompileReloadData.Capture(pipeline_state_desc.pixel_shader);
+		}
+
+		PipelineReloadData(const char* _name, WeakPipelineStateHandle _handle, const ComputePipelineStateDesc& pipeline_state_desc, const D3D12_COMPUTE_PIPELINE_STATE_DESC _pipeline_desc)
+		{
+			handle = _handle;
+			name = _name;
+			pipeline_desc = _pipeline_desc;
+			root_signature_handle = pipeline_state_desc.root_signature;
+			ComputeShaderCompileReloadData.Capture(pipeline_state_desc.compute_shader);
+		}
 	};
 
 	struct RenderTarget : RingResourceSupport<RenderTargetHandle>

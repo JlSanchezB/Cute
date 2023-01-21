@@ -170,7 +170,6 @@ namespace display
 	struct ComputePipelineStateDesc
 	{
 		WeakRootSignatureHandle root_signature;
-
 		CompileShaderDesc compute_shader;
 	};
 

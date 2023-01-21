@@ -135,6 +135,9 @@ namespace
 		//Cursor state
 		bool m_show_cursor = true;
 
+		//Needs a reloading shaders
+		bool m_reload_shaders = false;
+
 		//Imgui menu enabled
 		bool m_imgui_menu_enable = false;
 
@@ -300,6 +303,10 @@ namespace
 				g_Platform->m_imgui_menu_enable = !g_Platform->m_imgui_menu_enable;
 				//Enable or hide the cursor, as it can change because imgui
 				g_Platform->UpdateCursorVisibility();
+			}
+			else if (keyboard.VKey == VK_F1 && keyboard.Message == WM_KEYDOWN)
+			{
+				g_Platform->m_reload_shaders = true;
 			}
 			else
 			{
@@ -777,6 +784,13 @@ namespace platform
 
 		//Update render counters
 		core::UpdateCountersRender();
+
+		//Update shaders if needed
+		if (g_Platform->m_device && g_Platform->m_reload_shaders)
+		{
+			display::ReloadUpdatedShaders(g_Platform->m_device);
+			g_Platform->m_reload_shaders = false;
+		}
 	}
 
 	void Game::SetDevice(display::Device * device)
