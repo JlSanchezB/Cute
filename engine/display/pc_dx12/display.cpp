@@ -370,6 +370,9 @@ namespace display
 		device->m_descriptor_table_pool.Destroy();
 		device->m_sampler_descriptor_table_pool.Destroy();
 
+		//Empty reload pipeline state buffers
+		device->m_pipeline_reload_data.clear();
+
 		delete device;
 	}
 
