@@ -246,7 +246,10 @@ namespace display
 			file_name = shader_descriptor.file_name;
 			entry_point = shader_descriptor.entry_point;
 			target = shader_descriptor.target;
-			name = shader_descriptor.name;
+			if (shader_descriptor.name)
+			{
+				name = shader_descriptor.name;
+			}
 			for (size_t i = 0; i < shader_descriptor.defines.size(); ++i)
 			{
 				defines[i] = std::make_pair(shader_descriptor.defines[i].first, shader_descriptor.defines[i].second);
