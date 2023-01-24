@@ -232,8 +232,10 @@ namespace display
 
 	struct UnorderedAccessBufferDesc
 	{
+		UnorderedAccessBufferType type = UnorderedAccessBufferType::StructuredBuffer;
 		uint32_t element_size = 0;
 		uint32_t element_count = 0;
+		size_t size = 0;
 	};
 
 	struct ShaderResourceDesc
@@ -247,8 +249,8 @@ namespace display
 		uint32_t slice_pitch = 0;
 		uint16_t mips = 0;
 		size_t size = 0;
-		uint32_t num_elements = 0; //Used for buffers
-		uint32_t structure_stride = 0; //Used for buffers
+		uint32_t num_elements = 0; //Used for structured buffers
+		uint32_t structure_stride = 0; //Used for structured buffers
 		const void* init_data = nullptr;
 	};
 

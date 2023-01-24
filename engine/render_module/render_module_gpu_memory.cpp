@@ -19,8 +19,8 @@ namespace render
 
 		//Init static buffer
 		display::UnorderedAccessBufferDesc static_buffer_desc;
-		static_buffer_desc.element_size = 16;
-		static_buffer_desc.element_count = m_static_gpu_memory_size / 16;
+		static_buffer_desc.type = display::UnorderedAccessBufferType::RawBuffer;
+		static_buffer_desc.size = m_static_gpu_memory_size;
 
 		m_static_gpu_memory_buffer = display::CreateUnorderedAccessBuffer(device, static_buffer_desc, "StaticGpuMemoryBuffer");
 		
@@ -30,10 +30,8 @@ namespace render
 		//Init dynamic buffer
 		display::ShaderResourceDesc dynamic_buffer_desc;
 		dynamic_buffer_desc.access = display::Access::Upload;
-		dynamic_buffer_desc.type = display::ShaderResourceType::Buffer;
+		dynamic_buffer_desc.type = display::ShaderResourceType::RawBuffer;
 		dynamic_buffer_desc.size = m_dynamic_gpu_memory_size;
-		dynamic_buffer_desc.num_elements = m_dynamic_gpu_memory_size / 16;
-		dynamic_buffer_desc.structure_stride = 16;
 
 		m_dynamic_gpu_memory_buffer = display::CreateShaderResource(device, dynamic_buffer_desc, "DynamicGpuMemoryBuffer");
 		m_dynamic_gpu_memory_base_ptr = reinterpret_cast<uint8_t*>(display::GetResourceMemoryBuffer(device, m_dynamic_gpu_memory_buffer));

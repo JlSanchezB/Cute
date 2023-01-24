@@ -124,8 +124,15 @@ namespace display
 
 	enum class ShaderResourceType : uint8_t
 	{
-		Buffer,
+		RawBuffer,
+		StructuredBuffer,
 		Texture2D
+	};
+
+	enum class UnorderedAccessBufferType : uint8_t
+	{
+		RawBuffer,
+		StructuredBuffer
 	};
 
 	enum class RenderTargetType : uint8_t

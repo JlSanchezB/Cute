@@ -220,7 +220,8 @@ namespace display
 		switch (shader_resource_type)
 		{
 		default:
-		case ShaderResourceType::Buffer: return D3D12_RESOURCE_DIMENSION_BUFFER;
+		case ShaderResourceType::StructuredBuffer: return D3D12_RESOURCE_DIMENSION_BUFFER;
+		case ShaderResourceType::RawBuffer: return D3D12_RESOURCE_DIMENSION_BUFFER;
 		case ShaderResourceType::Texture2D: return D3D12_RESOURCE_DIMENSION_TEXTURE2D;
 		}
 	}
@@ -231,7 +232,7 @@ namespace display
 		switch (shader_resource_type)
 		{
 		default:
-		case ShaderResourceType::Buffer: return D3D12_SRV_DIMENSION_BUFFER;
+		case ShaderResourceType::StructuredBuffer: return D3D12_SRV_DIMENSION_BUFFER;
 		case ShaderResourceType::Texture2D: return D3D12_SRV_DIMENSION_TEXTURE2D;
 		}
 	}

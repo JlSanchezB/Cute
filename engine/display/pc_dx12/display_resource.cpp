@@ -385,7 +385,17 @@ namespace display
 
 	UnorderedAccessBufferHandle CreateUnorderedAccessBuffer(Device * device, const UnorderedAccessBufferDesc& unordered_access_buffer_desc, const char* name)
 	{
-		size_t size = unordered_access_buffer_desc.element_size * unordered_access_buffer_desc.element_count;
+		size_t size = 0;
+		D3D12_RESOURCE_DESC d12_resource_desc = {};
+
+		if (unordered_access_buffer_desc.type == UnorderedAccessBufferType::StructuredBuffer)
+		{
+			size = unordered_access_buffer_desc.element_size * unordered_access_buffer_desc.element_count;
+		}
+		else if (unordered_access_buffer_desc.type == UnorderedAccessBufferType::RawBuffer)
+		{
+			size = unordered_access_buffer_desc.size;
+		}
 
 		UnorderedAccessBufferHandle handle = device->m_unordered_access_buffer_pool.Alloc();
 
@@ -405,24 +415,42 @@ namespace display
 		}
 
 		D3D12_UNORDERED_ACCESS_VIEW_DESC dx12_unordered_access_buffer_desc_desc = {};
-		dx12_unordered_access_buffer_desc_desc.Format = DXGI_FORMAT_UNKNOWN;
 		dx12_unordered_access_buffer_desc_desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
-		dx12_unordered_access_buffer_desc_desc.Buffer.NumElements = static_cast<UINT>(unordered_access_buffer_desc.element_count);
-		dx12_unordered_access_buffer_desc_desc.Buffer.StructureByteStride = static_cast<UINT>(unordered_access_buffer_desc.element_size);
 		dx12_unordered_access_buffer_desc_desc.Buffer.FirstElement = 0;
 		dx12_unordered_access_buffer_desc_desc.Buffer.CounterOffsetInBytes = 0;
-		dx12_unordered_access_buffer_desc_desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_NONE;
+		if (unordered_access_buffer_desc.type == UnorderedAccessBufferType::StructuredBuffer)
+		{
+			dx12_unordered_access_buffer_desc_desc.Format = DXGI_FORMAT_UNKNOWN;
+			dx12_unordered_access_buffer_desc_desc.Buffer.NumElements = static_cast<UINT>(unordered_access_buffer_desc.element_count);
+			dx12_unordered_access_buffer_desc_desc.Buffer.StructureByteStride = static_cast<UINT>(unordered_access_buffer_desc.element_size);
+			dx12_unordered_access_buffer_desc_desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_NONE;
+		}
+		else if (unordered_access_buffer_desc.type == UnorderedAccessBufferType::RawBuffer)
+		{
+			dx12_unordered_access_buffer_desc_desc.Format = DXGI_FORMAT_R32_TYPELESS;
+			dx12_unordered_access_buffer_desc_desc.Buffer.NumElements = static_cast<UINT>(unordered_access_buffer_desc.size / 4);
+			dx12_unordered_access_buffer_desc_desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_RAW;
+		}
 
 		device->m_native_device->CreateUnorderedAccessView(unordered_access_buffer.resource.Get(), nullptr, &dx12_unordered_access_buffer_desc_desc, device->m_unordered_access_buffer_pool.GetDescriptor(handle, 0));
 
 		//Create shader resource view
 		D3D12_SHADER_RESOURCE_VIEW_DESC dx12_shader_resource_desc = {};
-		dx12_shader_resource_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-		dx12_shader_resource_desc.Format = DXGI_FORMAT_UNKNOWN;
 		dx12_shader_resource_desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
-		dx12_shader_resource_desc.Buffer.NumElements = static_cast<UINT>(unordered_access_buffer_desc.element_count);
-		dx12_shader_resource_desc.Buffer.StructureByteStride = static_cast<UINT>(unordered_access_buffer_desc.element_size);
-		
+		dx12_shader_resource_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+
+		if (unordered_access_buffer_desc.type == UnorderedAccessBufferType::StructuredBuffer)
+		{
+			dx12_shader_resource_desc.Format = DXGI_FORMAT_UNKNOWN;
+			dx12_shader_resource_desc.Buffer.NumElements = static_cast<UINT>(unordered_access_buffer_desc.element_count);
+			dx12_shader_resource_desc.Buffer.StructureByteStride = static_cast<UINT>(unordered_access_buffer_desc.element_size);
+		}
+		else if (unordered_access_buffer_desc.type == UnorderedAccessBufferType::RawBuffer)
+		{
+			dx12_shader_resource_desc.Format = DXGI_FORMAT_R32_TYPELESS;
+			dx12_shader_resource_desc.Buffer.NumElements = static_cast<UINT>(unordered_access_buffer_desc.size / 4);
+			dx12_shader_resource_desc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_RAW;
+		}
 
 		device->m_native_device->CreateShaderResourceView(unordered_access_buffer.resource.Get(), &dx12_shader_resource_desc, device->m_unordered_access_buffer_pool.GetDescriptor(handle, 1));
 
@@ -454,7 +482,12 @@ namespace display
 
 			init_resource_state = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE; //Mainly used for pixel shader
 		}
-		else if (shader_resource_desc.type == ShaderResourceType::Buffer)
+		else if (shader_resource_desc.type == ShaderResourceType::StructuredBuffer)
+		{
+			d12_resource_desc = CD3DX12_RESOURCE_DESC::Buffer(shader_resource_desc.size);
+			init_resource_state = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE; //Mainly used in compute or vertex shaders
+		}
+		else if (shader_resource_desc.type == ShaderResourceType::RawBuffer)
 		{
 			d12_resource_desc = CD3DX12_RESOURCE_DESC::Buffer(shader_resource_desc.size);
 			init_resource_state = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE; //Mainly used in compute or vertex shaders
@@ -475,16 +508,24 @@ namespace display
 
 			//Create view
 			D3D12_SHADER_RESOURCE_VIEW_DESC dx12_shader_resource_desc = {};
-			dx12_shader_resource_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-			dx12_shader_resource_desc.Format = d12_resource_desc.Format;
 			dx12_shader_resource_desc.ViewDimension = Convert<D3D12_SRV_DIMENSION>(shader_resource_desc.type);
-			if (shader_resource_desc.type == ShaderResourceType::Buffer)
+			dx12_shader_resource_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+
+			if (shader_resource_desc.type == ShaderResourceType::StructuredBuffer)
 			{
+				dx12_shader_resource_desc.Format = DXGI_FORMAT_UNKNOWN;
 				dx12_shader_resource_desc.Buffer.NumElements = static_cast<UINT>(shader_resource_desc.num_elements);
 				dx12_shader_resource_desc.Buffer.StructureByteStride = static_cast<UINT>(shader_resource_desc.structure_stride);
 			}
+			else if (shader_resource_desc.type == ShaderResourceType::RawBuffer)
+			{
+				dx12_shader_resource_desc.Format = DXGI_FORMAT_R32_TYPELESS;
+				dx12_shader_resource_desc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_RAW;
+				dx12_shader_resource_desc.Buffer.NumElements = static_cast<UINT>(shader_resource_desc.size / 4);
+			}
 			else if (shader_resource_desc.type == ShaderResourceType::Texture2D)
 			{
+				dx12_shader_resource_desc.Format = d12_resource_desc.Format;
 				dx12_shader_resource_desc.Texture2D.MipLevels = d12_resource_desc.MipLevels;
 			}
 			device->m_native_device->CreateShaderResourceView(shader_resource.resource.Get(), &dx12_shader_resource_desc, device->m_shader_resource_pool.GetDescriptor(handle));
@@ -497,7 +538,7 @@ namespace display
 		{
 			SourceResourceData data(shader_resource_desc.init_data, shader_resource_desc.size);
 
-			if (shader_resource_desc.type == ShaderResourceType::Buffer)
+			if (shader_resource_desc.type == ShaderResourceType::StructuredBuffer)
 			{
 				ShaderResourceHandle handle = CreateRingResources(device, data, d12_resource_desc, device->m_shader_resource_pool, init_resource_state,
 					[&](display::Device* device, const ShaderResourceHandle& handle, display::ShaderResource& shader_resource)
