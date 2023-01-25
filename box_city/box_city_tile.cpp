@@ -451,17 +451,33 @@ namespace BoxCityTileSystem
 	{
 		LODGroupData& lod_group_data = GetLodGroupData(lod_group);
 		auto& instances_vector = GetLodInstances(lod_group);
+		auto& instances_gpu_allocation = GetLodInstancesGPUAllocation(lod_group);
+		auto& instance_list_gpu_allocation = GetLodInstanceListGPUAllocation(lod_group);
 
 		//Size of the GPU allocation
-		size_t gpu_allocation_size = sizeof(GPUBoxInstance) * (lod_group_data.animated_building_data.size() + lod_group_data.building_data.size() + lod_group_data.animated_panel_data.size() + lod_group_data.panel_data.size());
+		size_t num_box_instances = (lod_group_data.animated_building_data.size() + lod_group_data.building_data.size() + lod_group_data.animated_panel_data.size() + lod_group_data.panel_data.size());
+		size_t gpu_allocation_size = sizeof(GPUBoxInstance) * num_box_instances;
 
 		if (gpu_allocation_size == 0)
 		{
 			return;
 		}
 
-		//Allocate the GPU memory
-		GetLodGPUAllocation(lod_group) = manager->GetGPUMemoryRenderModule()->AllocStaticGPUMemory(manager->GetDevice(), gpu_allocation_size, nullptr, render::GetGameFrameIndex(manager->GetRenderSystem()));
+		//Allocate the instances GPU memory
+		instances_gpu_allocation = manager->GetGPUMemoryRenderModule()->AllocStaticGPUMemory(manager->GetDevice(), gpu_allocation_size, nullptr, render::GetGameFrameIndex(manager->GetRenderSystem()));
+
+
+		//Create the instance list GPU allocation and memory
+		//The instance list is a count and  a list of offset to each instance in the tile log group
+		size_t round_size = render::RoundSizeTo16Bytes((num_box_instances + 1) * sizeof(uint32_t));
+		std::vector<uint32_t> instance_list_offsets(round_size / sizeof(uint32_t));
+		instance_list_offsets[0] = static_cast<uint32_t>(num_box_instances); //First is the count
+		size_t begin_instance_offset = manager->GetGPUMemoryRenderModule()->GetStaticGPUMemoryOffset(instances_gpu_allocation);
+		for (size_t i = 0; i < num_box_instances; ++i)
+		{
+			instance_list_offsets[i + 1] = static_cast<uint32_t>(begin_instance_offset + i * sizeof(GPUBoxInstance));
+		}
+		instance_list_gpu_allocation = manager->GetGPUMemoryRenderModule()->AllocStaticGPUMemory(manager->GetDevice(), round_size, instance_list_offsets.data(), render::GetGameFrameIndex(manager->GetRenderSystem()));
 
 		//Each instance it will reserve like a lineal allocator
 		uint32_t gpu_offset = 0;
@@ -478,7 +494,7 @@ namespace BoxCityTileSystem
 			gpu_box_instance.Fill(box_render);
 
 			//Update the GPU memory
-			manager->GetGPUMemoryRenderModule()->UpdateStaticGPUMemory(manager->GetDevice(), GetLodGPUAllocation(lod_group), &gpu_box_instance, sizeof(GPUBoxInstance), render::GetGameFrameIndex(manager->GetRenderSystem()), gpu_offset * sizeof(GPUBoxInstance));
+			manager->GetGPUMemoryRenderModule()->UpdateStaticGPUMemory(manager->GetDevice(), instances_gpu_allocation, &gpu_box_instance, sizeof(GPUBoxInstance), render::GetGameFrameIndex(manager->GetRenderSystem()), gpu_offset * sizeof(GPUBoxInstance));
 
 			InterpolatedPosition interpolated_position;
 			interpolated_position.position.Reset(building_data.oob_box.position);
@@ -507,7 +523,7 @@ namespace BoxCityTileSystem
 			gpu_box_instance.Fill(box_render);
 
 			//Update the GPU memory
-			manager->GetGPUMemoryRenderModule()->UpdateStaticGPUMemory(manager->GetDevice(), GetLodGPUAllocation(lod_group), &gpu_box_instance, sizeof(GPUBoxInstance), render::GetGameFrameIndex(manager->GetRenderSystem()), gpu_offset * sizeof(GPUBoxInstance));
+			manager->GetGPUMemoryRenderModule()->UpdateStaticGPUMemory(manager->GetDevice(), instances_gpu_allocation, &gpu_box_instance, sizeof(GPUBoxInstance), render::GetGameFrameIndex(manager->GetRenderSystem()), gpu_offset * sizeof(GPUBoxInstance));
 
 			//Just make it static
 			instances_vector.push_back(ecs::AllocInstance<GameDatabase, BoxType>(m_zone_id)
@@ -564,7 +580,7 @@ namespace BoxCityTileSystem
 			gpu_box_instance.Fill(box_render);
 
 			//Update the GPU memory
-			manager->GetGPUMemoryRenderModule()->UpdateStaticGPUMemory(manager->GetDevice(), GetLodGPUAllocation(lod_group), &gpu_box_instance, sizeof(GPUBoxInstance), render::GetGameFrameIndex(manager->GetRenderSystem()), gpu_offset * sizeof(GPUBoxInstance));
+			manager->GetGPUMemoryRenderModule()->UpdateStaticGPUMemory(manager->GetDevice(), instances_gpu_allocation, &gpu_box_instance, sizeof(GPUBoxInstance), render::GetGameFrameIndex(manager->GetRenderSystem()), gpu_offset * sizeof(GPUBoxInstance));
 
 			InterpolatedPosition interpolated_position;
 			interpolated_position.position.Reset(panel_data.oob_box.position);
@@ -593,7 +609,7 @@ namespace BoxCityTileSystem
 			gpu_box_instance.Fill(box_render);
 
 			//Update the GPU memory
-			manager->GetGPUMemoryRenderModule()->UpdateStaticGPUMemory(manager->GetDevice(), GetLodGPUAllocation(lod_group), &gpu_box_instance, sizeof(GPUBoxInstance), render::GetGameFrameIndex(manager->GetRenderSystem()), gpu_offset * sizeof(GPUBoxInstance));
+			manager->GetGPUMemoryRenderModule()->UpdateStaticGPUMemory(manager->GetDevice(), instances_gpu_allocation, &gpu_box_instance, sizeof(GPUBoxInstance), render::GetGameFrameIndex(manager->GetRenderSystem()), gpu_offset * sizeof(GPUBoxInstance));
 
 			//Add attached
 			instances_vector.push_back(ecs::AllocInstance<GameDatabase, PanelType>(m_zone_id)
@@ -641,10 +657,14 @@ namespace BoxCityTileSystem
 		}
 		GetLodInstances(lod_group).clear();
 
-		//Dealloc the gpu handle
-		if (GetLodGPUAllocation(lod_group).IsValid())
+		//Dealloc the gpu handles
+		if (GetLodInstancesGPUAllocation(lod_group).IsValid())
 		{
-			manager->GetGPUMemoryRenderModule()->DeallocStaticGPUMemory(manager->GetDevice(), GetLodGPUAllocation(lod_group), render::GetGameFrameIndex(manager->GetRenderSystem()));
+			manager->GetGPUMemoryRenderModule()->DeallocStaticGPUMemory(manager->GetDevice(), GetLodInstancesGPUAllocation(lod_group), render::GetGameFrameIndex(manager->GetRenderSystem()));
+		}
+		if (GetLodInstanceListGPUAllocation(lod_group).IsValid())
+		{
+			manager->GetGPUMemoryRenderModule()->DeallocStaticGPUMemory(manager->GetDevice(), GetLodInstanceListGPUAllocation(lod_group), render::GetGameFrameIndex(manager->GetRenderSystem()));
 		}
 	}
 
@@ -705,7 +725,7 @@ namespace BoxCityTileSystem
 
 				for (auto& instances_lod_group : m_instances)
 				{
-					for (auto& instance : instances_lod_group)
+					for (auto& instance : instances_lod_group.instances)
 					{
 						if (instance.Is<BoxType>() || instance.Is<AnimatedBoxType>())
 						{

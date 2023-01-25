@@ -163,7 +163,7 @@ namespace BoxCityTileSystem
 
 	render::AllocHandle& Manager::GetGPUHandle(uint32_t zoneID, uint32_t lod_group)
 	{
-		return m_tiles[zoneID].GetLodGPUAllocation(static_cast<LODGroup>(lod_group));
+		return m_tiles[zoneID].GetLodInstancesGPUAllocation(static_cast<LODGroup>(lod_group));
 	}
 
 	bool Manager::GetNextTrafficTarget(std::mt19937& random, const glm::vec3& position, glm::vec3& next_target) const

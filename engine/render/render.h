@@ -20,6 +20,11 @@ namespace platform
 
 namespace render
 {
+	inline size_t RoundSizeTo16Bytes(size_t size)
+	{
+		return (((size - 1) >> 4) + 1) << 4;
+	}
+
 	class ContextPass;
 
 	struct SystemDesc

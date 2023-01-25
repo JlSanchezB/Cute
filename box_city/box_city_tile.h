@@ -102,12 +102,17 @@ namespace BoxCityTileSystem
 
 		auto& GetLodInstances(const LODGroup lod_group)
 		{
-			return m_instances[static_cast<size_t>(lod_group)];
+			return m_instances[static_cast<size_t>(lod_group)].instances;
 		}
 
-		render::AllocHandle& GetLodGPUAllocation(const LODGroup lod_group)
+		render::AllocHandle& GetLodInstancesGPUAllocation(const LODGroup lod_group)
 		{
-			return m_gpu_allocation[static_cast<size_t>(lod_group)];
+			return m_instances[static_cast<size_t>(lod_group)].m_instances_gpu_allocation;
+		}
+
+		render::AllocHandle& GetLodInstanceListGPUAllocation(const LODGroup lod_group)
+		{
+			return m_instances[static_cast<size_t>(lod_group)].m_instance_list_gpu_allocation;
 		}
 
 		bool CollisionBoxVsLoadedTile(const helpers::AABB& aabb_box, const helpers::OBB& obb_box) const;
@@ -188,11 +193,14 @@ namespace BoxCityTileSystem
 		//Vector of precalculated items
 		std::array<LODGroupData, static_cast<size_t>(LODGroup::Count)> m_level_data;
 
+		struct LODGroupInstances
+		{
+			std::vector<Instance> instances;
+			render::AllocHandle m_instances_gpu_allocation;
+			render::AllocHandle m_instance_list_gpu_allocation;
+		};
 		//Vector of the block instances m_loaded in the ECS
-		std::array<std::vector<Instance>, static_cast<size_t>(LODGroup::Count)> m_instances;
-
-		//Vector of the GPU allocation for each lod group
-		std::array<render::AllocHandle, static_cast<size_t>(LODGroup::Count)> m_gpu_allocation;
+		std::array<LODGroupInstances, static_cast<size_t>(LODGroup::Count)> m_instances;
 
 		//LBVH for building instances
 		helpers::LinearBVH<InstanceReference, LinearBVHBuildingSettings> m_building_bvh;
