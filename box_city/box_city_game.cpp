@@ -48,6 +48,7 @@ void BoxCityGame::OnInit()
 
 	m_display_resources.Load(m_device);
 	DrawCityBoxItemsPass::m_display_resources = &m_display_resources;
+	DrawCityBoxesPass::m_display_resources = &m_display_resources;
 
 	//Create view constant buffer
 	display::ConstantBufferDesc view_constant_desc;
@@ -303,8 +304,14 @@ void BoxCityGame::OnRender(double total_time, float elapsed_time)
 	render_frame.AddRenderPass("Main"_sh32, 0, pass_info, "Main"_sh32, 0);
 	render_frame.AddRenderPass("SyncStaticGPUMemory"_sh32, 0, pass_info);
 
+	//Fill the custom data for the point of view
+	BoxCityCustomPointOfViewData view_data;
+
+	//Collect all the active tiles and build the list of instance_lists that needs to be processed by the GPU
+	view_data.instance_lists_offset = 0;
+
 	//Add point of view
-	auto& point_of_view = render_frame.AllocPointOfView("Main"_sh32, 0);
+	auto& point_of_view = render_frame.AllocPointOfView< BoxCityCustomPointOfViewData>("Main"_sh32, 0, view_data);
 
 	job::Fence culling_fence;
 

@@ -75,9 +75,15 @@ namespace render
 	class PointOfView
 	{
 	public:
-		PointOfView(PointOfViewName point_of_view_name, uint16_t id) :
+		PointOfView(PointOfViewName point_of_view_name, uint16_t id, const void* data, size_t data_size) :
 			m_name(point_of_view_name), m_id(id), m_allocated(true)
 		{
+			//Capture data
+			if (data != nullptr && data_size > 0)
+			{
+				m_data = std::make_unique<std::byte[]>(data_size);
+				memcpy(m_data.get(), data, data_size);
+			}
 		}
 
 		void PushRenderItem(Priority priority, SortKey sort_key, const CommandBuffer::CommandOffset& command_offset)
@@ -106,6 +112,13 @@ namespace render
 			return m_sorted_render_items;
 		}
 
+		//Get data associated to this point of view
+		template<class DATA>
+		const DATA& GetData()
+		{
+			return *reinterpret_cast<DATA*>(m_data.get());
+		};
+
 	private:
 		
 		//Point of view name, used for identification
@@ -123,6 +136,9 @@ namespace render
 		//Sorted render items associated (updated by the render system)
 		SortedRenderItems m_sorted_render_items;
 
+		//Custom data associated to this point of view
+		std::unique_ptr<std::byte[]> m_data;
+
 		friend class Frame;
 		friend struct System;
 		friend class DrawRenderItemsPass;
@@ -138,6 +154,10 @@ namespace render
 		uint16_t associated_point_of_view_id;
 	};
 
+	struct EmptyData
+	{
+	};
+
 	//Render frame will keep memory between frames to avoid reallocations
 	class Frame
 	{
@@ -146,8 +166,15 @@ namespace render
 		//Reset the frame, it will not deallocate the memory, just clear the frame
 		void Reset();
 
+		//Alloc point of view with custom with name and id to identify it
+		template<class DATA>
+		PointOfView& AllocPointOfView(PointOfViewName point_of_view_name, uint16_t id, const DATA& data);
+
 		//Alloc point of view with name and id to identify it
-		PointOfView& AllocPointOfView(PointOfViewName point_of_view_name, uint16_t id);
+		PointOfView& AllocPointOfView(PointOfViewName point_of_view_name, uint16_t id)
+		{
+			return AllocPointOfView<EmptyData>(point_of_view_name, id, EmptyData{});
+		}
 
 		//Add render pass to execute
 		void AddRenderPass(PassName pass_name, uint16_t id, const PassInfo& pass_info, PointOfViewName associated_point_of_view_name = PointOfViewName("None"), uint16_t associated_point_of_view_id = 0)
@@ -186,7 +213,8 @@ namespace render
 		m_allocated = false;
 	}
 
-	inline PointOfView& Frame::AllocPointOfView(PointOfViewName point_of_view_name, uint16_t id)
+	template<class DATA>
+	inline PointOfView& Frame::AllocPointOfView(PointOfViewName point_of_view_name, uint16_t id, const DATA& data)
 	{
 		//Check it is already one that match from other frame
 		for (auto& point_of_view : m_point_of_views)
@@ -200,7 +228,7 @@ namespace render
 			}
 		}
 		//Add to the vector
-		m_point_of_views.emplace_back(point_of_view_name, id);
+		m_point_of_views.emplace_back(point_of_view_name, id, &data, sizeof(DATA));
 
 		return m_point_of_views.back();
 	}

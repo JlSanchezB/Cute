@@ -192,4 +192,10 @@ struct GPUBoxInstance
 	}
 };
 
+//Point of view custom data associated to box city
+struct BoxCityCustomPointOfViewData
+{
+	uint32_t instance_lists_offset;
+};
+
 #endif //BOX_CITY_COMPONENTS_H
