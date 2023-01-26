@@ -741,6 +741,17 @@ namespace BoxCityTileSystem
 			}
 		}
 	}
+	void Tile::AppendVisibleInstanceLists(Manager* manager, std::vector<uint32_t>& instance_lists_offsets_array)
+	{
+		for (auto& lod_group : m_instances)
+		{
+			if (lod_group.m_instance_list_gpu_allocation.IsValid())
+			{
+				size_t instance_list_offset = manager->GetGPUMemoryRenderModule()->GetStaticGPUMemoryOffset(lod_group.m_instance_list_gpu_allocation);
+				instance_lists_offsets_array.push_back(static_cast<uint32_t>(instance_list_offset));
+			}
+		}
+	}
 	void Tile::AddedToLoadingQueue()
 	{
 		assert(m_state == State::Unloaded || m_state == State::Loaded);

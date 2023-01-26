@@ -305,13 +305,29 @@ void BoxCityGame::OnRender(double total_time, float elapsed_time)
 	render_frame.AddRenderPass("SyncStaticGPUMemory"_sh32, 0, pass_info);
 
 	//Fill the custom data for the point of view
-	BoxCityCustomPointOfViewData view_data;
+	BoxCityCustomPointOfViewData point_of_view_data;
 
-	//Collect all the active tiles and build the list of instance_lists that needs to be processed by the GPU
-	view_data.instance_lists_offset = 0;
+	{
+		//Collect all the active tiles and build the list of instance_lists that needs to be processed by the GPU
+		std::vector<uint32_t> instance_list_offsets_array;
+		m_tile_manager.AppendVisibleInstanceLists(*camera, instance_list_offsets_array);
+
+		//Allocate dynamic gpu memory to upload the instance_list_offsets_array
+		size_t buffer_size = render::RoundSizeTo16Bytes((instance_list_offsets_array.size() + 1) * sizeof(uint32_t));
+
+		uint32_t* gpu_instance_list_offset_array = reinterpret_cast<uint32_t*>(m_GPU_memory_render_module->AllocDynamicGPUMemory(m_device, buffer_size, render::GetGameFrameIndex(m_render_system)));
+
+		//First the count
+		gpu_instance_list_offset_array[0] = static_cast<uint32_t>(instance_list_offsets_array.size());
+		//Then the list of offsets
+		memcpy(&gpu_instance_list_offset_array[1], instance_list_offsets_array.data(), instance_list_offsets_array.size() * sizeof(uint32_t));
+
+		//Update the point of view data
+		point_of_view_data.instance_lists_offset = static_cast<uint32_t>(m_GPU_memory_render_module->GetDynamicGPUMemoryOffset(m_device, gpu_instance_list_offset_array));
+	}
 
 	//Add point of view
-	auto& point_of_view = render_frame.AllocPointOfView<BoxCityCustomPointOfViewData>("Main"_sh32, 0, view_data);
+	auto& point_of_view = render_frame.AllocPointOfView<BoxCityCustomPointOfViewData>("Main"_sh32, 0, point_of_view_data);
 
 	job::Fence culling_fence;
 

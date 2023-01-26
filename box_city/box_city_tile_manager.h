@@ -81,6 +81,8 @@ namespace BoxCityTileSystem
 			return ret;
 		}
 
+		void AppendVisibleInstanceLists(const helpers::Frustum& frustum, std::vector<uint32_t>& instance_lists_offsets_array);
+
 		//Init
 		void Init(display::Device* device, render::System* render_system, render::GPUMemoryRenderModule* GPU_memory_render_module);
 

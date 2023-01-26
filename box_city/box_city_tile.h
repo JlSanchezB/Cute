@@ -129,6 +129,8 @@ namespace BoxCityTileSystem
 		void DespawnTile(Manager* manager);
 		void LodTile(Manager* manager, uint32_t new_lod);
 
+		void AppendVisibleInstanceLists(Manager* manager, std::vector<uint32_t>& instance_lists_offsets_array);
+
 		bool IsVisible() const { return m_state == State::Visible;}
 		bool IsLoaded() const {	return m_state == State::Loaded || m_state == State::Visible;}
 		bool IsLoading() const { return m_state == State::Loading;}

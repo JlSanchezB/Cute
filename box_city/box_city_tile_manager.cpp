@@ -11,6 +11,18 @@ CONTROL_VARIABLE_BOOL(c_use_loading_thread, true, "BoxCityTileManager", "Use loa
 
 namespace BoxCityTileSystem
 {
+	void Manager::AppendVisibleInstanceLists(const helpers::Frustum& frustum, std::vector<uint32_t>& instance_lists_offsets_array)
+	{
+		for (auto& tile : m_tiles)
+		{
+			if (tile.IsVisible() && helpers::CollisionFrustumVsAABB(frustum, tile.GetBoundingBox()))
+			{
+				//Append all the activated instance lists
+				tile.AppendVisibleInstanceLists(this, instance_lists_offsets_array);
+			}
+		}
+	}
+
 	void Manager::Init(display::Device* device, render::System* render_system, render::GPUMemoryRenderModule* GPU_memory_render_module)
 	{
 		m_device = device;
