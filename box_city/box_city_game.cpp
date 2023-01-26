@@ -28,7 +28,7 @@ void BoxCityGame::OnInit()
 #ifdef _DEBUG
 	device_init_params.debug = true;
 #else
-	device_init_params.debug = false;
+	device_init_params.debug = true;
 #endif
 
 	device_init_params.width = kInitWidth;

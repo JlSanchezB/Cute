@@ -178,11 +178,11 @@ public:
 
 			//Add shaders
 			pipeline_state_desc.vertex_shader.file_name = "texture_shader.hlsl";
-			pipeline_state_desc.vertex_shader.target = "vs_5_0";
+			pipeline_state_desc.vertex_shader.target = "vs_6_0";
 			pipeline_state_desc.vertex_shader.entry_point = "vs_main";
 		
 			pipeline_state_desc.pixel_shader.file_name = "texture_shader.hlsl";
-			pipeline_state_desc.pixel_shader.target = "ps_5_0";
+			pipeline_state_desc.pixel_shader.target = "ps_6_0";
 			pipeline_state_desc.pixel_shader.entry_point = "ps_main";
 
 			//Add render targets
@@ -300,11 +300,11 @@ public:
 
 			//Add shaders
 			pipeline_state_desc.vertex_shader.file_name = "constant_buffer_shader.hlsl";
-			pipeline_state_desc.vertex_shader.target = "vs_5_0";
+			pipeline_state_desc.vertex_shader.target = "vs_6_0";
 			pipeline_state_desc.vertex_shader.entry_point = "vs_main";
 
 			pipeline_state_desc.pixel_shader.file_name = "constant_buffer_shader.hlsl";
-			pipeline_state_desc.pixel_shader.target = "ps_5_0";
+			pipeline_state_desc.pixel_shader.target = "ps_6_0";
 			pipeline_state_desc.pixel_shader.entry_point = "ps_main";
 
 			//Add render targets
@@ -403,11 +403,11 @@ public:
 
 			//Add shaders
 			pipeline_state_desc.vertex_shader.file_name = "instance_shader.hlsl";
-			pipeline_state_desc.vertex_shader.target = "vs_5_0";
+			pipeline_state_desc.vertex_shader.target = "vs_6_0";
 			pipeline_state_desc.vertex_shader.entry_point = "vs_main";
 
 			pipeline_state_desc.pixel_shader.file_name = "instance_shader.hlsl";
-			pipeline_state_desc.pixel_shader.target = "ps_5_0";
+			pipeline_state_desc.pixel_shader.target = "ps_6_0";
 			pipeline_state_desc.pixel_shader.entry_point = "ps_main";
 
 			//Add render targets
@@ -484,11 +484,11 @@ public:
 
 			pipeline_state_desc.vertex_shader.shader_code = shader_code;
 			pipeline_state_desc.vertex_shader.entry_point = "main_vs";
-			pipeline_state_desc.vertex_shader.target = "vs_5_0";
+			pipeline_state_desc.vertex_shader.target = "vs_6_0";
 
 			pipeline_state_desc.pixel_shader.shader_code = shader_code;
 			pipeline_state_desc.pixel_shader.entry_point = "main_ps";
-			pipeline_state_desc.pixel_shader.target = "ps_5_0";
+			pipeline_state_desc.pixel_shader.target = "ps_6_0";
 
 
 			//Add input layouts
@@ -543,7 +543,7 @@ public:
 
 			pipeline_state_desc.compute_shader.shader_code = shader_code;
 			pipeline_state_desc.compute_shader.entry_point = "fill_positions";
-			pipeline_state_desc.compute_shader.target = "cs_5_0";
+			pipeline_state_desc.compute_shader.target = "cs_6_0";
 
 			pipeline_state_desc.compute_shader.defines.emplace_back("NUM_QUADS", "10");
 

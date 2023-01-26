@@ -72,5 +72,6 @@
   <ItemGroup>
     <None Include="packages.config" />
     <None Include="box_rendering.hlsl" />
+    <None Include="box_culling.hlsl" />
   </ItemGroup>
 </Project>

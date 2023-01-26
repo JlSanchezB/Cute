@@ -56,11 +56,11 @@ struct DisplayResource
 
 		pipeline_state_desc.vertex_shader.shader_code = shader_code;
 		pipeline_state_desc.vertex_shader.entry_point = "main_vs";
-		pipeline_state_desc.vertex_shader.target = "vs_5_1";
+		pipeline_state_desc.vertex_shader.target = "vs_6_0";
 
 		pipeline_state_desc.pixel_shader.shader_code = shader_code;
 		pipeline_state_desc.pixel_shader.entry_point = "main_ps";
-		pipeline_state_desc.pixel_shader.target = "ps_5_1";
+		pipeline_state_desc.pixel_shader.target = "ps_6_0";
 
 
 		//Add input layouts
@@ -109,11 +109,11 @@ struct DisplayResource
 
 		pipeline_state_desc.vertex_shader.shader_code = gazelle_shader_code;
 		pipeline_state_desc.vertex_shader.entry_point = "main_vs";
-		pipeline_state_desc.vertex_shader.target = "vs_5_1";
+		pipeline_state_desc.vertex_shader.target = "vs_6_0";
 
 		pipeline_state_desc.pixel_shader.shader_code = gazelle_shader_code;
 		pipeline_state_desc.pixel_shader.entry_point = "main_ps";
-		pipeline_state_desc.pixel_shader.target = "ps_5_1";
+		pipeline_state_desc.pixel_shader.target = "ps_6_0";
 
 		//Create
 		m_gazelle_pipeline_state = display::CreatePipelineState(device, pipeline_state_desc, "Gazelle");
@@ -152,11 +152,11 @@ struct DisplayResource
 
 		pipeline_state_desc.vertex_shader.shader_code = lion_shader_code;
 		pipeline_state_desc.vertex_shader.entry_point = "main_vs";
-		pipeline_state_desc.vertex_shader.target = "vs_5_1";
+		pipeline_state_desc.vertex_shader.target = "vs_6_0";
 
 		pipeline_state_desc.pixel_shader.shader_code = lion_shader_code;
 		pipeline_state_desc.pixel_shader.entry_point = "main_ps";
-		pipeline_state_desc.pixel_shader.target = "ps_5_1";
+		pipeline_state_desc.pixel_shader.target = "ps_6_0";
 
 		//Create
 		m_lion_pipeline_state = display::CreatePipelineState(device, pipeline_state_desc, "Lion");

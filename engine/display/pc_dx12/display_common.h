@@ -14,13 +14,13 @@
 #include <windows.h>
 #include <d3d12.h>
 #include <dxgi1_4.h>
-#include <D3Dcompiler.h>
 #include <DirectXMath.h>
 #include <string>
 #include <wrl.h>
 #include <shellapi.h>
 #include <bitset>
 #include <filesystem>
+#include <dxcapi.h>
 
 using namespace DirectX;
 
@@ -412,6 +412,9 @@ namespace display
 		//Statis
 		size_t uploaded_memory_frame = 0;
 
+		//Shader compiler library
+		ComPtr<IDxcLibrary> m_shader_library;
+		ComPtr<IDxcCompiler3> m_shader_compiler;
 
 		//Pool for context
 		core::SimplePool<DX12Context, 256> m_context_pool;

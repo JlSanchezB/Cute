@@ -186,12 +186,12 @@ void imgui_render::CreateResources(display::Device * device)
 	pipeline_state_desc.vertex_shader.name = "imgui";
 	pipeline_state_desc.vertex_shader.shader_code = vertex_shader_code;
 	pipeline_state_desc.vertex_shader.entry_point= "main";
-	pipeline_state_desc.vertex_shader.target = "vs_5_0";
+	pipeline_state_desc.vertex_shader.target = "vs_6_0";
 
 	pipeline_state_desc.pixel_shader.name = "imgui";
 	pipeline_state_desc.pixel_shader.shader_code = pixel_shader_code;
 	pipeline_state_desc.pixel_shader.entry_point = "main";
-	pipeline_state_desc.pixel_shader.target = "ps_5_0";
+	pipeline_state_desc.pixel_shader.target = "ps_6_0";
 
 	//Add input layouts
 	pipeline_state_desc.input_layout.elements[0] = display::InputElementDesc("POSITION", 0, display::Format::R32G32_FLOAT, 0, 0);

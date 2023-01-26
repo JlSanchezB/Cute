@@ -88,7 +88,7 @@ namespace render
 			pipeline_state_desc.compute_shader.name = "CopyDataCompute";
 			pipeline_state_desc.compute_shader.shader_code = shader_code;
 			pipeline_state_desc.compute_shader.entry_point = "copy_data";
-			pipeline_state_desc.compute_shader.target = "cs_5_0";
+			pipeline_state_desc.compute_shader.target = "cs_6_0";
 
 
 			//Create
