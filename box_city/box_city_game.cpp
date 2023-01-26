@@ -311,7 +311,7 @@ void BoxCityGame::OnRender(double total_time, float elapsed_time)
 	view_data.instance_lists_offset = 0;
 
 	//Add point of view
-	auto& point_of_view = render_frame.AllocPointOfView< BoxCityCustomPointOfViewData>("Main"_sh32, 0, view_data);
+	auto& point_of_view = render_frame.AllocPointOfView<BoxCityCustomPointOfViewData>("Main"_sh32, 0, view_data);
 
 	job::Fence culling_fence;
 

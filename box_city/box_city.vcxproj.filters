@@ -33,6 +33,9 @@
     <ClCompile Include="box_city_car_control.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="box_city_render.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resources.h">

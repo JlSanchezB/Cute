@@ -1,8 +1,11 @@
 //////////////////////////////////////////////////////////////////////////
 // Cute engine - resources for the ECS test
 //////////////////////////////////////////////////////////////////////////
-#ifndef ECS_RESOURCES_h
-#define ECS_RESOURCES_h
+#ifndef RESOURCES_h
+#define RESOURCES_h
+
+#include <ext/glm/glm.hpp>
+#include <ext/glm/gtx/rotate_vector.hpp>
 
 struct DisplayResource
 {
