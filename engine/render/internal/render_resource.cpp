@@ -570,6 +570,62 @@ namespace render
 
 	void ComputePipelineStateResource::Load(LoadContext & load_context)
 	{
+		display::ComputePipelineStateDesc pipeline_state_desc;
+
+		std::vector<char> shader;
+
+		auto xml_element_root = load_context.current_xml_element->FirstChildElement();
+
+		while (xml_element_root)
+		{
+			if (CheckNodeName(xml_element_root, "RootSignature"))
+			{
+				//Root signature
+				//Find resource
+				RootSignatureResource* root_signature = GetResource<RootSignatureResource>(load_context.render_system, ResourceName(xml_element_root->GetText()));
+
+				if (root_signature)
+				{
+					pipeline_state_desc.root_signature = root_signature->GetHandle();
+				}
+				else
+				{
+					AddError(load_context, "RootSignature <%s> doesn't exist in pipeline <%s>", xml_element_root->GetText(), load_context.name);
+				}
+			}
+			else if (CheckNodeName(xml_element_root, "ComputeShader"))
+			{
+				const char* entry_point = xml_element_root->Attribute("entry_point");
+				const char* target = xml_element_root->Attribute("target");
+
+				if (entry_point && target)
+				{
+					pipeline_state_desc.compute_shader.file_name = xml_element_root->GetText();
+					pipeline_state_desc.compute_shader.target = target;
+					pipeline_state_desc.compute_shader.entry_point = entry_point;
+					pipeline_state_desc.compute_shader.name = load_context.name;
+				}
+				else
+				{
+					AddError(load_context, "Entry point or target missing in ComputeShader in pipeline state <%s>", load_context.name);
+					return;
+				}
+			}
+			else
+			{
+				AddError(load_context, "None <%s> invalid found in pipeline state <%s>", xml_element_root->Name(), load_context.name);
+			}
+
+			xml_element_root = xml_element_root->NextSiblingElement();
+		}
+
+		//Create pipeline state
+		Init(display::CreateComputePipelineState(load_context.device, pipeline_state_desc, load_context.name));
+
+		if (!GetHandle().IsValid())
+		{
+			AddError(load_context, "Error creating pipeline state <%s>, display error <%s>", load_context.name, display::GetLastErrorMessage(load_context.device));
+		}
 	}
 
 	void DescriptorTableResource::Load(LoadContext & load_context)

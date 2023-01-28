@@ -16,12 +16,26 @@
       <Input semantic_name="POSITION" semantic_index="0" format="R32G32B32_FLOAT" input_slot="0"/>
       <Input semantic_name="NORMAL" semantic_index="0" format="R32G32B32_FLOAT" input_slot="1"/>
     </InputLayouts>
-    <PixelShader entry_point="ps_box_main" target="ps_6_0">box_rendering.hlsl</PixelShader>
-    <VertexShader entry_point="vs_box_main" target="vs_6_0">box_rendering.hlsl</VertexShader>
+    <PixelShader entry_point="ps_box_main" target="ps_6_5">box_rendering.hlsl</PixelShader>
+    <VertexShader entry_point="vs_box_main" target="vs_6_5">box_rendering.hlsl</VertexShader>
     <Rasterization cull_mode="Front"/>
     <RenderTargets>
       <RenderTarget format="R8G8B8A8_UNORM"/>
     </RenderTargets>
+  </Resource>
+  <Resource type="RootSignature" name="BoxCullingRootSignature">
+    <RootParam index="0" type="Constants" num_constants="1" shader_register="1" visibility="All"/>
+    <RootParam index="1" type="DescriptorTable" visibility="All">
+      <Range base_shader_register="0" size="1" type="ConstantBuffer"/>
+      <Range base_shader_register="0" size="1" type="ShaderResource"/>
+      <Range base_shader_register="1" size="1" type="ShaderResource"/>
+      <Range base_shader_register="0" size="1" type="UnorderedAccessBuffer"/>
+      <Range base_shader_register="1" size="1" type="UnorderedAccessBuffer"/>
+    </RootParam>
+  </Resource>
+  <Resource type="ComputePipelineState" name="BoxCullingPipelineState">
+    <RootSignature>BoxCullingRootSignature</RootSignature>
+    <ComputeShader entry_point="box_culling" target="cs_6_5">box_culling.hlsl</ComputeShader>
   </Resource>
 </Global>
 <Passes>

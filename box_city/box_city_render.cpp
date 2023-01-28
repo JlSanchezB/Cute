@@ -2,12 +2,23 @@
 
 void DrawCityBoxesPass::Load(render::LoadContext& load_context)
 {
+	//Create Indirect Box buffer
+
+	//Create Indirect Draw parameters
 }
+
+struct ComputeCullingConstantBuffer
+{
+	uint32_t instance_lists_offset;
+	uint32_t max_indirect_culled_boxes;
+};
 
 void DrawCityBoxesPass::Render(render::RenderContext& render_context) const
 {
 	//Collect offsets from the point of view data
 
+	//Clear indirect draw parameters
+	
 	//Execute GPU compute
 
 	//Render

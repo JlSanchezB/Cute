@@ -754,7 +754,6 @@ namespace display
 	static bool CompileShader(Device* device, const CompileShaderDesc& compile_shader_desc, ComPtr<IDxcBlob>& shader_blob)
 	{
 		ComPtr<ID3DBlob> blob;
-		ComPtr<ID3DBlob> errors;
 
 		std::unique_ptr<D3D_SHADER_MACRO[]> defines;
 		if (compile_shader_desc.defines.size() > 0)
@@ -768,6 +767,7 @@ namespace display
 
 		HRESULT hr;
 		DxcBuffer source_buffer;
+		source_buffer.Encoding = 0;
 		std::vector<char> source_shader_blob;
 
 		if (compile_shader_desc.file_name)
@@ -802,6 +802,7 @@ namespace display
 
 		//arguments.push_back(L"-Qstrip_debug");
 		//arguments.push_back(L"-Qstrip_reflect");
+		arguments.push_back(L"-HV 2021");
 
 		arguments.push_back(DXC_ARG_WARNINGS_ARE_ERRORS); //-WX
 		arguments.push_back(DXC_ARG_DEBUG); //-Zi
@@ -849,7 +850,7 @@ namespace display
 		else
 		{
 			//Error compiling
-			SetLastErrorMessage(device, "Error compiling shader <%s>", compile_shader_desc.name, static_cast<char*>(errors->GetBufferPointer()));
+			SetLastErrorMessage(device, "Error compiling shader <%s>, invalid arguments", compile_shader_desc.name);
 
 			return false;
 		}
