@@ -5,6 +5,9 @@
 #include <core/profile.h>
 #include <fstream>
 
+extern "C" { __declspec(dllexport) extern const UINT D3D12SDKVersion = 608; }
+extern "C" { __declspec(dllexport) extern const char* D3D12SDKPath = u8".\\D3D12\\"; }
+
 namespace display
 {
 	_Use_decl_annotations_
@@ -802,7 +805,7 @@ namespace display
 
 		//arguments.push_back(L"-Qstrip_debug");
 		//arguments.push_back(L"-Qstrip_reflect");
-		arguments.push_back(L"-HV 2021");
+		//arguments.push_back(L"-HV 2021");
 
 		arguments.push_back(DXC_ARG_WARNINGS_ARE_ERRORS); //-WX
 		arguments.push_back(DXC_ARG_DEBUG); //-Zi

@@ -182,7 +182,7 @@
       <SubSystem>Windows</SubSystem>
       <EnableCOMDATFolding>false</EnableCOMDATFolding>
       <OptimizeReferences>false</OptimizeReferences>
-      <AdditionalDependencies>engine.lib;Xinput.lib;d3d12.lib;dxgi.lib;d3dcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>engine.lib;Xinput.lib;d3d12.lib;dxgi.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
       <AdditionalLibraryDirectories>$(SolutionDir)$(Platform)\$(Configuration)\libs\</AdditionalLibraryDirectories>
     </Link>
