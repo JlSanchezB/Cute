@@ -1,19 +1,5 @@
 <Root>
 <Global>
-  <Resource type="RootSignature" name="BoxCullingRootSignature">
-    <RootParam index="0" type="DescriptorTable" visibility="All">
-      <Range base_shader_register="0" size="1" type="ConstantBuffer"/>
-      <Range base_shader_register="1" size="1" type="ConstantBuffer"/>
-      <Range base_shader_register="0" size="1" type="ShaderResource"/>
-      <Range base_shader_register="1" size="1" type="ShaderResource"/>
-      <Range base_shader_register="0" size="1" type="UnorderedAccessBuffer"/>
-      <Range base_shader_register="1" size="1" type="UnorderedAccessBuffer"/>
-    </RootParam>
-  </Resource>
-  <Resource type="ComputePipelineState" name="BoxCullingPipelineState">
-    <RootSignature>BoxCullingRootSignature</RootSignature>
-    <ComputeShader entry_point="box_culling" target="cs_6_6">box_culling.hlsl</ComputeShader>
-  </Resource>
 </Global>
 <Passes>
   <Pass name="SyncStaticGPUMemory">
