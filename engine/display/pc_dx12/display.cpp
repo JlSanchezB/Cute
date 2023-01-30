@@ -710,13 +710,13 @@ namespace display
 		if (FAILED(D3DX12SerializeVersionedRootSignature(&rootSignatureDesc, featureData.HighestVersion, &signature, &error)))
 		{
 			device->m_root_signature_pool.Free(handle);
-			SetLastErrorMessage(device, "Error serializing root signature <%>", reinterpret_cast<const char*>(error->GetBufferPointer()));
+			SetLastErrorMessage(device, "Error serializing root signature <%s>", reinterpret_cast<const char*>(error->GetBufferPointer()));
 			return RootSignatureHandle();
 		}
 		if (FAILED(device->m_native_device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&device->Get(handle).resource))))
 		{
 			device->m_root_signature_pool.Free(handle);
-			SetLastErrorMessage(device, "Error creating root signature <%>", name);
+			SetLastErrorMessage(device, "Error creating root signature <%s>", name);
 			return RootSignatureHandle();
 		}
 		

@@ -114,7 +114,7 @@ namespace render
 
 		//Get data associated to this point of view
 		template<class DATA>
-		const DATA& GetData()
+		const DATA& GetData() const
 		{
 			return *reinterpret_cast<DATA*>(m_data.get());
 		};

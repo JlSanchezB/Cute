@@ -4,7 +4,7 @@
 #include <render/render.h>
 #include <render/render_resource.h>
 #include <render/render_helper.h>
-#include "resources.h"
+#include "box_city_resources.h"
 #include <render_module/render_module_gpu_memory.h>
 #include "box_city_components.h"
 
@@ -12,13 +12,21 @@
 class DrawCityBoxesPass : public render::Pass
 {
 	uint8_t m_priority;
-	inline static DisplayResource* m_display_resources;
+	inline static BoxCityResources* m_display_resources;
+
+
+	static constexpr uint32_t kIndirectBoxBufferCount = 500000;
+
+	//Indirect resources
+	display::UnorderedAccessBufferHandle m_indirect_box_buffer;
+	display::UnorderedAccessBufferHandle m_indirect_parameters_buffer;
 
 	friend class BoxCityGame;
 public:
 	DECLARE_RENDER_CLASS("DrawCityBoxes");
 
 	void Load(render::LoadContext& load_context) override;
+	void Destroy(display::Device* device) override;
 	void Render(render::RenderContext& render_context) const override;
 };
 
@@ -26,13 +34,15 @@ public:
 class DrawCityBoxItemsPass : public render::Pass
 {
 	uint8_t m_priority;
-	inline static DisplayResource* m_display_resources;
+	inline static BoxCityResources* m_display_resources;
 
 	friend class BoxCityGame;
+
 public:
 	DECLARE_RENDER_CLASS("DrawCityBoxItems");
 
 	void Load(render::LoadContext& load_context) override;
+	void Destroy(display::Device* device) override;
 	void Render(render::RenderContext& render_context) const override;
 };
 

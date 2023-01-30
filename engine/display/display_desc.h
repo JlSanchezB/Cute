@@ -272,7 +272,7 @@ namespace display
 
 	struct WeakUnorderedAccessBufferHandleAsShaderResource : WeakUnorderedAccessBufferHandle
 	{
-		WeakUnorderedAccessBufferHandleAsShaderResource(WeakUnorderedAccessBufferHandle& in) : WeakUnorderedAccessBufferHandle(in)
+		WeakUnorderedAccessBufferHandleAsShaderResource(const WeakUnorderedAccessBufferHandle& in) : WeakUnorderedAccessBufferHandle(in)
 		{
 		}
 	};

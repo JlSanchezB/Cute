@@ -299,6 +299,7 @@
     <ClCompile Include="box_city_car_control.cpp" />
     <ClCompile Include="box_city_game.cpp" />
     <ClCompile Include="box_city_render.cpp" />
+    <ClCompile Include="box_city_resources.cpp" />
     <ClCompile Include="box_city_tile.cpp" />
     <ClCompile Include="box_city_tile_manager.cpp" />
     <ClCompile Include="box_city_traffic_manager.cpp" />
@@ -313,7 +314,7 @@
     <ClInclude Include="box_city_tile.h" />
     <ClInclude Include="box_city_tile_manager.h" />
     <ClInclude Include="box_city_traffic_manager.h" />
-    <ClInclude Include="resources.h" />
+    <ClInclude Include="box_city_resources.h" />
   </ItemGroup>
   <ItemGroup>
     <Xml Include="box_city_render_passes.xml" />

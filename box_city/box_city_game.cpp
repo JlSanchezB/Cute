@@ -8,15 +8,6 @@ PROFILE_DEFINE_MARKER(g_profile_marker_Car_Culling, "Main", 0xFFFFAAAA, "CarCull
 
 COUNTER(c_Culled_Boxes, "Box City", "Render Boxes", true);
 COUNTER(c_Culled_Cars, "Box City", "Render Cars", true);
-namespace
-{
-	struct ViewConstantBuffer
-	{
-		glm::mat4x4 projection_view_matrix;
-		glm::vec4 time;
-		glm::vec4 sun_direction;
-	};
-}
 
 void BoxCityGame::OnInit()
 {
@@ -46,16 +37,6 @@ void BoxCityGame::OnInit()
 
 	SetDevice(m_device);
 
-	m_display_resources.Load(m_device);
-	DrawCityBoxItemsPass::m_display_resources = &m_display_resources;
-	DrawCityBoxesPass::m_display_resources = &m_display_resources;
-
-	//Create view constant buffer
-	display::ConstantBufferDesc view_constant_desc;
-	view_constant_desc.size = sizeof(ViewConstantBuffer);
-	view_constant_desc.access = display::Access::Dynamic;
-	m_view_constant_buffer = display::CreateConstantBuffer(m_device, view_constant_desc, "ViewConstantBuffer");
-
 	//Create job system
 	job::SystemDesc job_system_desc;
 	m_job_system = job::CreateSystem(job_system_desc);
@@ -78,11 +59,15 @@ void BoxCityGame::OnInit()
 
 	m_GPU_memory_render_module = render::RegisterModule<render::GPUMemoryRenderModule>(m_render_system, "GPUMemory"_sh32, gpu_memory_desc);
 
+	m_display_resources.Load(m_device, m_render_system);
+	DrawCityBoxItemsPass::m_display_resources = &m_display_resources;
+	DrawCityBoxesPass::m_display_resources = &m_display_resources;
+
 	//Register custom passes for box city renderer
 	render::RegisterPassFactory<DrawCityBoxItemsPass>(m_render_system);
 
 	//Register the ViewConstantBuffer for Main pass, ID 0
-	render::AddGameResource(m_render_system, "ViewConstantBuffer"_sh32, "Main"_sh32, 0, CreateResourceFromHandle<render::ConstantBufferResource>(display::WeakConstantBufferHandle(m_view_constant_buffer)));
+	render::AddGameResource(m_render_system, "ViewConstantBuffer"_sh32, "Main"_sh32, 0, CreateResourceFromHandle<render::ConstantBufferResource>(display::WeakConstantBufferHandle(m_display_resources.m_view_constant_buffer)));
 
 	m_render_passes_loader.Load("box_city_render_passes.xml", m_render_system, m_device);
 
@@ -125,9 +110,6 @@ void BoxCityGame::OnPrepareDestroy()
 
 void BoxCityGame::OnDestroy()
 {
-	//Destroy constant buffer
-	display::DestroyHandle(m_device, m_view_constant_buffer);
-
 	//Destroy handles
 	m_display_resources.Unload(m_device);
 
@@ -297,7 +279,7 @@ void BoxCityGame::OnRender(double total_time, float elapsed_time)
 	view_constant_buffer.projection_view_matrix = camera->GetViewProjectionMatrix();
 	view_constant_buffer.time = glm::vec4(static_cast<float>(total_time), 0.f, 0.f, 0.f);
 	view_constant_buffer.sun_direction = glm::rotate(glm::radians(m_sun_direction_angles.y), glm::vec3(1.f, 0.f, 0.f)) * glm::rotate(glm::radians(m_sun_direction_angles.x), glm::vec3(0.f, 0.f, 1.f)) * glm::vec4(1.f, 0.f, 0.f, 0.f);
-	render_frame.GetBeginFrameCommandBuffer().UploadResourceBuffer(m_view_constant_buffer, &view_constant_buffer, sizeof(view_constant_buffer));
+	render_frame.GetBeginFrameCommandBuffer().UploadResourceBuffer(m_display_resources.m_view_constant_buffer, &view_constant_buffer, sizeof(view_constant_buffer));
 	render_frame.GetBeginFrameCommandBuffer().Close();
 
 	//Add render passes

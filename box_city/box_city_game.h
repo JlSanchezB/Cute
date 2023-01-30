@@ -21,7 +21,7 @@
 #include <ext/glm/gtc/matrix_access.hpp>
 #include <helpers/collision.h>
 
-#include "resources.h"
+#include "box_city_resources.h"
 #include "box_city_components.h"
 #include "box_city_render.h"
 #include "box_city_tile_manager.h"
@@ -48,7 +48,7 @@ public:
 	std::unique_ptr<job::JobAllocator<1024 * 1024>> m_render_job_allocator;
 
 	//Display resources
-	DisplayResource m_display_resources;
+	BoxCityResources m_display_resources;
 
 	//Render passes loader
 	render::RenderPassesLoader m_render_passes_loader;
@@ -67,9 +67,6 @@ public:
 	CameraMode m_camera_mode = CameraMode::Fly;
 	helpers::FlyCamera m_fly_camera = helpers::FlyCamera(helpers::Camera::ZRange::OneZero);
 	BoxCityCarControl::CarCamera m_car_camera = BoxCityCarControl::CarCamera(helpers::Camera::ZRange::OneZero);
-
-	//View constant buffer
-	display::ConstantBufferHandle m_view_constant_buffer;
 
 	//Solid render priority
 	render::Priority m_box_render_priority;

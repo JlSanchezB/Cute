@@ -1,11 +1,5 @@
 #include "box_city_render.h"
-
-void DrawCityBoxesPass::Load(render::LoadContext& load_context)
-{
-	//Create Indirect Box buffer
-
-	//Create Indirect Draw parameters
-}
+#include <display/display.h>
 
 struct ComputeCullingConstantBuffer
 {
@@ -13,11 +7,40 @@ struct ComputeCullingConstantBuffer
 	uint32_t max_indirect_culled_boxes;
 };
 
+void DrawCityBoxesPass::Load(render::LoadContext& load_context)
+{
+	//Create Indirect Buffers
+	display::UnorderedAccessBufferDesc indirect_box_buffer_desc;
+	indirect_box_buffer_desc.type = display::UnorderedAccessBufferType::StructuredBuffer;
+	indirect_box_buffer_desc.element_size = sizeof(uint32_t);
+	indirect_box_buffer_desc.element_count = kIndirectBoxBufferCount;
+
+	m_indirect_box_buffer = display::CreateUnorderedAccessBuffer(load_context.device, indirect_box_buffer_desc, "IndirectBoxBuffer");
+
+	display::UnorderedAccessBufferDesc indirect_parameters_buffer_desc;
+	indirect_parameters_buffer_desc.type = display::UnorderedAccessBufferType::StructuredBuffer;
+	indirect_parameters_buffer_desc.element_size = sizeof(uint32_t);
+	indirect_parameters_buffer_desc.element_count = 5;
+
+	m_indirect_parameters_buffer = display::CreateUnorderedAccessBuffer(load_context.device, indirect_parameters_buffer_desc, "IndirectParametersBuffer");
+
+	//Create compute culling constant buffer
+
+}
+
+void DrawCityBoxesPass::Destroy(display::Device* device)
+{
+	display::DestroyUnorderedAccessBuffer(device, m_indirect_box_buffer);
+	display::DestroyUnorderedAccessBuffer(device, m_indirect_parameters_buffer);
+}
+
 void DrawCityBoxesPass::Render(render::RenderContext& render_context) const
 {
 	//Collect offsets from the point of view data
-
-	//Clear indirect draw parameters
+	const render::PointOfView* point_of_view = render_context.GetPointOfView();
+	const BoxCityCustomPointOfViewData& box_city_custom_data = point_of_view->GetData<BoxCityCustomPointOfViewData>();
+	
+	
 	
 	//Execute GPU compute
 
@@ -35,6 +58,9 @@ void DrawCityBoxItemsPass::Load(render::LoadContext& load_context)
 	{
 		AddError(load_context, "Attribute priority expected inside DrawCityBoxItems pass");
 	}
+}
+void DrawCityBoxItemsPass::Destroy(display::Device* device)
+{
 }
 void DrawCityBoxItemsPass::Render(render::RenderContext& render_context) const
 {
@@ -63,12 +89,14 @@ void DrawCityBoxItemsPass::Render(render::RenderContext& render_context) const
 			uint32_t offset_to_instance_offsets = static_cast<uint32_t>(gpu_memory->GetDynamicGPUMemoryOffset(render_context.GetDevice(), instances_ptrs));
 
 			auto context = render_context.GetContext();
+
+			context->SetRootSignature(display::Pipe::Graphics, m_display_resources->m_box_render_root_signature);
 			//Set the offset as a root constant
 			context->SetConstants(display::Pipe::Graphics, 0, &offset_to_instance_offsets, 1);
+			context->SetDescriptorTable(display::Pipe::Graphics, 1, m_display_resources->m_box_render_description_table_handle);
 
 			//Render
-			display::WeakPipelineStateHandle box_pipeline_state = render::GetResource<render::GraphicsPipelineStateResource>(render_context.GetRenderSystem(), "BoxPipelineState"_sh32)->GetHandle();
-			context->SetPipelineState(box_pipeline_state);
+			context->SetPipelineState(m_display_resources->m_box_render_pipeline_state);
 
 			display::WeakVertexBufferHandle vertex_buffers[] = { m_display_resources->m_box_vertex_position_buffer, m_display_resources->m_box_vertex_normal_buffer };
 			context->SetVertexBuffers(0, 1, &m_display_resources->m_box_vertex_position_buffer);
