@@ -31,6 +31,10 @@ struct BoxCityResources
 	display::VertexBufferHandle m_box_vertex_normal_buffer;
 	display::IndexBufferHandle m_box_index_buffer;
 
+	static const uint32_t kIndirectBoxBufferCount = 1024 * 1024;
+	display::UnorderedAccessBufferHandle m_indirect_box_buffer;
+	display::UnorderedAccessBufferHandle m_indirect_parameters_buffer;
+	display::PipelineStateHandle m_box_culling_pipeline_state;
 
 	void Load(display::Device* device, render::System* render_system);
 	void Unload(display::Device* device);

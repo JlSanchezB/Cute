@@ -1,37 +1,12 @@
 #include "box_city_render.h"
 #include <display/display.h>
 
-struct ComputeCullingConstantBuffer
-{
-	uint32_t instance_lists_offset;
-	uint32_t max_indirect_culled_boxes;
-};
-
 void DrawCityBoxesPass::Load(render::LoadContext& load_context)
 {
-	//Create Indirect Buffers
-	display::UnorderedAccessBufferDesc indirect_box_buffer_desc;
-	indirect_box_buffer_desc.type = display::UnorderedAccessBufferType::StructuredBuffer;
-	indirect_box_buffer_desc.element_size = sizeof(uint32_t);
-	indirect_box_buffer_desc.element_count = kIndirectBoxBufferCount;
-
-	m_indirect_box_buffer = display::CreateUnorderedAccessBuffer(load_context.device, indirect_box_buffer_desc, "IndirectBoxBuffer");
-
-	display::UnorderedAccessBufferDesc indirect_parameters_buffer_desc;
-	indirect_parameters_buffer_desc.type = display::UnorderedAccessBufferType::StructuredBuffer;
-	indirect_parameters_buffer_desc.element_size = sizeof(uint32_t);
-	indirect_parameters_buffer_desc.element_count = 5;
-
-	m_indirect_parameters_buffer = display::CreateUnorderedAccessBuffer(load_context.device, indirect_parameters_buffer_desc, "IndirectParametersBuffer");
-
-	//Create compute culling constant buffer
-
 }
 
 void DrawCityBoxesPass::Destroy(display::Device* device)
 {
-	display::DestroyUnorderedAccessBuffer(device, m_indirect_box_buffer);
-	display::DestroyUnorderedAccessBuffer(device, m_indirect_parameters_buffer);
 }
 
 void DrawCityBoxesPass::Render(render::RenderContext& render_context) const
@@ -41,8 +16,11 @@ void DrawCityBoxesPass::Render(render::RenderContext& render_context) const
 	const BoxCityCustomPointOfViewData& box_city_custom_data = point_of_view->GetData<BoxCityCustomPointOfViewData>();
 	
 	
-	
+	//Clear the parameters buffer
+
 	//Execute GPU compute
+
+	//Add transition
 
 	//Render
 }

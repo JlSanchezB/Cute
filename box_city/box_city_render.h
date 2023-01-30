@@ -14,13 +14,6 @@ class DrawCityBoxesPass : public render::Pass
 	uint8_t m_priority;
 	inline static BoxCityResources* m_display_resources;
 
-
-	static constexpr uint32_t kIndirectBoxBufferCount = 500000;
-
-	//Indirect resources
-	display::UnorderedAccessBufferHandle m_indirect_box_buffer;
-	display::UnorderedAccessBufferHandle m_indirect_parameters_buffer;
-
 	friend class BoxCityGame;
 public:
 	DECLARE_RENDER_CLASS("DrawCityBoxes");
