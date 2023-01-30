@@ -62,13 +62,17 @@ void BoxCityGame::OnInit()
 	m_display_resources.Load(m_device, m_render_system);
 	DrawCityBoxItemsPass::m_display_resources = &m_display_resources;
 	DrawCityBoxesPass::m_display_resources = &m_display_resources;
+	CullCityBoxesPass::m_display_resources = &m_display_resources;
 
 	//Register custom passes for box city renderer
 	render::RegisterPassFactory<DrawCityBoxItemsPass>(m_render_system);
 	render::RegisterPassFactory<DrawCityBoxesPass>(m_render_system);
+	render::RegisterPassFactory<CullCityBoxesPass>(m_render_system);
 
 	//Register the ViewConstantBuffer for Main pass, ID 0
 	render::AddGameResource(m_render_system, "ViewConstantBuffer"_sh32, "Main"_sh32, 0, CreateResourceFromHandle<render::ConstantBufferResource>(display::WeakConstantBufferHandle(m_display_resources.m_view_constant_buffer)));
+	render::AddGameResource(m_render_system, "IndirectBoxBuffer"_sh32, CreateResourceFromHandle<render::UnorderedAccessBufferResource>(display::WeakUnorderedAccessBufferHandle(m_display_resources.m_indirect_box_buffer)));
+	render::AddGameResource(m_render_system, "IndirectParametersBuffer"_sh32, CreateResourceFromHandle<render::UnorderedAccessBufferResource>(display::WeakUnorderedAccessBufferHandle(m_display_resources.m_indirect_parameters_buffer)));
 
 	m_render_passes_loader.Load("box_city_render_passes.xml", m_render_system, m_device);
 
@@ -284,7 +288,8 @@ void BoxCityGame::OnRender(double total_time, float elapsed_time)
 	render_frame.GetBeginFrameCommandBuffer().Close();
 
 	//Add render passes
-	render_frame.AddRenderPass("Main"_sh32, 0, pass_info, "Main"_sh32, 0);
+	render_frame.AddRenderPass("Main_Render"_sh32, 0, pass_info, "Main_Render"_sh32, 0);
+	render_frame.AddRenderPass("Main_Culling"_sh32, 0, pass_info, "Main_Render"_sh32, 0);
 	render_frame.AddRenderPass("SyncStaticGPUMemory"_sh32, 0, pass_info);
 
 	//Fill the custom data for the point of view
@@ -310,7 +315,7 @@ void BoxCityGame::OnRender(double total_time, float elapsed_time)
 	}
 
 	//Add point of view
-	auto& point_of_view = render_frame.AllocPointOfView<BoxCityCustomPointOfViewData>("Main"_sh32, 0, point_of_view_data);
+	auto& point_of_view = render_frame.AllocPointOfView<BoxCityCustomPointOfViewData>("Main_Render"_sh32, 0, point_of_view_data);
 
 	job::Fence culling_fence;
 

@@ -5,18 +5,16 @@ cbuffer ViewData : b0
     float4 sun_direction;
 };
 
-cbuffer Culling : b1
-{
-    uint instance_lists_offset;
-    uint max_indirect_culled_boxes;
-};
+uint instance_lists_offset : b1;
+uint indirect_box_buffer_count : b2;
 
 ByteAddressBuffer static_gpu_memory: t0;
 ByteAddressBuffer dynamic_gpu_memory: t1;
+
 //Buffer with the offsets of all the culled boxes
-RWStructuredBuffer<uint> indirect_culled_boxes : u0;
+RWStructuredBuffer<uint> indirect_culled_boxes : u2;
 //Indirect parameters for draw call
-RWStructuredBuffer<uint> indirect_culled_boxes_parameters : u1;
+RWStructuredBuffer<uint> indirect_culled_boxes_parameters : u3;
 
 
 //Naive implementation for culling

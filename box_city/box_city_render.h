@@ -8,18 +8,28 @@
 #include <render_module/render_module_gpu_memory.h>
 #include "box_city_components.h"
 
-//render pass definition for our custom GPU renderer
-class DrawCityBoxesPass : public render::Pass
+//Cull boxes
+class CullCityBoxesPass : public render::Pass
 {
 	uint8_t m_priority;
 	inline static BoxCityResources* m_display_resources;
 
 	friend class BoxCityGame;
 public:
+	DECLARE_RENDER_CLASS("CullCityBoxes");
+
+	void Render(render::RenderContext& render_context) const override;
+};
+
+//Render boxes
+class DrawCityBoxesPass : public render::Pass
+{
+	inline static BoxCityResources* m_display_resources;
+
+	friend class BoxCityGame;
+public:
 	DECLARE_RENDER_CLASS("DrawCityBoxes");
 
-	void Load(render::LoadContext& load_context) override;
-	void Destroy(display::Device* device) override;
 	void Render(render::RenderContext& render_context) const override;
 };
 

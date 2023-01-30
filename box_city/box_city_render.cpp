@@ -1,12 +1,8 @@
 #include "box_city_render.h"
 #include <display/display.h>
 
-void DrawCityBoxesPass::Load(render::LoadContext& load_context)
-{
-}
-
-void DrawCityBoxesPass::Destroy(display::Device* device)
-{
+void CullCityBoxesPass::Render(render::RenderContext& render_context) const
+{	
 }
 
 void DrawCityBoxesPass::Render(render::RenderContext& render_context) const

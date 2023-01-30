@@ -24,8 +24,20 @@
       <SyncStaticGPUMemoryPass/>
     </Commands>
   </Pass>
-  <Pass name="Main">
+  <Pass name="Main_Culling">
     <Dependencies>
+      <Resource name="IndirectBoxBuffer" pre_condition_state="Init" post_update_state="Ready" access="UnorderedAccess"/>
+      <Resource name="IndirectParametersBuffer" pre_condition_state="Init" post_update_state="Ready" access="UnorderedAccess"/>
+      <Resource name="StaticGPUMemoryBuffer" pre_condition_state="Ready" access="AllShaderResource"/>
+    </Dependencies>
+    <Commands>
+      <CullCityBoxes/>
+    </Commands>
+  </Pass>
+  <Pass name="Main_Render">
+    <Dependencies>
+      <Resource name="IndirectBoxBuffer" pre_condition_state="Ready" access="AllShaderResource"/>
+      <Resource name="IndirectParametersBuffer" pre_condition_state="Ready" access="AllShaderResource"/>
       <Resource name="StaticGPUMemoryBuffer" pre_condition_state="Ready" access="AllShaderResource"/>
       <DepthBuffer name="SceneDepth" pre_condition_state="Alloc" post_update_state="Free" access="Depth" format="D32_FLOAT" default_depth="0.f"/>
       <Resource name="BackBuffer" access="RenderTarget"/>

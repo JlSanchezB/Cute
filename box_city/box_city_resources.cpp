@@ -36,16 +36,13 @@ void BoxCityResources::Load(display::Device* device, render::System* render_syst
 
 		desc.root_parameters[1].type = display::RootSignatureParameterType::DescriptorTable;
 		desc.root_parameters[1].visibility = display::ShaderVisibility::All;
-		desc.root_parameters[1].table.num_ranges = 3;
+		desc.root_parameters[1].table.num_ranges = 2;
 		desc.root_parameters[1].table.range[0].base_shader_register = 0;
 		desc.root_parameters[1].table.range[0].size = 1;
 		desc.root_parameters[1].table.range[0].type = display::DescriptorTableParameterType::ConstantBuffer;
 		desc.root_parameters[1].table.range[1].base_shader_register = 0;
-		desc.root_parameters[1].table.range[1].size = 1;
+		desc.root_parameters[1].table.range[1].size = 2;
 		desc.root_parameters[1].table.range[1].type = display::DescriptorTableParameterType::ShaderResource;
-		desc.root_parameters[1].table.range[2].base_shader_register = 1;
-		desc.root_parameters[1].table.range[2].size = 1;
-		desc.root_parameters[1].table.range[2].type = display::DescriptorTableParameterType::ShaderResource;
 		desc.num_static_samplers = 0;
 
 		m_box_render_root_signature = display::CreateRootSignature(device, desc, "BoxRenderRootSignature");
@@ -156,16 +153,54 @@ void BoxCityResources::Load(display::Device* device, render::System* render_syst
 		m_box_index_buffer = display::CreateIndexBuffer(device, index_buffer_desc, "box_index_buffer");
 	}
 
+	{
+		display::DescriptorTableDesc description_table_desc;
+		description_table_desc.num_descriptors = 3;
+		description_table_desc.access = display::Access::Dynamic;
+		description_table_desc.descriptors[0] = m_view_constant_buffer;
+		description_table_desc.descriptors[1] = display::WeakUnorderedAccessBufferHandleAsShaderResource(gpu_memory->GetStaticGPUMemoryResource());
+		description_table_desc.descriptors[2] = gpu_memory->GetDynamicGPUMemoryResource();
+
+		//Create the descriptor table
+		m_box_culling_description_table_handle = display::CreateDescriptorTable(device, description_table_desc);
+	}
+
+	//Box culling root signature
+	{
+		display::RootSignatureDesc desc;
+		desc.num_root_parameters = 2;
+		desc.root_parameters[0].type = display::RootSignatureParameterType::Constants;
+		desc.root_parameters[0].visibility = display::ShaderVisibility::Vertex;
+		desc.root_parameters[0].root_param.shader_register = 1;
+		desc.root_parameters[0].root_param.num_constants = 2;
+
+		desc.root_parameters[1].type = display::RootSignatureParameterType::DescriptorTable;
+		desc.root_parameters[1].visibility = display::ShaderVisibility::All;
+		desc.root_parameters[1].table.num_ranges = 3;
+		desc.root_parameters[1].table.range[0].base_shader_register = 0;
+		desc.root_parameters[1].table.range[0].size = 1;
+		desc.root_parameters[1].table.range[0].type = display::DescriptorTableParameterType::ConstantBuffer;
+		desc.root_parameters[1].table.range[1].base_shader_register = 0;
+		desc.root_parameters[1].table.range[1].size = 2;
+		desc.root_parameters[1].table.range[1].type = display::DescriptorTableParameterType::ShaderResource;
+		desc.root_parameters[1].table.range[2].base_shader_register = 0;
+		desc.root_parameters[1].table.range[2].size = 1;
+		desc.root_parameters[1].table.range[2].type = display::DescriptorTableParameterType::UnorderedAccessBuffer;
+		desc.num_static_samplers = 0;
+
+		m_box_culling_root_signature = display::CreateRootSignature(device, desc, "BoxCullingRootSignature");
+	}
+
 	//Box culling pipeline state
 	{
-		//display::ComputePipelineStateDesc desc;
-		//desc.compute_shader.name = "BoxCulling";
-		//desc.compute_shader.entry_point = "box_culling";
-		//desc.compute_shader.target = "cs_6_6";
-		//desc.compute_shader.file_name = "box_culling.hlsl";
-		//desc.root_signature = m_box_render_root_signature;
+		display::ComputePipelineStateDesc desc;
+		desc.compute_shader.name = "BoxCulling";
+		desc.compute_shader.entry_point = "box_culling";
+		desc.compute_shader.target = "cs_6_6";
+		desc.compute_shader.file_name = "box_culling.hlsl";
+		desc.root_signature = m_box_culling_root_signature;
 
-		//m_box_culling_pipeline_state = display::CreateComputePipelineState(device, desc, "BoxCulling");
+		m_box_culling_pipeline_state = display::CreateComputePipelineState(device, desc, "BoxCulling");
 	}
 
 	{
@@ -189,13 +224,15 @@ void BoxCityResources::Load(display::Device* device, render::System* render_syst
 void BoxCityResources::Unload(display::Device* device)
 {
 	display::DestroyHandle(device, m_view_constant_buffer);
+	display::DestroyHandle(device, m_box_render_description_table_handle);
 	display::DestroyHandle(device, m_box_render_root_signature);
 	display::DestroyHandle(device, m_box_render_pipeline_state);
 	display::DestroyHandle(device, m_box_vertex_position_buffer);
 	display::DestroyHandle(device, m_box_vertex_normal_buffer);
 	display::DestroyHandle(device, m_box_index_buffer);
+	display::DestroyHandle(device, m_box_culling_description_table_handle);
+	display::DestroyHandle(device, m_box_culling_root_signature);
 	display::DestroyHandle(device, m_box_culling_pipeline_state);
 	display::DestroyHandle(device, m_indirect_box_buffer);
 	display::DestroyHandle(device, m_indirect_parameters_buffer);
-	display::DestroyHandle(device, m_box_render_description_table_handle);
 }
