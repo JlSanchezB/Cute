@@ -26,6 +26,11 @@ namespace display
 		uint32_t adapter_index = -1;
 	};
 
+	inline uint32_t CalculateGroupCount(uint32_t num_lanes, uint32_t lanes_for_group)
+	{
+		return 1 + (num_lanes - 1) / lanes_for_group;
+	}
+
 	struct Context;
 
 	Device* CreateDevice(const DeviceInitParams& params);
@@ -234,11 +239,20 @@ namespace display
 		//Draw Indexed Instanced
 		void DrawIndexedInstanced(const DrawIndexedInstancedDesc& draw_desc);
 
+		//Indirect Draw Indexed
+		void IndirectDrawIndexed(const IndirectDrawIndexedDesc& draw_desc);
+
+		//Indirect Draw Indexed Instanced
+		void IndirectDrawIndexedInstanced(const IndirectDrawIndexedInstancedDesc& draw_desc);
+
 		//Execute compute
 		void ExecuteCompute(const ExecuteComputeDesc& execute_compute_desc);
 
 		//Resource barriers
 		void AddResourceBarriers(const std::vector<ResourceBarrier>& resource_barriers);
+
+		//Clear Unordered Access buffer
+		void ClearUnsignedIntegerUnorderedAccessBuffer(const WeakUnorderedAccessBufferHandle& unordered_access_buffer_handle, const uint32_t values[4]);
 	};
 
 	template<typename HANDLE>

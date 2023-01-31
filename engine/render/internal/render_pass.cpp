@@ -33,7 +33,8 @@ namespace
 			{"NonPixelShaderResource", display::TranstitionState::NonPixelShaderResource},
 			{"AllShaderResource", display::TranstitionState::AllShaderResource},
 			{"Depth", display::TranstitionState::Depth},
-			{"DepthRead", display::TranstitionState::DepthRead}
+			{"DepthRead", display::TranstitionState::DepthRead},
+			{"IndirectArgument", display::TranstitionState::IndirectArgument}
 		};
 	};
 

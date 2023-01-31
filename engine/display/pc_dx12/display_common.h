@@ -416,6 +416,10 @@ namespace display
 		ComPtr<IDxcLibrary> m_shader_library;
 		ComPtr<IDxcCompiler3> m_shader_compiler;
 
+		//Indirect draw command signatures
+		ComPtr<ID3D12CommandSignature> m_indirect_draw_indexed_command_signature;
+		ComPtr<ID3D12CommandSignature> m_indirect_draw_indexed_instanced_command_signature;
+
 		//Pool for context
 		core::SimplePool<DX12Context, 256> m_context_pool;
 

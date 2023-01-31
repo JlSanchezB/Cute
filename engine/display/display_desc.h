@@ -331,6 +331,20 @@ namespace display
 		PrimitiveTopology primitive_topology = PrimitiveTopology::TriangleList;
 	};
 
+	struct IndirectDrawIndexedDesc
+	{
+		PrimitiveTopology primitive_topology = PrimitiveTopology::TriangleList;
+		WeakUnorderedAccessBufferHandle parameters_buffer; //3 values, look DrawIndexedDesc
+		size_t parameters_offset = 0;
+	};
+
+	struct IndirectDrawIndexedInstancedDesc
+	{
+		PrimitiveTopology primitive_topology = PrimitiveTopology::TriangleList;
+		WeakUnorderedAccessBufferHandle parameters_buffer; //5 values, look DrawIndexedInstancedDesc
+		size_t parameters_offset = 0;
+	};
+
 	struct ExecuteComputeDesc
 	{
 		uint32_t group_count_x = 1;

@@ -153,24 +153,12 @@ void BoxCityResources::Load(display::Device* device, render::System* render_syst
 		m_box_index_buffer = display::CreateIndexBuffer(device, index_buffer_desc, "box_index_buffer");
 	}
 
-	{
-		display::DescriptorTableDesc description_table_desc;
-		description_table_desc.num_descriptors = 3;
-		description_table_desc.access = display::Access::Dynamic;
-		description_table_desc.descriptors[0] = m_view_constant_buffer;
-		description_table_desc.descriptors[1] = display::WeakUnorderedAccessBufferHandleAsShaderResource(gpu_memory->GetStaticGPUMemoryResource());
-		description_table_desc.descriptors[2] = gpu_memory->GetDynamicGPUMemoryResource();
-
-		//Create the descriptor table
-		m_box_culling_description_table_handle = display::CreateDescriptorTable(device, description_table_desc);
-	}
-
 	//Box culling root signature
 	{
 		display::RootSignatureDesc desc;
 		desc.num_root_parameters = 2;
 		desc.root_parameters[0].type = display::RootSignatureParameterType::Constants;
-		desc.root_parameters[0].visibility = display::ShaderVisibility::Vertex;
+		desc.root_parameters[0].visibility = display::ShaderVisibility::All;
 		desc.root_parameters[0].root_param.shader_register = 1;
 		desc.root_parameters[0].root_param.num_constants = 2;
 
@@ -184,7 +172,7 @@ void BoxCityResources::Load(display::Device* device, render::System* render_syst
 		desc.root_parameters[1].table.range[1].size = 2;
 		desc.root_parameters[1].table.range[1].type = display::DescriptorTableParameterType::ShaderResource;
 		desc.root_parameters[1].table.range[2].base_shader_register = 0;
-		desc.root_parameters[1].table.range[2].size = 1;
+		desc.root_parameters[1].table.range[2].size = 2;
 		desc.root_parameters[1].table.range[2].type = display::DescriptorTableParameterType::UnorderedAccessBuffer;
 		desc.num_static_samplers = 0;
 
@@ -218,6 +206,20 @@ void BoxCityResources::Load(display::Device* device, render::System* render_syst
 		indirect_parameters_buffer_desc.element_count = 5;
 
 		m_indirect_parameters_buffer = display::CreateUnorderedAccessBuffer(device, indirect_parameters_buffer_desc, "IndirectParametersBuffer");
+	}
+
+	{
+		display::DescriptorTableDesc description_table_desc;
+		description_table_desc.num_descriptors = 5;
+		description_table_desc.access = display::Access::Dynamic;
+		description_table_desc.descriptors[0] = m_view_constant_buffer;
+		description_table_desc.descriptors[1] = display::WeakUnorderedAccessBufferHandleAsShaderResource(gpu_memory->GetStaticGPUMemoryResource());
+		description_table_desc.descriptors[2] = gpu_memory->GetDynamicGPUMemoryResource();
+		description_table_desc.descriptors[3] = m_indirect_box_buffer;
+		description_table_desc.descriptors[4] = m_indirect_parameters_buffer;
+
+		//Create the descriptor table
+		m_box_culling_description_table_handle = display::CreateDescriptorTable(device, description_table_desc);
 	}
 }
 

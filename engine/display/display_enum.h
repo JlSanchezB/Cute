@@ -158,7 +158,8 @@ namespace display
 		AllShaderResource,
 		Depth,
 		DepthRead,
-		Present
+		Present,
+		IndirectArgument
 	};
 
 	enum class ClearType : uint8_t

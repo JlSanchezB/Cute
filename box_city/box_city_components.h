@@ -196,6 +196,7 @@ struct GPUBoxInstance
 struct BoxCityCustomPointOfViewData
 {
 	uint32_t instance_lists_offset;
+	uint32_t num_instance_lists;
 };
 
 #endif //BOX_CITY_COMPONENTS_H

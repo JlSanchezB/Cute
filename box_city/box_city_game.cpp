@@ -312,6 +312,7 @@ void BoxCityGame::OnRender(double total_time, float elapsed_time)
 
 		//Update the point of view data
 		point_of_view_data.instance_lists_offset = static_cast<uint32_t>(m_GPU_memory_render_module->GetDynamicGPUMemoryOffset(m_device, gpu_instance_list_offset_array));
+		point_of_view_data.num_instance_lists = static_cast<uint32_t>(instance_list_offsets_array.size());
 	}
 
 	//Add point of view

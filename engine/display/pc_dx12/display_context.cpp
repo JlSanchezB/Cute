@@ -341,6 +341,28 @@ namespace display
 
 		command_list->DrawIndexedInstanced(static_cast<UINT>(draw_desc.index_count), static_cast<UINT>(draw_desc.instance_count), static_cast<UINT>(draw_desc.start_index), static_cast<UINT>(draw_desc.base_vertex), static_cast<UINT>(draw_desc.start_instance));
 	}
+
+	void Context::IndirectDrawIndexed(const IndirectDrawIndexedDesc& draw_desc)
+	{
+		auto dx12_context = reinterpret_cast<DX12Context*>(this);
+		Device* device = dx12_context->device;
+		const auto& command_list = dx12_context->command_list;
+
+		command_list->IASetPrimitiveTopology(Convert(draw_desc.primitive_topology));
+
+		command_list->ExecuteIndirect(device->m_indirect_draw_indexed_command_signature.Get(), 1, device->Get(draw_desc.parameters_buffer).resource.Get(), draw_desc.parameters_offset, NULL, 0);
+	}
+
+	void Context::IndirectDrawIndexedInstanced(const IndirectDrawIndexedInstancedDesc& draw_desc)
+	{
+		auto dx12_context = reinterpret_cast<DX12Context*>(this);
+		Device* device = dx12_context->device;
+		const auto& command_list = dx12_context->command_list;
+
+		command_list->IASetPrimitiveTopology(Convert(draw_desc.primitive_topology));
+
+		command_list->ExecuteIndirect(device->m_indirect_draw_indexed_instanced_command_signature.Get(), 1, device->Get(draw_desc.parameters_buffer).resource.Get(), draw_desc.parameters_offset, NULL, 0);
+	}
 	void Context::ExecuteCompute(const ExecuteComputeDesc& execute_compute_desc)
 	{
 		auto dx12_context = reinterpret_cast<DX12Context*>(this);
@@ -405,5 +427,18 @@ namespace display
 		}
 
 		command_list->ResourceBarrier(static_cast<UINT>(num_barriers), dx12_resource_barriers.get());
+	}
+	void Context::ClearUnsignedIntegerUnorderedAccessBuffer(const WeakUnorderedAccessBufferHandle& unordered_access_buffer_handle, const uint32_t values[4])
+	{
+		auto dx12_context = reinterpret_cast<DX12Context*>(this);
+		Device* device = dx12_context->device;
+		const auto& command_list = dx12_context->command_list;
+		auto& unordered_access_buffer = device->Get(unordered_access_buffer_handle);
+
+		device->m_unordered_access_buffer_pool.GetDescriptor(unordered_access_buffer_handle);
+
+		command_list->ClearUnorderedAccessViewUint(device->m_unordered_access_buffer_pool.GetGPUDescriptor(unordered_access_buffer_handle),
+			device->m_unordered_access_buffer_pool.GetDescriptor(unordered_access_buffer_handle),
+			unordered_access_buffer.resource.Get(), values, 0, nullptr);
 	}
 }
