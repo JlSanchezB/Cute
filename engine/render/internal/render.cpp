@@ -1204,6 +1204,11 @@ namespace render
 		}
 	}
 
+	job::Fence* GetRenderFence(System* system)
+	{
+		return &g_render_fence;
+	}
+
 	//Submit render job
 	void SubmitRenderJob(void* data)
 	{

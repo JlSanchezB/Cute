@@ -7,10 +7,10 @@
 #include <render/render_common.h>
 #include <render/render_frame.h>
 #include <optional>
-
 namespace job
 {
 	struct System;
+	class Fence;
 }
 
 namespace platform
@@ -161,6 +161,9 @@ namespace render
 
 	//Wait until all the task associated the render system is done
 	void FlushAndWait(System* system);
+
+	//Get render fence
+	job::Fence* GetRenderFence(System* system);
 
 	//Return the current frame for the game
 	uint64_t GetGameFrameIndex(System* system);
