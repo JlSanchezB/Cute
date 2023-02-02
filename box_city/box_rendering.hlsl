@@ -13,6 +13,8 @@ cbuffer ViewData : b1
     float4x4 view_projection_matrix;
     float4 time;
     float4 sun_direction;
+    float4 frustum_planes[6];
+    float4 frustum_points[8];
 };
 
 

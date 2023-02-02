@@ -18,6 +18,8 @@ struct ViewConstantBuffer
 	glm::mat4x4 projection_view_matrix;
 	glm::vec4 time;
 	glm::vec4 sun_direction;
+	glm::vec4 frustum_planes[6];
+	glm::vec4 frustum_points[8];
 };
 
 struct BoxCityResources

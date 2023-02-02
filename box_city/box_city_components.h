@@ -175,7 +175,8 @@ using GameDatabase = ecs::DatabaseDeclaration<GameComponents, GameEntityTypes>;
 using Instance = ecs::Instance<GameDatabase>;
 using InstanceReference = ecs::InstanceReference;
 
-//GPU memory structs
+
+//GPU struct for an instance
 struct GPUBoxInstance
 {
 	glm::vec4 local_matrix[3];

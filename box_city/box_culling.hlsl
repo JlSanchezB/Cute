@@ -7,6 +7,8 @@ cbuffer ViewData : b2
     float4x4 view_projection_matrix;
     float4 time;
     float4 sun_direction;
+    float4 frustum_planes[6];
+    float4 frustum_points[8];
 };
 
 ByteAddressBuffer static_gpu_memory: t0;
@@ -44,7 +46,6 @@ void box_culling(uint3 group : SV_GroupID, uint3 group_thread_id : SV_GroupThrea
     //Number of passes needed to process all the instances
     uint num_passes = 1 + (num_instances - 1) / 32;
 
-    
     //For each pass
     for (uint i = 0; i < num_passes; ++i)
     {
@@ -70,7 +71,51 @@ void box_culling(uint3 group : SV_GroupID, uint3 group_thread_id : SV_GroupThrea
             float3x3 rotate_matrix = float3x3(normalize(instance_data[0].xyz), normalize(instance_data[1].xyz), normalize(instance_data[2].xyz));
             float3 translation = float3(instance_data[0].w, instance_data[1].w, instance_data[2].w);
 
-            //Do culling
+            //Frustum collision
+            {
+                float3 box_points[8];
+                box_points[0] = mul(scale_rotate_matrix, float3(-1.f, -1.f, -1.f)) + translation;
+                box_points[1] = mul(scale_rotate_matrix, float3(-1.f, -1.f, 1.f)) + translation;
+                box_points[2] = mul(scale_rotate_matrix, float3(-1.f, 1.f, -1.f)) + translation;
+                box_points[3] = mul(scale_rotate_matrix, float3(-1.f, 1.f, 1.f)) + translation;
+                box_points[4] = mul(scale_rotate_matrix, float3(1.f, -1.f, -1.f)) + translation;
+                box_points[5] = mul(scale_rotate_matrix, float3(1.f, -1.f, 1.f)) + translation;
+                box_points[6] = mul(scale_rotate_matrix, float3(1.f, 1.f, -1.f)) + translation;
+                box_points[7] = mul(scale_rotate_matrix, float3(1.f, 1.f, 1.f)) + translation;
+
+                // check box outside/inside of frustum
+                for (int ii = 0; ii < 6; ii++)
+                {
+                    if ((dot(frustum_planes[ii], float4(box_points[0], 1.0f)) < 0.0f) &&
+                        (dot(frustum_planes[ii], float4(box_points[1], 1.0f)) < 0.0f) &&
+                        (dot(frustum_planes[ii], float4(box_points[2], 1.0f)) < 0.0f) &&
+                        (dot(frustum_planes[ii], float4(box_points[3], 1.0f)) < 0.0f) &&
+                        (dot(frustum_planes[ii], float4(box_points[4], 1.0f)) < 0.0f) &&
+                        (dot(frustum_planes[ii], float4(box_points[5], 1.0f)) < 0.0f) &&
+                        (dot(frustum_planes[ii], float4(box_points[6], 1.0f)) < 0.0f) &&
+                        (dot(frustum_planes[ii], float4(box_points[7], 1.0f)) < 0.0f))
+                    {
+                        //Outside
+                        continue;
+                    }
+                }
+                float3 box_max = box_points[0];
+                float3 box_min = box_points[0];
+                for (int j = 1; j < 8; ++j)
+                {
+                    box_min = min(box_min, box_points[j]);
+                    box_max = max(box_max, box_points[j]);
+                }
+
+                // check frustum outside/inside box
+                int outside;
+                {outside = 0; for (int k = 0; k < 8; k++) outside += ((frustum_points[k].x > box_max.x) ? 1 : 0); if (outside == 8) continue;};
+                {outside = 0; for (int k = 0; k < 8; k++) outside += ((frustum_points[k].x < box_min.x) ? 1 : 0); if (outside == 8) continue;};
+                {outside = 0; for (int k = 0; k < 8; k++) outside += ((frustum_points[k].y > box_max.y) ? 1 : 0); if (outside == 8) continue;};
+                {outside = 0; for (int k = 0; k < 8; k++) outside += ((frustum_points[k].y < box_min.y) ? 1 : 0); if (outside == 8) continue;};
+                {outside = 0; for (int k = 0; k < 8; k++) outside += ((frustum_points[k].z > box_max.z) ? 1 : 0); if (outside == 8) continue;};
+                {outside = 0; for (int k = 0; k < 8; k++) outside += ((frustum_points[k].z < box_min.z) ? 1 : 0); if (outside == 8) continue;};
+            }
 
             //Add into the indirect buffer
             uint offset;
