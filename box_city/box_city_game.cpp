@@ -319,7 +319,7 @@ void BoxCityGame::OnRender(double total_time, float elapsed_time)
 	auto& point_of_view = render_frame.AllocPointOfView<BoxCityCustomPointOfViewData>("Main_Render"_sh32, 0, point_of_view_data);
 
 	job::Fence culling_fence;
-
+	/*
 	//Add task
 	//Cull box city
 	ecs::AddJobs<GameDatabase, const OBBBox, const AABBBox, FlagBox, const BoxGPUHandle>(m_job_system, culling_fence, m_render_job_allocator, 256,
@@ -358,7 +358,7 @@ void BoxCityGame::OnRender(double total_time, float elapsed_time)
 				COUNTER_INC(c_Culled_Boxes);
 			}
 		}, m_tile_manager.GetCameraBitSet(*camera), &g_profile_marker_Culling);
-
+		*/
 	//Cull cars
 	ecs::AddJobs<GameDatabase, const OBBBox, const AABBBox, const CarGPUIndex, const Car>(m_job_system, culling_fence, m_render_job_allocator, 256,
 		[camera = camera, point_of_view = &point_of_view, box_priority = m_box_render_priority, render_system = m_render_system, device = m_device, render_gpu_memory_module = m_GPU_memory_render_module, traffic_manager = &m_traffic_system]

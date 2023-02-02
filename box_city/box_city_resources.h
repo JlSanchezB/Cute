@@ -37,6 +37,7 @@ struct BoxCityResources
 	display::DescriptorTableHandle m_box_culling_description_table_handle;
 	display::RootSignatureHandle m_box_culling_root_signature;
 	display::PipelineStateHandle m_box_culling_pipeline_state;
+	display::PipelineStateHandle m_box_culling_clear_pipeline_state;
 
 	void Load(display::Device* device, render::System* render_system);
 	void Unload(display::Device* device);

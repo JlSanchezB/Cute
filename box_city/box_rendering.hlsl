@@ -4,29 +4,38 @@ struct PSInput
     float3 normal : TEXCOORD0;
     float4 colour : TEXCOORD1;
 };
-
-cbuffer ViewData : b0
+cbuffer Root : b0
+{
+    uint instance_data_offset;
+}
+cbuffer ViewData : b1
 {
     float4x4 view_projection_matrix;
     float4 time;
     float4 sun_direction;
 };
 
-cbuffer Root : b1
-{
-    uint instance_data_offset;
-}
 
 ByteAddressBuffer static_gpu_memory: t0;
 ByteAddressBuffer dynamic_gpu_memory: t1;
+StructuredBuffer<uint> indirect_box_buffer: t2;
 
 PSInput vs_box_main(float3 position : POSITION, float3 normal : NORMAL, uint instance_id : SV_InstanceID)
 {
     PSInput result;
 
-    //Get box instance data using primitiveId and the instance_data_offset
-    uint instance_offset_byte = instance_data_offset + instance_id * 4;
-    uint instance_data_offset_byte = dynamic_gpu_memory.Load(instance_offset_byte);
+    uint instance_data_offset_byte = 0;
+    if (instance_data_offset == 0)
+    {
+        //The offset is in the indirect buffer
+        instance_data_offset_byte = indirect_box_buffer[instance_id];
+    }
+    else
+    {
+        //Get box instance data using primitiveId and the instance_data_offset
+        uint instance_offset_byte = instance_data_offset + instance_id * 4;
+        instance_data_offset_byte = dynamic_gpu_memory.Load(instance_offset_byte);
+    }
 
     //Read Box instance data
     float4 instance_data[4];

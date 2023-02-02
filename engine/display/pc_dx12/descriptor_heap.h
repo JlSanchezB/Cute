@@ -14,6 +14,10 @@ namespace display
 	public:
 		inline CD3DX12_CPU_DESCRIPTOR_HANDLE GetDescriptor(size_t index, size_t heap = 0) const;
 		inline CD3DX12_GPU_DESCRIPTOR_HANDLE GetGPUDescriptor(size_t index, size_t heap = 0) const;
+		ID3D12DescriptorHeap* GetHeap(size_t heap = 0) const
+		{
+			return m_descriptor_heap[heap].heap.Get();
+		}
 	protected:
 		void AddHeap(Device* device, D3D12_DESCRIPTOR_HEAP_TYPE heap_type, size_t size);
 		void DestroyHeaps();

@@ -334,14 +334,14 @@ namespace display
 	struct IndirectDrawIndexedDesc
 	{
 		PrimitiveTopology primitive_topology = PrimitiveTopology::TriangleList;
-		WeakUnorderedAccessBufferHandle parameters_buffer; //3 values, look DrawIndexedDesc
+		WeakUnorderedAccessBufferHandle parameters_buffer; //4 values, UINT VertexCountPerInstance;	UINT InstanceCount;	UINT StartVertexLocation; UINT StartInstanceLocation;
 		size_t parameters_offset = 0;
 	};
 
 	struct IndirectDrawIndexedInstancedDesc
 	{
 		PrimitiveTopology primitive_topology = PrimitiveTopology::TriangleList;
-		WeakUnorderedAccessBufferHandle parameters_buffer; //5 values, look DrawIndexedInstancedDesc
+		WeakUnorderedAccessBufferHandle parameters_buffer; //5 values, UINT IndexCountPerInstance; UINT InstanceCount; UINT StartIndexLocation;	INT BaseVertexLocation;	UINT StartInstanceLocation;
 		size_t parameters_offset = 0;
 	};
 

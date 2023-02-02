@@ -434,8 +434,8 @@ namespace display
 		Device* device = dx12_context->device;
 		const auto& command_list = dx12_context->command_list;
 		auto& unordered_access_buffer = device->Get(unordered_access_buffer_handle);
-
-		device->m_unordered_access_buffer_pool.GetDescriptor(unordered_access_buffer_handle);
+		ID3D12DescriptorHeap* descriptor_heap_array[1] = { device->m_unordered_access_buffer_pool.GetHeap() };
+		command_list->SetDescriptorHeaps(1, descriptor_heap_array);
 
 		command_list->ClearUnorderedAccessViewUint(device->m_unordered_access_buffer_pool.GetGPUDescriptor(unordered_access_buffer_handle),
 			device->m_unordered_access_buffer_pool.GetDescriptor(unordered_access_buffer_handle),

@@ -75,15 +75,9 @@ namespace render
 	class PointOfView
 	{
 	public:
-		PointOfView(PointOfViewName point_of_view_name, uint16_t id, const void* data, size_t data_size) :
+		PointOfView(PointOfViewName point_of_view_name, uint16_t id) :
 			m_name(point_of_view_name), m_id(id), m_allocated(true)
 		{
-			//Capture data
-			if (data != nullptr && data_size > 0)
-			{
-				m_data = std::make_unique<std::byte[]>(data_size);
-				memcpy(m_data.get(), data, data_size);
-			}
 		}
 
 		void PushRenderItem(Priority priority, SortKey sort_key, const CommandBuffer::CommandOffset& command_offset)
@@ -224,13 +218,26 @@ namespace render
 				&& point_of_view.m_id == id)
 			{
 				point_of_view.m_allocated = true;
+				if constexpr (!std::is_same_v<DATA, EmptyData>)
+				{
+					//Capture data
+					point_of_view.m_data = std::make_unique<std::byte[]>(sizeof(DATA));
+					memcpy(point_of_view.m_data.get(), &data, sizeof(DATA));
+				}
 				return point_of_view;
 			}
 		}
 		//Add to the vector
-		m_point_of_views.emplace_back(point_of_view_name, id, &data, sizeof(DATA));
+		m_point_of_views.emplace_back(point_of_view_name, id);
+		PointOfView& point_of_view = m_point_of_views.back();
+		if constexpr (!std::is_same_v<DATA, EmptyData>)
+		{
+			//Capture data
+			point_of_view.m_data = std::make_unique<std::byte[]>(sizeof(DATA));
+			memcpy(point_of_view.m_data.get(), &data, sizeof(DATA));
+		}
 
-		return m_point_of_views.back();
+		return point_of_view;
 	}
 
 	inline void Frame::Reset()
