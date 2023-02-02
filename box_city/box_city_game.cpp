@@ -326,7 +326,7 @@ void BoxCityGame::OnRender(double total_time, float elapsed_time)
 
 	//Add task
 	//Interpolate animation
-	ecs::AddJobs<GameDatabase, const OBBBox, const InterpolatedPosition, const BoxGPUHandle>(m_job_system, *render::GetRenderFence(m_render_system), m_render_job_allocator, 256,
+	ecs::AddJobs<GameDatabase, const OBBBox, const InterpolatedPosition, const BoxGPUHandle>(m_job_system, culling_fence, m_render_job_allocator, 256,
 		[camera = camera, point_of_view = &point_of_view, box_priority = m_box_render_priority, render_system = m_render_system, device = m_device, render_gpu_memory_module = m_GPU_memory_render_module, tile_manager = &m_tile_manager, render_frame_index]
 	(const auto& instance_iterator, const OBBBox obb_box,const InterpolatedPosition interpolated_position, const BoxGPUHandle& box_gpu_handle)
 		{
