@@ -830,10 +830,11 @@ namespace display
 		//arguments.push_back(L"-Qstrip_debug");
 		//arguments.push_back(L"-Qstrip_reflect");
 		//arguments.push_back(L"-HV 2021");
-
+		arguments.push_back(L"-Fd");
+		arguments.push_back(L".\\shader_pdbs\\");
 		arguments.push_back(DXC_ARG_WARNINGS_ARE_ERRORS); //-WX
 		arguments.push_back(DXC_ARG_DEBUG); //-Zi
-		//arguments.push_back(DXC_ARG_PACK_MATRIX_ROW_MAJOR); //-Zp
+		arguments.push_back(DXC_ARG_DEBUG_NAME_FOR_SOURCE);
 
 		std::vector<std::wstring> defines_array;
 		for (auto& define_it : compile_shader_desc.defines)

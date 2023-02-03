@@ -4,11 +4,11 @@ struct PSInput
     float3 normal : TEXCOORD0;
     float4 colour : TEXCOORD1;
 };
-cbuffer Root : b0
+cbuffer Root : register(b0)
 {
     uint instance_data_offset;
 }
-cbuffer ViewData : b1
+cbuffer ViewData : register(b1)
 {
     float4x4 view_projection_matrix;
     float4 time;
@@ -18,9 +18,9 @@ cbuffer ViewData : b1
 };
 
 
-ByteAddressBuffer static_gpu_memory: t0;
-ByteAddressBuffer dynamic_gpu_memory: t1;
-StructuredBuffer<uint> indirect_box_buffer: t2;
+ByteAddressBuffer static_gpu_memory: register(t0);
+ByteAddressBuffer dynamic_gpu_memory: register(t1);
+StructuredBuffer<uint> indirect_box_buffer: register(t2);
 
 PSInput vs_box_main(float3 position : POSITION, float3 normal : NORMAL, uint instance_id : SV_InstanceID)
 {

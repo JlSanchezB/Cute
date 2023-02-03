@@ -1,8 +1,11 @@
 
-uint instance_lists_offset : b0;
-uint indirect_box_buffer_count : b1;
+cbuffer Root : register(b0)
+{
+    uint instance_lists_offset;
+    uint indirect_box_buffer_count;
+}
 
-cbuffer ViewData : b2
+cbuffer ViewData : register(b1)
 {
     float4x4 view_projection_matrix;
     float4 time;
@@ -11,14 +14,14 @@ cbuffer ViewData : b2
     float4 frustum_points[8];
 };
 
-ByteAddressBuffer static_gpu_memory: t0;
-ByteAddressBuffer dynamic_gpu_memory: t1;
+ByteAddressBuffer static_gpu_memory: register(t0);
+ByteAddressBuffer dynamic_gpu_memory: register(t1);
 
 //Indirect parameters for draw call
-RWStructuredBuffer<uint> indirect_culled_boxes_parameters : u2;
+RWStructuredBuffer<uint> indirect_culled_boxes_parameters : register(u0);
 
 //Buffer with the offsets of all the culled boxes
-RWStructuredBuffer<uint> indirect_culled_boxes : u3;
+RWStructuredBuffer<uint> indirect_culled_boxes : register(u1);
 
 
 //Clear
