@@ -78,6 +78,9 @@ namespace BoxCityTrafficSystem
 		//Update Cars
 		void UpdateCars(platform::Game* game, job::System* job_system, job::JobAllocator<1024 * 1024>* job_allocator, const helpers::Camera& camera, job::Fence& update_fence, BoxCityTileSystem::Manager* tile_manager, uint32_t frame_index, float elapsed_time);
 
+		//Process car moves
+		void ProcessCarMoves();
+
 		//GPU Access
 		render::AllocHandle& GetGPUHandle()
 		{
@@ -139,16 +142,28 @@ namespace BoxCityTrafficSystem
 
 			//Bounding box of the tile
 			helpers::AABB m_bounding_box;
+
+			//Car instances list GPU allocation
+			uint32_t num_cars;
+			uint32_t instance_list_max_size;
+			render::AllocHandle m_instance_list_handle;
+
+			//Car moves tracking
+			core::Mutex m_car_moves_access;
+			std::vector<CarInstanceListSlot*> m_move_out_cars;
+			std::vector<CarInstanceListSlot*> m_move_in_cars;
 		};
+
+		//Tiles
+		Tile m_tiles[kLocalTileCount * kLocalTileCount];
+
+		void RegisterCarMove(CarInstanceListSlot* car_slot, uint32_t source_tile, uint32_t destination_tile);
 
 		//Player car
 		InstanceReference m_player_car;
 
 		//Player control 
 		bool m_player_control_enable = false;
-
-		//Tiles
-		Tile m_tiles[kLocalTileCount * kLocalTileCount];
 
 		//Get tile
 		Tile& GetTile(const LocalTilePosition& local_tile);

@@ -210,9 +210,9 @@ namespace BoxCityTrafficSystem
 
 		std::bitset<BoxCityTileSystem::kLocalTileCount* BoxCityTileSystem::kLocalTileCount> camera_bitset = GetCameraBitSet(camera);
 		//Update the cars in the direction of the target
-		ecs::AddJobs < GameDatabase, Car, CarMovement, CarTarget, CarSettings, CarControl, CarBuildingsCache, OBBBox, AABBBox, CarGPUIndex, FlagBox> (job_system, update_fence, job_allocator, 256,
+		ecs::AddJobs < GameDatabase, Car, CarMovement, CarTarget, CarSettings, CarControl, CarBuildingsCache, OBBBox, AABBBox, CarGPUIndex, FlagBox, CarInstanceListSlot> (job_system, update_fence, job_allocator, 256,
 			[elapsed_time, camera_bitset, manager = this, tile_manager = tile_manager, game, camera_position = camera.GetPosition(), frame_index]
-			(const auto& instance_iterator, Car& car, CarMovement& car_movement, CarTarget& car_target, CarSettings& car_settings, CarControl& car_control, CarBuildingsCache& car_buildings_cache, OBBBox& obb_box, AABBBox& aabb_box, CarGPUIndex& car_gpu_index, FlagBox& flag_box)
+			(const auto& instance_iterator, Car& car, CarMovement& car_movement, CarTarget& car_target, CarSettings& car_settings, CarControl& car_control, CarBuildingsCache& car_buildings_cache, OBBBox& obb_box, AABBBox& aabb_box, CarGPUIndex& car_gpu_index, FlagBox& flag_box, CarInstanceListSlot& car_instance_slot)
 			{
 				//Update position
 				if (instance_iterator == manager->GetPlayerCar().Get<GameDatabase>() && manager->m_player_control_enable)
@@ -266,6 +266,9 @@ namespace BoxCityTrafficSystem
 						//Needs to move
 						instance_iterator.Move(next_zone_index);
 
+						//Register move to update the instance lists
+						manager->RegisterCarMove(&car_instance_slot, instance_iterator.m_zone_index, next_zone_index);
+
 						assert(manager->GetTile(next_zone_index).m_bounding_box.Inside(*car.position, 1.f));
 					}
 					else
@@ -304,5 +307,29 @@ namespace BoxCityTrafficSystem
 	Manager::Tile& Manager::GetTile(const LocalTilePosition& local_tile)
 	{
 		return m_tiles[CalculateLocalTileToZoneIndex(local_tile)];
+	}
+
+	void Manager::RegisterCarMove(CarInstanceListSlot* car_slot, uint32_t source_tile, uint32_t destination_tile)
+	{
+		{
+			auto& out_tile = m_tiles[source_tile];
+			core::MutexGuard access(out_tile.m_car_moves_access);
+			out_tile.m_move_out_cars.emplace_back(car_slot);
+		}
+		{
+			auto& in_tile = m_tiles[destination_tile];
+			core::MutexGuard access(in_tile.m_car_moves_access);
+			in_tile.m_move_in_cars.emplace_back(car_slot);
+		}
+
+	}
+
+	void Manager::ProcessCarMoves()
+	{
+		for (auto& tile : m_tiles)
+		{
+			tile.m_move_in_cars.clear();
+			tile.m_move_out_cars.clear();
+		}
 	}
 }

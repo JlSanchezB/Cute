@@ -161,12 +161,17 @@ struct CarBuildingsCache
 	std::array<CachedBuilding, kNumCachedBuildings> buildings;
 };
 
+struct CarInstanceListSlot
+{
+	uint32_t index;
+};
+
 //ECS definition
 using BoxType = ecs::EntityType<BoxRender, BoxGPUHandle, OBBBox, AABBBox, FlagBox>;
 using AnimatedBoxType = ecs::EntityType<InterpolatedPosition, BoxRender, BoxGPUHandle, OBBBox, AABBBox, AnimationBox, FlagBox>;
 using AttachedPanelType = ecs::EntityType<InterpolatedPosition, BoxRender, BoxGPUHandle, OBBBox, AABBBox, FlagBox, Attachment, Panel>;
 using PanelType = ecs::EntityType<BoxRender, BoxGPUHandle, OBBBox, AABBBox, FlagBox, Panel>;
-using CarType = ecs::EntityType<OBBBox, AABBBox, Car, CarMovement, CarSettings, CarTarget, CarControl, CarGPUIndex, CarBuildingsCache, FlagBox>;
+using CarType = ecs::EntityType<OBBBox, AABBBox, Car, CarMovement, CarSettings, CarTarget, CarControl, CarGPUIndex, CarBuildingsCache, FlagBox, CarInstanceListSlot>;
 
 using GameComponents = ecs::ComponentList<InterpolatedPosition, BoxRender, BoxGPUHandle, OBBBox, AABBBox, AnimationBox, FlagBox, Attachment, Panel, Car, CarMovement, CarSettings, CarTarget, CarGPUIndex, CarControl, CarBuildingsCache>;
 using GameEntityTypes = ecs::EntityTypeList<BoxType, AnimatedBoxType, AttachedPanelType, PanelType, CarType>;

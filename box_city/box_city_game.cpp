@@ -224,6 +224,9 @@ void BoxCityGame::OnLogic(double total_time, float elapsed_time)
 	job::Wait(m_job_system, update_attachments_fence);
 	job::Wait(m_job_system, update_cars_fence);
 
+	//Process car moves
+	m_traffic_system.ProcessCarMoves();
+
 	//Update camera for the render frame or next logic update
 	switch (m_camera_mode)
 	{
