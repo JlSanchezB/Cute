@@ -41,6 +41,16 @@ namespace BoxCityTrafficSystem
 
 	void Manager::Shutdown()
 	{
+		//Deallocate the tile GPU memory
+		for (auto& tile : m_tiles)
+		{
+			if (tile.m_instances_list_handle.IsValid())
+			{
+				//Deallocate GPU memory
+				m_GPU_memory_render_module->DeallocStaticGPUMemory(m_device, tile.m_instances_list_handle, render::GetGameFrameIndex(m_render_system));
+			}
+		}
+
 		//Deallocate GPU memory
 		m_GPU_memory_render_module->DeallocStaticGPUMemory(m_device, m_gpu_memory, render::GetGameFrameIndex(m_render_system));
 	}
@@ -156,6 +166,13 @@ namespace BoxCityTrafficSystem
 					{
 						core::LogInfo("Traffic: Tile Local<%i,%i>, World<%i,%i>, created", local_tile.i, local_tile.j, world_tile.i, world_tile.j);
 
+						//Create the indirect instance array in CPU
+						//Allocate a lot more, because the cars move
+						size_t max_size = render::RoundSizeTo16Bytes(((kNumCars * 10) / 8) * sizeof(uint32_t)) / sizeof(uint32_t);
+						tile.m_instances_list_cpu.resize(max_size);
+						tile.m_instances_list_cpu[0] = kNumCars;
+						tile.m_instances_list_size = kNumCars;
+						
 						//Create cars
 						for (size_t i = 0; i < kNumCars; ++i)
 						{
@@ -195,7 +212,13 @@ namespace BoxCityTrafficSystem
 								//The first car is the player car
 								m_player_car = instance;
 							}
+
+							//Fill the instances list with the offset
+							tile.m_instances_list_cpu[1 + i] = static_cast<uint32_t>(m_GPU_memory_render_module->GetStaticGPUMemoryOffset(GetGPUHandle()) + car_gpu_index.gpu_slot * sizeof(GPUBoxInstance));
 						}
+
+						//Create the gpu instances list memory
+						tile.m_instances_list_handle = m_GPU_memory_render_module->AllocStaticGPUMemory(m_device, tile.m_instances_list_cpu.size() * sizeof(uint32_t), tile.m_instances_list_cpu.data(), render::GetGameFrameIndex(m_render_system));
 
 						//Init tile
 						tile.m_activated = true;
@@ -204,6 +227,20 @@ namespace BoxCityTrafficSystem
 			}
 		}
 	}
+
+	void Manager::AppendVisibleInstanceLists(const helpers::Frustum& frustum, std::vector<uint32_t>& instance_lists_offsets_array)
+	{
+		for (auto& tile : m_tiles)
+		{
+			if (helpers::CollisionFrustumVsAABB(frustum, tile.m_bounding_box))
+			{
+				size_t instance_list_offset = m_GPU_memory_render_module->GetStaticGPUMemoryOffset(tile.m_instances_list_handle);
+				instance_lists_offsets_array.push_back(static_cast<uint32_t>(instance_list_offset));
+			}
+		}
+	}
+
+
 	void Manager::UpdateCars(platform::Game* game, job::System* job_system, job::JobAllocator<1024 * 1024>* job_allocator, const helpers::Camera& camera, job::Fence& update_fence, BoxCityTileSystem::Manager* tile_manager, uint32_t frame_index, float elapsed_time)
 	{
 		std::bitset<BoxCityTileSystem::kLocalTileCount* BoxCityTileSystem::kLocalTileCount> full_bitset(0xFFFFFFFF >> (32 - kLocalTileCount * kLocalTileCount));

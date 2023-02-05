@@ -102,6 +102,8 @@ namespace BoxCityTrafficSystem
 			return ret;
 		}
 
+		void AppendVisibleInstanceLists(const helpers::Frustum& frustum, std::vector<uint32_t>& instance_lists_offsets_array);
+
 		InstanceReference GetPlayerCar()
 		{
 			return m_player_car;
@@ -144,9 +146,9 @@ namespace BoxCityTrafficSystem
 			helpers::AABB m_bounding_box;
 
 			//Car instances list GPU allocation
-			uint32_t num_cars;
-			uint32_t instance_list_max_size;
-			render::AllocHandle m_instance_list_handle;
+			uint32_t m_instances_list_size;
+			std::vector<uint32_t> m_instances_list_cpu;
+			render::AllocHandle m_instances_list_handle;
 
 			//Car moves tracking
 			core::Mutex m_car_moves_access;

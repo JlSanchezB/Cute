@@ -60,12 +60,10 @@ void BoxCityGame::OnInit()
 	m_GPU_memory_render_module = render::RegisterModule<render::GPUMemoryRenderModule>(m_render_system, "GPUMemory"_sh32, gpu_memory_desc);
 
 	m_display_resources.Load(m_device, m_render_system);
-	DrawCityBoxItemsPass::m_display_resources = &m_display_resources;
 	DrawCityBoxesPass::m_display_resources = &m_display_resources;
 	CullCityBoxesPass::m_display_resources = &m_display_resources;
 
 	//Register custom passes for box city renderer
-	render::RegisterPassFactory<DrawCityBoxItemsPass>(m_render_system);
 	render::RegisterPassFactory<DrawCityBoxesPass>(m_render_system);
 	render::RegisterPassFactory<CullCityBoxesPass>(m_render_system);
 
@@ -305,6 +303,7 @@ void BoxCityGame::OnRender(double total_time, float elapsed_time)
 		//Collect all the active tiles and build the list of instance_lists that needs to be processed by the GPU
 		std::vector<uint32_t> instance_list_offsets_array;
 		m_tile_manager.AppendVisibleInstanceLists(*camera, instance_list_offsets_array);
+		m_traffic_system.AppendVisibleInstanceLists(*camera, instance_list_offsets_array);
 
 		//Allocate dynamic gpu memory to upload the instance_list_offsets_array
 		size_t buffer_size = render::RoundSizeTo16Bytes((instance_list_offsets_array.size() + 1) * sizeof(uint32_t));
@@ -330,7 +329,7 @@ void BoxCityGame::OnRender(double total_time, float elapsed_time)
 	//Add task
 	//Interpolate animation
 	ecs::AddJobs<GameDatabase, const OBBBox, const InterpolatedPosition, const BoxGPUHandle>(m_job_system, culling_fence, m_render_job_allocator, 256,
-		[camera = camera, point_of_view = &point_of_view, box_priority = m_box_render_priority, render_system = m_render_system, device = m_device, render_gpu_memory_module = m_GPU_memory_render_module, tile_manager = &m_tile_manager, render_frame_index]
+		[camera = camera, render_system = m_render_system, device = m_device, render_gpu_memory_module = m_GPU_memory_render_module, tile_manager = &m_tile_manager, render_frame_index]
 	(const auto& instance_iterator, const OBBBox obb_box,const InterpolatedPosition interpolated_position, const BoxGPUHandle& box_gpu_handle)
 		{
 			//Calculate if it is in the camera and has still a gpu memory handle
@@ -351,19 +350,14 @@ void BoxCityGame::OnRender(double total_time, float elapsed_time)
 			}
 		}, m_tile_manager.GetCameraBitSet(*camera), &g_profile_marker_Culling);
 
-	//Cull cars
+	//Interpolate cars
 	ecs::AddJobs<GameDatabase, const OBBBox, const AABBBox, const CarGPUIndex, const Car>(m_job_system, culling_fence, m_render_job_allocator, 256,
-		[camera = camera, point_of_view = &point_of_view, box_priority = m_box_render_priority, render_system = m_render_system, device = m_device, render_gpu_memory_module = m_GPU_memory_render_module, traffic_manager = &m_traffic_system, render_frame_index]
+		[camera = camera, render_system = m_render_system, device = m_device, render_gpu_memory_module = m_GPU_memory_render_module, traffic_manager = &m_traffic_system, render_frame_index]
 	(const auto& instance_iterator, const OBBBox& obb_box, const AABBBox& aabb_box, const CarGPUIndex& car_gpu_index, const Car& car)
 		{
 			//Calculate if it is in the camera and has still a gpu memory handle
 			if (helpers::CollisionFrustumVsAABB(*camera, aabb_box) && car_gpu_index.IsValid())
 			{
-				//Calculate sort key, sort key is 24 bits
-				float camera_distance = glm::length(obb_box.position - camera->GetInterpolatedPosition());
-				float camera_distance_01 = glm::clamp(camera_distance, 0.f, camera->GetFarPlane()) / camera->GetFarPlane();
-				uint32_t sort_key = static_cast<uint32_t>(camera_distance_01 * ((1 << 24) - 1));
-
 				//Calculate the interpolated OBB
 				OBBBox render_box = obb_box;
 				render_box.position = car.position.GetInterpolated();
@@ -375,11 +369,6 @@ void BoxCityGame::OnRender(double total_time, float elapsed_time)
 
 				//Only the first 3 float4
 				render_gpu_memory_module->UpdateStaticGPUMemory(device, traffic_manager->GetGPUHandle(), &gpu_box_instance, 3 * sizeof(glm::vec4), render_frame_index, car_gpu_index.gpu_slot * sizeof(GPUBoxInstance));
-
-				//Add this point of view
-				point_of_view->PushRenderItem(box_priority, static_cast<render::SortKey>(sort_key), static_cast<uint32_t>(render_gpu_memory_module->GetStaticGPUMemoryOffset(traffic_manager->GetGPUHandle()) + car_gpu_index.gpu_slot * sizeof(GPUBoxInstance)));
-
-				COUNTER_INC(c_Culled_Cars);
 			}
 		}, m_traffic_system.GetCameraBitSet(*camera), &g_profile_marker_Car_Culling);
 
