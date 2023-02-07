@@ -78,7 +78,7 @@ namespace BoxCityTrafficSystem
 		//Update Cars
 		void UpdateCars(platform::Game* game, job::System* job_system, job::JobAllocator<1024 * 1024>* job_allocator, const helpers::Camera& camera, job::Fence& update_fence, BoxCityTileSystem::Manager* tile_manager, uint32_t frame_index, float elapsed_time);
 
-		//Process car moves
+		//Process car moves after the database moves
 		void ProcessCarMoves();
 
 		//GPU Access
@@ -89,7 +89,7 @@ namespace BoxCityTrafficSystem
 
 		std::bitset<BoxCityTileSystem::kLocalTileCount* BoxCityTileSystem::kLocalTileCount> GetCameraBitSet(const helpers::Frustum& frustum) const
 		{
-			std::bitset<BoxCityTileSystem::kLocalTileCount* BoxCityTileSystem::kLocalTileCount> ret(false);
+			std::bitset<BoxCityTileSystem::kLocalTileCount* BoxCityTileSystem::kLocalTileCount> ret;
 
 			for (auto& tile : m_tiles)
 			{
@@ -145,21 +145,18 @@ namespace BoxCityTrafficSystem
 			//Bounding box of the tile
 			helpers::AABB m_bounding_box;
 
-			//Car instances list GPU allocation
-			uint32_t m_instances_list_size;
-			std::vector<uint32_t> m_instances_list_cpu;
+			//Instance list handle
+			uint32_t m_instance_list_max_count;
 			render::AllocHandle m_instances_list_handle;
-
-			//Car moves tracking
-			core::Mutex m_car_moves_access;
-			std::vector<CarInstanceListSlot*> m_move_out_cars;
-			std::vector<CarInstanceListSlot*> m_move_in_cars;
 		};
 
 		//Tiles
 		Tile m_tiles[kLocalTileCount * kLocalTileCount];
 
-		void RegisterCarMove(CarInstanceListSlot* car_slot, uint32_t source_tile, uint32_t destination_tile);
+		//Invalidated zones
+		std::vector<uint32_t> m_invalidated_zones;
+
+		void InvalidateZone(uint32_t zone_index);
 
 		//Player car
 		InstanceReference m_player_car;

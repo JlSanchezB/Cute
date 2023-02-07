@@ -36,6 +36,9 @@ namespace ecs
 		template<typename ENTITY_TYPE>
 		constexpr bool Is() const;
 
+		//Get Zone
+		ZoneType GetZone() const;
+
 	private:
 		InstanceIndirectionIndexType m_indirection_index;
 
@@ -67,7 +70,7 @@ namespace ecs
 		InstanceReference()
 		{
 			m_indirection_index.thread_id = InstanceIndirectionIndexType::kInvalidThreadID;
-			m_indirection_index.index = InstanceIndirectionIndexType::kInvalidThreadID;
+			m_indirection_index.index = InstanceIndirectionIndexType::kInvalidIndex;
 		}
 
 		template<typename DATABASE_DECLARATION>
@@ -76,10 +79,22 @@ namespace ecs
 			m_indirection_index = instance.m_indirection_index;
 		}
 
+		InstanceReference(const InstanceIndirectionIndexType& indirection_index)
+		{
+			m_indirection_index = indirection_index;
+		}
+
 		bool IsValid() const
 		{
-			return m_indirection_index.index != InstanceIndirectionIndexType::kInvalidThreadID;
+			return !(m_indirection_index.thread_id == InstanceIndirectionIndexType::kInvalidThreadID &&
+				m_indirection_index.index == InstanceIndirectionIndexType::kInvalidIndex);
 		}
+
+		bool operator==(const InstanceReference& b)
+		{
+			return m_indirection_index.thread_id == b.m_indirection_index.thread_id && m_indirection_index.index == b.m_indirection_index.index;
+		}
+
 	private:
 		InstanceIndirectionIndexType m_indirection_index;
 	};
@@ -103,6 +118,7 @@ namespace ecs
 
 		return *this;
 	}
+
 	template<typename DATABASE_DECLARATION>
 	template<typename ...COMPONENTS, typename ...ARGS>
 	constexpr inline Instance<DATABASE_DECLARATION>& Instance<DATABASE_DECLARATION>::Init(ARGS&&... args)
@@ -154,6 +170,12 @@ namespace ecs
 	inline constexpr bool Instance<DATABASE_DECLARATION>::Is() const
 	{
 		return internal::GetInstanceTypeIndex(DATABASE_DECLARATION::s_database, m_indirection_index) == DATABASE_DECLARATION::template EntityTypeIndex<ENTITY_TYPE>();
+	}
+
+	template<typename DATABASE_DECLARATION>
+	inline ZoneType Instance<DATABASE_DECLARATION>::GetZone() const
+	{
+		return internal::GetInstanceZone(DATABASE_DECLARATION::s_database, m_indirection_index);
 	}
 }
 

@@ -218,12 +218,8 @@ void BoxCityGame::OnLogic(double total_time, float elapsed_time)
 	job::Fence update_cars_fence;
 	m_traffic_system.UpdateCars(this, m_job_system, m_update_job_allocator.get(), *camera, update_cars_fence, &m_tile_manager, m_frame_index, elapsed_time);
 
-
 	job::Wait(m_job_system, update_attachments_fence);
 	job::Wait(m_job_system, update_cars_fence);
-
-	//Process car moves
-	m_traffic_system.ProcessCarMoves();
 
 	//Update camera for the render frame or next logic update
 	switch (m_camera_mode)
@@ -240,9 +236,15 @@ void BoxCityGame::OnLogic(double total_time, float elapsed_time)
 	}
 
 	{
-		PROFILE_SCOPE("ECSTest", 0xFFFF77FF, "DatabaseTick");
+		PROFILE_SCOPE("BoxCity", 0xFFFF77FF, "DatabaseTick");
 		//Tick database
 		ecs::Tick<GameDatabase>();
+	}
+
+	{
+		PROFILE_SCOPE("BoxCity", 0xFFFF77FF, "UpdateTrafficInstancesLists");
+		//Process car moves after the zone movements
+		m_traffic_system.ProcessCarMoves();
 	}
 
 	m_frame_index++;
@@ -355,8 +357,7 @@ void BoxCityGame::OnRender(double total_time, float elapsed_time)
 		[camera = camera, render_system = m_render_system, device = m_device, render_gpu_memory_module = m_GPU_memory_render_module, traffic_manager = &m_traffic_system, render_frame_index]
 	(const auto& instance_iterator, const OBBBox& obb_box, const AABBBox& aabb_box, const CarGPUIndex& car_gpu_index, const Car& car)
 		{
-			//Calculate if it is in the camera and has still a gpu memory handle
-			if (helpers::CollisionFrustumVsAABB(*camera, aabb_box) && car_gpu_index.IsValid())
+			if (car_gpu_index.IsValid())
 			{
 				//Calculate the interpolated OBB
 				OBBBox render_box = obb_box;
@@ -370,7 +371,7 @@ void BoxCityGame::OnRender(double total_time, float elapsed_time)
 				//Only the first 3 float4
 				render_gpu_memory_module->UpdateStaticGPUMemory(device, traffic_manager->GetGPUHandle(), &gpu_box_instance, 3 * sizeof(glm::vec4), render_frame_index, car_gpu_index.gpu_slot * sizeof(GPUBoxInstance));
 			}
-		}, m_traffic_system.GetCameraBitSet(*camera), &g_profile_marker_Car_Culling);
+		}, m_traffic_system.GetCameraBitSet(*camera), & g_profile_marker_Car_Culling);
 
 	job::Wait(m_job_system, culling_fence);
 

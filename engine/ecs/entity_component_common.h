@@ -42,6 +42,9 @@ namespace ecs
 		//Get instance type index from a entity type index
 		size_t GetInstanceTypeIndex(Database* database, InstanceIndirectionIndexType index);
 
+		//Get instance zone index
+		ZoneType GetInstanceZone(Database* database, InstanceIndirectionIndexType index);
+
 		//Get component data
 		void* GetComponentData(Database* database, InstanceIndirectionIndexType index, ComponentType component_index);
 

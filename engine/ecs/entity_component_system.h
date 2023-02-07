@@ -166,6 +166,9 @@ namespace ecs
 
 		//Get database stats
 		void GetDatabaseStats(Database* database, DatabaseStats& stats);
+
+		//Get Instace Reference
+		InstanceReference GetInstanceReference(Database* database, ZoneType zone_index, EntityTypeType entity_type, ComponentType component_index);
 	}
 
 	//Create database from a database description with the component lists
@@ -309,6 +312,11 @@ namespace ecs
 		bool operator==(const Instance<DATABASE_DECLARATION>& b) const
 		{
 			return internal::InstanceCompare(DATABASE_DECLARATION::s_database, b.m_indirection_index, m_zone_index, m_entity_type, m_instance_index);
+		}
+
+		InstanceReference GetInstanceReference() const
+		{
+			return internal::GetInstanceReference(DATABASE_DECLARATION::s_database, m_zone_index, m_entity_type, m_instance_index);
 		}
 	};
 

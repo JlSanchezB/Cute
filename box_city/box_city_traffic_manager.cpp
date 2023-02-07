@@ -162,17 +162,18 @@ namespace BoxCityTrafficSystem
 
 							}, bitset);
 					}
-					else if (!tile.m_activated)
+					else
 					{
 						core::LogInfo("Traffic: Tile Local<%i,%i>, World<%i,%i>, created", local_tile.i, local_tile.j, world_tile.i, world_tile.j);
 
 						//Create the indirect instance array in CPU
 						//Allocate a lot more, because the cars move
-						size_t max_size = render::RoundSizeTo16Bytes(((kNumCars * 10) / 8) * sizeof(uint32_t)) / sizeof(uint32_t);
-						tile.m_instances_list_cpu.resize(max_size);
-						tile.m_instances_list_cpu[0] = kNumCars;
-						tile.m_instances_list_size = kNumCars;
-						
+						size_t max_size = render::RoundSizeTo16Bytes(kNumCars * 2 * sizeof(uint32_t)) / sizeof(uint32_t);
+						tile.m_instance_list_max_count = static_cast<uint32_t>(max_size);
+						std::vector<uint32_t> init_instances_list_data;
+						init_instances_list_data.resize(max_size);
+						init_instances_list_data[0] = kNumCars;
+
 						//Create cars
 						for (size_t i = 0; i < kNumCars; ++i)
 						{
@@ -190,7 +191,7 @@ namespace BoxCityTrafficSystem
 
 							SetupCar(tile, random, begin_tile_x, begin_tile_y, position_range, position_range_z, size_range,
 								car, car_movement, car_settings, obb_box_component, aabb_box_component, car_gpu_index);
-							
+
 							CarTarget car_target;
 							BoxCityCarControl::SetupCarTarget(random, tile_manager, car, car_target, true);
 
@@ -214,11 +215,11 @@ namespace BoxCityTrafficSystem
 							}
 
 							//Fill the instances list with the offset
-							tile.m_instances_list_cpu[1 + i] = static_cast<uint32_t>(m_GPU_memory_render_module->GetStaticGPUMemoryOffset(GetGPUHandle()) + car_gpu_index.gpu_slot * sizeof(GPUBoxInstance));
+							init_instances_list_data[1 + i] = static_cast<uint32_t>(m_GPU_memory_render_module->GetStaticGPUMemoryOffset(GetGPUHandle()) + car_gpu_index.gpu_slot * sizeof(GPUBoxInstance));
 						}
 
 						//Create the gpu instances list memory
-						tile.m_instances_list_handle = m_GPU_memory_render_module->AllocStaticGPUMemory(m_device, tile.m_instances_list_cpu.size() * sizeof(uint32_t), tile.m_instances_list_cpu.data(), render::GetGameFrameIndex(m_render_system));
+						tile.m_instances_list_handle = m_GPU_memory_render_module->AllocStaticGPUMemory(m_device, init_instances_list_data.size() * sizeof(uint32_t), init_instances_list_data.data(), render::GetGameFrameIndex(m_render_system));
 
 						//Init tile
 						tile.m_activated = true;
@@ -232,7 +233,7 @@ namespace BoxCityTrafficSystem
 	{
 		for (auto& tile : m_tiles)
 		{
-			if (helpers::CollisionFrustumVsAABB(frustum, tile.m_bounding_box))
+			if (helpers::CollisionFrustumVsAABB(frustum, tile.m_bounding_box) && tile.m_instances_list_handle.IsValid())
 			{
 				size_t instance_list_offset = m_GPU_memory_render_module->GetStaticGPUMemoryOffset(tile.m_instances_list_handle);
 				instance_lists_offsets_array.push_back(static_cast<uint32_t>(instance_list_offset));
@@ -244,12 +245,11 @@ namespace BoxCityTrafficSystem
 	void Manager::UpdateCars(platform::Game* game, job::System* job_system, job::JobAllocator<1024 * 1024>* job_allocator, const helpers::Camera& camera, job::Fence& update_fence, BoxCityTileSystem::Manager* tile_manager, uint32_t frame_index, float elapsed_time)
 	{
 		std::bitset<BoxCityTileSystem::kLocalTileCount* BoxCityTileSystem::kLocalTileCount> full_bitset(0xFFFFFFFF >> (32 - kLocalTileCount * kLocalTileCount));
-
-		std::bitset<BoxCityTileSystem::kLocalTileCount* BoxCityTileSystem::kLocalTileCount> camera_bitset = GetCameraBitSet(camera);
+		//std::bitset<BoxCityTileSystem::kLocalTileCount* BoxCityTileSystem::kLocalTileCount> camera_bitset = GetCameraBitSet(camera);
 		//Update the cars in the direction of the target
-		ecs::AddJobs < GameDatabase, Car, CarMovement, CarTarget, CarSettings, CarControl, CarBuildingsCache, OBBBox, AABBBox, CarGPUIndex, FlagBox, CarInstanceListSlot> (job_system, update_fence, job_allocator, 256,
-			[elapsed_time, camera_bitset, manager = this, tile_manager = tile_manager, game, camera_position = camera.GetPosition(), frame_index]
-			(const auto& instance_iterator, Car& car, CarMovement& car_movement, CarTarget& car_target, CarSettings& car_settings, CarControl& car_control, CarBuildingsCache& car_buildings_cache, OBBBox& obb_box, AABBBox& aabb_box, CarGPUIndex& car_gpu_index, FlagBox& flag_box, CarInstanceListSlot& car_instance_slot)
+		ecs::AddJobs < GameDatabase, Car, CarMovement, CarTarget, CarSettings, CarControl, CarBuildingsCache, OBBBox, AABBBox, CarGPUIndex, FlagBox> (job_system, update_fence, job_allocator, 256,
+			[elapsed_time, manager = this, tile_manager = tile_manager, game, camera_position = camera.GetPosition(), frame_index]
+			(const auto& instance_iterator, Car& car, CarMovement& car_movement, CarTarget& car_target, CarSettings& car_settings, CarControl& car_control, CarBuildingsCache& car_buildings_cache, OBBBox& obb_box, AABBBox& aabb_box, CarGPUIndex& car_gpu_index, FlagBox& flag_box)
 			{
 				//Update position
 				if (instance_iterator == manager->GetPlayerCar().Get<GameDatabase>() && manager->m_player_control_enable)
@@ -273,7 +273,7 @@ namespace BoxCityTrafficSystem
 
 				//Integrate
 				BoxCityCarControl::IntegrateCar(car, car_movement, car_settings, linear_forces, angular_forces, position_offset, elapsed_time);
-				
+
 				if (!flag_box.moved)
 				{
 					//Check if it is outside of the tile (change tile or cycle the car)
@@ -284,7 +284,7 @@ namespace BoxCityTrafficSystem
 					{
 						LocalTilePosition next_local_tile = CalculateLocalTileIndex(next_world_tile);
 						uint32_t next_zone_index = CalculateLocalTileToZoneIndex(next_local_tile);
-
+	
 						//Check if we need to cycle front-back or left-right, in that case we need to move the target
 						//LocalTilePosition last_local_tile = CalculateLocalTileIndex(current_world_tile);
 						//core::LogInfo("Car current world <%d,%d> current local <%d,%d>, next world<%d,%d> next local <%d,%d>", current_world_tile.i, current_world_tile.j, last_local_tile.i, last_local_tile.j, next_world_tile.i, next_world_tile.j, next_local_tile.i, next_local_tile.j);
@@ -304,7 +304,8 @@ namespace BoxCityTrafficSystem
 						instance_iterator.Move(next_zone_index);
 
 						//Register move to update the instance lists
-						manager->RegisterCarMove(&car_instance_slot, instance_iterator.m_zone_index, next_zone_index);
+						manager->InvalidateZone(instance_iterator.GetInstanceReference().Get<GameDatabase>().GetZone());
+						manager->InvalidateZone(next_zone_index);
 
 						assert(manager->GetTile(next_zone_index).m_bounding_box.Inside(*car.position, 1.f));
 					}
@@ -323,6 +324,7 @@ namespace BoxCityTrafficSystem
 
 			}, full_bitset, &g_profile_marker_Car_Update);
 	}
+
 	void Manager::GenerateZoneDescriptors()
 	{
 		//We create all the tile descriptors
@@ -345,28 +347,42 @@ namespace BoxCityTrafficSystem
 	{
 		return m_tiles[CalculateLocalTileToZoneIndex(local_tile)];
 	}
-
-	void Manager::RegisterCarMove(CarInstanceListSlot* car_slot, uint32_t source_tile, uint32_t destination_tile)
+#
+	void Manager::InvalidateZone(uint32_t zone)
 	{
+		for (const uint32_t invalidated_zones : m_invalidated_zones)
 		{
-			auto& out_tile = m_tiles[source_tile];
-			core::MutexGuard access(out_tile.m_car_moves_access);
-			out_tile.m_move_out_cars.emplace_back(car_slot);
-		}
-		{
-			auto& in_tile = m_tiles[destination_tile];
-			core::MutexGuard access(in_tile.m_car_moves_access);
-			in_tile.m_move_in_cars.emplace_back(car_slot);
+			if (zone == invalidated_zones) return;
 		}
 
+		m_invalidated_zones.push_back(zone);
 	}
 
 	void Manager::ProcessCarMoves()
 	{
-		for (auto& tile : m_tiles)
+		//Recreate the instance list for the zone
+		for (const auto& zone_index : m_invalidated_zones)
 		{
-			tile.m_move_in_cars.clear();
-			tile.m_move_out_cars.clear();
+			Tile& tile = m_tiles[zone_index];
+			std::bitset<BoxCityTileSystem::kLocalTileCount* BoxCityTileSystem::kLocalTileCount> zone_bitset(false);
+			zone_bitset[zone_index] = true;
+			std::vector<uint32_t> updated_instance_list_data(1); //Space for the size
+			updated_instance_list_data.reserve(tile.m_instance_list_max_count);
+			uint32_t base_offset = static_cast<uint32_t>(m_GPU_memory_render_module->GetStaticGPUMemoryOffset(GetGPUHandle()));
+
+			ecs::Process<GameDatabase, const CarGPUIndex>([&](const auto& instance_iterator, const CarGPUIndex& car_gpu_index)
+				{
+					assert(instance_iterator.m_zone_index == zone_index);
+					updated_instance_list_data.push_back(static_cast<uint32_t>(base_offset + car_gpu_index.gpu_slot * sizeof(GPUBoxInstance)));
+			}, zone_bitset);
+
+			assert(updated_instance_list_data.size() < tile.m_instance_list_max_count);
+			updated_instance_list_data[0] = static_cast<uint32_t>(updated_instance_list_data.size() - 1);
+
+			//Update the instance list in the GPU
+			m_GPU_memory_render_module->UpdateStaticGPUMemory(m_device, tile.m_instances_list_handle, updated_instance_list_data.data(), render::RoundSizeTo16Bytes(updated_instance_list_data.size() * sizeof(uint32_t)), render::GetGameFrameIndex(m_render_system));
 		}
+
+		m_invalidated_zones.clear();
 	}
 }

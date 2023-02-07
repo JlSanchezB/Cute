@@ -268,6 +268,8 @@ namespace ecs
 						assert(new_internal_instance_index.instance_index == internal_instance_index.instance_index);
 
 						new_internal_instance_index = new_zone_internal_instance_index;
+
+						assert(new_internal_instance_index.zone_index == new_zone_index);
 					}
 				}
 			}
@@ -500,6 +502,11 @@ namespace ecs
 			return database->AccessInternalInstanceIndex(index).entity_type_index;
 		}
 
+		ZoneType GetInstanceZone(Database* database, InstanceIndirectionIndexType index)
+		{
+			return database->AccessInternalInstanceIndex(index).zone_index;
+		}
+
 		void TickDatabase(Database* database)
 		{
 			//Lock database
@@ -541,6 +548,9 @@ namespace ecs
 							{
 								database->MoveInstance(internal_instance_index, deferred_move_instance.new_zone);
 							}
+
+							//Check that the zone is the correct one
+							assert(internal_instance_index.zone_index == deferred_move_instance.new_zone);
 						}
 					}
 					database->m_stats.num_deferred_moves = deferred_instance_moves.size();
@@ -576,6 +586,10 @@ namespace ecs
 		{
 			assert(!database->m_locked);
 			stats = database->m_stats;
+		}
+		InstanceReference GetInstanceReference(Database* database, ZoneType zone_index, EntityTypeType entity_type, ComponentType component_index)
+		{
+			return InstanceReference(database->GetIndirectionIndex(zone_index, entity_type, component_index));
 		}
 	}
 }
