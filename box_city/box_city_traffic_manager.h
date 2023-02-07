@@ -114,6 +114,9 @@ namespace BoxCityTrafficSystem
 			m_player_control_enable = enable;
 		}
 
+		//The instance in the zone has change for some reason, the gpu offset needs to be reevaluated
+		void RegisterECSChange(uint32_t zone_index, uint32_t instance_index);
+
 	private:
 		//Systems
 		display::Device* m_device = nullptr;
@@ -155,6 +158,9 @@ namespace BoxCityTrafficSystem
 
 		//Invalidated zones
 		std::vector<uint32_t> m_invalidated_zones;
+
+		//Invalidate memory blocks 
+		std::array<std::vector<uint32_t>, kLocalTileCount* kLocalTileCount> m_invalidated_memory_block;
 
 		void InvalidateZone(uint32_t zone_index);
 

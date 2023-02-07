@@ -303,10 +303,6 @@ namespace BoxCityTrafficSystem
 						//Needs to move
 						instance_iterator.Move(next_zone_index);
 
-						//Register move to update the instance lists
-						manager->InvalidateZone(instance_iterator.GetInstanceReference().Get<GameDatabase>().GetZone());
-						manager->InvalidateZone(next_zone_index);
-
 						assert(manager->GetTile(next_zone_index).m_bounding_box.Inside(*car.position, 1.f));
 					}
 					else
@@ -347,7 +343,28 @@ namespace BoxCityTrafficSystem
 	{
 		return m_tiles[CalculateLocalTileToZoneIndex(local_tile)];
 	}
-#
+
+	void Manager::RegisterECSChange(uint32_t zone_index, uint32_t instance_index)
+	{
+		//Invalidate zone
+		InvalidateZone(zone_index);
+
+		//We need to invalidate that range of memory
+		auto& invalidated_memory_block = m_invalidated_memory_block[zone_index];
+
+		//Calculate the block offset, it is a 16bytes aligned block
+		uint32_t invalidated_block_offset = ((instance_index * 4) / 16) * 16;
+
+		//Check if already has been added
+		for (auto& block_offset : invalidated_memory_block)
+		{
+			if (block_offset == invalidated_block_offset) return;
+		}
+
+		//Add the new invalidate block
+		invalidated_memory_block.push_back(invalidated_block_offset);
+	}
+
 	void Manager::InvalidateZone(uint32_t zone)
 	{
 		for (const uint32_t invalidated_zones : m_invalidated_zones)
@@ -384,5 +401,10 @@ namespace BoxCityTrafficSystem
 		}
 
 		m_invalidated_zones.clear();
+
+		for (auto& invalidated_memory_block : m_invalidated_memory_block)
+		{
+			invalidated_memory_block.clear();
+		}
 	}
 }

@@ -10,9 +10,12 @@
 #include <core/type_list.h>
 #include "entity_component_common.h"
 #include "entity_component_instance.h"
+#include <functional>
 
 namespace ecs
 {
+	using CallbackInternalFunction = std::function<void(DababaseTransaction, ZoneType, EntityTypeType, InstanceIndexType, ZoneType, EntityTypeType, InstanceIndexType)>;
+
 	template<typename ...COMPONENTS>
 	using ComponentList = core::TypeList<COMPONENTS...>;
 
@@ -145,6 +148,9 @@ namespace ecs
 		//Tick database
 		void TickDatabase(Database* database);
 
+		//Set the callback transation function if needed
+		void SetCallbackTransaction(Database* database, CallbackInternalFunction&& callback);
+
 		//Get num zones
 		ZoneType GetNumZones(Database* database);
 
@@ -240,6 +246,12 @@ namespace ecs
 			size_count += internal::GetNumInstances(DATABASE_DECLARATION::s_database, zone_index, DATABASE_DECLARATION::template EntityTypeIndex<ENTITY_TYPE>());
 		}
 		return size_count;
+	}
+
+	template<typename DATABASE_DECLARATION, typename ENTITY_TYPE>
+	size_t GetNumInstances(ZoneType zone_index)
+	{
+		internal::GetNumInstances(DATABASE_DECLARATION::s_database, zone_index, DATABASE_DECLARATION::template EntityTypeIndex<ENTITY_TYPE>());
 	}
 
 	template<typename DATABASE_DECLARATION>
@@ -383,6 +395,12 @@ namespace ecs
 
 			}
 		});
+	}
+
+	template<typename DATABASE_DECLARATION>
+	void RegisterCallbackTransaction(CallbackInternalFunction&& callback)
+	{
+		internal::SetCallbackTransaction(DATABASE_DECLARATION::s_database, std::move(callback));
 	}
 }
 

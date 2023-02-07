@@ -87,6 +87,9 @@ namespace ecs
 		//Stats from last frames
 		DatabaseStats m_stats;
 
+		//Callback function
+		std::function<void (DababaseTransaction, ZoneType, EntityTypeType, InstanceIndexType, ZoneType, EntityTypeType, InstanceIndexType)> m_callback_function;
+
 		//Get indirection index
 		InternalInstanceIndex& AccessInternalInstanceIndex(const InstanceIndirectionIndexType& indirection_index)
 		{
@@ -181,6 +184,16 @@ namespace ecs
 			//Check if the instance to delete is the last instance, then is nothing to do
 			const bool needs_to_move = last_instance_index != internal_instance_index.instance_index;
 
+			if (m_callback_function)
+			{
+				m_callback_function(DababaseTransaction::Deletion, internal_instance_index.zone_index, internal_instance_index.entity_type_index, internal_instance_index.instance_index, 0, 0, 0);
+				if (needs_to_move)
+				{
+					m_callback_function(DababaseTransaction::Move, internal_instance_index.zone_index, internal_instance_index.entity_type_index, internal_instance_index.instance_index,
+						internal_instance_index.zone_index, internal_instance_index.entity_type_index, last_instance_index);
+				}
+			}
+
 			//Reduce by one all components
 			const size_t component_begin_index = GetBeginContainerIndex(internal_instance_index.zone_index, internal_instance_index.entity_type_index);
 			for (size_t i = 0; i < m_num_components; ++i)
@@ -273,6 +286,13 @@ namespace ecs
 					}
 				}
 			}
+
+			if (m_callback_function)
+			{
+				m_callback_function(DababaseTransaction::Move, new_zone_internal_instance_index.zone_index, new_zone_internal_instance_index.entity_type_index, new_zone_internal_instance_index.instance_index,
+					old_internal_instance_index.zone_index, old_internal_instance_index.entity_type_index, old_internal_instance_index.instance_index);
+			}
+
 
 			//Call Destroy old instance but without destructor
 			DestroyInstance(old_internal_instance_index, false);
@@ -567,6 +587,11 @@ namespace ecs
 			//Unlock database
 			database->m_locked = false;
 		}
+		void SetCallbackTransaction(Database* database, CallbackInternalFunction&& callback)
+		{
+			database->m_callback_function = callback;
+		}
+
 		ZoneType GetNumZones(Database * database)
 		{
 			return database->m_num_zones;

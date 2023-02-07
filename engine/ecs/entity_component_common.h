@@ -19,6 +19,11 @@ namespace ecs
 		static constexpr uint32_t kInvalidIndex = 0xFFFFFF;
 	};
 
+	enum class DababaseTransaction
+	{
+		Deletion,
+		Move
+	};
 
 	using ComponentType = uint8_t;
 	using ZoneType = uint16_t;

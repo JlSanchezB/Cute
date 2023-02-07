@@ -87,8 +87,20 @@ void BoxCityGame::OnInit()
 	m_car_camera.SetNearFar(0.5f, 8000.f);
 
 	m_tile_manager.Init(m_device, m_render_system, m_GPU_memory_render_module);
-
 	m_traffic_system.Init(m_device, m_render_system, m_GPU_memory_render_module);
+
+	//Register the callback transaction function in the ecs
+	ecs::RegisterCallbackTransaction<GameDatabase>([manager = &m_traffic_system](ecs::DababaseTransaction transaction, ecs::ZoneType zone, ecs::EntityTypeType entity_type, ecs::InstanceIndexType instance_index, ecs::ZoneType zone_ext, ecs::EntityTypeType entity_type_ext, ecs::InstanceIndexType instance_index_ext)
+		{
+			if (GameDatabase::EntityTypeIndex<CarType>() == entity_type)
+			{
+				manager->RegisterECSChange(static_cast<uint32_t>(zone), static_cast<uint32_t>(instance_index));
+				if (transaction == ecs::DababaseTransaction::Move)
+				{
+					manager->RegisterECSChange(static_cast<uint32_t>(zone_ext), static_cast<uint32_t>(instance_index_ext));
+				}
+			}
+		});
 }
 	
 void BoxCityGame::OnPrepareDestroy()
