@@ -46,6 +46,8 @@ void box_culling(uint3 group : SV_GroupID, uint3 group_thread_id : SV_GroupThrea
     //Read number of instances
     uint num_instances = static_gpu_memory.Load(instance_list_offset);
 
+    instance_list_offset += 4; //The num is read, now are the offsets
+
     //Number of passes needed to process all the instances
     uint num_passes = 1 + (num_instances - 1) / 32;
 
@@ -58,9 +60,8 @@ void box_culling(uint3 group : SV_GroupID, uint3 group_thread_id : SV_GroupThrea
 
         if (instance_index < num_instances)
         {
-
             //Calculate the offset with the instance data
-            uint instance_offset = static_gpu_memory.Load(instance_list_offset + 4 + instance_index * 4);
+            uint instance_offset = static_gpu_memory.Load(instance_list_offset + instance_index * 4);
 
             //Read Box instance data
             float4 instance_data[4];

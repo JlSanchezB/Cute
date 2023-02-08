@@ -14,7 +14,7 @@
 
 namespace ecs
 {
-	using CallbackInternalFunction = std::function<void(DababaseTransaction, ZoneType, EntityTypeType, InstanceIndexType, ZoneType, EntityTypeType, InstanceIndexType)>;
+	using CallbackInternalFunction = std::function<void(const DababaseTransaction, const ZoneType, const EntityTypeType, const InstanceIndexType, const ZoneType, const EntityTypeType, const InstanceIndexType)>;
 
 	template<typename ...COMPONENTS>
 	using ComponentList = core::TypeList<COMPONENTS...>;
@@ -251,7 +251,14 @@ namespace ecs
 	template<typename DATABASE_DECLARATION, typename ENTITY_TYPE>
 	size_t GetNumInstances(ZoneType zone_index)
 	{
-		internal::GetNumInstances(DATABASE_DECLARATION::s_database, zone_index, DATABASE_DECLARATION::template EntityTypeIndex<ENTITY_TYPE>());
+		return internal::GetNumInstances(DATABASE_DECLARATION::s_database, zone_index, DATABASE_DECLARATION::template EntityTypeIndex<ENTITY_TYPE>());
+	}
+
+	template<typename DATABASE_DECLARATION, typename ENTITY_TYPE, typename COMPONENT>
+	COMPONENT& GetComponentData(ZoneType zone_index, InstanceIndexType instance_index)
+	{
+		return *(reinterpret_cast<COMPONENT*>(internal::GetStorageComponent(DATABASE_DECLARATION::s_database,
+			zone_index, DATABASE_DECLARATION::template EntityTypeIndex<ENTITY_TYPE>(), DATABASE_DECLARATION::template ComponentIndex<COMPONENT>())) + instance_index);
 	}
 
 	template<typename DATABASE_DECLARATION>

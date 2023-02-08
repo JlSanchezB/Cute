@@ -12,6 +12,7 @@
 #include "box_city_car_control.h"
 
 PROFILE_DEFINE_MARKER(g_profile_marker_Car_Update, "Main", 0xFFFFAAAA, "CarUpdate");
+CONTROL_VARIABLE_BOOL(c_traffic_full_instance_list_upload, false, "TrafficSystem", "Upload all invalidated instance_list");
 
 namespace BoxCityTrafficSystem
 {
@@ -168,7 +169,7 @@ namespace BoxCityTrafficSystem
 
 						//Create the indirect instance array in CPU
 						//Allocate a lot more, because the cars move
-						size_t max_size = render::RoundSizeTo16Bytes(kNumCars * 2 * sizeof(uint32_t)) / sizeof(uint32_t);
+						size_t max_size = render::RoundSizeUp16Bytes(kNumCars * 2 * sizeof(uint32_t)) / sizeof(uint32_t);
 						tile.m_instance_list_max_count = static_cast<uint32_t>(max_size);
 						std::vector<uint32_t> init_instances_list_data;
 						init_instances_list_data.resize(max_size);
@@ -217,9 +218,12 @@ namespace BoxCityTrafficSystem
 							//Fill the instances list with the offset
 							init_instances_list_data[1 + i] = static_cast<uint32_t>(m_GPU_memory_render_module->GetStaticGPUMemoryOffset(GetGPUHandle()) + car_gpu_index.gpu_slot * sizeof(GPUBoxInstance));
 						}
+						//Fill the rest with 0xFFFFFFFF
+						for (uint32_t i = static_cast<uint32_t>(init_instances_list_data.size()); i < tile.m_instance_list_max_count; ++i)
+							init_instances_list_data[i] = 0xFFFFFFFF;
 
 						//Create the gpu instances list memory
-						tile.m_instances_list_handle = m_GPU_memory_render_module->AllocStaticGPUMemory(m_device, init_instances_list_data.size() * sizeof(uint32_t), init_instances_list_data.data(), render::GetGameFrameIndex(m_render_system));
+						tile.m_instances_list_handle = m_GPU_memory_render_module->AllocStaticGPUMemory(m_device, tile.m_instance_list_max_count * sizeof(uint32_t), init_instances_list_data.data(), render::GetGameFrameIndex(m_render_system));
 
 						//Init tile
 						tile.m_activated = true;
@@ -346,14 +350,11 @@ namespace BoxCityTrafficSystem
 
 	void Manager::RegisterECSChange(uint32_t zone_index, uint32_t instance_index)
 	{
-		//Invalidate zone
-		InvalidateZone(zone_index);
-
 		//We need to invalidate that range of memory
 		auto& invalidated_memory_block = m_invalidated_memory_block[zone_index];
 
-		//Calculate the block offset, it is a 16bytes aligned block
-		uint32_t invalidated_block_offset = ((instance_index * 4) / 16) * 16;
+		//Calculate the block offset, it is a 16bytes aligned block and starting in 1, as 0 has the size
+		uint32_t invalidated_block_offset = static_cast<uint32_t>(render::RoundOffsetDown16Bytes((instance_index + 1) * sizeof(uint32_t)));
 
 		//Check if already has been added
 		for (auto& block_offset : invalidated_memory_block)
@@ -363,6 +364,9 @@ namespace BoxCityTrafficSystem
 
 		//Add the new invalidate block
 		invalidated_memory_block.push_back(invalidated_block_offset);
+
+		//Invalidate zone
+		InvalidateZone(zone_index);
 	}
 
 	void Manager::InvalidateZone(uint32_t zone)
@@ -378,33 +382,107 @@ namespace BoxCityTrafficSystem
 	void Manager::ProcessCarMoves()
 	{
 		//Recreate the instance list for the zone
-		for (const auto& zone_index : m_invalidated_zones)
+		if (c_traffic_full_instance_list_upload)
 		{
-			Tile& tile = m_tiles[zone_index];
-			std::bitset<BoxCityTileSystem::kLocalTileCount* BoxCityTileSystem::kLocalTileCount> zone_bitset(false);
-			zone_bitset[zone_index] = true;
-			std::vector<uint32_t> updated_instance_list_data(1); //Space for the size
-			updated_instance_list_data.reserve(tile.m_instance_list_max_count);
-			uint32_t base_offset = static_cast<uint32_t>(m_GPU_memory_render_module->GetStaticGPUMemoryOffset(GetGPUHandle()));
+			for (const auto& zone_index : m_invalidated_zones)
+			{
+				Tile& tile = m_tiles[zone_index];
+				std::bitset<BoxCityTileSystem::kLocalTileCount* BoxCityTileSystem::kLocalTileCount> zone_bitset(false);
+				zone_bitset[zone_index] = true;
+				std::vector<uint32_t> updated_instance_list_data; 
+				updated_instance_list_data.reserve(tile.m_instance_list_max_count);
+				updated_instance_list_data.push_back(0);//Space for the size
+				uint32_t base_offset = static_cast<uint32_t>(m_GPU_memory_render_module->GetStaticGPUMemoryOffset(GetGPUHandle()));
 
-			ecs::Process<GameDatabase, const CarGPUIndex>([&](const auto& instance_iterator, const CarGPUIndex& car_gpu_index)
+				ecs::Process<GameDatabase, const CarGPUIndex>([&](const auto& instance_iterator, const CarGPUIndex& car_gpu_index)
+					{
+						assert(instance_iterator.m_zone_index == zone_index);
+				updated_instance_list_data.push_back(static_cast<uint32_t>(base_offset + car_gpu_index.gpu_slot * sizeof(GPUBoxInstance)));
+					}, zone_bitset);
+
+				for (uint32_t i = static_cast<uint32_t>(updated_instance_list_data.size()); i < tile.m_instance_list_max_count; ++i)
+					updated_instance_list_data.push_back(0xFFFFFFFF);
+
+				assert(updated_instance_list_data.size() <= tile.m_instance_list_max_count);
+				updated_instance_list_data[0] = static_cast<uint32_t>(ecs::GetNumInstances<GameDatabase, CarType>(zone_index));
+
+				//Update the instance list in the GPU
+				m_GPU_memory_render_module->UpdateStaticGPUMemory(m_device, tile.m_instances_list_handle, updated_instance_list_data.data(), render::RoundSizeUp16Bytes(updated_instance_list_data.size() * sizeof(uint32_t)), render::GetGameFrameIndex(m_render_system));
+			}
+		}
+		else
+		{
+			for (const auto& zone_index : m_invalidated_zones)
+			{
+				Tile& tile = m_tiles[zone_index];
+				uint32_t num_instances = static_cast<uint32_t>(ecs::GetNumInstances<GameDatabase, CarType>(tile.m_zone_index));
+
+				assert(num_instances < tile.m_instance_list_max_count - 1);
+
+				auto fill_block = [&](uint32_t memory_block_data[4], uint32_t memory_block)
 				{
-					assert(instance_iterator.m_zone_index == zone_index);
-					updated_instance_list_data.push_back(static_cast<uint32_t>(base_offset + car_gpu_index.gpu_slot * sizeof(GPUBoxInstance)));
-			}, zone_bitset);
+					//Needs the -1 because the memory block is including the first element that is the size
 
-			assert(updated_instance_list_data.size() < tile.m_instance_list_max_count);
-			updated_instance_list_data[0] = static_cast<uint32_t>(updated_instance_list_data.size() - 1);
+					auto fill_block_element = [&](uint32_t index, uint32_t instance_index)
+					{
+						if (instance_index < num_instances)
+						{
+							//It uses the index to calculate the offset
+							const CarGPUIndex& gpu_car_index = ecs::GetComponentData<GameDatabase, CarType, CarGPUIndex>(tile.m_zone_index, instance_index);
+							assert(gpu_car_index.IsValid());
+							memory_block_data[index] = static_cast<uint32_t>(m_GPU_memory_render_module->GetStaticGPUMemoryOffset(GetGPUHandle()) + gpu_car_index.gpu_slot * sizeof(GPUBoxInstance));
+						}
+						else
+						{
+							memory_block_data[index] = 0xFFFFFFFF; //That is bad, nobody ever can access here
+						}
+					};
 
-			//Update the instance list in the GPU
-			m_GPU_memory_render_module->UpdateStaticGPUMemory(m_device, tile.m_instances_list_handle, updated_instance_list_data.data(), render::RoundSizeTo16Bytes(updated_instance_list_data.size() * sizeof(uint32_t)), render::GetGameFrameIndex(m_render_system));
+					if (memory_block == 0)
+					{
+						//The first one is the count
+						memory_block_data[0] = num_instances;
+						fill_block_element(1, 0);
+						fill_block_element(2, 1);
+						fill_block_element(3, 2);
+					}
+					else
+					{
+						uint32_t base_instance_index_in_block = (memory_block / 4) - 1;
+
+						fill_block_element(0, base_instance_index_in_block);
+						fill_block_element(1, base_instance_index_in_block + 1);
+						fill_block_element(2, base_instance_index_in_block + 2);
+						fill_block_element(3, base_instance_index_in_block + 3);
+					}
+				};
+
+				uint32_t updated_memory_block[4];
+
+				for (auto& memory_block : m_invalidated_memory_block[zone_index])
+				{
+					//Create and update of the block to the GPU
+					fill_block(updated_memory_block, memory_block);
+
+					//Send it to the GPU
+					m_GPU_memory_render_module->UpdateStaticGPUMemory(m_device, tile.m_instances_list_handle, updated_memory_block, 16, render::GetGameFrameIndex(m_render_system), memory_block);
+				}
+
+
+				//Update zero with the size, an invalidation of the zone has produce a change in the size
+				fill_block(updated_memory_block, 0);
+
+				//Send it to the GPU
+				m_GPU_memory_render_module->UpdateStaticGPUMemory(m_device, tile.m_instances_list_handle, updated_memory_block, 16, render::GetGameFrameIndex(m_render_system), 0);
+			}
 		}
 
+		//Clear for the next frame
 		m_invalidated_zones.clear();
-
-		for (auto& invalidated_memory_block : m_invalidated_memory_block)
+		for (size_t i = 0; i < kLocalTileCount * kLocalTileCount; ++i)
 		{
-			invalidated_memory_block.clear();
+			m_invalidated_memory_block[i].clear();
 		}
 	}
+
 }

@@ -469,7 +469,7 @@ namespace BoxCityTileSystem
 
 		//Create the instance list GPU allocation and memory
 		//The instance list is a count and  a list of offset to each instance in the tile log group
-		size_t round_size = render::RoundSizeTo16Bytes((num_box_instances + 1) * sizeof(uint32_t));
+		size_t round_size = render::RoundSizeUp16Bytes((num_box_instances + 1) * sizeof(uint32_t));
 		std::vector<uint32_t> instance_list_offsets(round_size / sizeof(uint32_t));
 		instance_list_offsets[0] = static_cast<uint32_t>(num_box_instances); //First is the count
 		size_t begin_instance_offset = manager->GetGPUMemoryRenderModule()->GetStaticGPUMemoryOffset(instances_gpu_allocation);

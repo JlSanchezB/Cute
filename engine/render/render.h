@@ -20,7 +20,13 @@ namespace platform
 
 namespace render
 {
-	inline size_t RoundSizeTo16Bytes(size_t size)
+	template<typename TYPE>
+	inline TYPE RoundOffsetDown16Bytes(TYPE offset)
+	{
+		return (((offset) >> 4)) << 4;
+	}
+	template<typename TYPE>
+	inline TYPE RoundSizeUp16Bytes(TYPE size)
 	{
 		return (((size - 1) >> 4) + 1) << 4;
 	}

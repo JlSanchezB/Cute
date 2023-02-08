@@ -186,7 +186,7 @@ namespace ecs
 
 			if (m_callback_function)
 			{
-				m_callback_function(DababaseTransaction::Deletion, internal_instance_index.zone_index, internal_instance_index.entity_type_index, internal_instance_index.instance_index, 0, 0, 0);
+				m_callback_function(DababaseTransaction::Delete, internal_instance_index.zone_index, internal_instance_index.entity_type_index, internal_instance_index.instance_index, 0, 0, 0);
 				if (needs_to_move)
 				{
 					m_callback_function(DababaseTransaction::Move, internal_instance_index.zone_index, internal_instance_index.entity_type_index, internal_instance_index.instance_index,
@@ -579,8 +579,22 @@ namespace ecs
 
 	
 			//Moves and deleted are using the count_created as well as entities created during the last frame, update count 
-			for (auto& instance_count : database->m_num_instances)
+			for (size_t i = 0; i < database->m_num_instances.size(); ++i)
 			{
+				auto& instance_count = database->m_num_instances[i];
+				
+				if (database->m_callback_function)
+				{	
+					//Call all the instances for add
+					ZoneType zone_index = static_cast<ZoneType>(i / database->m_num_entity_types);
+					EntityTypeType entity_type_index = static_cast<EntityTypeType>(i % database->m_num_entity_types);
+
+					for (InstanceIndexType instance_index = instance_count.count; instance_index < instance_count.count_created; ++instance_index)
+					{
+						database->m_callback_function(DababaseTransaction::Add, zone_index, entity_type_index, instance_index, 0, 0, 0);
+					}
+				}
+
 				instance_count.count = instance_count.count_created;
 			}
 

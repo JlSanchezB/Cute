@@ -90,7 +90,7 @@ void BoxCityGame::OnInit()
 	m_traffic_system.Init(m_device, m_render_system, m_GPU_memory_render_module);
 
 	//Register the callback transaction function in the ecs
-	ecs::RegisterCallbackTransaction<GameDatabase>([manager = &m_traffic_system](ecs::DababaseTransaction transaction, ecs::ZoneType zone, ecs::EntityTypeType entity_type, ecs::InstanceIndexType instance_index, ecs::ZoneType zone_ext, ecs::EntityTypeType entity_type_ext, ecs::InstanceIndexType instance_index_ext)
+	ecs::RegisterCallbackTransaction<GameDatabase>([manager = &m_traffic_system](const ecs::DababaseTransaction transaction, const ecs::ZoneType zone, const ecs::EntityTypeType entity_type, const ecs::InstanceIndexType instance_index, const ecs::ZoneType zone_ext, const ecs::EntityTypeType entity_type_ext, const ecs::InstanceIndexType instance_index_ext)
 		{
 			if (GameDatabase::EntityTypeIndex<CarType>() == entity_type)
 			{
@@ -253,17 +253,17 @@ void BoxCityGame::OnLogic(double total_time, float elapsed_time)
 		ecs::Tick<GameDatabase>();
 	}
 
-	{
-		PROFILE_SCOPE("BoxCity", 0xFFFF77FF, "UpdateTrafficInstancesLists");
-		//Process car moves after the zone movements
-		m_traffic_system.ProcessCarMoves();
-	}
-
 	m_frame_index++;
 }
 
 void BoxCityGame::OnRender(double total_time, float elapsed_time)
 {
+	{
+		PROFILE_SCOPE("BoxCity", 0xFFFF77FF, "UpdateTrafficInstancesLists");
+		//Process all the moves for all the updates and update the instance lists correctly (acumulated all the frames before)
+		m_traffic_system.ProcessCarMoves();
+	}
+
 	//Reset job allocators
 	m_render_job_allocator->Clear();
 
@@ -320,7 +320,7 @@ void BoxCityGame::OnRender(double total_time, float elapsed_time)
 		m_traffic_system.AppendVisibleInstanceLists(*camera, instance_list_offsets_array);
 
 		//Allocate dynamic gpu memory to upload the instance_list_offsets_array
-		size_t buffer_size = render::RoundSizeTo16Bytes((instance_list_offsets_array.size() + 1) * sizeof(uint32_t));
+		size_t buffer_size = render::RoundSizeUp16Bytes((instance_list_offsets_array.size() + 1) * sizeof(uint32_t));
 
 		uint32_t* gpu_instance_list_offset_array = reinterpret_cast<uint32_t*>(m_GPU_memory_render_module->AllocDynamicGPUMemory(m_device, buffer_size, render::GetGameFrameIndex(m_render_system)));
 

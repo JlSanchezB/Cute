@@ -21,7 +21,8 @@ namespace ecs
 
 	enum class DababaseTransaction
 	{
-		Deletion,
+		Add,
+		Delete,
 		Move
 	};
 
