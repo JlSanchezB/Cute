@@ -109,13 +109,16 @@ namespace
 		platform::UpdateType m_update_type = platform::UpdateType::Tick;
 
 		//If a logic/render mode is enabled, it is the frame lenght
-		float m_fixed_logic_frame_length;
+		float m_fixed_logic_frame_length = 0.f;
 
 		//Value used to calculate how much logic time goes between frames
 		double m_logic_time_accumulator = 0.f;
 
 		//Last logic tick elapsed time
 		float m_last_logic_elapsed_time = 0.f;
+
+		//Last render tick elapsed time
+		float m_last_render_elapsed_time = 0.f;
 
 		//Logic total time, this is the logic one
 		double m_logic_total_time = 0.f;
@@ -161,7 +164,8 @@ namespace
 
 		//Imgui fps smooth
 		float m_imgui_fps = 0.f;
-		float m_imgui_logic_fps = 0.f;
+		float m_imgui_logic_frame_lenght = 0.f;
+		float m_imgui_render_frame_lenght = 0.f;
 
 		constexpr std::array<platform::InputSlotState, 256> build_keyboard_conversion()
 		{
@@ -696,11 +700,14 @@ namespace
 		if (ImGui::Begin("Perf", &open, (corner != -1 ? ImGuiWindowFlags_NoMove : 0) | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav))
 		{
 			platform->m_imgui_fps = platform->m_imgui_fps * 0.95f + (1.f / max(0.001f, platform->m_last_elapsed_time)) * 0.05f;
-			platform->m_imgui_logic_fps = platform->m_imgui_logic_fps * 0.95f + (1.f / max(0.001f, platform->m_last_logic_elapsed_time)) * 0.05f;
 			ImGui::Text("FPS: %3.1f", platform->m_imgui_fps);
 			if (platform->m_update_type == platform::UpdateType::LogicRender)
 			{
-				ImGui::Text("LogicFPS: %3.1f/%3.1f", platform->m_imgui_logic_fps, 1.f / platform->m_fixed_logic_frame_length);
+				platform->m_imgui_logic_frame_lenght = platform->m_imgui_logic_frame_lenght * 0.95f + platform->m_last_logic_elapsed_time * 0.05f;
+				platform->m_imgui_render_frame_lenght = platform->m_imgui_render_frame_lenght * 0.95f + platform->m_last_render_elapsed_time * 0.05f;
+
+				ImGui::Text("Logic: %3.1fms", platform->m_imgui_logic_frame_lenght * 1000.f);
+				ImGui::Text("Render: %3.1fms", platform->m_imgui_render_frame_lenght * 1000.f);
 			}
 		}
 		ImGui::End();
@@ -993,24 +1000,22 @@ namespace platform
 							break;
 						}
 
-						if (game->IsWindowFocus())
+						//Update interpolated control, new frame and it can update data
+						platform::FrameInterpolationControl::s_frame = (platform::FrameInterpolationControl::s_frame + 1) % 2;
+						platform::FrameInterpolationControl::s_update_phase = true;
+
 						{
-							//Update interpolated control, new frame and it can update data
-							platform::FrameInterpolationControl::s_frame = (platform::FrameInterpolationControl::s_frame + 1) % 2;
-							platform::FrameInterpolationControl::s_update_phase = true;
-
-							{
-								PROFILE_SCOPE("Platform", 0xFFFF00FF, "GameLogic");
-								//Tick logic, with the logic time and the fixed frame lengh
-								game->OnLogic(g_Platform->m_logic_total_time, g_Platform->m_fixed_logic_frame_length);
-							}
-
-							platform::FrameInterpolationControl::s_update_phase = false;
-
-							//Move logic total time and the accumulator
-							g_Platform->m_logic_total_time += g_Platform->m_fixed_logic_frame_length;
-							g_Platform->m_logic_time_accumulator -= g_Platform->m_fixed_logic_frame_length;
+							PROFILE_SCOPE("Platform", 0xFFFF00FF, "GameLogic");
+							//Tick logic, with the logic time and the fixed frame lengh
+							game->OnLogic(g_Platform->m_logic_total_time, g_Platform->m_fixed_logic_frame_length);
 						}
+
+						platform::FrameInterpolationControl::s_update_phase = false;
+
+						//Move logic total time and the accumulator
+						g_Platform->m_logic_total_time += g_Platform->m_fixed_logic_frame_length;
+						g_Platform->m_logic_time_accumulator -= g_Platform->m_fixed_logic_frame_length;
+
 						//Calculate the length of the logic
 						LARGE_INTEGER end_logic_tick;
 						QueryPerformanceCounter(&end_logic_tick);
@@ -1048,10 +1053,17 @@ namespace platform
 					platform::FrameInterpolationControl::s_interpolate_phase = true;
 
 					{
+						LARGE_INTEGER begin_render_tick;
+						QueryPerformanceCounter(&begin_render_tick);
+
 						PROFILE_SCOPE("Platform", 0xFFFF00FF, "GameRender");
 
 						//Render
 						game->OnRender(g_Platform->m_total_time, g_Platform->m_last_elapsed_time);
+
+						LARGE_INTEGER end_render_tick;
+						QueryPerformanceCounter(&end_render_tick);
+						g_Platform->m_last_render_elapsed_time = static_cast<float>(static_cast<double>(end_render_tick.QuadPart - begin_render_tick.QuadPart) / static_cast<double>(g_Platform->m_frequency.QuadPart));
 					}
 
 					platform::FrameInterpolationControl::s_interpolate_phase = false;

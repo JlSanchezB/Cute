@@ -134,6 +134,12 @@ void BoxCityGame::OnDestroy()
 
 void BoxCityGame::OnLogic(double total_time, float elapsed_time)
 {
+	if (!IsWindowFocus() && m_camera_mode == CameraMode::Car && m_traffic_system.GetPlayerControlEnable())
+	{
+		//Skip update
+		return;
+	}
+
 	//Reset job allocators
 	m_update_job_allocator->Clear();
 

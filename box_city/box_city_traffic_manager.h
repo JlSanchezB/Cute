@@ -114,6 +114,11 @@ namespace BoxCityTrafficSystem
 			m_player_control_enable = enable;
 		}
 
+		bool GetPlayerControlEnable() const
+		{
+			return m_player_control_enable;
+		}
+
 		//The instance in the zone has change for some reason, the gpu offset needs to be reevaluated
 		void RegisterECSChange(uint32_t zone_index, uint32_t instance_index);
 
