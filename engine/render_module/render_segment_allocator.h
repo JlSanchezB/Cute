@@ -120,10 +120,6 @@ namespace render
 	{
 		PROFILE_SCOPE("Render", kRenderProfileColour, "SegmentAllocator::Alloc");
 		assert(size > 0);
-
-		//Always align the size to 16
-		size = (((size - 1) >> 4) + 1) << 4;
-
 		assert(size <= m_segment_size);
 
 		//Get frame

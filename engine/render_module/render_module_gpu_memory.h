@@ -54,6 +54,12 @@ namespace render
 		display::RootSignatureHandle m_copy_data_compute_root_signature;
 		display::PipelineStateHandle m_copy_data_compute_pipeline_state;
 
+		//Stats
+		size_t m_static_total_memory_allocated = 0;
+		size_t m_static_frame_memory_updated = 0;
+		size_t m_dynamic_frame_memory_allocated = 0;
+		size_t m_num_frame_render_commands = 0;
+		size_t m_num_frame_16bytes_copies = 0;
 
 		//An over approximation of max distance between CPU and GPU
 		//That is from the GAME thread to the GPU
@@ -92,6 +98,7 @@ namespace render
 		void Init(display::Device* device, System* system) override;
 		void Shutdown(display::Device* device, System* system) override;
 		void BeginFrame(display::Device* device, System* system, uint64_t cpu_frame_index, uint64_t freed_frame_index) override;
+		void DisplayImguiStats() override;
 
 		//Allocate a buffer in the static gpu memory
 		AllocHandle AllocStaticGPUMemory(display::Device* device, const size_t size, const void* data, const uint64_t frame_index);

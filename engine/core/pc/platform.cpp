@@ -153,6 +153,9 @@ namespace
 		//Imgui display stats
 		bool m_imgui_display_stats = false;
 
+		//Imgui render stats
+		bool m_imgui_render_stats = false;
+
 		//Imgui render log
 		bool m_imgui_log_enable = false;
 
@@ -726,7 +729,8 @@ namespace
 					ImGui::Checkbox("Show FPS", &g_Platform->m_imgui_fps_enable);
 					ImGui::Checkbox("Show Log", &g_Platform->m_imgui_log_enable);
 					ImGui::Checkbox("Show Imgui Demo", &g_Platform->m_imgui_demo_enable);
-					ImGui::Checkbox("Display Stats", &g_Platform->m_imgui_display_stats);
+					if (g_Platform->m_device) ImGui::Checkbox("Display Stats", &g_Platform->m_imgui_display_stats);
+					if (g_Platform->m_render_system) ImGui::Checkbox("Render Stats", &g_Platform->m_imgui_render_stats);
 					ImGui::Checkbox("Show Control Variables", &g_Platform->m_imgui_control_variables_enable);
 					ImGui::Checkbox("Show Counters", &g_Platform->m_imgui_counters_enable);
 					ImGui::EndMenu();
@@ -746,6 +750,11 @@ namespace
 			if (g_Platform->m_imgui_display_stats && g_Platform->m_device)
 			{
 				display::DisplayImguiStats(g_Platform->m_device, &g_Platform->m_imgui_display_stats);
+			}
+
+			if (g_Platform->m_imgui_render_stats && g_Platform->m_render_system)
+			{
+				render::DisplayImguiStats(g_Platform->m_render_system, &g_Platform->m_imgui_render_stats);
 			}
 
 			if (g_Platform->m_imgui_log_enable)

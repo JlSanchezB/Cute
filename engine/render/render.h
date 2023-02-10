@@ -46,6 +46,7 @@ namespace render
 		virtual void Shutdown(display::Device* device, System* system) {};
 		virtual void BeginFrame(display::Device* device, System* system, uint64_t cpu_frame_index, uint64_t freed_frame_index) {};
 		virtual void EndFrame(display::Device* device, System* system) {};
+		virtual void DisplayImguiStats() {};
 	};
 
 	//Context used for rendering a pass
@@ -203,6 +204,9 @@ namespace render
 
 		return dynamic_cast<MODULE*>(GetModule(system, name));
 	}
+
+	//Display stats
+	void DisplayImguiStats(System* system, bool* activated);
 }
 
 #endif //RENDER_H_

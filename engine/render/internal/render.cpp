@@ -1287,6 +1287,18 @@ namespace render
 		system->m_modules.Insert(name, std::move(module));
 	}
 
+	void DisplayImguiStats(System* system, bool* activated)
+	{
+		if (ImGui::Begin("Render Stats", activated, ImGuiWindowFlags_AlwaysAutoResize))
+		{
+			for (const auto& module : system->m_modules)
+			{
+				module.second->DisplayImguiStats();
+			}
+			ImGui::End();
+		}
+	}
+
 	bool AddGameResource(System * system, const ResourceName& name, std::unique_ptr<Resource>&& resource, const std::optional<display::TranstitionState>& current_access)
 	{
 		return system->AddResource(name, std::move(resource), ResourceSource::Game, current_access);

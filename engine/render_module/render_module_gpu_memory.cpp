@@ -3,6 +3,7 @@
 #include "render/render_resource.h"
 #include "render/render_helper.h"
 #include <core/profile.h>
+#include <ext/imgui/imgui.h>
 
 namespace render
 {
@@ -118,9 +119,28 @@ namespace render
 		m_static_gpu_memory_allocator.Sync(freed_frame_index);
 	}
 
+	void GPUMemoryRenderModule::DisplayImguiStats()
+	{
+		ImGui::Text("Static total memory allocated (%zu)", m_static_total_memory_allocated);
+		ImGui::Text("Static frame memory updated (%zu)", m_static_frame_memory_updated);
+		ImGui::Text("Dynamic frame memory allocated (%zu)", m_dynamic_frame_memory_allocated);
+		ImGui::Text("Num frame render commands (%zu)", m_num_frame_render_commands);
+		ImGui::Text("Num frame 16bytes copies (%zu)", m_num_frame_16bytes_copies);
+
+		m_dynamic_frame_memory_allocated = 0;
+		m_static_frame_memory_updated = 0;
+		m_num_frame_render_commands = 0;
+		m_num_frame_16bytes_copies = 0;
+	}
+
 	void* GPUMemoryRenderModule::AllocDynamicGPUMemory(display::Device* device, const size_t size, const uint64_t frame_index)
 	{
+		assert(size > 0);
+		assert(size % 16 == 0);
+
 		size_t offset = m_dynamic_gpu_memory_allocator.Alloc(size, frame_index);
+
+		m_dynamic_frame_memory_allocated += size;
 
 		//Return the memory address inside the resource
 		return reinterpret_cast<uint8_t*>(display::GetResourceMemoryBuffer(device, m_dynamic_gpu_memory_buffer)) + offset;
@@ -128,7 +148,12 @@ namespace render
 
 	AllocHandle GPUMemoryRenderModule::AllocStaticGPUMemory(display::Device* device, const size_t size, const void* data, const uint64_t frame_index)
 	{
+		assert(size > 0);
+		assert(size % 16 == 0);
+
 		AllocHandle handle = m_static_gpu_memory_allocator.Alloc(size);
+
+		m_static_total_memory_allocated += size;
 
 		if (data)
 		{
@@ -140,6 +165,8 @@ namespace render
 
 	void GPUMemoryRenderModule::DeallocStaticGPUMemory(display::Device* device, AllocHandle& handle, const uint64_t frame_index)
 	{
+		m_static_total_memory_allocated -= m_static_gpu_memory_allocator.Get(handle).size;
+
 		m_static_gpu_memory_allocator.Dealloc(handle, frame_index);
 	}
 
@@ -149,6 +176,8 @@ namespace render
 		assert(size % 16 == 0);
 		//Destination size needs to be aligned to float4
 		size_t dest_size = size;
+
+		m_static_frame_memory_updated += size;
 
 		//Data gets copied in the dynamic gpu memory
 		void* gpu_memory = AllocDynamicGPUMemory(device, dest_size, frame_index);
@@ -206,6 +235,8 @@ namespace render
 
 				data.clear();
 			});
+
+		m_num_frame_render_commands = copy_commands.size();
 
 		if (copy_commands.size() > 0)
 		{
@@ -280,6 +311,8 @@ namespace render
 				desc.group_count_y = desc.group_count_z = 1;
 				desc.group_count_x = static_cast<uint32_t>(((number_of_float4_copies - 1) / 64) + 1);
 				display_context->ExecuteCompute(desc);
+
+				m_num_frame_16bytes_copies += number_of_float4_copies;
 
 				begin_command = last_command;
 			}
