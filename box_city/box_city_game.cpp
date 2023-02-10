@@ -6,8 +6,9 @@ PROFILE_DEFINE_MARKER(g_profile_marker_UpdateAttachments, "Main", 0xFFFFAAAA, "B
 PROFILE_DEFINE_MARKER(g_profile_marker_Culling, "Main", 0xFFFFAAAA, "BoxCulling");
 PROFILE_DEFINE_MARKER(g_profile_marker_Car_Culling, "Main", 0xFFFFAAAA, "CarCulling");
 
-COUNTER(c_Culled_Boxes, "Box City", "Render Boxes", true);
-COUNTER(c_Culled_Cars, "Box City", "Render Cars", true);
+COUNTER(c_InstancesLists_Summitted, "Box City", "InstancesLists summitted to GPU", true);
+COUNTER(c_Car_Interpolated, "Box City", "Car interpolated for render", true);
+COUNTER(c_Building_Interpolated, "Box City", "Buildings interpolated for render", true);
 
 void BoxCityGame::OnInit()
 {
@@ -325,6 +326,8 @@ void BoxCityGame::OnRender(double total_time, float elapsed_time)
 		m_tile_manager.AppendVisibleInstanceLists(*camera, instance_list_offsets_array);
 		m_traffic_system.AppendVisibleInstanceLists(*camera, instance_list_offsets_array);
 
+		COUNTER_SET(c_InstancesLists_Summitted, instance_list_offsets_array.size());
+
 		//Allocate dynamic gpu memory to upload the instance_list_offsets_array
 		size_t buffer_size = render::RoundSizeUp16Bytes((instance_list_offsets_array.size() + 1) * sizeof(uint32_t));
 
@@ -367,6 +370,8 @@ void BoxCityGame::OnRender(double total_time, float elapsed_time)
 
 				//Only the first 3 float4
 				render_gpu_memory_module->UpdateStaticGPUMemory(device, gpu_handle, &gpu_box_instance, 3 * sizeof(glm::vec4), render_frame_index, box_gpu_handle.offset_gpu_allocator * sizeof(GPUBoxInstance));
+
+				COUNTER_INC(c_Building_Interpolated);
 			}
 		}, m_tile_manager.GetCameraBitSet(*camera), &g_profile_marker_Culling);
 
@@ -388,6 +393,8 @@ void BoxCityGame::OnRender(double total_time, float elapsed_time)
 
 				//Only the first 3 float4
 				render_gpu_memory_module->UpdateStaticGPUMemory(device, traffic_manager->GetGPUHandle(), &gpu_box_instance, 3 * sizeof(glm::vec4), render_frame_index, car_gpu_index.gpu_slot * sizeof(GPUBoxInstance));
+
+				COUNTER_INC(c_Car_Interpolated);
 			}
 		}, m_traffic_system.GetCameraBitSet(*camera), & g_profile_marker_Car_Culling);
 

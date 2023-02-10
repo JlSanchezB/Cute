@@ -9,10 +9,12 @@
 #include <job/job_helper.h>
 #include <ecs/entity_component_job_helper.h>
 #include <core/control_variables.h>
+#include <core/counters.h>
 #include "box_city_car_control.h"
 
 PROFILE_DEFINE_MARKER(g_profile_marker_Car_Update, "Main", 0xFFFFAAAA, "CarUpdate");
 CONTROL_VARIABLE_BOOL(c_traffic_full_instance_list_upload, false, "TrafficSystem", "Upload all invalidated instance_list");
+COUNTER(c_Car_Summitted, "Box City", "Car summitted to the GPU", true);
 
 namespace BoxCityTrafficSystem
 {
@@ -241,6 +243,8 @@ namespace BoxCityTrafficSystem
 			{
 				size_t instance_list_offset = m_GPU_memory_render_module->GetStaticGPUMemoryOffset(tile.m_instances_list_handle);
 				instance_lists_offsets_array.push_back(static_cast<uint32_t>(instance_list_offset));
+
+				COUNTER_INC_VALUE(c_Car_Summitted, static_cast<uint32_t>(ecs::GetNumInstances<GameDatabase, CarType>(tile.m_zone_index)));
 			}
 		}
 	}

@@ -10,6 +10,7 @@
 
 COUNTER(c_Blocks_Count, "Box City", "Number of Blocks", false);
 COUNTER(c_Panels_Count, "Box City", "Number of Panels", false);
+COUNTER(c_Building_Summitted, "Box City", "Building summitted to the GPU", true);
 
 namespace
 {
@@ -749,6 +750,8 @@ namespace BoxCityTileSystem
 			{
 				size_t instance_list_offset = manager->GetGPUMemoryRenderModule()->GetStaticGPUMemoryOffset(lod_group.m_instance_list_gpu_allocation);
 				instance_lists_offsets_array.push_back(static_cast<uint32_t>(instance_list_offset));
+
+				COUNTER_INC_VALUE(c_Building_Summitted, static_cast<uint32_t>(lod_group.instances.size()));
 			}
 		}
 	}
