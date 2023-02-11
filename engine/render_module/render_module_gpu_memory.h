@@ -55,9 +55,12 @@ namespace render
 		display::PipelineStateHandle m_copy_data_compute_pipeline_state;
 
 		//Stats
-		size_t m_static_total_memory_allocated = 0;
-		size_t m_static_frame_memory_updated = 0;
-		size_t m_dynamic_frame_memory_allocated = 0;
+		std::atomic<size_t> m_static_total_memory_allocated = 0;
+		std::atomic<size_t> m_static_frame_memory_updated = 0;
+		std::atomic<size_t> m_dynamic_frame_memory_allocated = 0;
+		std::atomic<size_t> m_static_frame_allocations = 0;
+		std::atomic<size_t> m_static_frame_deallocations = 0;
+		std::atomic<size_t> m_dynamic_frame_allocations = 0;
 		size_t m_num_frame_render_commands = 0;
 		size_t m_num_frame_16bytes_copies = 0;
 

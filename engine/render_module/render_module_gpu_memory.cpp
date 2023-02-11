@@ -124,17 +124,23 @@ namespace render
 	{
 		char buffer[1024];
 
-		helpers::FormatMemory(buffer, 1024, m_static_total_memory_allocated);
+		helpers::FormatMemory(buffer, 1024, m_static_total_memory_allocated.load());
 		ImGui::Text("Static total memory allocated (%s)", buffer);
-		helpers::FormatMemory(buffer, 1024, m_static_frame_memory_updated);
+		helpers::FormatMemory(buffer, 1024, m_static_frame_memory_updated.load());
 		ImGui::Text("Static frame memory updated (%s)", buffer);
-		helpers::FormatMemory(buffer, 1024, m_dynamic_frame_memory_allocated);
+		helpers::FormatMemory(buffer, 1024, m_dynamic_frame_memory_allocated.load());
 		ImGui::Text("Dynamic frame memory allocated (%s)", buffer);
+		ImGui::Text("Static frame allocations (%zu)", m_static_frame_allocations.load());
+		ImGui::Text("Static frame deallocations (%zu)", m_static_frame_deallocations.load());
+		ImGui::Text("Dynamic frame allocations (%zu)", m_dynamic_frame_allocations.load());
 		ImGui::Text("Num frame render commands (%zu)", m_num_frame_render_commands);
 		ImGui::Text("Num frame 16bytes copies (%zu)", m_num_frame_16bytes_copies);
 
 		m_dynamic_frame_memory_allocated = 0;
 		m_static_frame_memory_updated = 0;
+		m_static_frame_allocations = 0;
+		m_dynamic_frame_allocations = 0;
+		m_static_frame_deallocations = 0;
 		m_num_frame_render_commands = 0;
 		m_num_frame_16bytes_copies = 0;
 	}
@@ -147,6 +153,7 @@ namespace render
 		size_t offset = m_dynamic_gpu_memory_allocator.Alloc(size, frame_index);
 
 		m_dynamic_frame_memory_allocated += size;
+		m_dynamic_frame_allocations++;
 
 		//Return the memory address inside the resource
 		return reinterpret_cast<uint8_t*>(display::GetResourceMemoryBuffer(device, m_dynamic_gpu_memory_buffer)) + offset;
@@ -160,6 +167,7 @@ namespace render
 		AllocHandle handle = m_static_gpu_memory_allocator.Alloc(size);
 
 		m_static_total_memory_allocated += size;
+		m_static_frame_allocations++;
 
 		if (data)
 		{
@@ -172,6 +180,7 @@ namespace render
 	void GPUMemoryRenderModule::DeallocStaticGPUMemory(display::Device* device, AllocHandle& handle, const uint64_t frame_index)
 	{
 		m_static_total_memory_allocated -= m_static_gpu_memory_allocator.Get(handle).size;
+		m_static_frame_deallocations++;
 
 		m_static_gpu_memory_allocator.Dealloc(handle, frame_index);
 	}
