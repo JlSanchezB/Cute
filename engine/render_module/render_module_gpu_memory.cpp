@@ -4,6 +4,7 @@
 #include "render/render_helper.h"
 #include <core/profile.h>
 #include <ext/imgui/imgui.h>
+#include <helpers/imgui_helper.h>
 
 namespace render
 {
@@ -121,9 +122,14 @@ namespace render
 
 	void GPUMemoryRenderModule::DisplayImguiStats()
 	{
-		ImGui::Text("Static total memory allocated (%zu)", m_static_total_memory_allocated);
-		ImGui::Text("Static frame memory updated (%zu)", m_static_frame_memory_updated);
-		ImGui::Text("Dynamic frame memory allocated (%zu)", m_dynamic_frame_memory_allocated);
+		char buffer[1024];
+
+		helpers::FormatMemory(buffer, 1024, m_static_total_memory_allocated);
+		ImGui::Text("Static total memory allocated (%s)", buffer);
+		helpers::FormatMemory(buffer, 1024, m_static_frame_memory_updated);
+		ImGui::Text("Static frame memory updated (%s)", buffer);
+		helpers::FormatMemory(buffer, 1024, m_dynamic_frame_memory_allocated);
+		ImGui::Text("Dynamic frame memory allocated (%s)", buffer);
 		ImGui::Text("Num frame render commands (%zu)", m_num_frame_render_commands);
 		ImGui::Text("Num frame 16bytes copies (%zu)", m_num_frame_16bytes_copies);
 

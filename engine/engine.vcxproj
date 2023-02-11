@@ -565,6 +565,7 @@
     <ClInclude Include="helpers\camera.h" />
     <ClInclude Include="helpers\collision.h" />
     <ClInclude Include="helpers\grid3D.h" />
+    <ClInclude Include="helpers\imgui_helper.h" />
     <ClInclude Include="helpers\interpolated.h" />
     <ClInclude Include="job\job.h" />
     <ClInclude Include="job\job_queue.h" />

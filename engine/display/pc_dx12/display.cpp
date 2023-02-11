@@ -4,6 +4,7 @@
 #include <locale.h>
 #include <core/profile.h>
 #include <fstream>
+#include <helpers/imgui_helper.h>
 
 extern "C" { __declspec(dllexport) extern const UINT D3D12SDKVersion = 608; }
 extern "C" { __declspec(dllexport) extern const char* D3D12SDKPath = u8".\\D3D12\\"; }
@@ -117,7 +118,9 @@ namespace display
 			ImGui::Text("Resolution (%i,%i), frames (%i)", device->m_width, device->m_height, device->m_frame_resources.size());
 			ImGui::Text("windowed(%s), tearing(%s), vsync(%s)", (device->m_windowed) ? "true" : "false", (device->m_tearing) ? "true" : "false", (device->m_vsync) ? "true" : "false");
 			ImGui::Separator();
-			ImGui::Text("Uploaded memory each frame (%zu)", device->uploaded_memory_frame);
+			char buffer[1024];
+			helpers::FormatMemory(buffer, 1024, device->uploaded_memory_frame);
+			ImGui::Text("Uploaded memory each frame (%s)", buffer);
 			ImGui::Separator();
 			ImGui::Text("Command list handles (%zu/%zu)", device->m_command_list_pool.Size(), device->m_command_list_pool.MaxSize());
 			ImGui::Text("Render target handles (%zu/%zu)", device->m_render_target_pool.Size(), device->m_render_target_pool.MaxSize());
