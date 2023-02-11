@@ -326,7 +326,7 @@ void BoxCityGame::OnRender(double total_time, float elapsed_time)
 		m_tile_manager.AppendVisibleInstanceLists(*camera, instance_list_offsets_array);
 		m_traffic_system.AppendVisibleInstanceLists(*camera, instance_list_offsets_array);
 
-		COUNTER_SET(c_InstancesLists_Summitted, instance_list_offsets_array.size());
+		COUNTER_SET(c_InstancesLists_Summitted, static_cast<uint32_t>(instance_list_offsets_array.size()));
 
 		//Allocate dynamic gpu memory to upload the instance_list_offsets_array
 		size_t buffer_size = render::RoundSizeUp16Bytes((instance_list_offsets_array.size() + 1) * sizeof(uint32_t));

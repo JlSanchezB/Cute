@@ -7,7 +7,6 @@
 #include <core/profile.h>
 #include "render_pass.h"
 #include <core/control_variables.h>
-#include <core/counters.h>
 
 #include <cassert>
 #include <stdarg.h>
@@ -20,9 +19,6 @@ template<class... Ts> overloaded(Ts...)->overloaded<Ts...>;
 
 CONTROL_VARIABLE_RENDER(uint32_t, c_parallel_sort_render_item_min_count, 1000, 0, 1000000, "Render", "Parallel Sort Render Item Min Count");
 CONTROL_VARIABLE_BOOL_RENDER(c_parallel_sort_render_item_enable, true, "Render", "Parallel Sort Render Item Enable");
-
-COUNTER_RENDER(c_render_items_count, "Render", "Render Items Count", true);
-COUNTER_RENDER(c_point_of_views_count, "Render", "Point of Views Count", false);
 
 namespace
 {
@@ -807,7 +803,7 @@ namespace render
 			
 			command_list_to_execute.push_back(m_render_command_list);
 		}
-		COUNTER_SET(c_point_of_views_count, static_cast<uint32_t>(render_frame.m_point_of_views.size()));
+
 		//Sort all render items for each point of view, it can run in parallel
 		for (auto& point_of_view : render_frame.m_point_of_views)
 		{
@@ -825,8 +821,6 @@ namespace render
 				{
 					num_render_items += data.size();
 				});
-
-			COUNTER_INC_VALUE(c_render_items_count, static_cast<uint32_t>(num_render_items));
 
 			if (!m_job_system || !c_parallel_sort_render_item_enable || (num_render_items < c_parallel_sort_render_item_min_count))
 			{
@@ -1291,6 +1285,12 @@ namespace render
 	{
 		if (ImGui::Begin("Render Stats", activated, ImGuiWindowFlags_AlwaysAutoResize))
 		{
+			auto& points_of_view = system->m_frame_data[system->m_render_frame_index % 2].m_point_of_views;
+			ImGui::Text("Num of point of views (%zu)", points_of_view.size());
+			for (auto& point_of_view : points_of_view)
+			{
+				ImGui::Text("Point of View (%s): Num of render items (%zu)", point_of_view.m_name.GetValue(), point_of_view.GetSortedRenderItems().m_sorted_render_items.size());
+			}
 			for (const auto& module : system->m_modules)
 			{
 				module.second->DisplayImguiStats();

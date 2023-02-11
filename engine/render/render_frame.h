@@ -136,6 +136,7 @@ namespace render
 		friend class Frame;
 		friend struct System;
 		friend class DrawRenderItemsPass;
+		friend void DisplayImguiStats(System*, bool*);
 	};
 
 	//Render pass that the render needs to execute
@@ -190,6 +191,7 @@ namespace render
 		job::ThreadData<CommandBuffer> m_begin_frame_command_buffer;
 
 		friend struct System;
+		friend void DisplayImguiStats(System*, bool*);
 	};
 
 	inline void PointOfView::Reset()
