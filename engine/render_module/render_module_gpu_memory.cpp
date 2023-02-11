@@ -123,9 +123,11 @@ namespace render
 	void GPUMemoryRenderModule::DisplayImguiStats()
 	{
 		char buffer[1024];
+		char buffer2[1024];
 
 		helpers::FormatMemory(buffer, 1024, m_static_total_memory_allocated.load());
-		ImGui::Text("Static total memory allocated (%s)", buffer);
+		helpers::FormatMemory(buffer2, 1024, m_static_gpu_memory_size);
+		ImGui::Text("Static total memory allocated (%s/%s)", buffer, buffer2);
 		helpers::FormatMemory(buffer, 1024, m_static_frame_memory_updated.load());
 		ImGui::Text("Static frame memory updated (%s)", buffer);
 		helpers::FormatMemory(buffer, 1024, m_dynamic_frame_memory_allocated.load());
@@ -135,6 +137,12 @@ namespace render
 		ImGui::Text("Dynamic frame allocations (%zu)", m_dynamic_frame_allocations.load());
 		ImGui::Text("Num frame render commands (%zu)", m_num_frame_render_commands);
 		ImGui::Text("Num frame 16bytes copies (%zu)", m_num_frame_16bytes_copies);
+
+		SegmentAllocator::Stats stats;
+		m_dynamic_gpu_memory_allocator.CollectStats(stats);
+		helpers::FormatMemory(buffer, 1024, stats.m_memory_alive);
+		helpers::FormatMemory(buffer2, 1024, m_dynamic_gpu_memory_size);
+		ImGui::Text("Dynamic memory alive (needed by the GPU) (%s/%s)", buffer, buffer2);
 
 		m_dynamic_frame_memory_allocated = 0;
 		m_static_frame_memory_updated = 0;

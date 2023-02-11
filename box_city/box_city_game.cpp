@@ -55,8 +55,8 @@ void BoxCityGame::OnInit()
 	//Register gpu memory render module
 	render::GPUMemoryRenderModule::GPUMemoryDesc gpu_memory_desc;
 	gpu_memory_desc.static_gpu_memory_size = 50 * 1024 * 1024;
-	gpu_memory_desc.dynamic_gpu_memory_size = 200 * 1024 * 1024;
-	gpu_memory_desc.dynamic_gpu_memory_segment_size = 5 * 1024 * 1024;
+	gpu_memory_desc.dynamic_gpu_memory_size = 40 * 1024 * 1024;
+	gpu_memory_desc.dynamic_gpu_memory_segment_size = 64 * 1024;
 
 	m_GPU_memory_render_module = render::RegisterModule<render::GPUMemoryRenderModule>(m_render_system, "GPUMemory"_sh32, gpu_memory_desc);
 
@@ -186,7 +186,8 @@ void BoxCityGame::OnLogic(double total_time, float elapsed_time)
 	}
 	
 	//Update tile manager
-	m_tile_manager.Update(camera->GetPosition());
+	m_tile_manager.Update(camera->GetPosition(), m_first_logic_tick_after_render);
+	m_first_logic_tick_after_render = false;
 
 	//Update traffic manager
 	m_traffic_system.Update(&m_tile_manager, camera->GetPosition());
@@ -265,6 +266,8 @@ void BoxCityGame::OnLogic(double total_time, float elapsed_time)
 
 void BoxCityGame::OnRender(double total_time, float elapsed_time)
 {
+	m_first_logic_tick_after_render = true;
+
 	{
 		PROFILE_SCOPE("BoxCity", 0xFFFF77FF, "UpdateTrafficInstancesLists");
 		//Process all the moves for all the updates and update the instance lists correctly (acumulated all the frames before)

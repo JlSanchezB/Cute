@@ -42,7 +42,7 @@ namespace BoxCityTileSystem
 		m_loading_thread.reset( new core::Thread(L"TileLoading Thread", core::ThreadPriority::Background, &LoadingThreadRun, this));
 
 		//Simulate one frame in the center, it has to create all tiles around origin
-		Update(glm::vec3(0.f, 0.f, 0.f));
+		Update(glm::vec3(0.f, 0.f, 0.f), true);
 
 	}
 
@@ -72,9 +72,17 @@ namespace BoxCityTileSystem
 		}
 	}
 
-	void Manager::Update(const glm::vec3& camera_position)
+	void Manager::Update(const glm::vec3& camera_position, bool first_logic_tick_after_render)
 	{
 		PROFILE_SCOPE("BoxCityTileManager", 0xFFFF77FF, "Update");
+
+		if (!first_logic_tick_after_render)
+		{
+			//We should not tick more than one each render
+			//It can create a lot of data that needs to sync with the GPU, filling a lot of the upload buffers
+			return;
+		}
+
 		//Check if the camera is still in the same tile, using some fugde factor
 		constexpr float fudge_factor = 0.05f;
 		float min_x = (m_camera_tile_position.i - fudge_factor) * kTileSize;

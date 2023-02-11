@@ -80,6 +80,9 @@ public:
 	//Frame index
 	uint32_t m_frame_index = 0;
 
+	//First logic tick after render
+	bool m_first_logic_tick_after_render = true;
+
 	//Sun direction
 	glm::vec2 m_sun_direction_angles = glm::vec2(45.f, 45.f);
 

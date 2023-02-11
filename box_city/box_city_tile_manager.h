@@ -89,8 +89,8 @@ namespace BoxCityTileSystem
 		//Shutdown
 		void Shutdown();
 
-		//Update, it will check if new tiles need to be created/move because the camera has moved
-		void Update(const glm::vec3& camera_position);
+		//Update, it will check if new tiles need to be created/move because the camera has moved, as we send a to the GPU, we really only do it in the first logic tick after render
+		void Update(const glm::vec3& camera_position, bool first_logic_tick_after_render);
 
 		//Get GPU alloc handle from zoneID
 		render::AllocHandle& GetGPUHandle(uint32_t zoneID, uint32_t lod_group);

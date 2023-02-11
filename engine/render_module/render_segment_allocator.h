@@ -52,6 +52,14 @@ namespace render
 		//Allocs memory in the allocation for the frame index
 		size_t Alloc(size_t size, uint64_t allocation_frame_index);
 
+		struct Stats
+		{
+			size_t m_memory_alive= 0; //Memory that is allocated and needed for all the frames in the GPU
+		};
+
+		//Collect stats
+		void CollectStats(Stats& stats);
+
 	private:
 
 		//An over approximation of max distance between CPU and GPU
@@ -221,6 +229,24 @@ namespace render
 					allocation.segment_index = kInvalidSegment;
 				}
 			});
+	}
+
+	inline void SegmentAllocator::CollectStats(Stats& stats)
+	{
+		stats = Stats();
+
+		for (size_t i = 0; i < kMaxFrames; ++i)
+		{
+			auto& frame = m_frames[i];
+			if (frame.frame_index > 0) //Check if the frame is active
+			{
+				stats.m_memory_alive += frame.live_segments.size() * m_segment_size;
+				frame.active_allocations.Visit([&](ActiveAllocation& allocation)
+					{
+						stats.m_memory_alive += m_segment_size;
+					});
+			}
+		}
 	}
 }
 #endif //RENDER_SEGMENT_ALLOCATOR_H_
