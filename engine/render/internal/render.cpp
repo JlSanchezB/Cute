@@ -6,7 +6,6 @@
 #include <render/render_resource.h>
 #include <core/profile.h>
 #include "render_pass.h"
-#include <core/control_variables.h>
 
 #include <cassert>
 #include <stdarg.h>
@@ -15,10 +14,6 @@
 
 template<class... Ts> struct overloaded : Ts... { using Ts::operator()...; };
 template<class... Ts> overloaded(Ts...)->overloaded<Ts...>;
-
-
-CONTROL_VARIABLE_RENDER(uint32_t, c_parallel_sort_render_item_min_count, 1000, 0, 1000000, "Render", "Parallel Sort Render Item Min Count");
-CONTROL_VARIABLE_BOOL_RENDER(c_parallel_sort_render_item_enable, true, "Render", "Parallel Sort Render Item Enable");
 
 namespace
 {
@@ -822,7 +817,7 @@ namespace render
 					num_render_items += data.size();
 				});
 
-			if (!m_job_system || !c_parallel_sort_render_item_enable || (num_render_items < c_parallel_sort_render_item_min_count))
+			if (!m_job_system || !m_parallel_sort_render_items || (num_render_items < m_parallel_sort_render_item_min_count))
 			{
 				//Sort in the render job, not a lot 
 
@@ -1283,14 +1278,19 @@ namespace render
 
 	void DisplayImguiStats(System* system, bool* activated)
 	{
-		if (ImGui::Begin("Render Stats", activated, ImGuiWindowFlags_AlwaysAutoResize))
+		if (ImGui::Begin("Render", activated, ImGuiWindowFlags_AlwaysAutoResize))
 		{
 			auto& points_of_view = system->m_frame_data[system->m_render_frame_index % 2].m_point_of_views;
 			ImGui::Text("Num of point of views (%zu)", points_of_view.size());
+			ImGui::Separator();
+			ImGui::Checkbox("Parallel sort render items", &system->m_parallel_sort_render_items);
+			ImGui::DragScalar("Parallel sort render items min count", ImGuiDataType_U32, &system->m_parallel_sort_render_item_min_count, 1.f);
+			ImGui::Separator();
 			for (auto& point_of_view : points_of_view)
 			{
 				ImGui::Text("Point of View (%s): Num of render items (%zu)", point_of_view.m_name.GetValue(), point_of_view.GetSortedRenderItems().m_sorted_render_items.size());
 			}
+			ImGui::Separator();
 			for (const auto& module : system->m_modules)
 			{
 				module.second->DisplayImguiStats();

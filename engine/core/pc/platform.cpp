@@ -755,7 +755,7 @@ namespace
 					ImGui::Checkbox("Show Log", &g_Platform->m_imgui_log_enable);
 					ImGui::Checkbox("Show Imgui Demo", &g_Platform->m_imgui_demo_enable);
 					if (g_Platform->m_device) ImGui::Checkbox("Display Stats", &g_Platform->m_imgui_display_stats);
-					if (g_Platform->m_render_system) ImGui::Checkbox("Render Stats", &g_Platform->m_imgui_render_stats);
+					if (g_Platform->m_render_system) ImGui::Checkbox("Render", &g_Platform->m_imgui_render_stats);
 					ImGui::Checkbox("Show Control Variables", &g_Platform->m_imgui_control_variables_enable);
 					ImGui::Checkbox("Show Counters", &g_Platform->m_imgui_counters_enable);
 					ImGui::EndMenu();

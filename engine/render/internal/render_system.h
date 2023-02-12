@@ -213,6 +213,9 @@ namespace render
 		//Container for the pool resources
 		std::vector<PoolResource> m_pool_resources;
 
+		bool m_parallel_sort_render_items = true;
+		uint32_t m_parallel_sort_render_item_min_count = 1000;
+
 		//Create render context
 		RenderContextInternal * CreateRenderContext(display::Device * device, const PassName& pass, const uint16_t pass_id, const PassInfo& pass_info, std::vector<std::string>& errors);
 

@@ -678,7 +678,7 @@ namespace ecs
 					ImGui::Text("Component (%s): Used Memory (%s)", database->m_components[i].name, buffer);
 				}
 				ImGui::Separator();
-				ImGui::Text("Num instances (%d)", total_num_instances);
+				ImGui::Text("Num instances (%zu)", total_num_instances);
 				helpers::FormatMemory(buffer, 256, total_memory);
 				ImGui::Text("Total memory used in components (%s)", buffer);
 				ImGui::Separator();
