@@ -86,8 +86,6 @@ public:
 	//Sun direction
 	glm::vec2 m_sun_direction_angles = glm::vec2(45.f, 45.f);
 
-	//Show ecs debug info
-	bool m_show_ecs_stats = false;
 
 	BoxCityGame()
 	{

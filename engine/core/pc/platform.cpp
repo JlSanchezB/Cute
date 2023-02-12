@@ -170,6 +170,32 @@ namespace
 		float m_imgui_logic_frame_lenght = 0.f;
 		float m_imgui_render_frame_lenght = 0.f;
 
+		//Imgui debug systems
+		struct ImguiDebugSystem
+		{
+			bool visible;
+			std::function<void(bool*)> function;
+
+			ImguiDebugSystem(std::function<void(bool*)>& _function):
+				function(_function), visible(false)
+			{
+			}
+			ImguiDebugSystem(ImguiDebugSystem&& a)
+			{
+				visible = a.visible;
+				function = a.function;
+			}
+			ImguiDebugSystem& operator=(ImguiDebugSystem&& a)
+			{
+				visible = a.visible;
+				function = a.function;
+
+				return *this;
+			}
+
+		};
+		core::FastMap<platform::ImguiDebugSystemName, ImguiDebugSystem> m_imgui_debug_systems;
+
 		constexpr std::array<platform::InputSlotState, 256> build_keyboard_conversion()
 		{
 			std::array<platform::InputSlotState, 256> table{};
@@ -734,6 +760,19 @@ namespace
 					ImGui::Checkbox("Show Counters", &g_Platform->m_imgui_counters_enable);
 					ImGui::EndMenu();
 				}
+
+				if (ImGui::BeginMenu("Debug Systems"))
+				{
+					g_Platform->m_imgui_debug_systems.VisitNamed([&](const platform::ImguiDebugSystemName& name, Platform::ImguiDebugSystem& debug_system)
+						{
+							char buffer[256];
+							sprintf_s(buffer, "Show %s", name.GetValue());
+							ImGui::Checkbox(name.GetValue(), &debug_system.visible);
+						});
+
+					ImGui::EndMenu();
+				}
+
 				//Call game to add it owns menus
 				game->OnAddImguiMenu();
 
@@ -770,6 +809,15 @@ namespace
 			{
 				g_Platform->m_imgui_counters_enable = core::RenderCounters();
 			}
+
+			//Render debug systems
+			g_Platform->m_imgui_debug_systems.Visit([&](Platform::ImguiDebugSystem& debug_system)
+				{
+					if (debug_system.visible)
+					{
+						debug_system.function(&debug_system.visible);
+					}
+				});
 
 			//Render game imgui
 			game->OnImguiRender();
@@ -882,6 +930,19 @@ namespace platform
 		g_Platform->m_game_show_cursor = show;
 
 		g_Platform->UpdateCursorVisibility();
+	}
+
+	void Game::RegisterImguiDebugSystem(const ImguiDebugSystemName& name, std::function<void(bool*)>&& function)
+	{
+		auto& it =  g_Platform->m_imgui_debug_systems.Find(name);
+		if (it)
+		{
+			//It has been already added
+			core::LogWarning("ImguiSystem (%s) already added, skipping last one", name.GetValue());
+			return;
+		}
+
+		g_Platform->m_imgui_debug_systems.Insert(name, std::forward<std::function<void(bool*)>>(function));
 	}
 
 	void Game::Present()

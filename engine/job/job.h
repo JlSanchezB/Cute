@@ -31,6 +31,8 @@ namespace job
 	System* CreateSystem(const SystemDesc& system_desc);
 	void DestroySystem(System*& system);
 
+	void RenderImguiDebug(System* system, bool* activated);
+
 	//Run all tasks in a single thread
 	void SetSingleThreadMode(System* system, bool single_thread_mode);
 	bool GetSingleThreadMode(System* system);

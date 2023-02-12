@@ -9,6 +9,7 @@
 #include <stdint.h>
 #include <vector>
 #include <helpers/interpolated.h>
+#include <core/string_hash.h>
 
 namespace display
 {
@@ -152,6 +153,8 @@ namespace platform
 		LogicRender //Each frame calls to OnLogic in fixed FPS and OnRender as much as it needs
 	};
 
+	using ImguiDebugSystemName = StringHash32<"ImguiDebugSystemName"_namespace>;
+
 	//Virtual interface that implements a game
 	class Game
 	{
@@ -178,6 +181,9 @@ namespace platform
 
 		//Show Cursor
 		void ShowCursor(bool show);
+
+		//Imgui debug systems
+		void RegisterImguiDebugSystem(const ImguiDebugSystemName& name, std::function<void(bool*)>&& function);
 
 		//Present 
 		//Needs to be called at the end of each tick

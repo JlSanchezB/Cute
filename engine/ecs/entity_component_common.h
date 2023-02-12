@@ -35,6 +35,7 @@ namespace ecs
 	{
 		size_t num_deferred_deletions;
 		size_t num_deferred_moves;
+		size_t num_deferred_creations;
 	};
 
 	namespace internal

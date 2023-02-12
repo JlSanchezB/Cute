@@ -4,6 +4,8 @@
 #include <memory>
 #include <core/profile.h>
 #include <job/job_helper.h>
+#include <ext/imgui/imgui.h>
+#include <helpers/imgui_helper.h>
 
 namespace ecs
 {
@@ -52,6 +54,7 @@ namespace ecs
 
 		//List of entity types
 		std::vector<EntityTypeMask> m_entity_types;
+		std::vector<const char*> m_entity_names;
 
 		//Flat list of all component containers (one virtual buffer for each)
 		//Dimensions are <Zone, EntityType, Component>
@@ -364,7 +367,7 @@ namespace ecs
 
 	namespace internal
 	{
-		Database* CreateDatabase(const DatabaseDesc & database_desc, const std::vector<Component>& components, const std::vector<EntityTypeMask> entity_types)
+		Database* CreateDatabase(const DatabaseDesc & database_desc, const std::vector<Component>& components, const std::vector<EntityTypeMask>& entity_types, const std::vector<const char*>& entity_names)
 		{
 			assert(database_desc.num_zones > 0);
 			assert(database_desc.num_zones < std::numeric_limits<ZoneType>::max());
@@ -390,6 +393,7 @@ namespace ecs
 
 			//Get all entity types
 			database->m_entity_types = entity_types;
+			database->m_entity_names = entity_names;
 
 			//Add the new indirection component to ALL the entity types
 			for (auto& entity_type : database->m_entity_types)
@@ -578,6 +582,8 @@ namespace ecs
 				});
 
 	
+			//Register creations
+			database->m_stats.num_deferred_creations = 0;
 			//Moves and deleted are using the count_created as well as entities created during the last frame, update count 
 			for (size_t i = 0; i < database->m_num_instances.size(); ++i)
 			{
@@ -589,11 +595,13 @@ namespace ecs
 					ZoneType zone_index = static_cast<ZoneType>(i / database->m_num_entity_types);
 					EntityTypeType entity_type_index = static_cast<EntityTypeType>(i % database->m_num_entity_types);
 
-					for (InstanceIndexType instance_index = instance_count.count; instance_index < instance_count.count_created; ++instance_index)
+					for (InstanceIndexType instance_index = static_cast<InstanceIndexType>(instance_count.count); instance_index < instance_count.count_created; ++instance_index)
 					{
 						database->m_callback_function(DababaseTransaction::Add, zone_index, entity_type_index, instance_index, 0, 0, 0);
 					}
 				}
+
+				database->m_stats.num_deferred_creations += (instance_count.count_created - instance_count.count);
 
 				instance_count.count = instance_count.count_created;
 			}
@@ -625,6 +633,61 @@ namespace ecs
 		{
 			assert(!database->m_locked);
 			stats = database->m_stats;
+		}
+
+		void RenderImguiStats(Database* database, bool* activated)
+		{
+			assert(!database->m_locked);
+
+			if (ImGui::Begin("ECS stats", activated))
+			{
+				char buffer[256];
+
+				ImGui::Text("Num zones (%d)", database->m_num_zones);
+				ImGui::Text("Num entity types (%d)", database->m_num_entity_types);
+				ImGui::Text("Num components (%d)", database->m_num_components);
+				ImGui::Separator();
+				size_t total_num_instances = 0;
+				size_t total_memory = 0;
+				std::vector<size_t> components_memory(database->m_num_components, 0);
+
+				for (EntityTypeType entity_type_index = 0; entity_type_index < database->m_num_entity_types; ++entity_type_index)
+				{
+					size_t count = 0;
+					size_t memory = 0;
+					for (ZoneType zone_index = 0; zone_index < database->m_num_zones; ++zone_index)
+					{
+						count += database->GetNumInstances(zone_index, entity_type_index);
+						for (ComponentType component_index = 0; component_index < database->m_num_components; ++component_index)
+						{
+							size_t storage_memory = database->GetStorage(zone_index, entity_type_index, component_index).GetCommitedSize();
+							memory += storage_memory;
+							components_memory[component_index] += storage_memory;
+						}
+					}
+					helpers::FormatMemory(buffer, 256, memory);
+					ImGui::Text("Entity type (%s): Num instances (%zu), Used Memory (%s)", database->m_entity_names[entity_type_index], count, buffer);
+
+					total_memory += memory;
+					total_num_instances += count;
+				}
+				ImGui::Separator();
+				for (size_t i = 0; i < database->m_num_components; ++i)
+				{
+					helpers::FormatMemory(buffer, 256, components_memory[i]);
+					ImGui::Text("Component (%s): Used Memory (%s)", database->m_components[i].name, buffer);
+				}
+				ImGui::Separator();
+				ImGui::Text("Num instances (%d)", total_num_instances);
+				helpers::FormatMemory(buffer, 256, total_memory);
+				ImGui::Text("Total memory used in components (%s)", buffer);
+				ImGui::Separator();
+				ImGui::Text("Num deferred deletions (%zu)", database->m_stats.num_deferred_deletions);
+				ImGui::Text("Num deferred moves (%zu)", database->m_stats.num_deferred_moves);
+				ImGui::Text("Num deferred creations (%zu)", database->m_stats.num_deferred_creations);
+
+				ImGui::End();
+			}
 		}
 		InstanceReference GetInstanceReference(Database* database, ZoneType zone_index, EntityTypeType entity_type, ComponentType component_index)
 		{

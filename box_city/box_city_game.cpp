@@ -41,6 +41,11 @@ void BoxCityGame::OnInit()
 	//Create job system
 	job::SystemDesc job_system_desc;
 	m_job_system = job::CreateSystem(job_system_desc);
+	RegisterImguiDebugSystem("Job System"_sh32, [&](bool* activated)
+		{
+			job::RenderImguiDebug(m_job_system, activated);
+		});
+
 
 	//Create Job allocator now that the job system is enabled
 	m_update_job_allocator = std::make_unique<job::JobAllocator<1024 * 1024>>();
@@ -75,6 +80,13 @@ void BoxCityGame::OnInit()
 
 	m_render_passes_loader.Load("box_city_render_passes.xml", m_render_system, m_device);
 
+	RegisterImguiDebugSystem("Render Pass Editor"_sh32, [&](bool* activated)
+		{
+			m_render_passes_loader.GetShowEditDescriptorFile() = *activated;
+			m_render_passes_loader.RenderImgui();
+			*activated = m_render_passes_loader.GetShowEditDescriptorFile();
+		});
+
 	//Get render priorities
 	m_box_render_priority = render::GetRenderItemPriority(m_render_system, "Box"_sh32);
 
@@ -83,6 +95,11 @@ void BoxCityGame::OnInit()
 	database_desc.num_max_entities_zone = 1024 * 1024;
 	database_desc.num_zones = m_tile_manager.GetNumTiles();
 	ecs::CreateDatabase<GameDatabase>(database_desc);
+
+	RegisterImguiDebugSystem("ECS stats"_sh32, [](bool* activated)
+		{
+			ecs::RenderImguiStats<GameDatabase>(activated);
+		});
 
 	m_fly_camera.SetNearFar(0.5f, 8000.f);
 	m_car_camera.SetNearFar(0.5f, 8000.f);
@@ -423,42 +440,11 @@ void BoxCityGame::OnAddImguiMenu()
 	//Add menu for modifying the render system descriptor file
 	if (ImGui::BeginMenu("BoxCity"))
 	{
-		m_render_passes_loader.GetShowEditDescriptorFile() = ImGui::MenuItem("Edit descriptor file");
-		bool single_frame_mode = job::GetSingleThreadMode(m_job_system);
-		if (ImGui::Checkbox("Single thread mode", &single_frame_mode))
-		{
-			job::SetSingleThreadMode(m_job_system, single_frame_mode);
-		}
 		ImGui::SliderFloat2("Sun Direction", reinterpret_cast<float*>(&m_sun_direction_angles), 0.f, 360.f);
-		m_show_ecs_stats = ImGui::MenuItem("Show ECS stats");
 		ImGui::EndMenu();
 	}
 }
 
 void BoxCityGame::OnImguiRender()
 {
-	m_render_passes_loader.RenderImgui();
-
-	if (m_show_ecs_stats)
-	{
-		if (!ImGui::Begin("Show ECS stats", &m_show_ecs_stats))
-		{
-			ImGui::End();
-			return;
-		}
-		ImGui::Text("Num city boxes (%zu)", ecs::GetNumInstances<GameDatabase, BoxType>());
-		ImGui::Text("Num animated city boxes (%zu)", ecs::GetNumInstances<GameDatabase, AnimatedBoxType>());
-		ImGui::Text("Num city panels (%zu)", ecs::GetNumInstances<GameDatabase, PanelType>());
-		ImGui::Text("Num attached city panels (%zu)", ecs::GetNumInstances<GameDatabase, AttachedPanelType>());
-		ImGui::Text("Num cars (%zu)", ecs::GetNumInstances<GameDatabase, CarType>());
-
-		ecs::DatabaseStats database_stats;
-		ecs::GetDatabaseStats<GameDatabase>(database_stats);
-
-		ImGui::Separator();
-		ImGui::Text("Num deferred deletions (%zu)", database_stats.num_deferred_deletions);
-		ImGui::Text("Num deferred moves (%zu)", database_stats.num_deferred_moves);
-
-		ImGui::End();
-	}
 }

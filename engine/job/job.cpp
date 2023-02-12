@@ -4,8 +4,9 @@
 #include <cassert>
 #include "job_queue.h"
 #include <cstdlib>
-#include "core/profile.h"
-#include "core/sync.h"
+#include <core/profile.h>
+#include <core/sync.h>
+#include <ext/imgui/imgui.h>
 
 namespace
 {
@@ -135,6 +136,10 @@ namespace job
 
 		size_t m_count_for_yield = 0;
 
+		//Stats
+		std::atomic<size_t> m_jobs_added = 0;
+		std::atomic<size_t> m_jobs_stolen = 0;
+
 		bool StealJob(size_t current_worker_id, Job& job)
 		{
 			//Get random value
@@ -232,6 +237,28 @@ namespace job
 		system = nullptr;
 	}
 
+	void RenderImguiDebug(System* system, bool* activated)
+	{
+		if (ImGui::Begin("Job System", activated))
+		{
+			ImGui::Text("Num workers (%zu)", g_num_workers);
+			ImGui::Separator();
+			ImGui::Text("Num jobs added (%zu)", system->m_jobs_added.load());
+			ImGui::Text("Num jobs stolen (%zu)", system->m_jobs_stolen.load());
+			ImGui::Separator();
+			bool single_frame_mode = job::GetSingleThreadMode(system);
+			if (ImGui::Checkbox("Single thread mode", &single_frame_mode))
+			{
+				job::SetSingleThreadMode(system, single_frame_mode);
+			}
+
+			system->m_jobs_added = 0;
+			system->m_jobs_stolen = 0;
+
+			ImGui::End();
+		}
+	}
+
 	void SetSingleThreadMode(System* system, bool single_thread_mode)
 	{
 		system->m_single_thread_mode = single_thread_mode;
@@ -244,6 +271,8 @@ namespace job
 
 	void AddJob(System * system, const JobFunction job, void* data, Fence& fence)
 	{
+		system->m_jobs_added++;
+
 		if (system->m_single_thread_mode)
 		{
 			//Just run the job
@@ -290,6 +319,7 @@ namespace job
 		//Try to steal from a random queue
 		if (m_system->StealJob(m_worker_index, job))
 		{
+			m_system->m_jobs_stolen++;
 			return true;
 		}
 

@@ -93,6 +93,7 @@ namespace ecs
 	{
 		size_t size;
 		size_t align;
+		const char* name;
 
 		//Move operator
 		void(*move_operator)(void*, void*);
@@ -106,6 +107,7 @@ namespace ecs
 		{
 			size = sizeof(COMPONENT);
 			align = alignof(COMPONENT);
+			name = typeid(COMPONENT).name();
 
 			move_operator = ComponentOperatorsDeclaration<COMPONENT>::Move;
 			destructor_operator = ComponentOperatorsDeclaration<COMPONENT>::Destructor;
@@ -124,7 +126,7 @@ namespace ecs
 	namespace internal
 	{
 		//Create database from a database description with the component lists
-		Database* CreateDatabase(const DatabaseDesc& database_desc, const std::vector<Component>& components, const std::vector<EntityTypeMask> entity_type_masks);
+		Database* CreateDatabase(const DatabaseDesc& database_desc, const std::vector<Component>& components, const std::vector<EntityTypeMask>& entity_type_masks, const std::vector<const char*>& entity_names);
 		void DestroyDatabase(Database*& database);
 
 		//Alloc instance
@@ -173,6 +175,9 @@ namespace ecs
 		//Get database stats
 		void GetDatabaseStats(Database* database, DatabaseStats& stats);
 
+		//Render imgui stats
+		void RenderImguiStats(Database* database, bool* activated);
+
 		//Get Instace Reference
 		InstanceReference GetInstanceReference(Database* database, ZoneType zone_index, EntityTypeType entity_type, ComponentType component_index);
 	}
@@ -195,14 +200,16 @@ namespace ecs
 
 		//List of register entity types using type_list visit
 		std::vector<EntityTypeMask> entity_types;
+		std::vector<const char*> entity_names;
 		core::visit<DATABASE_DECLARATION::EntityTypes::template Size()>([&](auto entity_type_index)
 		{
 			using EntityTypeIt = typename DATABASE_DECLARATION::EntityTypes::template ElementType<entity_type_index.value>;
 			entity_types.push_back(EntityTypeIt::template EntityTypeMask<DATABASE_DECLARATION>());
+			entity_names.push_back(typeid(EntityTypeIt).name());
 		});
 
 		//Create the database
-		Database* database = internal::CreateDatabase(database_desc, components, entity_types);
+		Database* database = internal::CreateDatabase(database_desc, components, entity_types, entity_names);
 		//Set the static fast access for the instances with this DATABASE_NAME
 		DATABASE_DECLARATION::s_database = database;
 
@@ -265,6 +272,12 @@ namespace ecs
 	void GetDatabaseStats(DatabaseStats& stats)
 	{
 		return internal::GetDatabaseStats(DATABASE_DECLARATION::s_database, stats);
+	}
+
+	template<typename DATABASE_DECLARATION>
+	void RenderImguiStats(bool* activated)
+	{
+		return internal::RenderImguiStats(DATABASE_DECLARATION::s_database, activated);
 	}
 
 	//Tick database
