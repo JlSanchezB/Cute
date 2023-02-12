@@ -378,9 +378,6 @@ public:
 		job::ThreadData<std::array<InstanceBuffer, 3>>* instance_buffer;
 	};
 
-	//Show ecs debug info
-	bool m_show_ecs_stats = false;
-
 	//Config world settings
 	bool m_show_word_settings = false;
 
@@ -515,6 +512,11 @@ public:
 		job::SystemDesc job_system_desc;
 		m_job_system = job::CreateSystem(job_system_desc);
 
+		RegisterImguiDebugSystem("Job System"_sh32, [&](bool* activated)
+			{
+				job::RenderImguiDebug(m_job_system, activated);
+			});
+
 		//Create Job allocator now that the job system is enabled
 		m_update_job_allocator = std::make_unique<job::JobAllocator<1024 * 1024>>();
 
@@ -542,11 +544,23 @@ public:
 		//Load render passes descriptor
 		m_render_passes_loader.Load("ecs_render_passes.xml", m_render_system, m_device);
 
+		RegisterImguiDebugSystem("Render Pass Editor"_sh32, [&](bool* activated)
+			{
+				m_render_passes_loader.GetShowEditDescriptorFile() = *activated;
+				m_render_passes_loader.RenderImgui();
+				*activated = m_render_passes_loader.GetShowEditDescriptorFile();
+			});
+
 		//Create ecs database
 		ecs::DatabaseDesc database_desc;
 		database_desc.num_max_entities_zone = 1024 * 128;
 		database_desc.num_zones = GridZone::zone_count;
 		ecs::CreateDatabase<GameDatabase>(database_desc);
+
+		RegisterImguiDebugSystem("ECS stats"_sh32, [](bool* activated)
+			{
+				ecs::RenderImguiStats<GameDatabase>(activated);
+			});
 	}
 
 	void OnPrepareDestroy() override
@@ -1514,16 +1528,9 @@ public:
 	void OnAddImguiMenu() override
 	{
 		//Add menu for modifying the render system descriptor file
-		if (ImGui::BeginMenu("ECS"))
+		if (ImGui::BeginMenu("ECSTest"))
 		{
-			m_render_passes_loader.GetShowEditDescriptorFile() = ImGui::MenuItem("Edit descriptor file");
-			m_show_ecs_stats = ImGui::MenuItem("Show ECS stats");
 			m_show_word_settings = ImGui::MenuItem("Show world settings");
-			bool single_frame_mode = job::GetSingleThreadMode(m_job_system);
-			if (ImGui::Checkbox("Single thread mode", &single_frame_mode))
-			{
-				job::SetSingleThreadMode(m_job_system, single_frame_mode);
-			}
 			ImGui::EndMenu();
 		}
 	}
@@ -1531,27 +1538,6 @@ public:
 	void OnImguiRender() override
 	{
 		m_render_passes_loader.RenderImgui();
-		
-		if (m_show_ecs_stats)
-		{
-			if (!ImGui::Begin("Show ECS stats", &m_show_ecs_stats))
-			{
-				ImGui::End();
-				return;
-			}
-			ImGui::Text("Num grass entities (%zu)", ecs::GetNumInstances<GameDatabase, GrassEntityType>());
-			ImGui::Text("Num gazelle entities (%zu)", ecs::GetNumInstances<GameDatabase, GazelleEntityType>());
-			ImGui::Text("Num lion entities (%zu)", ecs::GetNumInstances<GameDatabase, LionEntityType>());
-
-			ecs::DatabaseStats database_stats;
-			ecs::GetDatabaseStats<GameDatabase>(database_stats);
-
-			ImGui::Separator();
-			ImGui::Text("Num deferred deletions (%zu)", database_stats.num_deferred_deletions);
-			ImGui::Text("Num deferred moves (%zu)", database_stats.num_deferred_moves);
-
-			ImGui::End();
-		}
 
 		if (m_show_word_settings)
 		{

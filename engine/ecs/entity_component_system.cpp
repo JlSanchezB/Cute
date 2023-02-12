@@ -601,7 +601,7 @@ namespace ecs
 					}
 				}
 
-				database->m_stats.num_deferred_creations += (instance_count.count_created - instance_count.count);
+				database->m_stats.num_deferred_creations += (instance_count.count_created > instance_count.count ) ? (instance_count.count_created - instance_count.count) : 0;
 
 				instance_count.count = instance_count.count_created;
 			}
