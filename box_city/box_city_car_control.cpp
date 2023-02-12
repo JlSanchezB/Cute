@@ -427,10 +427,13 @@ namespace BoxCityCarControl
 		assert(glm::all(glm::isfinite(linear_forces)));
 		assert(glm::all(glm::isfinite(angular_forces)));
 	}
-	void CalculateCollisionForces(BoxCityTileSystem::Manager* manager, const glm::vec3& camera_pos, AABBBox& aabb, OBBBox& obb, glm::vec3& linear_forces, glm::vec3& angular_forces, glm::vec3& position_offset)
+	void CalculateCollisionForces(BoxCityTileSystem::Manager* manager, const glm::vec3& camera_pos, OBBBox& obb, glm::vec3& linear_forces, glm::vec3& angular_forces, glm::vec3& position_offset)
 	{
 		if (c_car_collision_enable && glm::distance2(obb.position, camera_pos) < c_car_ai_avoidance_calculation_distance * c_car_ai_avoidance_calculation_distance)
 		{
+			helpers::AABB aabb;
+			helpers::CalculateAABBFromOBB(aabb, obb);
+
 			manager->VisitBuildings(aabb, [&](const InstanceReference& building)
 				{
 					assert(building.IsValid());

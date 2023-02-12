@@ -8,8 +8,8 @@
 #include "box_city_descriptors.h"
 #include <numeric>
 
-COUNTER(c_Blocks_Count, "Box City", "Number of Blocks", false);
-COUNTER(c_Panels_Count, "Box City", "Number of Panels", false);
+COUNTER(c_BuildingInstances_Count, "Box City", "Number of building instances", false);
+COUNTER(c_Box_Count, "Box City", "Number of box between all the instances", false);
 COUNTER(c_Building_Summitted, "Box City", "Building summitted to the GPU", true);
 
 namespace
@@ -294,62 +294,29 @@ namespace BoxCityTileSystem
 		//Just a little smaller, so it has space for the panels
 		const float panel_depth = zone_descriptor.panel_depth_panel;
 
-		helpers::OBB updated_obb = obb;
-		updated_obb.extents = updated_obb.extents - glm::vec3(panel_depth, panel_depth, 0.f);
+		bool top = (obb.position.z + obb.extents.z > kTileHeightTopViewRange);
 
-		uint32_t parent_index;
-		bool top;
-		if (!dynamic_box)
-		{
-			BoxData box_data;
-			box_data.aabb_box = aabb;
-			box_data.oob_box = updated_obb;
+		//Build the instance data
+		InstanceData building_instance;
+		building_instance.oob_box = obb;
 
-			if (box_data.oob_box.position.z + box_data.oob_box.extents.z > kTileHeightTopViewRange)
-			{
-				top = true;
-				//Top box
-				GetLodGroupData(LODGroup::TopBuildings).building_data.push_back(box_data);
-			}
-			else
-			{
-				top = false;
-				//Bottom box
-				GetLodGroupData(LODGroup::Rest).building_data.push_back(box_data);
-			}
-		}
-		else
-		{
-			AnimatedBoxData animated_box_data;
-			animated_box_data.aabb_box = aabb;
-			animated_box_data.oob_box = updated_obb;
-			animated_box_data.animation = animated_box;
+		//Add bulding box
+		BoxData building_box;
+		building_box.colour_palette = 0xFF;
+		building_box.oob_box.position = glm::vec3(0.f, 0.f, 0.f);
+		building_box.oob_box.rotation = glm::mat3(1.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 1.f);
+		building_box.oob_box.extents = obb.extents;
+		building_box.oob_box.extents -= glm::vec3(panel_depth, panel_depth, 0.f);
 
-			if (animated_box_data.oob_box.position.z + animated_box_data.oob_box.extents.z + animated_box.range > kTileHeightTopViewRange)
-			{
-				top = true;
-				//Top box
-				GetLodGroupData(LODGroup::TopBuildings).animated_building_data.push_back(animated_box_data);
+		building_instance.m_boxes.push_back(building_box);
 
-				parent_index = static_cast<uint32_t>(GetLodGroupData(LODGroup::TopBuildings).animated_building_data.size() - 1);
-			}
-			else
-			{
-				top = false;
-				//Bottom box
-				GetLodGroupData(LODGroup::Rest).animated_building_data.push_back(animated_box_data);
+		assert(building_box.oob_box.extents.x > 0.f);
+		assert(building_box.oob_box.extents.y > 0.f);
+		assert(building_box.oob_box.extents.z > 0.f);
 
-				parent_index = static_cast<uint32_t>(GetLodGroupData(LODGroup::Rest).animated_building_data.size() - 1);
-			}
-		}
-		assert(updated_obb.extents.x > 0.f);
-		assert(updated_obb.extents.y > 0.f);
-		assert(updated_obb.extents.z > 0.f);
-		//Create panels in each side of the box
+		//Create the boxes that makes this building
 
-		//Matrix used for the attachments
-		glm::mat4x4 box_to_world(updated_obb.rotation);
-		box_to_world[3] = glm::vec4(updated_obb.position, 1.f);
+		helpers::OBB updated_obb = building_box.oob_box;
 
 		std::vector<std::pair<glm::vec2, glm::vec2>> panels_generated;
 		for (size_t face = 0; face < 4; ++face)
@@ -362,8 +329,8 @@ namespace BoxCityTileSystem
 			std::uniform_real_distribution<float> panel_size_range(zone_descriptor.panel_size_range_min, glm::min(wall_width, zone_descriptor.panel_size_range_max));
 
 			//Calculate rotation matrix of the face and position
-			glm::mat3x3 face_rotation = glm::mat3x3(glm::rotate(glm::half_pi<float>(), glm::vec3(1.f, 0.f, 0.f))) * glm::mat3x3(glm::rotate(glm::half_pi<float>() * face, glm::vec3(0.f, 0.f, 1.f))) * updated_obb.rotation;
-			glm::vec3 face_position = updated_obb.position + glm::vec3(0.f, 0.f, wall_width) * face_rotation;
+			glm::mat3x3 face_rotation = glm::mat3x3(glm::rotate(glm::half_pi<float>(), glm::vec3(1.f, 0.f, 0.f))) * glm::mat3x3(glm::rotate(glm::half_pi<float>() * face, glm::vec3(0.f, 0.f, 1.f)));
+			glm::vec3 face_position = glm::vec3(0.f, 0.f, wall_width) * face_rotation;
 
 			for (size_t i = 0; i < zone_descriptor.num_panel_generated; ++i)
 			{
@@ -403,49 +370,83 @@ namespace BoxCityTileSystem
 
 				uint8_t colour_palette = random() % 5;
 
-				if (dynamic_box)
-				{
-					//Calculate attachment matrix
-					AnimatedPanelData animated_panel_data;
+				BoxData panel_box;
 
-					animated_panel_data.parent_index = parent_index;
-					animated_panel_data.aabb_box = aabb_panel;
-					animated_panel_data.oob_box = obb_panel;
-					animated_panel_data.colour_palette = colour_palette;
-
-					glm::mat4x4 panel_to_world(obb_panel.rotation);
-					panel_to_world[3] = glm::vec4(obb_panel.position, 1.f);
-
-					animated_panel_data.parent_to_child = glm::inverse(box_to_world) * panel_to_world;
-
-					if (top)
-					{
-						GetLodGroupData(LODGroup::TopPanels).animated_panel_data.push_back(animated_panel_data);
-					}
-					else
-					{
-						GetLodGroupData(LODGroup::Rest).animated_panel_data.push_back(animated_panel_data);
-					}
-				}
-				else
-				{
-					PanelData panel_data;
-
-					panel_data.aabb_box = aabb_panel;
-					panel_data.oob_box = obb_panel;
-					panel_data.colour_palette = colour_palette;
-
-					if (top)
-					{
-						GetLodGroupData(LODGroup::TopPanels).panel_data.push_back(panel_data);
-					}
-					else
-					{
-						GetLodGroupData(LODGroup::Rest).panel_data.push_back(panel_data);
-					}
-				}
+				panel_box.colour_palette = colour_palette;
+				panel_box.oob_box = obb_panel; //local space
+				
+				building_instance.m_boxes.push_back(panel_box);
 			}
 		}
+
+		if (!dynamic_box)
+		{
+			if (top)
+			{
+				//Top box
+				GetLodGroupData(LODGroup::TopBuildings).building_data.push_back(std::move(building_instance));
+			}
+			else
+			{
+				//Bottom box
+				GetLodGroupData(LODGroup::Rest).building_data.push_back(std::move(building_instance));
+			}
+		}
+		else
+		{
+			//We create an animated from the instance data
+			AnimatedInstanceData animated_building_instance(std::move(building_instance));
+			animated_building_instance.animation = animated_box;
+
+			if (top)
+			{
+				//Top box
+				GetLodGroupData(LODGroup::TopBuildings).animated_building_data.push_back(std::move(animated_building_instance));
+			}
+			else
+			{
+				//Bottom box
+				GetLodGroupData(LODGroup::Rest).animated_building_data.push_back(std::move(animated_building_instance));
+			}
+		}
+	}
+
+	render::AllocHandle Tile::CreateBoxList(Manager* manager, const std::vector<BoxData>& box_data_array)
+	{
+		//Color palette
+		const glm::vec4 colour_palette[] =
+		{
+			{1.f, 0.1f, 0.6f, 0.f},
+			{1.f, 0.6f, 0.1f, 0.f},
+			{1.f, 0.95f, 0.f, 0.f},
+			{0.5f, 1.f, 0.f, 0.f},
+			{0.f, 1.0f, 1.f, 0.f}
+		};
+
+		size_t allocation_size = 16 + sizeof(GPUBox) * box_data_array.size();
+
+		//Create the memory with the box list
+		std::vector<uint8_t> buffer(allocation_size);
+
+		//Set the size
+		uint32_t* size_data = reinterpret_cast<uint32_t*>(buffer.data());
+		size_data[0] = static_cast<uint32_t>(box_data_array.size());
+		size_data[1] = 0;
+		size_data[2] = 0;
+		size_data[3] = 0;
+
+		for (size_t i = 0; i < box_data_array.size(); ++i)
+		{
+			const auto& box_data = box_data_array[i];
+
+			uint8_t* dest_data = buffer.data() + 16 + i * sizeof(GPUBox);
+			reinterpret_cast<GPUBox*>(dest_data)->Fill(box_data.oob_box, (box_data.colour_palette == 0xFF) ? glm::vec3(1.f, 1.f, 1.f) : 2.f * colour_palette[box_data.colour_palette], 0);
+		}
+
+		//COUNTER_INC(c_Box_Count);
+
+		//Allocate it
+		return manager->GetGPUMemoryRenderModule()->AllocStaticGPUMemory(manager->GetDevice(), allocation_size, buffer.data(), render::GetGameFrameIndex(manager->GetRenderSystem()));
 	}
 
 	void Tile::SpawnLodGroup(Manager* manager, const LODGroup lod_group)
@@ -456,7 +457,7 @@ namespace BoxCityTileSystem
 		auto& instance_list_gpu_allocation = GetLodInstanceListGPUAllocation(lod_group);
 
 		//Size of the GPU allocation
-		size_t num_box_instances = (lod_group_data.animated_building_data.size() + lod_group_data.building_data.size() + lod_group_data.animated_panel_data.size() + lod_group_data.panel_data.size());
+		size_t num_box_instances = (lod_group_data.animated_building_data.size() + lod_group_data.building_data.size());
 		size_t gpu_allocation_size = sizeof(GPUBoxInstance) * num_box_instances;
 
 		if (gpu_allocation_size == 0)
@@ -486,13 +487,12 @@ namespace BoxCityTileSystem
 		//First dynamic
 		for (auto& building_data : lod_group_data.animated_building_data)
 		{
-			BoxRender box_render;
-			box_render.colour = glm::vec4(1.f, 1.f, 1.f, 0.f);
+			//Create Box list
+			render::AllocHandle box_list_handle = CreateBoxList(manager, building_data.m_boxes);
 
 			//GPU memory
 			GPUBoxInstance gpu_box_instance;
-			gpu_box_instance.Fill(building_data.oob_box);
-			gpu_box_instance.Fill(box_render);
+			gpu_box_instance.Fill(building_data.oob_box, static_cast<uint32_t>(manager->GetGPUMemoryRenderModule()->GetStaticGPUMemoryOffset(box_list_handle)));
 
 			//Update the GPU memory
 			manager->GetGPUMemoryRenderModule()->UpdateStaticGPUMemory(manager->GetDevice(), instances_gpu_allocation, &gpu_box_instance, sizeof(GPUBoxInstance), render::GetGameFrameIndex(manager->GetRenderSystem()), gpu_offset * sizeof(GPUBoxInstance));
@@ -500,127 +500,49 @@ namespace BoxCityTileSystem
 			InterpolatedPosition interpolated_position;
 			interpolated_position.position.Reset(building_data.oob_box.position);
 
+			//Calculate range AABB
+			helpers::AABB range_aabb;
+			helpers::OBB range_obb = building_data.oob_box;
+			range_obb.extents.z += building_data.animation.range;
+			helpers::CalculateAABBFromOBB(range_aabb, range_obb);
+
 			//Just make it static
 			instances_vector.push_back(ecs::AllocInstance<GameDatabase, AnimatedBoxType>(m_zone_id)
 				.Init<OBBBox>(building_data.oob_box)
-				.Init<AABBBox>(building_data.aabb_box)
-				.Init<BoxRender>(box_render)
 				.Init<AnimationBox>(building_data.animation)
 				.Init<BoxGPUHandle>(gpu_offset, static_cast<uint32_t>(lod_group))
+				.Init<BoxListHandle>(box_list_handle)
 				.Init<InterpolatedPosition>(interpolated_position));
 
 			gpu_offset++;
-			COUNTER_INC(c_Blocks_Count);
+			COUNTER_INC(c_BuildingInstances_Count);
 		}
 
 		for (auto& building_data : lod_group_data.building_data)
 		{
-			BoxRender box_render;
-			box_render.colour = glm::vec4(1.f, 1.f, 1.f, 0.f);
+			//Create Box list
+			render::AllocHandle box_list_handle = CreateBoxList(manager, building_data.m_boxes);
 
 			//GPU memory
 			GPUBoxInstance gpu_box_instance;
-			gpu_box_instance.Fill(building_data.oob_box);
-			gpu_box_instance.Fill(box_render);
+			gpu_box_instance.Fill(building_data.oob_box, static_cast<uint32_t>(manager->GetGPUMemoryRenderModule()->GetStaticGPUMemoryOffset(box_list_handle)));
 
 			//Update the GPU memory
 			manager->GetGPUMemoryRenderModule()->UpdateStaticGPUMemory(manager->GetDevice(), instances_gpu_allocation, &gpu_box_instance, sizeof(GPUBoxInstance), render::GetGameFrameIndex(manager->GetRenderSystem()), gpu_offset * sizeof(GPUBoxInstance));
+
+			//Calculate range aabb
+			helpers::AABB range_aabb;
+			helpers::CalculateAABBFromOBB(range_aabb, building_data.oob_box);
 
 			//Just make it static
 			instances_vector.push_back(ecs::AllocInstance<GameDatabase, BoxType>(m_zone_id)
 				.Init<OBBBox>(building_data.oob_box)
-				.Init<AABBBox>(building_data.aabb_box)
-				.Init<BoxRender>(box_render)
+				.Init<RangeAABB>(range_aabb)
+				.Init<BoxListHandle>(box_list_handle)
 				.Init<BoxGPUHandle>(gpu_offset, static_cast<uint32_t>(lod_group)));
 
 			gpu_offset++;
-			COUNTER_INC(c_Blocks_Count);
-		}
-
-		//Color palette
-		const glm::vec4 colour_palette[] =
-		{
-			{1.f, 0.1f, 0.6f, 0.f},
-			{1.f, 0.6f, 0.1f, 0.f},
-			{1.f, 0.95f, 0.f, 0.f},
-			{0.5f, 1.f, 0.f, 0.f},
-			{0.f, 1.0f, 1.f, 0.f}
-		};
-
-		for (auto& panel_data : lod_group_data.animated_panel_data)
-		{
-			glm::mat4x4 box_to_world;
-			//Calculate attachment matrix
-			Attachment attachment;
-			if (lod_group == LODGroup::TopPanels)
-			{
-				//Parents are in the TopBuilding groups
-				attachment.parent = GetLodInstances(LODGroup::TopBuildings)[panel_data.parent_index];
-				box_to_world = GetLodGroupData(LODGroup::TopBuildings).animated_building_data[panel_data.parent_index].oob_box.rotation;
-				box_to_world[3] = glm::vec4(GetLodGroupData(LODGroup::TopBuildings).animated_building_data[panel_data.parent_index].oob_box.position, 1.f);
-			}
-			else
-			{
-				//Parents are in this group
-				attachment.parent = instances_vector[panel_data.parent_index];
-				box_to_world = lod_group_data.animated_building_data[panel_data.parent_index].oob_box.rotation;
-				box_to_world[3] = glm::vec4(lod_group_data.animated_building_data[panel_data.parent_index].oob_box.position, 1.f);
-			}
-
-			glm::mat4x4 panel_to_world(panel_data.oob_box.rotation);
-			panel_to_world[3] = glm::vec4(panel_data.oob_box.position, 1.f);
-
-			attachment.parent_to_child = glm::inverse(box_to_world) * panel_to_world;
-
-			BoxRender box_render;
-			box_render.colour = colour_palette[panel_data.colour_palette] * 2.f;
-
-			//GPU memory
-			GPUBoxInstance gpu_box_instance;
-			gpu_box_instance.Fill(panel_data.oob_box);
-			gpu_box_instance.Fill(box_render);
-
-			//Update the GPU memory
-			manager->GetGPUMemoryRenderModule()->UpdateStaticGPUMemory(manager->GetDevice(), instances_gpu_allocation, &gpu_box_instance, sizeof(GPUBoxInstance), render::GetGameFrameIndex(manager->GetRenderSystem()), gpu_offset * sizeof(GPUBoxInstance));
-
-			InterpolatedPosition interpolated_position;
-			interpolated_position.position.Reset(panel_data.oob_box.position);
-
-			//Add attached
-			instances_vector.push_back(ecs::AllocInstance<GameDatabase, AttachedPanelType>(m_zone_id)
-				.Init<OBBBox>(panel_data.oob_box)
-				.Init<AABBBox>(panel_data.aabb_box)
-				.Init<BoxRender>(box_render)
-				.Init<Attachment>(attachment)
-				.Init<BoxGPUHandle>(gpu_offset, static_cast<uint32_t>(lod_group))
-				.Init<InterpolatedPosition>(interpolated_position));
-
-			gpu_offset++;
-			COUNTER_INC(c_Panels_Count);
-		}
-
-		for (auto& panel_data : lod_group_data.panel_data)
-		{
-			BoxRender box_render;
-			box_render.colour = colour_palette[panel_data.colour_palette];
-
-			//GPU memory
-			GPUBoxInstance gpu_box_instance;
-			gpu_box_instance.Fill(panel_data.oob_box);
-			gpu_box_instance.Fill(box_render);
-
-			//Update the GPU memory
-			manager->GetGPUMemoryRenderModule()->UpdateStaticGPUMemory(manager->GetDevice(), instances_gpu_allocation, &gpu_box_instance, sizeof(GPUBoxInstance), render::GetGameFrameIndex(manager->GetRenderSystem()), gpu_offset * sizeof(GPUBoxInstance));
-
-			//Add attached
-			instances_vector.push_back(ecs::AllocInstance<GameDatabase, PanelType>(m_zone_id)
-				.Init<OBBBox>(panel_data.oob_box)
-				.Init<AABBBox>(panel_data.aabb_box)
-				.Init<BoxRender>(box_render)
-				.Init<BoxGPUHandle>(gpu_offset, static_cast<uint32_t>(lod_group)));
-
-			gpu_offset++;
-			COUNTER_INC(c_Panels_Count);
+			COUNTER_INC(c_BuildingInstances_Count);
 		}
 	}
 
@@ -644,14 +566,14 @@ namespace BoxCityTileSystem
 			//Check the type
 			if (instance.Is<BoxType>() || instance.Is<AnimatedBoxType>())
 			{
-				COUNTER_SUB(c_Blocks_Count);
+				COUNTER_SUB(c_BuildingInstances_Count);
 			}
-			else
-			{
-				COUNTER_SUB(c_Panels_Count);
-			}
+
 			//Set to invalid to the GPU memory
 			instance.Get<BoxGPUHandle>().offset_gpu_allocator = BoxGPUHandle::kInvalidOffset;
+
+			//Deallocate the box list
+			manager->GetGPUMemoryRenderModule()->DeallocStaticGPUMemory(manager->GetDevice(), instance.Get<BoxListHandle>().box_list_handle, render::GetGameFrameIndex(manager->GetRenderSystem()));
 
 			//Dealloc instance
 			ecs::DeallocInstance<GameDatabase>(instance);

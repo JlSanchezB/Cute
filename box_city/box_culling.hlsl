@@ -71,9 +71,10 @@ void box_culling(uint3 group : SV_GroupID, uint3 group_thread_id : SV_GroupThrea
             instance_data[2] = asfloat(static_gpu_memory.Load4(instance_offset + 32));
             instance_data[3] = asfloat(static_gpu_memory.Load4(instance_offset + 48));
 
-            float3x3 scale_rotate_matrix = float3x3(instance_data[0].xyz, instance_data[1].xyz, instance_data[2].xyz);
-            float3x3 rotate_matrix = float3x3(normalize(instance_data[0].xyz), normalize(instance_data[1].xyz), normalize(instance_data[2].xyz));
-            float3 translation = float3(instance_data[0].w, instance_data[1].w, instance_data[2].w);
+            float3x3 rotate_matrix = float3x3(instance_data[1].xyz, instance_data[2].xyz, instance_data[3].xyz);
+            float3 extent = float3(instance_data[1].w, instance_data[2].w, instance_data[3].w);
+            float3x3 scale_rotate_matrix = float3x3(extent, extent, extent) * float3x3(rotate_matrix[0], rotate_matrix[1], rotate_matrix[2]);
+            float3 translation = float3(instance_data[0].x, instance_data[0].y, instance_data[0].z);
 
             //Frustum collision
             {
@@ -121,12 +122,27 @@ void box_culling(uint3 group : SV_GroupID, uint3 group_thread_id : SV_GroupThrea
                 {outside = 0; for (int k = 0; k < 8; k++) outside += ((frustum_points[k].z < box_min.z) ? 1 : 0); if (outside == 8) continue;};
             }
 
-            //Add into the indirect buffer
-            uint offset;
-            InterlockedAdd(indirect_culled_boxes_parameters[1], 1, offset);
-            if (offset < indirect_box_buffer_count)
+            //Read the GPUBoxList number of boxes
+            uint box_list_offset = asuint(instance_data[0].w);
+
+            if (box_list_offset != 0)
             {
-                indirect_culled_boxes[offset] = instance_offset;
+                uint box_list_count = static_gpu_memory.Load(box_list_offset);
+                //Loop for each box, REALLY BAD for performance
+                for (uint j = 0; j < box_list_count; ++j)
+                {
+                    uint indirect_box; //Encode the instance offset and the index of the box
+                    indirect_box = ((instance_offset / 16) << 8) | j;
+                    
+                    //Add into the indirect buffer
+                    uint offset;
+                    InterlockedAdd(indirect_culled_boxes_parameters[1], 1, offset);
+                    if (offset < indirect_box_buffer_count)
+                    {
+                        indirect_culled_boxes[offset] = indirect_box;
+                    }
+                }
+                
             }
         }
     }

@@ -11,18 +11,16 @@
 //Components
 struct FlagBox
 {
-	bool gpu_updated : 1;
 	bool moved : 1;
 
 	FlagBox()
 	{
-		gpu_updated = false;
 		moved = false;
 	}
 };
 
-using AABBBox = helpers::AABB;
 using OBBBox = helpers::OBB;
+using RangeAABB = helpers::AABB; //It includes as far it can move
 
 struct InterpolatedPosition
 {
@@ -35,12 +33,6 @@ struct AnimationBox
 	float range; //Distance to navigate in axis Z
 	float offset; //Start offset
 	float frecuency; //Speed
-};
-
-struct Attachment
-{
-	ecs::InstanceReference parent;
-	glm::mat4x4 parent_to_child;
 };
 
 struct BoxGPUHandle
@@ -58,15 +50,6 @@ struct BoxGPUHandle
 	BoxGPUHandle(const uint32_t _offset_gpu_allocator, const uint32_t _lod_group) : offset_gpu_allocator(_offset_gpu_allocator), lod_group(_lod_group)
 	{
 	}
-};
-
-struct BoxRender
-{
-	glm::vec4 colour;
-};
-
-struct Panel
-{
 };
 
 struct Car
@@ -148,6 +131,16 @@ struct CarGPUIndex
 	}
 };
 
+struct BoxListHandle
+{
+	render::AllocHandle box_list_handle;
+
+	BoxListHandle(render::AllocHandle& handle)
+	{
+		box_list_handle = std::move(handle);
+	}
+};
+
 struct CarBuildingsCache
 {
 	struct CachedBuilding
@@ -162,36 +155,66 @@ struct CarBuildingsCache
 };
 
 //ECS definition
-using BoxType = ecs::EntityType<BoxRender, BoxGPUHandle, OBBBox, AABBBox, FlagBox>;
-using AnimatedBoxType = ecs::EntityType<InterpolatedPosition, BoxRender, BoxGPUHandle, OBBBox, AABBBox, AnimationBox, FlagBox>;
-using AttachedPanelType = ecs::EntityType<InterpolatedPosition, BoxRender, BoxGPUHandle, OBBBox, AABBBox, FlagBox, Attachment, Panel>;
-using PanelType = ecs::EntityType<BoxRender, BoxGPUHandle, OBBBox, AABBBox, FlagBox, Panel>;
-using CarType = ecs::EntityType<OBBBox, AABBBox, Car, CarMovement, CarSettings, CarTarget, CarControl, CarGPUIndex, CarBuildingsCache, FlagBox>;
+using BoxType = ecs::EntityType<BoxGPUHandle, OBBBox, RangeAABB, FlagBox, BoxListHandle>;
+using AnimatedBoxType = ecs::EntityType<InterpolatedPosition, BoxGPUHandle, RangeAABB, OBBBox, AnimationBox, FlagBox, BoxListHandle>;
+using CarType = ecs::EntityType<OBBBox, Car, CarMovement, CarSettings, CarTarget, CarControl, CarGPUIndex, CarBuildingsCache, FlagBox>;
 
-using GameComponents = ecs::ComponentList<InterpolatedPosition, BoxRender, BoxGPUHandle, OBBBox, AABBBox, AnimationBox, FlagBox, Attachment, Panel, Car, CarMovement, CarSettings, CarTarget, CarGPUIndex, CarControl, CarBuildingsCache>;
-using GameEntityTypes = ecs::EntityTypeList<BoxType, AnimatedBoxType, AttachedPanelType, PanelType, CarType>;
+using GameComponents = ecs::ComponentList<InterpolatedPosition, BoxGPUHandle, OBBBox, RangeAABB, AnimationBox, BoxListHandle, FlagBox, Car, CarMovement, CarSettings, CarTarget, CarGPUIndex, CarControl, CarBuildingsCache>;
+using GameEntityTypes = ecs::EntityTypeList<BoxType, AnimatedBoxType, CarType>;
 
 using GameDatabase = ecs::DatabaseDeclaration<GameComponents, GameEntityTypes>;
 using Instance = ecs::Instance<GameDatabase>;
 using InstanceReference = ecs::InstanceReference;
 
 
-//GPU struct for an instance
+//GPUBoxInstance
 struct GPUBoxInstance
 {
-	glm::vec4 local_matrix[3];
-	glm::vec4 colour;
-	void Fill(const helpers::OBB& obb_box)
+	glm::vec3 position; //3
+	uint32_t box_list_offset; //1
+
+	glm::vec4 rotation_matrix_extents[3]; //12
+
+	void FillForUpdatePosition(const helpers::OBB& obb_box, uint32_t _box_list_offset)
 	{
-		local_matrix[0] = glm::vec4(obb_box.rotation[0][0] * obb_box.extents[0], obb_box.rotation[0][1] * obb_box.extents[1], obb_box.rotation[0][2] * obb_box.extents[2], obb_box.position.x);
-		local_matrix[1] = glm::vec4(obb_box.rotation[1][0] * obb_box.extents[0], obb_box.rotation[1][1] * obb_box.extents[1], obb_box.rotation[1][2] * obb_box.extents[2], obb_box.position.y);
-		local_matrix[2] = glm::vec4(obb_box.rotation[2][0] * obb_box.extents[0], obb_box.rotation[2][1] * obb_box.extents[1], obb_box.rotation[2][2] * obb_box.extents[2], obb_box.position.z);
+		position = obb_box.position;
+		box_list_offset = _box_list_offset;
 	}
-	void Fill(const BoxRender& box_render)
+
+	void Fill(const helpers::OBB& obb_box, uint32_t _box_list_offset)
 	{
-		colour = box_render.colour;
+		position = obb_box.position;
+		box_list_offset = _box_list_offset;
+		rotation_matrix_extents[0] = glm::vec4(obb_box.rotation[0][0], obb_box.rotation[0][1], obb_box.rotation[0][2], obb_box.extents.x);
+		rotation_matrix_extents[1] = glm::vec4(obb_box.rotation[1][0], obb_box.rotation[1][1], obb_box.rotation[1][2], obb_box.extents.y);
+		rotation_matrix_extents[2] = glm::vec4(obb_box.rotation[2][0], obb_box.rotation[2][1], obb_box.rotation[2][2], obb_box.extents.z);
 	}
 };
+
+//GPUBox
+struct GPUBox
+{
+	glm::vec3 position; //3
+	uint32_t gap;
+	glm::vec4 rotation_extent[3]; //12
+	glm::vec3 colour; //3
+	uint32_t flags; //1
+
+	void Fill(const helpers::OBB& obb_box, const glm::vec3& _colour, const uint32_t& _flags)
+	{
+		position = obb_box.position;
+		rotation_extent[0] =  glm::vec4(obb_box.rotation[0][0], obb_box.rotation[0][1], obb_box.rotation[0][2], obb_box.extents.x);
+		rotation_extent[1] =  glm::vec4(obb_box.rotation[1][0], obb_box.rotation[1][1], obb_box.rotation[1][2], obb_box.extents.y);
+		rotation_extent[2] =  glm::vec4(obb_box.rotation[2][0], obb_box.rotation[2][1], obb_box.rotation[2][2], obb_box.extents.z);
+
+		colour = _colour;
+		flags = _flags;
+	}
+
+
+};
+
+
 
 //Point of view custom data associated to box city
 struct BoxCityCustomPointOfViewData

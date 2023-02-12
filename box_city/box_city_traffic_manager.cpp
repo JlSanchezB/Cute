@@ -60,7 +60,7 @@ namespace BoxCityTrafficSystem
 
 	void Manager::SetupCar(Tile& tile, std::mt19937& random, float begin_tile_x, float begin_tile_y,
 		std::uniform_real_distribution<float>& position_range, std::uniform_real_distribution<float>& position_range_z, std::uniform_real_distribution<float>& size_range,
-		Car& car, CarMovement& car_movement, CarSettings& car_settings, OBBBox& obb_component, AABBBox& aabb_component, CarGPUIndex& car_gpu_index)
+		Car& car, CarMovement& car_movement, CarSettings& car_settings, OBBBox& obb_component, CarGPUIndex& car_gpu_index)
 	{
 		glm::vec3 position(begin_tile_x + position_range(random), begin_tile_y + position_range(random), position_range_z(random));
 		float size = size_range(random);
@@ -82,16 +82,9 @@ namespace BoxCityTrafficSystem
 		obb_component.extents = car_settings.size;
 		obb_component.rotation = glm::toMat3(*car.rotation);
 
-		helpers::CalculateAABBFromOBB(aabb_component, obb_component);
-	
-
-		//Update GPU
-		BoxRender box_render;
-		box_render.colour = glm::vec4(3.f, 3.f, 3.f, 0.f);
-
+		//Update GPU, all the gpu instance
 		GPUBoxInstance gpu_box_instance;
-		gpu_box_instance.Fill(obb_component);
-		gpu_box_instance.Fill(box_render);
+		gpu_box_instance.Fill(obb_component, 0);
 
 		//Update the GPU memory
 		m_GPU_memory_render_module->UpdateStaticGPUMemory(m_device, m_gpu_memory, &gpu_box_instance, sizeof(GPUBoxInstance), render::GetGameFrameIndex(m_render_system), car_gpu_index.gpu_slot * sizeof(GPUBoxInstance));
@@ -154,10 +147,10 @@ namespace BoxCityTrafficSystem
 						core::LogInfo("Traffic: Tile Local<%i,%i>, World<%i,%i>, moved", local_tile.i, local_tile.j, world_tile.i, world_tile.j);
 
 						//Move cars
-						ecs::Process<GameDatabase, Car, CarMovement, CarSettings, CarTarget, OBBBox, AABBBox, CarGPUIndex, FlagBox>([&](const auto& instance_iterator, Car& car, CarMovement& car_movement, CarSettings& car_settings, CarTarget& car_target, OBBBox& obb_box_component, AABBBox& aabb_box_component, CarGPUIndex& car_gpu_index, FlagBox& flag_box)
+						ecs::Process<GameDatabase, Car, CarMovement, CarSettings, CarTarget, OBBBox, CarGPUIndex, FlagBox>([&](const auto& instance_iterator, Car& car, CarMovement& car_movement, CarSettings& car_settings, CarTarget& car_target, OBBBox& obb_box_component, CarGPUIndex& car_gpu_index, FlagBox& flag_box)
 							{
 								SetupCar(tile, random, begin_tile_x, begin_tile_y, position_range, position_range_z, size_range,
-								car, car_movement, car_settings, obb_box_component, aabb_box_component, car_gpu_index);
+								car, car_movement, car_settings, obb_box_component, car_gpu_index);
 
 								BoxCityCarControl::SetupCarTarget(random, tile_manager, car, car_target, true);
 
@@ -184,7 +177,6 @@ namespace BoxCityTrafficSystem
 							CarMovement car_movement;
 							CarSettings car_settings;
 							OBBBox obb_box_component;
-							AABBBox aabb_box_component;
 							CarGPUIndex car_gpu_index;
 							CarControl car_control;
 							FlagBox flag_box;
@@ -193,7 +185,7 @@ namespace BoxCityTrafficSystem
 							car_gpu_index.gpu_slot = static_cast<uint16_t>(tile.m_zone_index * kNumCars + i);
 
 							SetupCar(tile, random, begin_tile_x, begin_tile_y, position_range, position_range_z, size_range,
-								car, car_movement, car_settings, obb_box_component, aabb_box_component, car_gpu_index);
+								car, car_movement, car_settings, obb_box_component, car_gpu_index);
 
 							CarTarget car_target;
 							BoxCityCarControl::SetupCarTarget(random, tile_manager, car, car_target, true);
@@ -206,7 +198,6 @@ namespace BoxCityTrafficSystem
 								.Init<CarSettings>(car_settings)
 								.Init<CarTarget>(car_target)
 								.Init<OBBBox>(obb_box_component)
-								.Init<AABBBox>(aabb_box_component)
 								.Init<CarGPUIndex>(car_gpu_index)
 								.Init<CarControl>(car_control)
 								.Init<FlagBox>(flag_box);
@@ -255,9 +246,9 @@ namespace BoxCityTrafficSystem
 		std::bitset<BoxCityTileSystem::kLocalTileCount* BoxCityTileSystem::kLocalTileCount> full_bitset(0xFFFFFFFF >> (32 - kLocalTileCount * kLocalTileCount));
 		//std::bitset<BoxCityTileSystem::kLocalTileCount* BoxCityTileSystem::kLocalTileCount> camera_bitset = GetCameraBitSet(camera);
 		//Update the cars in the direction of the target
-		ecs::AddJobs < GameDatabase, Car, CarMovement, CarTarget, CarSettings, CarControl, CarBuildingsCache, OBBBox, AABBBox, CarGPUIndex, FlagBox> (job_system, update_fence, job_allocator, 256,
+		ecs::AddJobs < GameDatabase, Car, CarMovement, CarTarget, CarSettings, CarControl, CarBuildingsCache, OBBBox, CarGPUIndex, FlagBox> (job_system, update_fence, job_allocator, 256,
 			[elapsed_time, manager = this, tile_manager = tile_manager, game, camera_position = camera.GetPosition(), frame_index]
-			(const auto& instance_iterator, Car& car, CarMovement& car_movement, CarTarget& car_target, CarSettings& car_settings, CarControl& car_control, CarBuildingsCache& car_buildings_cache, OBBBox& obb_box, AABBBox& aabb_box, CarGPUIndex& car_gpu_index, FlagBox& flag_box)
+			(const auto& instance_iterator, Car& car, CarMovement& car_movement, CarTarget& car_target, CarSettings& car_settings, CarControl& car_control, CarBuildingsCache& car_buildings_cache, OBBBox& obb_box, CarGPUIndex& car_gpu_index, FlagBox& flag_box)
 			{
 				//Update position
 				if (instance_iterator == manager->GetPlayerCar().Get<GameDatabase>() && manager->m_player_control_enable)
@@ -277,7 +268,7 @@ namespace BoxCityTrafficSystem
 				glm::vec3 position_offset(0.f, 0.f, 0.f);
 
 				BoxCityCarControl::CalculateControlForces(car, car_movement, car_settings, car_control, elapsed_time, linear_forces, angular_forces);
-				BoxCityCarControl::CalculateCollisionForces(tile_manager, camera_position, aabb_box, obb_box, linear_forces, angular_forces, position_offset);
+				BoxCityCarControl::CalculateCollisionForces(tile_manager, camera_position, obb_box, linear_forces, angular_forces, position_offset);
 
 				//Integrate
 				BoxCityCarControl::IntegrateCar(car, car_movement, car_settings, linear_forces, angular_forces, position_offset, elapsed_time);
@@ -321,10 +312,9 @@ namespace BoxCityTrafficSystem
 				flag_box.moved = false;
 
 
-				//Update OOBB and AABB
+				//Update OOBB
 				obb_box.position = *car.position;
 				obb_box.rotation = glm::toMat3(*car.rotation);
-				helpers::CalculateAABBFromOBB(aabb_box, obb_box);
 
 			}, full_bitset, &g_profile_marker_Car_Update);
 	}

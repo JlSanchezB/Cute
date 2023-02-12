@@ -26,18 +26,11 @@ PSInput vs_box_main(float3 position : POSITION, float3 normal : NORMAL, uint ins
 {
     PSInput result;
 
-    uint instance_data_offset_byte = 0;
-    if (instance_data_offset == 0)
-    {
-        //The offset is in the indirect buffer
-        instance_data_offset_byte = indirect_box_buffer[instance_id];
-    }
-    else
-    {
-        //Get box instance data using primitiveId and the instance_data_offset
-        uint instance_offset_byte = instance_data_offset + instance_id * 4;
-        instance_data_offset_byte = dynamic_gpu_memory.Load(instance_offset_byte);
-    }
+    //The offset is in the indirect buffer
+    uint indirect_box = indirect_box_buffer[instance_id];
+
+    //Extract the instance data
+    uint instance_data_offset_byte = (indirect_box >> 8) * 16;
 
     //Read Box instance data
     float4 instance_data[4];
@@ -46,22 +39,43 @@ PSInput vs_box_main(float3 position : POSITION, float3 normal : NORMAL, uint ins
     instance_data[1] = asfloat(static_gpu_memory.Load4(instance_data_offset_byte + 16));
     instance_data[2] = asfloat(static_gpu_memory.Load4(instance_data_offset_byte + 32));
     instance_data[3] = asfloat(static_gpu_memory.Load4(instance_data_offset_byte + 48));
+    
+    float3x3 instance_rotate_matrix = float3x3(instance_data[1].xyz, instance_data[2].xyz, instance_data[3].xyz);
+    float3 instance_translation = float3(instance_data[0].x, instance_data[0].y, instance_data[0].z);
 
-    float3x3 scale_rotate_matrix = float3x3(instance_data[0].xyz, instance_data[1].xyz, instance_data[2].xyz);
-    float3x3 rotate_matrix = float3x3(normalize(instance_data[0].xyz), normalize(instance_data[1].xyz), normalize(instance_data[2].xyz));
-    float3 translation = float3(instance_data[0].w, instance_data[1].w, instance_data[2].w);
+    //Then extract the box obb
+    uint box_index = indirect_box & 0xFF;
+    uint box_list_offset_byte = asuint(instance_data[0].w);
+    box_list_offset_byte += 16; //Skip the box_list count
+    box_list_offset_byte += box_index * 16 * 5; //Each box is a float4 * 5
+
+    //Read Box data
+    float4 box_data[5];
+    box_data[0] = asfloat(static_gpu_memory.Load4(box_list_offset_byte + 0));
+    box_data[1] = asfloat(static_gpu_memory.Load4(box_list_offset_byte + 16));
+    box_data[2] = asfloat(static_gpu_memory.Load4(box_list_offset_byte + 32));
+    box_data[3] = asfloat(static_gpu_memory.Load4(box_list_offset_byte + 48));
+    box_data[4] = asfloat(static_gpu_memory.Load4(box_list_offset_byte + 64));
+
+    float3x3 box_rotate_matrix = float3x3(box_data[1].xyz, box_data[2].xyz, box_data[3].xyz);
+    float3 box_extent = float3(box_data[1].w, box_data[2].w, box_data[3].w);
+    float3 box_translation = float3(box_data[0].x, box_data[0].y, box_data[0].z);
+    float4 box_colour = float4(box_data[4].x, box_data[4].y, box_data[4].z, 1.f);
 
     //Each position needs to be multiply by the local matrix
-    float3 world_position = mul(scale_rotate_matrix, position) + translation;
+    float3 box_position = mul(box_rotate_matrix, position * box_extent) + box_translation;
+    float3 world_position = mul(instance_rotate_matrix, box_position) + instance_translation;
+
     result.position = mul(view_projection_matrix, float4(world_position, 1.f));
 
-    result.normal = mul(rotate_matrix, normal);
-    result.colour = instance_data[3];
+    float3 box_normal = mul(box_rotate_matrix, normal);
+    result.normal = mul(instance_rotate_matrix, box_normal);
+    result.colour = box_colour;
 
     return result;
 }
 
 float4 ps_box_main(PSInput input) : SV_TARGET
 {
-    return float4(input.colour.xyz, 1.f) * (0.2f + 0.8f * saturate(dot(normalize(input.normal), sun_direction.xyz)));
+    return float4(input.colour.xyz, 1.f) * (0.3f + 0.7f * saturate(dot(normalize(input.normal), sun_direction.xyz)));
 }

@@ -56,39 +56,36 @@ namespace BoxCityTileSystem
 
 	struct BoxData
 	{
-		helpers::AABB aabb_box;
 		helpers::OBB oob_box;
-	};
-
-	struct AnimatedBoxData : public BoxData
-	{
-		AnimationBox animation;
-	};
-
-	struct PanelData : BoxData
-	{
 		uint8_t colour_palette;
 	};
 
-	struct AnimatedPanelData : PanelData
+	struct InstanceData
 	{
-		uint32_t parent_index;
-		glm::mat4x4 parent_to_child;
+		helpers::OBB oob_box;
+		std::vector<BoxData> m_boxes; //Include the building itself
+	};
+
+	struct AnimatedInstanceData : public InstanceData
+	{
+		AnimationBox animation;
+
+		AnimatedInstanceData(const InstanceData&& instance_data)
+		{
+			oob_box = instance_data.oob_box;
+			m_boxes = std::move(instance_data.m_boxes);
+		}
 	};
 
 	struct LODGroupData
 	{
-		std::vector<BoxData> building_data;
-		std::vector<PanelData> panel_data;
-		std::vector<AnimatedBoxData> animated_building_data;
-		std::vector<AnimatedPanelData> animated_panel_data;
+		std::vector<InstanceData> building_data;
+		std::vector<AnimatedInstanceData> animated_building_data;
 
 		void clear()
 		{
 			building_data.clear();
-			panel_data.clear();
 			animated_building_data.clear();
-			animated_panel_data.clear();
 		}
 	};
 
@@ -121,6 +118,7 @@ namespace BoxCityTileSystem
 		//Building logic
 		void BuildTileData(Manager* manager, const LocalTilePosition& local_tile, const WorldTilePosition& world_tile);
 		void BuildBlockData(std::mt19937& random, const helpers::OBB& obb, helpers::AABB& aabb, const bool dynamic_box, const AnimationBox& animated_box, const uint32_t descriptor_index = 0);
+		render::AllocHandle CreateBoxList(Manager* manager, const std::vector<BoxData>& box_data);
 
 		//Spawn/Despawn logic
 		void SpawnLodGroup(Manager* manager, const LODGroup lod_group);
@@ -143,7 +141,7 @@ namespace BoxCityTileSystem
 		{
 			using IndexType = uint32_t;
 			void SetLeafIndex(InstanceReference& instance, uint32_t) {}
-			helpers::AABB GetAABB(const InstanceReference& instance) { return instance.Get<GameDatabase>().Get<AABBBox>(); }
+			helpers::AABB GetAABB(const InstanceReference& instance) { return instance.Get<GameDatabase>().Get<RangeAABB>(); }
 		};
 		helpers::LinearBVH<InstanceReference, LinearBVHBuildingSettings>& GetBuildingsBVH()
 		{
