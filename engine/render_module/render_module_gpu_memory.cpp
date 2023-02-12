@@ -197,24 +197,31 @@ namespace render
 	{
 		assert(size > 0);
 		assert(size % 16 == 0);
-		//Destination size needs to be aligned to float4
-		size_t dest_size = size;
 
 		m_static_frame_memory_updated += size;
 
-		//Data gets copied in the dynamic gpu memory
-		void* gpu_memory = AllocDynamicGPUMemory(device, dest_size, frame_index);
-		memcpy(gpu_memory, data, size);
+		//We need so spit it using the segment size
+		size_t num_segments = 1 + ((size - 1) / m_dynamic_gpu_memory_segment_size);
 
-		//Calculate offsets
-		uint8_t* dynamic_memory_base = reinterpret_cast<uint8_t*>(display::GetResourceMemoryBuffer(device, m_dynamic_gpu_memory_buffer));
+		const std::byte* data_byte = reinterpret_cast<const std::byte*>(data);
 
-		uint32_t source_offset = static_cast<uint32_t>(reinterpret_cast<uint8_t*>(gpu_memory) - dynamic_memory_base);
-		const auto& destination_allocation = m_static_gpu_memory_allocator.Get(handle);
+		for (size_t i = 0; i < num_segments; ++i)
+		{
+			size_t begin_data = i * m_dynamic_gpu_memory_segment_size;
+			size_t end_data = std::min((i + 1) * m_dynamic_gpu_memory_segment_size, size);
+			//Data gets copied in the dynamic gpu memory
+			void* gpu_memory = AllocDynamicGPUMemory(device, end_data - begin_data, frame_index);
+			memcpy(gpu_memory, &data_byte[begin_data], end_data - begin_data);
 
-		//Add copy command
-		AddCopyDataCommand(frame_index, source_offset, static_cast<uint32_t>(destination_allocation.offset + destination_offset), static_cast<uint32_t>(size));
+			//Calculate offsets
+			uint8_t* dynamic_memory_base = reinterpret_cast<uint8_t*>(display::GetResourceMemoryBuffer(device, m_dynamic_gpu_memory_buffer));
 
+			uint32_t source_offset = static_cast<uint32_t>(reinterpret_cast<uint8_t*>(gpu_memory) - dynamic_memory_base);
+			const auto& destination_allocation = m_static_gpu_memory_allocator.Get(handle);
+
+			//Add copy command
+			AddCopyDataCommand(frame_index, source_offset, static_cast<uint32_t>(destination_allocation.offset + destination_offset + begin_data), static_cast<uint32_t>(end_data - begin_data));
+		}
 	}
 
 	display::WeakUnorderedAccessBufferHandle GPUMemoryRenderModule::GetStaticGPUMemoryResource()

@@ -126,6 +126,9 @@ namespace render
 
 		//Get dynamic gpu memory resource
 		display::WeakShaderResourceHandle GetDynamicGPUMemoryResource();
+
+		//Get dynamic segment size
+		size_t GetDynamicSegmentSize() const { return m_dynamic_gpu_memory_segment_size; }
 	};
 
 	class SyncStaticGPUMemoryPass : public Pass
