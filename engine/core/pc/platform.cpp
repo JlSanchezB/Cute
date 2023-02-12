@@ -725,7 +725,6 @@ namespace
 			{
 				if (ImGui::BeginMenu("Cute"))
 				{
-					if (ImGui::MenuItem("Logger")) {};
 					ImGui::Checkbox("Show FPS", &g_Platform->m_imgui_fps_enable);
 					ImGui::Checkbox("Show Log", &g_Platform->m_imgui_log_enable);
 					ImGui::Checkbox("Show Imgui Demo", &g_Platform->m_imgui_demo_enable);
