@@ -77,14 +77,14 @@ struct CarMovement
 
 struct CarSettings
 {
-	glm::vec3 size;
+	float size;
 	float inv_mass;
 	glm::vec3 inv_mass_inertia;
 
 	CarSettings()
 	{
 	};
-	CarSettings(const glm::vec3& _size, const float mass, const glm::vec3& mass_inertia) : size(_size), inv_mass(1.f / mass), inv_mass_inertia(1.f / mass_inertia.x, 1.f / mass_inertia.y, 1.f / mass_inertia.z)
+	CarSettings(const float _size, const float mass, const glm::vec3& mass_inertia) : size(_size), inv_mass(1.f / mass), inv_mass_inertia(1.f / mass_inertia.x, 1.f / mass_inertia.y, 1.f / mass_inertia.z)
 	{
 	}
 };
@@ -181,13 +181,13 @@ struct GPUBoxInstance
 		box_list_offset = _box_list_offset;
 	}
 
-	void Fill(const helpers::OBB& obb_box, uint32_t _box_list_offset)
+	void Fill(const helpers::OBB& obb_box, uint32_t _box_list_offset, float scale = 1.f)
 	{
 		position = obb_box.position;
 		box_list_offset = _box_list_offset;
-		rotation_matrix_extents[0] = glm::vec4(obb_box.rotation[0][0], obb_box.rotation[0][1], obb_box.rotation[0][2], obb_box.extents.x);
-		rotation_matrix_extents[1] = glm::vec4(obb_box.rotation[1][0], obb_box.rotation[1][1], obb_box.rotation[1][2], obb_box.extents.y);
-		rotation_matrix_extents[2] = glm::vec4(obb_box.rotation[2][0], obb_box.rotation[2][1], obb_box.rotation[2][2], obb_box.extents.z);
+		rotation_matrix_extents[0] = glm::vec4(obb_box.rotation[0][0] * scale, obb_box.rotation[0][1] * scale, obb_box.rotation[0][2] * scale, obb_box.extents.x);
+		rotation_matrix_extents[1] = glm::vec4(obb_box.rotation[1][0] * scale, obb_box.rotation[1][1] * scale, obb_box.rotation[1][2] * scale, obb_box.extents.y);
+		rotation_matrix_extents[2] = glm::vec4(obb_box.rotation[2][0] * scale, obb_box.rotation[2][1] * scale, obb_box.rotation[2][2] * scale, obb_box.extents.z);
 	}
 };
 

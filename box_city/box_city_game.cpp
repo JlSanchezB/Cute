@@ -366,9 +366,9 @@ void BoxCityGame::OnRender(double total_time, float elapsed_time)
 		}, m_tile_manager.GetCameraBitSet(*camera), &g_profile_marker_Culling);
 
 	//Interpolate cars
-	ecs::AddJobs<GameDatabase, const OBBBox, const CarGPUIndex, const Car>(m_job_system, culling_fence, m_render_job_allocator, 256,
+	ecs::AddJobs<GameDatabase, const OBBBox, const CarGPUIndex, const Car, const CarSettings>(m_job_system, culling_fence, m_render_job_allocator, 256,
 		[camera = camera, render_system = m_render_system, device = m_device, render_gpu_memory_module = m_GPU_memory_render_module, traffic_manager = &m_traffic_system, render_frame_index]
-	(const auto& instance_iterator, const OBBBox& obb_box, const CarGPUIndex& car_gpu_index, const Car& car)
+	(const auto& instance_iterator, const OBBBox& obb_box, const CarGPUIndex& car_gpu_index, const Car& car, const CarSettings& car_settings)
 		{
 			if (car_gpu_index.IsValid())
 			{
@@ -379,7 +379,7 @@ void BoxCityGame::OnRender(double total_time, float elapsed_time)
 
 				//Update GPU
 				GPUBoxInstance gpu_box_instance;
-				gpu_box_instance.Fill(render_box, 0);
+				gpu_box_instance.Fill(render_box, static_cast<uint32_t>(render_gpu_memory_module->GetStaticGPUMemoryOffset(traffic_manager->GetGPUCarBoxListHandle())), car_settings.size);
 
 				//Only the first 3 float4
 				render_gpu_memory_module->UpdateStaticGPUMemory(device, traffic_manager->GetGPUHandle(), &gpu_box_instance, sizeof(GPUBoxInstance), render_frame_index, car_gpu_index.gpu_slot * sizeof(GPUBoxInstance));

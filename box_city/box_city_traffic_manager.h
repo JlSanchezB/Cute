@@ -87,6 +87,12 @@ namespace BoxCityTrafficSystem
 			return m_gpu_memory;
 		}
 
+		//GPU Access
+		render::AllocHandle& GetGPUCarBoxListHandle()
+		{
+			return m_gpu_car_box_list;
+		}
+
 		std::bitset<BoxCityTileSystem::kLocalTileCount* BoxCityTileSystem::kLocalTileCount> GetCameraBitSet(const helpers::Frustum& frustum) const
 		{
 			std::bitset<BoxCityTileSystem::kLocalTileCount* BoxCityTileSystem::kLocalTileCount> ret;
@@ -194,6 +200,9 @@ namespace BoxCityTrafficSystem
 
 		//GPU memory
 		render::AllocHandle m_gpu_memory;
+
+		//GPU car box list
+		render::AllocHandle m_gpu_car_box_list;
 	};
 }
 
