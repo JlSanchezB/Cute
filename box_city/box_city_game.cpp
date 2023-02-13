@@ -379,7 +379,7 @@ void BoxCityGame::OnRender(double total_time, float elapsed_time)
 
 				//Update GPU
 				GPUBoxInstance gpu_box_instance;
-				gpu_box_instance.Fill(render_box, static_cast<uint32_t>(render_gpu_memory_module->GetStaticGPUMemoryOffset(traffic_manager->GetGPUCarBoxListHandle())), car_settings.size);
+				gpu_box_instance.Fill(render_box, static_cast<uint32_t>(render_gpu_memory_module->GetStaticGPUMemoryOffset(traffic_manager->GetGPUCarBoxListHandle(car_settings.car_type))), car_settings.size);
 
 				//Only the first 3 float4
 				render_gpu_memory_module->UpdateStaticGPUMemory(device, traffic_manager->GetGPUHandle(), &gpu_box_instance, sizeof(GPUBoxInstance), render_frame_index, car_gpu_index.gpu_slot * sizeof(GPUBoxInstance));

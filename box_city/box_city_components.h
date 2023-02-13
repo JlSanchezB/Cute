@@ -80,11 +80,12 @@ struct CarSettings
 	float size;
 	float inv_mass;
 	glm::vec3 inv_mass_inertia;
+	uint32_t car_type;
 
 	CarSettings()
 	{
 	};
-	CarSettings(const float _size, const float mass, const glm::vec3& mass_inertia) : size(_size), inv_mass(1.f / mass), inv_mass_inertia(1.f / mass_inertia.x, 1.f / mass_inertia.y, 1.f / mass_inertia.z)
+	CarSettings(const float _size, const float mass, const glm::vec3& mass_inertia, const uint32_t _car_type) : size(_size), inv_mass(1.f / mass), inv_mass_inertia(1.f / mass_inertia.x, 1.f / mass_inertia.y, 1.f / mass_inertia.z), car_type(_car_type)
 	{
 	}
 };

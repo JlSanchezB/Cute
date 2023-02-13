@@ -41,23 +41,83 @@ namespace BoxCityTrafficSystem
 		//Allocate GPU memory, num tiles * max num cars
 		m_gpu_memory = m_GPU_memory_render_module->AllocStaticGPUMemory(m_device, kNumCars * kLocalTileCount * kLocalTileCount * sizeof(GPUBoxInstance), nullptr, render::GetGameFrameIndex(m_render_system));
 
-		//Create the car box list
-		std::vector<uint8_t> car_buffer(16 + sizeof(GPUBox));
-		uint32_t* buffer_size = reinterpret_cast<uint32_t*>(car_buffer.data());
-		buffer_size[0] = 1;
-		buffer_size[1] = 1;
-		buffer_size[2] = 1;
-		buffer_size[3] = 1;
+		std::vector<uint8_t> car_buffer;
+		auto fill_box = [&](uint32_t index, const glm::vec3& position, const glm::vec3& extent, const glm::vec3& colour)
+		{
+			GPUBox* gpu_box = reinterpret_cast<GPUBox*>(&car_buffer[16 + index * sizeof(GPUBox)]);
+			helpers::OBB obb;
+			obb.position = position;
+			obb.rotation = glm::mat3(1.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 1.f);
+			obb.extents = extent;
+			gpu_box->Fill(obb, colour, 0);
+		};
 
-		GPUBox* gpu_box = reinterpret_cast<GPUBox*>(&car_buffer[16]);
-		helpers::OBB obb;
-		obb.position = glm::vec3(0.f, 0.f, 0.f);
-		obb.rotation = glm::mat3(1.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 1.f);
-		obb.extents = glm::vec3(1.f, 1.f, 0.5f);
-		gpu_box->Fill(obb, glm::vec3(3.f, 3.f, 3.f), 0);
+		//Create the car box list, car 0
+		{
+			const uint32_t num_boxes = 10;
+			car_buffer.resize(16 + num_boxes * sizeof(GPUBox));
+			uint32_t* buffer_size = reinterpret_cast<uint32_t*>(car_buffer.data());
+			buffer_size[0] = num_boxes;
+			buffer_size[1] = 0;
+			buffer_size[2] = 0;
+			buffer_size[3] = 0;
 
-		//Allocate GPU car box list
-		m_gpu_car_box_list = m_GPU_memory_render_module->AllocStaticGPUMemory(m_device, car_buffer.size(), car_buffer.data(), render::GetGameFrameIndex(m_render_system));
+			fill_box(0, glm::vec3(0.f, 0.f, 0.f), glm::vec3(0.95f, 0.95f, 0.3f), glm::vec3(3.f, 3.f, 3.f));
+
+			//Top
+			fill_box(1, glm::vec3(0.f, -0.1f, 0.5f), glm::vec3(0.8f, 0.45f, 0.2f), 2.f * glm::vec3(0.5f, 1.0f, 1.f));
+
+			//Bottom engines
+			fill_box(2, glm::vec3(0.7f, 0.7f, -0.35f), glm::vec3(0.2f, 0.2f, 0.1f), glm::vec3(3.f, 1.f, 1.f));
+			fill_box(3, glm::vec3(0.7f, -0.7f, -0.35f), glm::vec3(0.2f, 0.2f, 0.1f), glm::vec3(3.f, 1.f, 1.f));
+			fill_box(4, glm::vec3(-0.7f, 0.7f, -0.35f), glm::vec3(0.2f, 0.2f, 0.1f), glm::vec3(3.f, 1.f, 1.f));
+			fill_box(5, glm::vec3(-0.7f, -0.7f, -0.35f), glm::vec3(0.2f, 0.2f, 0.1f), glm::vec3(3.f, 1.f, 1.f));
+
+			//Front lights
+			fill_box(6, glm::vec3(0.6f, 0.975f, 0.f), glm::vec3(0.2f, 0.025f, 0.2f), glm::vec3(3.f, 3.f, 0.f));
+			fill_box(7, glm::vec3(-0.6f, 0.975f, 0.f), glm::vec3(0.2f, 0.025f, 0.2f), glm::vec3(3.f, 3.f, 0.f));
+
+			//Rear lights
+			fill_box(8, glm::vec3(0.6f, -0.975f, 0.f), glm::vec3(0.2f, 0.025f, 0.2f), glm::vec3(3.f, 0.f, 0.f));
+			fill_box(9, glm::vec3(-0.6f, -0.975f, 0.f), glm::vec3(0.2f, 0.025f, 0.2f), glm::vec3(3.f, 0.f, 0.f));
+
+			//Allocate GPU car box list
+			m_gpu_car_box_list[0] = m_GPU_memory_render_module->AllocStaticGPUMemory(m_device, car_buffer.size(), car_buffer.data(), render::GetGameFrameIndex(m_render_system));
+		}
+		{
+			const uint32_t num_boxes = 10;
+			const float length_factor = 2.f;
+			car_buffer.resize(16 + num_boxes * sizeof(GPUBox));
+			uint32_t* buffer_size = reinterpret_cast<uint32_t*>(car_buffer.data());
+			buffer_size[0] = num_boxes;
+			buffer_size[1] = 0;
+			buffer_size[2] = 0;
+			buffer_size[3] = 0;
+
+			fill_box(0, glm::vec3(0.f, 0.f, 0.f), glm::vec3(0.95f, 0.95f * length_factor, 0.3f), glm::vec3(3.f, 3.f, 3.f));
+
+			//Top
+			fill_box(1, glm::vec3(0.f, 0.0f, 0.55f), glm::vec3(0.95f, 0.95f * length_factor, 0.3f), 2.f * glm::vec3(0.5f, 1.0f, 1.f));
+
+			//Bottom engines
+			fill_box(2, glm::vec3(0.7f, 0.7f * length_factor, -0.35f), glm::vec3(0.2f, 0.2f, 0.1f), glm::vec3(3.f, 1.f, 1.f));
+			fill_box(3, glm::vec3(0.7f, -0.7f * length_factor, -0.35f), glm::vec3(0.2f, 0.2f, 0.1f), glm::vec3(3.f, 1.f, 1.f));
+			fill_box(4, glm::vec3(-0.7f, 0.7f * length_factor, -0.35f), glm::vec3(0.2f, 0.2f, 0.1f), glm::vec3(3.f, 1.f, 1.f));
+			fill_box(5, glm::vec3(-0.7f, -0.7f * length_factor, -0.35f), glm::vec3(0.2f, 0.2f, 0.1f), glm::vec3(3.f, 1.f, 1.f));
+
+			//Front lights
+			fill_box(6, glm::vec3(0.6f, 0.975f * length_factor, 0.f), glm::vec3(0.2f, 0.025f, 0.2f), glm::vec3(3.f, 3.f, 0.f));
+			fill_box(7, glm::vec3(-0.6f, 0.975f * length_factor, 0.f), glm::vec3(0.2f, 0.025f, 0.2f), glm::vec3(3.f, 3.f, 0.f));
+
+			//Rear lights
+			fill_box(8, glm::vec3(0.6f, -0.975f * length_factor, 0.f), glm::vec3(0.2f, 0.025f, 0.2f), glm::vec3(3.f, 0.f, 0.f));
+			fill_box(9, glm::vec3(-0.6f, -0.975f * length_factor, 0.f), glm::vec3(0.2f, 0.025f, 0.2f), glm::vec3(3.f, 0.f, 0.f));
+
+			//Allocate GPU car box list
+			m_gpu_car_box_list[1] = m_GPU_memory_render_module->AllocStaticGPUMemory(m_device, car_buffer.size(), car_buffer.data(), render::GetGameFrameIndex(m_render_system));
+		}
+
+
 	}
 
 	void Manager::Shutdown()
@@ -74,7 +134,8 @@ namespace BoxCityTrafficSystem
 
 		//Deallocate GPU memory
 		m_GPU_memory_render_module->DeallocStaticGPUMemory(m_device, m_gpu_memory, render::GetGameFrameIndex(m_render_system));
-		m_GPU_memory_render_module->DeallocStaticGPUMemory(m_device, m_gpu_car_box_list, render::GetGameFrameIndex(m_render_system));
+		m_GPU_memory_render_module->DeallocStaticGPUMemory(m_device, m_gpu_car_box_list[0], render::GetGameFrameIndex(m_render_system));
+		m_GPU_memory_render_module->DeallocStaticGPUMemory(m_device, m_gpu_car_box_list[1], render::GetGameFrameIndex(m_render_system));
 	}
 
 	void Manager::SetupCar(Tile& tile, std::mt19937& random, float begin_tile_x, float begin_tile_y,
@@ -82,7 +143,14 @@ namespace BoxCityTrafficSystem
 		Car& car, CarMovement& car_movement, CarSettings& car_settings, OBBBox& obb_component, CarGPUIndex& car_gpu_index)
 	{
 		glm::vec3 position(begin_tile_x + position_range(random), begin_tile_y + position_range(random), position_range_z(random));
-		float size = size_range(random);
+		
+		//Car type
+		uint32_t car_type = ((random() % 10) < 2) ? 1 : 0;
+		
+		auto car_size_multipliers = std::array{ 1.f, 1.f };
+		auto car_dimensions = std::array{ glm::vec3(1.0f, 1.f, 0.6f), glm::vec3(1.0f, 2.f, 0.8f) };
+
+		float size = size_range(random) * car_size_multipliers[car_type];
 		
 		car.position.Reset(position);
 		car.rotation.Reset(glm::quat(glm::vec3(0.f, 0.f, 0.f)));
@@ -90,21 +158,22 @@ namespace BoxCityTrafficSystem
 		car_movement.rotation_velocity = glm::vec3(0.f, 0.f, 0.f);
 
 		car_settings.size = size;
-		glm::vec3 car_dimensions(size, size, size * 0.5f);
-		float mass = (size * size * (size / 2.f));
+		glm::vec3 car_size = car_dimensions[car_type] * size;
+		float mass = (car_size.x * car_size.y * car_size.z);
 		car_settings.inv_mass = 1.f / mass;
 		car_settings.inv_mass_inertia = glm::vec3(
-			1.f / (0.083f * mass * (car_dimensions.z * car_dimensions.z + car_dimensions.y * car_dimensions.y)),
-			1.f / (0.083f * mass * (car_dimensions.x * car_dimensions.x + car_dimensions.y * car_dimensions.y)),
-			1.f / (0.083f * mass * (car_dimensions.x * car_dimensions.x + car_dimensions.z * car_dimensions.z)));
-		
+			1.f / (0.083f * mass * (car_size.z * car_size.z + car_size.y * car_size.y)),
+			1.f / (0.083f * mass * (car_size.x * car_size.x + car_size.y * car_size.y)),
+			1.f / (0.083f * mass * (car_size.x * car_size.x + car_size.z * car_size.z)));
+		car_settings.car_type = car_type;
+
 		obb_component.position = position;
-		obb_component.extents = glm::vec3(1.f, 1.f, 0.5f);
+		obb_component.extents = car_dimensions[car_type];
 		obb_component.rotation = glm::toMat3(*car.rotation);
 
 		//Update GPU, all the gpu instance
 		GPUBoxInstance gpu_box_instance;
-		gpu_box_instance.Fill(obb_component, static_cast<uint32_t>(m_GPU_memory_render_module->GetStaticGPUMemoryOffset(m_gpu_car_box_list)));
+		gpu_box_instance.Fill(obb_component, static_cast<uint32_t>(m_GPU_memory_render_module->GetStaticGPUMemoryOffset(m_gpu_car_box_list[car_type])));
 
 		//Update the GPU memory
 		m_GPU_memory_render_module->UpdateStaticGPUMemory(m_device, m_gpu_memory, &gpu_box_instance, sizeof(GPUBoxInstance), render::GetGameFrameIndex(m_render_system), car_gpu_index.gpu_slot * sizeof(GPUBoxInstance));
@@ -156,7 +225,7 @@ namespace BoxCityTrafficSystem
 
 					std::uniform_real_distribution<float> position_range(0.f, kTileSize);
 					std::uniform_real_distribution<float> position_range_z(BoxCityTileSystem::kTileHeightBottom, BoxCityTileSystem::kTileHeightTop);
-					std::uniform_real_distribution<float> size_range(1.f, 2.f);
+					std::uniform_real_distribution<float> size_range(1.f, 1.5f);
 
 					//Tile is getting deactivated or moved
 					if (tile.m_activated)

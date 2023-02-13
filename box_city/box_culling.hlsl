@@ -128,6 +128,11 @@ void box_culling(uint3 group : SV_GroupID, uint3 group_thread_id : SV_GroupThrea
             if (box_list_offset != 0)
             {
                 uint box_list_count = static_gpu_memory.Load(box_list_offset);
+
+                //Reserve space in the indirect box buffer
+                uint offset;
+                InterlockedAdd(indirect_culled_boxes_parameters[1], box_list_count, offset);
+
                 //Loop for each box, REALLY BAD for performance
                 for (uint j = 0; j < box_list_count; ++j)
                 {
@@ -135,11 +140,9 @@ void box_culling(uint3 group : SV_GroupID, uint3 group_thread_id : SV_GroupThrea
                     indirect_box = ((instance_offset / 16) << 8) | j;
                     
                     //Add into the indirect buffer
-                    uint offset;
-                    InterlockedAdd(indirect_culled_boxes_parameters[1], 1, offset);
-                    if (offset < indirect_box_buffer_count)
+                    if ((offset + j) < indirect_box_buffer_count)
                     {
-                        indirect_culled_boxes[offset] = indirect_box;
+                        indirect_culled_boxes[offset + j] = indirect_box;
                     }
                 }
                 
