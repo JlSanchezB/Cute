@@ -140,12 +140,12 @@ namespace BoxCityTrafficSystem
 
 	void Manager::SetupCar(Tile& tile, std::mt19937& random, float begin_tile_x, float begin_tile_y,
 		std::uniform_real_distribution<float>& position_range, std::uniform_real_distribution<float>& position_range_z, std::uniform_real_distribution<float>& size_range,
-		Car& car, CarMovement& car_movement, CarSettings& car_settings, OBBBox& obb_component, CarGPUIndex& car_gpu_index, CarBoxListIndex& car_box_list_index)
+		Car& car, CarMovement& car_movement, CarSettings& car_settings, OBBBox& obb_component, CarGPUIndex& car_gpu_index, CarBoxListOffset& car_box_list_offset)
 	{
 		glm::vec3 position(begin_tile_x + position_range(random), begin_tile_y + position_range(random), position_range_z(random));
 		
 		//Car type
-		car_box_list_index.car_box_list_index = ((random() % 10) < 2) ? 1 : 0;
+		uint32_t car_type = ((random() % 10) < 2) ? 1 : 0;
 		
 		auto car_dimensions = std::array{ glm::vec3(1.0f, 1.f, 0.7f), glm::vec3(1.0f, 2.f, 0.8f) };
 
@@ -157,7 +157,7 @@ namespace BoxCityTrafficSystem
 		car_movement.rotation_velocity = glm::vec3(0.f, 0.f, 0.f);
 
 		car_settings.size = size;
-		glm::vec3 car_size = car_dimensions[car_box_list_index.car_box_list_index] * size;
+		glm::vec3 car_size = car_dimensions[car_type] * size;
 		float mass = (car_size.x * car_size.y * car_size.z);
 		car_settings.inv_mass = 1.f / mass;
 		car_settings.inv_mass_inertia = glm::vec3(
@@ -166,12 +166,13 @@ namespace BoxCityTrafficSystem
 			1.f / (0.083f * mass * (car_size.x * car_size.x + car_size.z * car_size.z)));
 
 		obb_component.position = position;
-		obb_component.extents = car_dimensions[car_box_list_index.car_box_list_index];
+		obb_component.extents = car_dimensions[car_type];
 		obb_component.rotation = glm::toMat3(*car.rotation);
 
+		car_box_list_offset.car_box_list_offset = static_cast<uint32_t>(m_GPU_memory_render_module->GetStaticGPUMemoryOffset(m_gpu_car_box_list[car_type]));
 		//Update GPU, all the gpu instance
 		GPUBoxInstance gpu_box_instance;
-		gpu_box_instance.Fill(obb_component, static_cast<uint32_t>(m_GPU_memory_render_module->GetStaticGPUMemoryOffset(m_gpu_car_box_list[car_box_list_index.car_box_list_index])));
+		gpu_box_instance.Fill(obb_component, car_box_list_offset.car_box_list_offset);
 
 		//Update the GPU memory
 		m_GPU_memory_render_module->UpdateStaticGPUMemory(m_device, m_gpu_memory, &gpu_box_instance, sizeof(GPUBoxInstance), render::GetGameFrameIndex(m_render_system), car_gpu_index.gpu_slot * sizeof(GPUBoxInstance));
@@ -234,11 +235,11 @@ namespace BoxCityTrafficSystem
 						core::LogInfo("Traffic: Tile Local<%i,%i>, World<%i,%i>, moved", local_tile.i, local_tile.j, world_tile.i, world_tile.j);
 
 						//Move cars
-						ecs::Process<GameDatabase, Car, CarMovement, CarSettings, CarTarget, OBBBox, CarGPUIndex, FlagBox, CarBoxListIndex>([&]
-						(const auto& instance_iterator, Car& car, CarMovement& car_movement, CarSettings& car_settings, CarTarget& car_target, OBBBox& obb_box_component, CarGPUIndex& car_gpu_index, FlagBox& flag_box, CarBoxListIndex& car_box_index_index)
+						ecs::Process<GameDatabase, Car, CarMovement, CarSettings, CarTarget, OBBBox, CarGPUIndex, FlagBox, CarBoxListOffset>([&]
+						(const auto& instance_iterator, Car& car, CarMovement& car_movement, CarSettings& car_settings, CarTarget& car_target, OBBBox& obb_box_component, CarGPUIndex& car_gpu_index, FlagBox& flag_box, CarBoxListOffset& car_box_index_offset)
 							{
 								SetupCar(tile, random, begin_tile_x, begin_tile_y, position_range, position_range_z, size_range,
-								car, car_movement, car_settings, obb_box_component, car_gpu_index, car_box_index_index);
+								car, car_movement, car_settings, obb_box_component, car_gpu_index, car_box_index_offset);
 
 								BoxCityCarControl::SetupCarTarget(random, tile_manager, car, car_target, true);
 
@@ -268,12 +269,12 @@ namespace BoxCityTrafficSystem
 							CarGPUIndex car_gpu_index;
 							CarControl car_control;
 							FlagBox flag_box;
-							CarBoxListIndex car_box_list_index;
+							CarBoxListOffset car_box_list_offset;
 							//Alloc GPU slot
 							car_gpu_index.gpu_slot = static_cast<uint16_t>(tile.m_zone_index * kNumCars + i);
 
 							SetupCar(tile, random, begin_tile_x, begin_tile_y, position_range, position_range_z, size_range,
-								car, car_movement, car_settings, obb_box_component, car_gpu_index, car_box_list_index);
+								car, car_movement, car_settings, obb_box_component, car_gpu_index, car_box_list_offset);
 
 							CarTarget car_target;
 							BoxCityCarControl::SetupCarTarget(random, tile_manager, car, car_target, true);
@@ -289,7 +290,7 @@ namespace BoxCityTrafficSystem
 								.Init<CarGPUIndex>(car_gpu_index)
 								.Init<CarControl>(car_control)
 								.Init<FlagBox>(flag_box)
-								.Init<CarBoxListIndex>(car_box_list_index);
+								.Init<CarBoxListOffset>(car_box_list_offset);
 
 							if (tile.m_zone_index == 0 && i == 0)
 							{

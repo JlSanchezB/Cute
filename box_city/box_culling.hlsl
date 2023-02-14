@@ -23,6 +23,13 @@ RWStructuredBuffer<uint> indirect_culled_boxes_parameters : register(u0);
 //Buffer with the offsets of all the culled boxes
 RWStructuredBuffer<uint> indirect_culled_boxes : register(u1);
 
+float3 quat_multiplication(float4 quat, float3 vector)
+{
+    float3 qv = float3(quat.x, quat.y, quat.z);
+    float s = quat.w;
+    float3 t = 2.0f * cross(qv, vector);
+    return vector + (s * t) + cross(qv, t);
+}
 
 //Clear
 [numthreads(1, 1, 1)]
@@ -64,29 +71,27 @@ void box_culling(uint3 group : SV_GroupID, uint3 group_thread_id : SV_GroupThrea
             uint instance_offset = static_gpu_memory.Load(instance_list_offset + instance_index * 4);
 
             //Read Box instance data
-            float4 instance_data[4];
+            float4 instance_data[3];
 
             instance_data[0] = asfloat(static_gpu_memory.Load4(instance_offset + 0));
             instance_data[1] = asfloat(static_gpu_memory.Load4(instance_offset + 16));
             instance_data[2] = asfloat(static_gpu_memory.Load4(instance_offset + 32));
-            instance_data[3] = asfloat(static_gpu_memory.Load4(instance_offset + 48));
 
-            float3x3 rotate_matrix = float3x3(instance_data[1].xyz, instance_data[2].xyz, instance_data[3].xyz);
-            float3 extent = float3(instance_data[1].w, instance_data[2].w, instance_data[3].w);
-            float3x3 scale_rotate_matrix = float3x3(extent, extent, extent) * float3x3(rotate_matrix[0], rotate_matrix[1], rotate_matrix[2]);
+            float4 rotate_quat = instance_data[2];
+            float3 extent = float3(instance_data[1].x, instance_data[1].y, instance_data[1].z);
             float3 translation = float3(instance_data[0].x, instance_data[0].y, instance_data[0].z);
 
             //Frustum collision
             {
                 float3 box_points[8];
-                box_points[0] = mul(scale_rotate_matrix, float3(-1.f, -1.f, -1.f)) + translation;
-                box_points[1] = mul(scale_rotate_matrix, float3(-1.f, -1.f, 1.f)) + translation;
-                box_points[2] = mul(scale_rotate_matrix, float3(-1.f, 1.f, -1.f)) + translation;
-                box_points[3] = mul(scale_rotate_matrix, float3(-1.f, 1.f, 1.f)) + translation;
-                box_points[4] = mul(scale_rotate_matrix, float3(1.f, -1.f, -1.f)) + translation;
-                box_points[5] = mul(scale_rotate_matrix, float3(1.f, -1.f, 1.f)) + translation;
-                box_points[6] = mul(scale_rotate_matrix, float3(1.f, 1.f, -1.f)) + translation;
-                box_points[7] = mul(scale_rotate_matrix, float3(1.f, 1.f, 1.f)) + translation;
+                box_points[0] = quat_multiplication(rotate_quat, float3(-1.f, -1.f, -1.f) * extent) + translation;
+                box_points[1] = quat_multiplication(rotate_quat, float3(-1.f, -1.f, 1.f) * extent) + translation;
+                box_points[2] = quat_multiplication(rotate_quat, float3(-1.f, 1.f, -1.f) * extent) + translation;
+                box_points[3] = quat_multiplication(rotate_quat, float3(-1.f, 1.f, 1.f) * extent) + translation;
+                box_points[4] = quat_multiplication(rotate_quat, float3(1.f, -1.f, -1.f) * extent) + translation;
+                box_points[5] = quat_multiplication(rotate_quat, float3(1.f, -1.f, 1.f) * extent) + translation;
+                box_points[6] = quat_multiplication(rotate_quat, float3(1.f, 1.f, -1.f) * extent) + translation;
+                box_points[7] = quat_multiplication(rotate_quat, float3(1.f, 1.f, 1.f) * extent) + translation;
 
                 // check box outside/inside of frustum
                 for (int ii = 0; ii < 6; ii++)
@@ -121,7 +126,7 @@ void box_culling(uint3 group : SV_GroupID, uint3 group_thread_id : SV_GroupThrea
                 {outside = 0; for (int k = 0; k < 8; k++) outside += ((frustum_points[k].z > box_max.z) ? 1 : 0); if (outside == 8) continue;};
                 {outside = 0; for (int k = 0; k < 8; k++) outside += ((frustum_points[k].z < box_min.z) ? 1 : 0); if (outside == 8) continue;};
             }
-
+            
             //Read the GPUBoxList number of boxes
             uint box_list_offset = asuint(instance_data[0].w);
 

@@ -22,6 +22,14 @@ ByteAddressBuffer static_gpu_memory: register(t0);
 ByteAddressBuffer dynamic_gpu_memory: register(t1);
 StructuredBuffer<uint> indirect_box_buffer: register(t2);
 
+float3 quat_multiplication(float4 quat, float3 vector)
+{
+    float3 qv = float3(quat.x, quat.y, quat.z);
+    float s = -quat.w;
+    float3 t = 2.0f * cross(qv, vector);
+    return vector + (s * t) + cross(qv, t);
+}
+
 PSInput vs_box_main(float3 position : POSITION, float3 normal : NORMAL, uint instance_id : SV_InstanceID)
 {
     PSInput result;
@@ -33,14 +41,13 @@ PSInput vs_box_main(float3 position : POSITION, float3 normal : NORMAL, uint ins
     uint instance_data_offset_byte = (indirect_box >> 8) * 16;
 
     //Read Box instance data
-    float4 instance_data[4];
+    float4 instance_data[3];
 
     instance_data[0] = asfloat(static_gpu_memory.Load4(instance_data_offset_byte + 0));
-    instance_data[1] = asfloat(static_gpu_memory.Load4(instance_data_offset_byte + 16));
+    //instance_data[1] = asfloat(static_gpu_memory.Load4(instance_data_offset_byte + 16));
     instance_data[2] = asfloat(static_gpu_memory.Load4(instance_data_offset_byte + 32));
-    instance_data[3] = asfloat(static_gpu_memory.Load4(instance_data_offset_byte + 48));
-    
-    float3x3 instance_rotate_matrix = float3x3(instance_data[1].xyz, instance_data[2].xyz, instance_data[3].xyz);
+
+    float4 instance_rotate_quat = instance_data[2];
     float3 instance_translation = float3(instance_data[0].x, instance_data[0].y, instance_data[0].z);
 
     //Then extract the box obb
@@ -64,12 +71,12 @@ PSInput vs_box_main(float3 position : POSITION, float3 normal : NORMAL, uint ins
 
     //Each position needs to be multiply by the local matrix
     float3 box_position = mul(box_rotate_matrix, position * box_extent) + box_translation;
-    float3 world_position = mul(instance_rotate_matrix, box_position) + instance_translation;
+    float3 world_position = quat_multiplication(instance_rotate_quat, box_position) + instance_translation;
 
     result.position = mul(view_projection_matrix, float4(world_position, 1.f));
 
     float3 box_normal = mul(box_rotate_matrix, normal);
-    result.normal = mul(instance_rotate_matrix, box_normal);
+    result.normal = quat_multiplication(instance_rotate_quat, box_normal);
     result.colour = box_colour;
 
     return result;

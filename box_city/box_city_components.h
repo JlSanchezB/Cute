@@ -90,14 +90,14 @@ struct CarSettings
 	}
 };
 
-struct CarBoxListIndex
+struct CarBoxListOffset
 {
-	uint8_t car_box_list_index;
+	uint32_t car_box_list_offset;
 
-	CarBoxListIndex()
+	CarBoxListOffset()
 	{
 	}
-	CarBoxListIndex(uint8_t _car_box_list_index) : car_box_list_index(_car_box_list_index)
+	CarBoxListOffset(uint32_t _car_box_list_offset) : car_box_list_offset(_car_box_list_offset)
 	{
 	}
 };
@@ -170,9 +170,9 @@ struct CarBuildingsCache
 //ECS definition
 using BoxType = ecs::EntityType<BoxGPUHandle, OBBBox, RangeAABB, FlagBox, BoxListHandle>;
 using AnimatedBoxType = ecs::EntityType<InterpolatedPosition, BoxGPUHandle, RangeAABB, OBBBox, AnimationBox, FlagBox, BoxListHandle>;
-using CarType = ecs::EntityType<OBBBox, Car, CarMovement, CarSettings, CarTarget, CarControl, CarGPUIndex, CarBuildingsCache, FlagBox, CarBoxListIndex>;
+using CarType = ecs::EntityType<OBBBox, Car, CarMovement, CarSettings, CarTarget, CarControl, CarGPUIndex, CarBuildingsCache, FlagBox, CarBoxListOffset>;
 
-using GameComponents = ecs::ComponentList<InterpolatedPosition, BoxGPUHandle, OBBBox, RangeAABB, AnimationBox, BoxListHandle, FlagBox, Car, CarMovement, CarSettings, CarTarget, CarGPUIndex, CarControl, CarBuildingsCache, CarBoxListIndex>;
+using GameComponents = ecs::ComponentList<InterpolatedPosition, BoxGPUHandle, OBBBox, RangeAABB, AnimationBox, BoxListHandle, FlagBox, Car, CarMovement, CarSettings, CarTarget, CarGPUIndex, CarControl, CarBuildingsCache, CarBoxListOffset>;
 using GameEntityTypes = ecs::EntityTypeList<BoxType, AnimatedBoxType, CarType>;
 
 using GameDatabase = ecs::DatabaseDeclaration<GameComponents, GameEntityTypes>;
@@ -186,8 +186,11 @@ struct GPUBoxInstance
 {
 	glm::vec3 position; //3
 	uint32_t box_list_offset; //1
+	
+	glm::vec3 extents; //3
+	uint32_t instance_id; //1
 
-	glm::vec4 rotation_matrix_extents[3]; //12
+	glm::quat rotation; //4
 
 	void FillForUpdatePosition(const helpers::OBB& obb_box, uint32_t _box_list_offset)
 	{
@@ -195,13 +198,20 @@ struct GPUBoxInstance
 		box_list_offset = _box_list_offset;
 	}
 
+	void Fill(const glm::vec3& _position, const glm::vec3& _extents, const glm::quat& _rotation, uint32_t _box_list_offset)
+	{
+		position = _position;
+		box_list_offset = _box_list_offset;
+		extents = _extents;
+		rotation = _rotation;
+	}
+
 	void Fill(const helpers::OBB& obb_box, uint32_t _box_list_offset)
 	{
 		position = obb_box.position;
 		box_list_offset = _box_list_offset;
-		rotation_matrix_extents[0] = glm::vec4(obb_box.rotation[0][0], obb_box.rotation[0][1], obb_box.rotation[0][2], obb_box.extents.x);
-		rotation_matrix_extents[1] = glm::vec4(obb_box.rotation[1][0], obb_box.rotation[1][1], obb_box.rotation[1][2], obb_box.extents.y);
-		rotation_matrix_extents[2] = glm::vec4(obb_box.rotation[2][0], obb_box.rotation[2][1], obb_box.rotation[2][2], obb_box.extents.z);
+		extents = obb_box.extents;
+		rotation = glm::toQuat(obb_box.rotation);
 	}
 };
 
@@ -225,8 +235,6 @@ struct GPUBox
 		colour = _colour;
 		flags = _flags;
 	}
-
-
 };
 
 

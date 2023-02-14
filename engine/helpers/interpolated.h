@@ -19,7 +19,7 @@ namespace helpers
 	template<>
 	inline glm::quat Lerp(const glm::quat& a, const glm::quat& b, const float t)
 	{
-		return glm::lerp(a, b, t);
+		return glm::slerp(a, b, t);
 	}
 
 
