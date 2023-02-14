@@ -182,7 +182,8 @@ namespace BoxCityCarControl
 		{
 			car_target.last_target = last_target;
 		}
-
+		assert(glm::all(glm::isfinite(car_target.target)));
+		assert(glm::all(glm::isfinite(car_target.last_target)));
 		assert(reset || !car_target.target_valid || glm::distance(glm::vec2(*car.position), glm::vec2(car_target.target)) < 2000.f);
 	}
 	void UpdateAIControl(std::mt19937& random, uint32_t instance_index, CarControl& car_control, const Car& car, const CarMovement& car_movement, const CarSettings& car_settings, CarTarget& car_target, CarBuildingsCache& car_buildings_cache, uint32_t frame_index, float elapsed_time, BoxCityTileSystem::Manager* tile_manager, BoxCityTrafficSystem::Manager* traffic_manager, const glm::vec3& camera_pos)

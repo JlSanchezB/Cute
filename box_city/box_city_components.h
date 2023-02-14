@@ -85,7 +85,19 @@ struct CarSettings
 	CarSettings()
 	{
 	};
-	CarSettings(const float _size, const float mass, const glm::vec3& mass_inertia, const uint32_t _car_type) : size(_size), inv_mass(1.f / mass), inv_mass_inertia(1.f / mass_inertia.x, 1.f / mass_inertia.y, 1.f / mass_inertia.z), car_type(_car_type)
+	CarSettings(const float _size, const float mass, const glm::vec3& mass_inertia) : size(_size), inv_mass(1.f / mass), inv_mass_inertia(1.f / mass_inertia.x, 1.f / mass_inertia.y, 1.f / mass_inertia.z)
+	{
+	}
+};
+
+struct CarBoxListIndex
+{
+	uint8_t car_box_list_index;
+
+	CarBoxListIndex()
+	{
+	}
+	CarBoxListIndex(uint8_t _car_box_list_index) : car_box_list_index(_car_box_list_index)
 	{
 	}
 };
@@ -108,7 +120,7 @@ struct CarTarget
 	CarTarget()
 	{
 	};
-	CarTarget(const glm::vec3& _target) : target(_target)
+	CarTarget(const glm::vec3& _target) : target(_target), last_target(_target)
 	{
 	};
 };
@@ -158,9 +170,9 @@ struct CarBuildingsCache
 //ECS definition
 using BoxType = ecs::EntityType<BoxGPUHandle, OBBBox, RangeAABB, FlagBox, BoxListHandle>;
 using AnimatedBoxType = ecs::EntityType<InterpolatedPosition, BoxGPUHandle, RangeAABB, OBBBox, AnimationBox, FlagBox, BoxListHandle>;
-using CarType = ecs::EntityType<OBBBox, Car, CarMovement, CarSettings, CarTarget, CarControl, CarGPUIndex, CarBuildingsCache, FlagBox>;
+using CarType = ecs::EntityType<OBBBox, Car, CarMovement, CarSettings, CarTarget, CarControl, CarGPUIndex, CarBuildingsCache, FlagBox, CarBoxListIndex>;
 
-using GameComponents = ecs::ComponentList<InterpolatedPosition, BoxGPUHandle, OBBBox, RangeAABB, AnimationBox, BoxListHandle, FlagBox, Car, CarMovement, CarSettings, CarTarget, CarGPUIndex, CarControl, CarBuildingsCache>;
+using GameComponents = ecs::ComponentList<InterpolatedPosition, BoxGPUHandle, OBBBox, RangeAABB, AnimationBox, BoxListHandle, FlagBox, Car, CarMovement, CarSettings, CarTarget, CarGPUIndex, CarControl, CarBuildingsCache, CarBoxListIndex>;
 using GameEntityTypes = ecs::EntityTypeList<BoxType, AnimatedBoxType, CarType>;
 
 using GameDatabase = ecs::DatabaseDeclaration<GameComponents, GameEntityTypes>;
@@ -169,6 +181,7 @@ using InstanceReference = ecs::InstanceReference;
 
 
 //GPUBoxInstance
+//GPU instance represent a 1 size box
 struct GPUBoxInstance
 {
 	glm::vec3 position; //3
@@ -182,17 +195,18 @@ struct GPUBoxInstance
 		box_list_offset = _box_list_offset;
 	}
 
-	void Fill(const helpers::OBB& obb_box, uint32_t _box_list_offset, float scale = 1.f)
+	void Fill(const helpers::OBB& obb_box, uint32_t _box_list_offset)
 	{
 		position = obb_box.position;
 		box_list_offset = _box_list_offset;
-		rotation_matrix_extents[0] = glm::vec4(obb_box.rotation[0][0] * scale, obb_box.rotation[0][1] * scale, obb_box.rotation[0][2] * scale, obb_box.extents.x);
-		rotation_matrix_extents[1] = glm::vec4(obb_box.rotation[1][0] * scale, obb_box.rotation[1][1] * scale, obb_box.rotation[1][2] * scale, obb_box.extents.y);
-		rotation_matrix_extents[2] = glm::vec4(obb_box.rotation[2][0] * scale, obb_box.rotation[2][1] * scale, obb_box.rotation[2][2] * scale, obb_box.extents.z);
+		rotation_matrix_extents[0] = glm::vec4(obb_box.rotation[0][0], obb_box.rotation[0][1], obb_box.rotation[0][2], obb_box.extents.x);
+		rotation_matrix_extents[1] = glm::vec4(obb_box.rotation[1][0], obb_box.rotation[1][1], obb_box.rotation[1][2], obb_box.extents.y);
+		rotation_matrix_extents[2] = glm::vec4(obb_box.rotation[2][0], obb_box.rotation[2][1], obb_box.rotation[2][2], obb_box.extents.z);
 	}
 };
 
 //GPUBox
+//The Box are axis oriented boxes and the range is -1 to 1
 struct GPUBox
 {
 	glm::vec3 position; //3
