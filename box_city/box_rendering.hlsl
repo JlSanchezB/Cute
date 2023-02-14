@@ -54,28 +54,25 @@ PSInput vs_box_main(float3 position : POSITION, float3 normal : NORMAL, uint ins
     uint box_index = indirect_box & 0xFF;
     uint box_list_offset_byte = asuint(instance_data[0].w);
     box_list_offset_byte += 16; //Skip the box_list count
-    box_list_offset_byte += box_index * 16 * 5; //Each box is a float4 * 5
+    box_list_offset_byte += box_index * 16 * 3; //Each box is a float4 * 5
 
     //Read Box data
-    float4 box_data[5];
+    float4 box_data[3];
     box_data[0] = asfloat(static_gpu_memory.Load4(box_list_offset_byte + 0));
     box_data[1] = asfloat(static_gpu_memory.Load4(box_list_offset_byte + 16));
     box_data[2] = asfloat(static_gpu_memory.Load4(box_list_offset_byte + 32));
-    box_data[3] = asfloat(static_gpu_memory.Load4(box_list_offset_byte + 48));
-    box_data[4] = asfloat(static_gpu_memory.Load4(box_list_offset_byte + 64));
 
-    float3x3 box_rotate_matrix = float3x3(box_data[1].xyz, box_data[2].xyz, box_data[3].xyz);
-    float3 box_extent = float3(box_data[1].w, box_data[2].w, box_data[3].w);
+    float3 box_extent = float3(box_data[1].x, box_data[1].y, box_data[1].z);
     float3 box_translation = float3(box_data[0].x, box_data[0].y, box_data[0].z);
-    float4 box_colour = float4(box_data[4].x, box_data[4].y, box_data[4].z, 1.f);
+    float4 box_colour = float4(box_data[2].x, box_data[2].y, box_data[2].z, 1.f);
 
     //Each position needs to be multiply by the local matrix
-    float3 box_position = mul(box_rotate_matrix, position * box_extent) + box_translation;
+    float3 box_position = position * box_extent + box_translation;
     float3 world_position = quat_multiplication(instance_rotate_quat, box_position) + instance_translation;
 
     result.position = mul(view_projection_matrix, float4(world_position, 1.f));
 
-    float3 box_normal = mul(box_rotate_matrix, normal);
+    float3 box_normal = normal;
     result.normal = quat_multiplication(instance_rotate_quat, box_normal);
     result.colour = box_colour;
 

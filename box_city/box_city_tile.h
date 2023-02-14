@@ -56,7 +56,8 @@ namespace BoxCityTileSystem
 
 	struct BoxData
 	{
-		helpers::OBB oob_box;
+		glm::vec3 position;
+		glm::vec3 extents;
 		uint8_t colour_palette;
 	};
 

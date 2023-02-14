@@ -303,27 +303,23 @@ namespace BoxCityTileSystem
 		//Add bulding box
 		BoxData building_box;
 		building_box.colour_palette = 0xFF;
-		building_box.oob_box.position = glm::vec3(0.f, 0.f, 0.f);
-		building_box.oob_box.rotation = glm::mat3(1.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 1.f);
-		building_box.oob_box.extents = obb.extents;
-		building_box.oob_box.extents -= glm::vec3(panel_depth, panel_depth, 0.f);
+		building_box.position = glm::vec3(0.f, 0.f, 0.f);
+		building_box.extents = obb.extents;
+		building_box.extents -= glm::vec3(panel_depth, panel_depth, 0.f);
 
 		building_instance.m_boxes.push_back(building_box);
 
-		assert(building_box.oob_box.extents.x > 0.f);
-		assert(building_box.oob_box.extents.y > 0.f);
-		assert(building_box.oob_box.extents.z > 0.f);
+		assert(building_box.extents.x > 0.f);
+		assert(building_box.extents.y > 0.f);
+		assert(building_box.extents.z > 0.f);
 
 		//Create the boxes that makes this building
-
-		helpers::OBB updated_obb = building_box.oob_box;
-
 		std::vector<std::pair<glm::vec2, glm::vec2>> panels_generated;
 		for (size_t face = 0; face < 4; ++face)
 		{
 			//For each face try to create panels
-			const float wall_width = (face % 2 == 0) ? updated_obb.extents.x : updated_obb.extents.y;
-			const float wall_heigh = updated_obb.extents.z;
+			const float wall_width = (face % 2 == 0) ? building_box.extents.x : building_box.extents.y;
+			const float wall_heigh = building_box.extents.z;
 			panels_generated.clear();
 
 			std::uniform_real_distribution<float> panel_size_range(zone_descriptor.panel_size_range_min, glm::min(wall_width, zone_descriptor.panel_size_range_max));
@@ -359,21 +355,13 @@ namespace BoxCityTileSystem
 
 				panels_generated.emplace_back(panel_position, panel_size);
 
-				//Calculate panel data
-				helpers::AABB aabb_panel;
-				helpers::OBB obb_panel;
-				obb_panel.position = face_position + glm::vec3(panel_position.x, panel_position.y, panel_depth / 2.f) * face_rotation;
-				obb_panel.rotation = face_rotation;
-				obb_panel.extents = glm::vec3(panel_size.x, panel_size.y, panel_depth / 2.f);
-
-				helpers::CalculateAABBFromOBB(aabb_panel, obb_panel);
 
 				uint8_t colour_palette = random() % 5;
-
 				BoxData panel_box;
 
 				panel_box.colour_palette = colour_palette;
-				panel_box.oob_box = obb_panel; //local space
+				panel_box.position = face_position + glm::vec3(panel_position.x, panel_position.y, panel_depth / 2.f) * face_rotation;
+				panel_box.extents = glm::abs(glm::vec3(panel_size.x, panel_size.y, panel_depth / 2.f) * face_rotation);
 				
 				building_instance.m_boxes.push_back(panel_box);
 			}
@@ -440,7 +428,7 @@ namespace BoxCityTileSystem
 			const auto& box_data = box_data_array[i];
 
 			uint8_t* dest_data = buffer.data() + 16 + i * sizeof(GPUBox);
-			reinterpret_cast<GPUBox*>(dest_data)->Fill(box_data.oob_box, (box_data.colour_palette == 0xFF) ? glm::vec3(1.f, 1.f, 1.f) : 2.f * colour_palette[box_data.colour_palette], 0);
+			reinterpret_cast<GPUBox*>(dest_data)->Fill(box_data.position, box_data.extents, (box_data.colour_palette == 0xFF) ? glm::vec3(1.f, 1.f, 1.f) : 2.f * colour_palette[box_data.colour_palette], 0);
 		}
 
 		//COUNTER_INC(c_Box_Count);

@@ -220,18 +220,16 @@ struct GPUBoxInstance
 struct GPUBox
 {
 	glm::vec3 position; //3
-	uint32_t gap;
-	glm::vec4 rotation_extent[3]; //12
+	uint32_t gap_1;
+	glm::vec3 extent; //3
+	uint32_t gap_2;
 	glm::vec3 colour; //3
 	uint32_t flags; //1
 
-	void Fill(const helpers::OBB& obb_box, const glm::vec3& _colour, const uint32_t& _flags)
+	void Fill(const glm::vec3& _position, const glm::vec3 _extent, const glm::vec3& _colour, const uint32_t& _flags)
 	{
-		position = obb_box.position;
-		rotation_extent[0] =  glm::vec4(obb_box.rotation[0][0], obb_box.rotation[0][1], obb_box.rotation[0][2], obb_box.extents.x);
-		rotation_extent[1] =  glm::vec4(obb_box.rotation[1][0], obb_box.rotation[1][1], obb_box.rotation[1][2], obb_box.extents.y);
-		rotation_extent[2] =  glm::vec4(obb_box.rotation[2][0], obb_box.rotation[2][1], obb_box.rotation[2][2], obb_box.extents.z);
-
+		position = _position;
+		extent = _extent;
 		colour = _colour;
 		flags = _flags;
 	}

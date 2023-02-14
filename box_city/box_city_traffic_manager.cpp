@@ -45,11 +45,7 @@ namespace BoxCityTrafficSystem
 		auto fill_box = [&](uint32_t index, const glm::vec3& position, const glm::vec3& extent, const glm::vec3& colour)
 		{
 			GPUBox* gpu_box = reinterpret_cast<GPUBox*>(&car_buffer[16 + index * sizeof(GPUBox)]);
-			helpers::OBB obb;
-			obb.position = position;
-			obb.rotation = glm::mat3(1.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 1.f);
-			obb.extents = extent;
-			gpu_box->Fill(obb, colour, 0);
+			gpu_box->Fill(position, extent, colour, 0);
 		};
 
 		//Create the car box list, car 0
