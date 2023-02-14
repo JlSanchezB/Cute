@@ -509,6 +509,7 @@ namespace BoxCityTileSystem
 			//Just make it static
 			instances_vector.push_back(ecs::AllocInstance<GameDatabase, AnimatedBoxType>(m_zone_id)
 				.Init<OBBBox>(building_data.oob_box)
+				.Init<RangeAABB>(range_aabb)
 				.Init<AnimationBox>(building_data.animation)
 				.Init<BoxGPUHandle>(gpu_offset, static_cast<uint32_t>(lod_group))
 				.Init<BoxListHandle>(box_list_handle)
