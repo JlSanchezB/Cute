@@ -26,7 +26,7 @@ RWStructuredBuffer<uint> indirect_culled_boxes : register(u1);
 float3 quat_multiplication(float4 quat, float3 vector)
 {
     float3 qv = float3(quat.x, quat.y, quat.z);
-    float s = quat.w;
+    float s = -quat.w;
     float3 t = 2.0f * cross(qv, vector);
     return vector + (s * t) + cross(qv, t);
 }
