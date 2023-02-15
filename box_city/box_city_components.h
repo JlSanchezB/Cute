@@ -179,6 +179,25 @@ using GameDatabase = ecs::DatabaseDeclaration<GameComponents, GameEntityTypes>;
 using Instance = ecs::Instance<GameDatabase>;
 using InstanceReference = ecs::InstanceReference;
 
+//Set friendly names
+template<> inline const char* ecs::GetTypeDebugName<InterpolatedPosition>() { return "InterpolatedPosition"; };
+template<> inline const char* ecs::GetTypeDebugName<BoxGPUHandle>() { return "BoxGPUHandle"; };
+template<> inline const char* ecs::GetTypeDebugName<OBBBox>() { return "OBBBox"; };
+template<> inline const char* ecs::GetTypeDebugName<RangeAABB>() { return "RangeAABB"; };
+template<> inline const char* ecs::GetTypeDebugName<AnimationBox>() { return "AnimationBox"; };
+template<> inline const char* ecs::GetTypeDebugName<BoxListHandle>() { return "BoxListHandle"; };
+template<> inline const char* ecs::GetTypeDebugName<FlagBox>() { return "FlagBox"; };
+template<> inline const char* ecs::GetTypeDebugName<Car>() { return "Car"; };
+template<> inline const char* ecs::GetTypeDebugName<CarMovement>() { return "CarMovement"; };
+template<> inline const char* ecs::GetTypeDebugName<CarSettings>() { return "CarSettings"; };
+template<> inline const char* ecs::GetTypeDebugName<CarGPUIndex>() { return "CarGPUIndex"; };
+template<> inline const char* ecs::GetTypeDebugName<CarControl>() { return "CarControl"; };
+template<> inline const char* ecs::GetTypeDebugName<CarBuildingsCache>() { return "CarBuildingsCache"; };
+template<> inline const char* ecs::GetTypeDebugName<CarBoxListOffset>() { return "CarBoxListOffset"; };
+
+template<> inline const char* ecs::GetTypeDebugName<BoxType>() { return "BoxType"; };
+template<> inline const char* ecs::GetTypeDebugName<AnimatedBoxType>() { return "AnimatedBoxType"; };
+template<> inline const char* ecs::GetTypeDebugName<CarType>() { return "CarType"; };
 
 //GPUBoxInstance
 //GPU instance represent a 1 size box

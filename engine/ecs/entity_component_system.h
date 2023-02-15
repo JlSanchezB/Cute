@@ -88,6 +88,13 @@ namespace ecs
 		}
 	};
 
+	//Generic template to get the debug name, it can be specialised for another types
+	template<typename TYPE>
+	inline const char* GetTypeDebugName()
+	{
+		return typeid(TYPE).name();
+	};
+
 	//Represent all information needed for the ECS about the component
 	struct Component
 	{
@@ -107,7 +114,7 @@ namespace ecs
 		{
 			size = sizeof(COMPONENT);
 			align = alignof(COMPONENT);
-			name = typeid(COMPONENT).name();
+			name = GetTypeDebugName<COMPONENT>();
 
 			move_operator = ComponentOperatorsDeclaration<COMPONENT>::Move;
 			destructor_operator = ComponentOperatorsDeclaration<COMPONENT>::Destructor;
@@ -205,7 +212,7 @@ namespace ecs
 		{
 			using EntityTypeIt = typename DATABASE_DECLARATION::EntityTypes::template ElementType<entity_type_index.value>;
 			entity_types.push_back(EntityTypeIt::template EntityTypeMask<DATABASE_DECLARATION>());
-			entity_names.push_back(typeid(EntityTypeIt).name());
+			entity_names.push_back(GetTypeDebugName<EntityTypeIt>());
 		});
 
 		//Create the database
