@@ -72,6 +72,11 @@ namespace ecs
 	template<typename COMPONENT>
 	struct ComponentOperatorsDeclaration
 	{
+		static void Constructor(void* ptr)
+		{
+			new (ptr) COMPONENT();
+		}
+
 		static void Move(void* ptr_a, void* ptr_b)
 		{
 			COMPONENT& a = *(reinterpret_cast<COMPONENT*>(ptr_a));
@@ -102,6 +107,9 @@ namespace ecs
 		size_t align;
 		const char* name;
 
+		//constructor operator
+		void(*constructor_operator)(void*);
+
 		//Move operator
 		void(*move_operator)(void*, void*);
 
@@ -116,6 +124,7 @@ namespace ecs
 			align = alignof(COMPONENT);
 			name = GetTypeDebugName<COMPONENT>();
 
+			constructor_operator = ComponentOperatorsDeclaration<COMPONENT>::Constructor;
 			move_operator = ComponentOperatorsDeclaration<COMPONENT>::Move;
 			destructor_operator = ComponentOperatorsDeclaration<COMPONENT>::Destructor;
 		}

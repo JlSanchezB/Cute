@@ -7,6 +7,7 @@
 #include <render_module/render_module_gpu_memory.h>
 #include <ext/glm/ext.hpp>
 #include <core/platform.h>
+#include <core/slot_pool.h>
 
 //Components
 struct FlagBox
@@ -46,7 +47,9 @@ struct BoxGPUHandle
 	{
 		return offset_gpu_allocator != kInvalidOffset;
 	}
-
+	BoxGPUHandle()
+	{
+	}
 	BoxGPUHandle(const uint32_t _offset_gpu_allocator, const uint32_t _lod_group) : offset_gpu_allocator(_offset_gpu_allocator), lod_group(_lod_group)
 	{
 	}
@@ -148,6 +151,9 @@ struct BoxListHandle
 {
 	render::AllocHandle box_list_handle;
 
+	BoxListHandle()
+	{
+	}
 	BoxListHandle(render::AllocHandle& handle)
 	{
 		box_list_handle = std::move(handle);
@@ -167,12 +173,38 @@ struct CarBuildingsCache
 	std::array<CachedBuilding, kNumCachedBuildings> buildings;
 };
 
-//ECS definition
-using BoxType = ecs::EntityType<BoxGPUHandle, OBBBox, RangeAABB, FlagBox, BoxListHandle>;
-using AnimatedBoxType = ecs::EntityType<InterpolatedPosition, BoxGPUHandle, RangeAABB, OBBBox, AnimationBox, FlagBox, BoxListHandle>;
-using CarType = ecs::EntityType<OBBBox, Car, CarMovement, CarSettings, CarTarget, CarControl, CarGPUIndex, CarBuildingsCache, FlagBox, CarBoxListOffset>;
+struct InstanceIndex
+{
+	inline static core::SlotPool<uint32_t, 500000> slot_pool;
+	core::Slot<uint32_t> slot;
 
-using GameComponents = ecs::ComponentList<InterpolatedPosition, BoxGPUHandle, OBBBox, RangeAABB, AnimationBox, BoxListHandle, FlagBox, Car, CarMovement, CarSettings, CarTarget, CarGPUIndex, CarControl, CarBuildingsCache, CarBoxListOffset>;
+	InstanceIndex()
+	{
+	}
+	~InstanceIndex()
+	{
+		slot_pool.Free(slot);
+	}
+	InstanceIndex(InstanceIndex&& instance_index)
+	{
+		slot = std::move(instance_index.slot);
+	}
+	InstanceIndex& operator=(InstanceIndex&& instance_index)
+	{
+		slot = std::move(instance_index.slot);
+		return *this;
+	}
+	InstanceIndex(core::Slot<uint32_t>&& slot) : slot(std::move(slot))
+	{
+	}
+};
+
+//ECS definition
+using BoxType = ecs::EntityType<BoxGPUHandle, OBBBox, RangeAABB, FlagBox, BoxListHandle, InstanceIndex>;
+using AnimatedBoxType = ecs::EntityType<InterpolatedPosition, BoxGPUHandle, RangeAABB, OBBBox, AnimationBox, FlagBox, BoxListHandle, InstanceIndex>;
+using CarType = ecs::EntityType<OBBBox, Car, CarMovement, CarSettings, CarTarget, CarControl, CarGPUIndex, CarBuildingsCache, FlagBox, CarBoxListOffset, InstanceIndex>;
+
+using GameComponents = ecs::ComponentList<InterpolatedPosition, BoxGPUHandle, OBBBox, RangeAABB, AnimationBox, BoxListHandle, FlagBox, Car, CarMovement, CarSettings, CarTarget, CarGPUIndex, CarControl, CarBuildingsCache, CarBoxListOffset, InstanceIndex>;
 using GameEntityTypes = ecs::EntityTypeList<BoxType, AnimatedBoxType, CarType>;
 
 using GameDatabase = ecs::DatabaseDeclaration<GameComponents, GameEntityTypes>;
@@ -194,6 +226,7 @@ template<> inline const char* ecs::GetTypeDebugName<CarGPUIndex>() { return "Car
 template<> inline const char* ecs::GetTypeDebugName<CarControl>() { return "CarControl"; };
 template<> inline const char* ecs::GetTypeDebugName<CarBuildingsCache>() { return "CarBuildingsCache"; };
 template<> inline const char* ecs::GetTypeDebugName<CarBoxListOffset>() { return "CarBoxListOffset"; };
+template<> inline const char* ecs::GetTypeDebugName<InstanceIndex>() { return "InstanceIndex"; };
 
 template<> inline const char* ecs::GetTypeDebugName<BoxType>() { return "BoxType"; };
 template<> inline const char* ecs::GetTypeDebugName<AnimatedBoxType>() { return "AnimatedBoxType"; };

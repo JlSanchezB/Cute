@@ -119,6 +119,8 @@ void BoxCityGame::OnInit()
 				}
 			}
 		});
+
+	InstanceIndex::slot_pool.Init(render::GetGameFrameIndex(m_render_system));
 }
 	
 void BoxCityGame::OnPrepareDestroy()
@@ -157,6 +159,9 @@ void BoxCityGame::OnLogic(double total_time, float elapsed_time)
 		//Skip update
 		return;
 	}
+
+	//Sync the instance index
+	InstanceIndex::slot_pool.Sync(render::GetGameFrameIndex(m_render_system), display::GetLastCompletedGPUFrame(m_device));
 
 	//Reset job allocators
 	m_update_job_allocator->Clear();

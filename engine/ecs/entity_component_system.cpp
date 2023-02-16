@@ -268,6 +268,8 @@ namespace ecs
 					uint8_t* old_zone_component_instance_data = reinterpret_cast<uint8_t*>(old_zonecomponent_container->GetPtr()) + internal_instance_index.instance_index * component_size;
 					uint8_t* new_zone_component_instance_data = reinterpret_cast<uint8_t*>(new_zonecomponent_container->GetPtr()) + new_zone_internal_instance_index.instance_index * component_size;
 
+					//Call the default constructor 
+					m_components[i].constructor_operator(new_zone_component_instance_data);
 					
 					//Move components (the indirection will move as well, as the last component is the indirection index
 					m_components[i].move_operator(new_zone_component_instance_data, old_zone_component_instance_data);

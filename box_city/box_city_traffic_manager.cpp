@@ -286,7 +286,8 @@ namespace BoxCityTrafficSystem
 								.Init<CarGPUIndex>(car_gpu_index)
 								.Init<CarControl>(car_control)
 								.Init<FlagBox>(flag_box)
-								.Init<CarBoxListOffset>(car_box_list_offset);
+								.Init<CarBoxListOffset>(car_box_list_offset)
+								.Init<InstanceIndex>(InstanceIndex::slot_pool.Alloc());
 
 							if (tile.m_zone_index == 0 && i == 0)
 							{

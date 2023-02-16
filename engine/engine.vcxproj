@@ -292,6 +292,7 @@
     <ClInclude Include="core\profile.h" />
     <ClInclude Include="core\ring_buffer.h" />
     <ClInclude Include="core\simple_pool.h" />
+    <ClInclude Include="core\slot_pool.h" />
     <ClInclude Include="core\string_hash.h" />
     <ClInclude Include="core\sync.h" />
     <ClInclude Include="core\type_list.h" />

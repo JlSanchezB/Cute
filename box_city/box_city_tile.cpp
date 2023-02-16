@@ -501,7 +501,8 @@ namespace BoxCityTileSystem
 				.Init<AnimationBox>(building_data.animation)
 				.Init<BoxGPUHandle>(gpu_offset, static_cast<uint32_t>(lod_group))
 				.Init<BoxListHandle>(box_list_handle)
-				.Init<InterpolatedPosition>(interpolated_position));
+				.Init<InterpolatedPosition>(interpolated_position)
+				.Init<InstanceIndex>(InstanceIndex::slot_pool.Alloc()));
 
 			gpu_offset++;
 			COUNTER_INC(c_BuildingInstances_Count);
@@ -528,7 +529,8 @@ namespace BoxCityTileSystem
 				.Init<OBBBox>(building_data.oob_box)
 				.Init<RangeAABB>(range_aabb)
 				.Init<BoxListHandle>(box_list_handle)
-				.Init<BoxGPUHandle>(gpu_offset, static_cast<uint32_t>(lod_group)));
+				.Init<BoxGPUHandle>(gpu_offset, static_cast<uint32_t>(lod_group))
+				.Init<InstanceIndex>(InstanceIndex::slot_pool.Alloc()));
 
 			gpu_offset++;
 			COUNTER_INC(c_BuildingInstances_Count);
