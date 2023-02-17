@@ -31,9 +31,9 @@ struct InterpolatedPosition
 struct AnimationBox
 {
 	glm::vec3 original_position;
-	float range; //Distance to navigate in axis Z
-	float offset; //Start offset
-	float frecuency; //Speed
+	float range = 0.f; //Distance to navigate in axis Z
+	float offset = 0.f; //Start offset
+	float frecuency = 0.f; //Speed
 };
 
 struct BoxGPUHandle
@@ -47,7 +47,7 @@ struct BoxGPUHandle
 	{
 		return offset_gpu_allocator != kInvalidOffset;
 	}
-	BoxGPUHandle()
+	BoxGPUHandle() : offset_gpu_allocator(kInvalidOffset), lod_group(0)
 	{
 	}
 	BoxGPUHandle(const uint32_t _offset_gpu_allocator, const uint32_t _lod_group) : offset_gpu_allocator(_offset_gpu_allocator), lod_group(_lod_group)
@@ -80,10 +80,10 @@ struct CarMovement
 
 struct CarSettings
 {
-	float size;
-	float inv_mass;
+	float size = 0.f;
+	float inv_mass = 0.f;
 	glm::vec3 inv_mass_inertia;
-	uint32_t car_type;
+	uint32_t car_type = 0;
 
 	CarSettings()
 	{
@@ -95,7 +95,7 @@ struct CarSettings
 
 struct CarBoxListOffset
 {
-	uint32_t car_box_list_offset;
+	uint32_t car_box_list_offset = 0;
 
 	CarBoxListOffset()
 	{
@@ -154,7 +154,7 @@ struct BoxListHandle
 	BoxListHandle()
 	{
 	}
-	BoxListHandle(render::AllocHandle& handle)
+	BoxListHandle(render::AllocHandle&& handle)
 	{
 		box_list_handle = std::move(handle);
 	}
@@ -175,9 +175,9 @@ struct CarBuildingsCache
 
 struct InstanceIndex
 {
-	inline static core::SlotPool<uint32_t, 500000> slot_pool;
+	static constexpr size_t kMaxInstances = 1024 * 1024;
+	inline static core::SlotPool<uint32_t, kMaxInstances> slot_pool;
 	core::Slot<uint32_t> slot;
-
 	InstanceIndex()
 	{
 	}
@@ -185,9 +185,8 @@ struct InstanceIndex
 	{
 		slot_pool.Free(slot);
 	}
-	InstanceIndex(InstanceIndex&& instance_index)
+	InstanceIndex(InstanceIndex&& instance_index) : slot(std::move(instance_index.slot))
 	{
-		slot = std::move(instance_index.slot);
 	}
 	InstanceIndex& operator=(InstanceIndex&& instance_index)
 	{
@@ -212,25 +211,25 @@ using Instance = ecs::Instance<GameDatabase>;
 using InstanceReference = ecs::InstanceReference;
 
 //Set friendly names
-template<> inline const char* ecs::GetTypeDebugName<InterpolatedPosition>() { return "InterpolatedPosition"; };
-template<> inline const char* ecs::GetTypeDebugName<BoxGPUHandle>() { return "BoxGPUHandle"; };
-template<> inline const char* ecs::GetTypeDebugName<OBBBox>() { return "OBBBox"; };
-template<> inline const char* ecs::GetTypeDebugName<RangeAABB>() { return "RangeAABB"; };
-template<> inline const char* ecs::GetTypeDebugName<AnimationBox>() { return "AnimationBox"; };
-template<> inline const char* ecs::GetTypeDebugName<BoxListHandle>() { return "BoxListHandle"; };
-template<> inline const char* ecs::GetTypeDebugName<FlagBox>() { return "FlagBox"; };
-template<> inline const char* ecs::GetTypeDebugName<Car>() { return "Car"; };
-template<> inline const char* ecs::GetTypeDebugName<CarMovement>() { return "CarMovement"; };
-template<> inline const char* ecs::GetTypeDebugName<CarSettings>() { return "CarSettings"; };
-template<> inline const char* ecs::GetTypeDebugName<CarGPUIndex>() { return "CarGPUIndex"; };
-template<> inline const char* ecs::GetTypeDebugName<CarControl>() { return "CarControl"; };
-template<> inline const char* ecs::GetTypeDebugName<CarBuildingsCache>() { return "CarBuildingsCache"; };
-template<> inline const char* ecs::GetTypeDebugName<CarBoxListOffset>() { return "CarBoxListOffset"; };
-template<> inline const char* ecs::GetTypeDebugName<InstanceIndex>() { return "InstanceIndex"; };
+ECSDEBUGNAME(InterpolatedPosition);
+ECSDEBUGNAME(BoxGPUHandle);
+ECSDEBUGNAME(OBBBox);
+ECSDEBUGNAME(RangeAABB);
+ECSDEBUGNAME(AnimationBox);
+ECSDEBUGNAME(BoxListHandle);
+ECSDEBUGNAME(FlagBox);
+ECSDEBUGNAME(Car);
+ECSDEBUGNAME(CarMovement);
+ECSDEBUGNAME(CarSettings);
+ECSDEBUGNAME(CarGPUIndex);
+ECSDEBUGNAME(CarControl);;
+ECSDEBUGNAME(CarBuildingsCache);
+ECSDEBUGNAME(CarBoxListOffset);
+ECSDEBUGNAME(InstanceIndex);
 
-template<> inline const char* ecs::GetTypeDebugName<BoxType>() { return "BoxType"; };
-template<> inline const char* ecs::GetTypeDebugName<AnimatedBoxType>() { return "AnimatedBoxType"; };
-template<> inline const char* ecs::GetTypeDebugName<CarType>() { return "CarType"; };
+ECSDEBUGNAME(BoxType);
+ECSDEBUGNAME(AnimatedBoxType);
+ECSDEBUGNAME(CarType);
 
 //GPUBoxInstance
 //GPU instance represent a 1 size box
@@ -250,20 +249,22 @@ struct GPUBoxInstance
 		box_list_offset = _box_list_offset;
 	}
 
-	void Fill(const glm::vec3& _position, const glm::vec3& _extents, const glm::quat& _rotation, uint32_t _box_list_offset)
+	void Fill(const glm::vec3& _position, const glm::vec3& _extents, const glm::quat& _rotation, uint32_t _box_list_offset, uint32_t _instance_id)
 	{
 		position = _position;
 		box_list_offset = _box_list_offset;
 		extents = _extents;
 		rotation = _rotation;
+		instance_id = _instance_id;
 	}
 
-	void Fill(const helpers::OBB& obb_box, uint32_t _box_list_offset)
+	void Fill(const helpers::OBB& obb_box, uint32_t _box_list_offset, uint32_t _instance_id)
 	{
 		position = obb_box.position;
 		box_list_offset = _box_list_offset;
 		extents = obb_box.extents;
 		rotation = glm::toQuat(obb_box.rotation);
+		instance_id = _instance_id;
 	}
 };
 

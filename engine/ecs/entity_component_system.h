@@ -12,6 +12,8 @@
 #include "entity_component_instance.h"
 #include <functional>
 
+#define ECSDEBUGNAME(type) template<> inline const char* ecs::GetTypeDebugName<type>() { return #type; };
+
 namespace ecs
 {
 	using CallbackInternalFunction = std::function<void(const DababaseTransaction, const ZoneType, const EntityTypeType, const InstanceIndexType, const ZoneType, const EntityTypeType, const InstanceIndexType)>;
@@ -77,6 +79,12 @@ namespace ecs
 			new (ptr) COMPONENT();
 		}
 
+		static void MoveConstructor(void* ptr_a, void* ptr_b)
+		{
+			COMPONENT& b = *(reinterpret_cast<COMPONENT*>(ptr_b));
+			new (ptr_a) COMPONENT(std::move(b));
+		}
+
 		static void Move(void* ptr_a, void* ptr_b)
 		{
 			COMPONENT& a = *(reinterpret_cast<COMPONENT*>(ptr_a));
@@ -110,6 +118,9 @@ namespace ecs
 		//constructor operator
 		void(*constructor_operator)(void*);
 
+		//move constructor operator
+		void(*move_constructor_operator)(void*, void*);
+
 		//Move operator
 		void(*move_operator)(void*, void*);
 
@@ -125,6 +136,7 @@ namespace ecs
 			name = GetTypeDebugName<COMPONENT>();
 
 			constructor_operator = ComponentOperatorsDeclaration<COMPONENT>::Constructor;
+			move_constructor_operator = ComponentOperatorsDeclaration<COMPONENT>::MoveConstructor;
 			move_operator = ComponentOperatorsDeclaration<COMPONENT>::Move;
 			destructor_operator = ComponentOperatorsDeclaration<COMPONENT>::Destructor;
 		}

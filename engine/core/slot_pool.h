@@ -24,6 +24,11 @@ namespace core
 		}
 		template <typename TYPE, TYPE MAX_SIZE, size_t MAX_FRAMES>
 		friend class SlotPool;
+
+		void Invalidate()
+		{
+			m_index = kInvalid;
+		}
 	public:
 
 		//Public constructor
@@ -95,6 +100,12 @@ namespace core
 
 		~SlotPool()
 		{
+			//We need to invalidate all the slots, as they are going to be destroy
+			for (auto& free_slot : m_free_slots) free_slot.Invalidate();
+			for (auto& frame : m_frames)
+			{
+				for (auto& free_slot : frame.deferred_free_slots) free_slot.Invalidate();
+			}
 		}
 
 		Slot<TYPE> Alloc()

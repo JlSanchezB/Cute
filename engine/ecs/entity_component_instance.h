@@ -134,7 +134,7 @@ namespace ecs
 			void* data = internal::GetComponentData(DATABASE_DECLARATION::s_database, m_indirection_index, DATABASE_DECLARATION::template ComponentIndex<ComponentType>());
 
 			//Placement new
-			new (data) ComponentType(std::forward<ARGS>(args)...);
+			new (data) ComponentType{ std::forward<ARGS>(args)... };
 		});
 
 		return *this;

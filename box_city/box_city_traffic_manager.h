@@ -191,7 +191,7 @@ namespace BoxCityTrafficSystem
 		//SetupCar
 		void SetupCar(Tile& tile, std::mt19937& random, float begin_tile_x, float begin_tile_y,
 			std::uniform_real_distribution<float>& position_range, std::uniform_real_distribution<float>& position_range_z, std::uniform_real_distribution<float>& size_range,
-			Car& car, CarMovement& car_movement, CarSettings& car_settings, OBBBox& obb_component, CarGPUIndex& car_gpu_index, CarBoxListOffset& car_box_list_offset);
+			Car& car, CarMovement& car_movement, CarSettings& car_settings, OBBBox& obb_component, CarGPUIndex& car_gpu_index, CarBoxListOffset& car_box_list_offset, InstanceIndex& instance_index);
 
 		void SetupCarTarget(std::mt19937& random, Car& car, CarTarget& car_target);
 
