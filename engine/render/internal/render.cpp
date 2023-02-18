@@ -1078,6 +1078,10 @@ namespace render
 							uint16_t width = render_context->m_pass_info.width * pool_resource.width_factor / 256;
 							uint16_t height = render_context->m_pass_info.height * pool_resource.height_factor / 256;
 
+							//Adjust to the tile size
+							width = (((width - 1) / pool_resource.tile_size_width) + 1) * pool_resource.tile_size_width;
+							height = (((height - 1) / pool_resource.tile_size_height) + 1) * pool_resource.tile_size_height;
+
 							//Pass the control to the resource in the resource map
 							auto allocated_pool_resource = AllocPoolResource(pool_resource.name, pool_resource.type, width, height, pool_resource.format, pool_resource.default_depth, pool_resource.default_stencil);
 							auto resource_info = m_resources_map.Find(pool_resource.name)->get();
