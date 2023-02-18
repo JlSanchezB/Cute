@@ -136,7 +136,7 @@ namespace BoxCityTrafficSystem
 
 	void Manager::SetupCar(Tile& tile, std::mt19937& random, float begin_tile_x, float begin_tile_y,
 		std::uniform_real_distribution<float>& position_range, std::uniform_real_distribution<float>& position_range_z, std::uniform_real_distribution<float>& size_range,
-		Car& car, CarMovement& car_movement, CarSettings& car_settings, OBBBox& obb_component, CarGPUIndex& car_gpu_index, CarBoxListOffset& car_box_list_offset, InstanceIndex& instance_index)
+		Car& car, CarMovement& car_movement, CarSettings& car_settings, OBBBox& obb_component, CarGPUIndex& car_gpu_index, CarBoxListOffset& car_box_list_offset)
 	{
 		glm::vec3 position(begin_tile_x + position_range(random), begin_tile_y + position_range(random), position_range_z(random));
 		
@@ -168,7 +168,7 @@ namespace BoxCityTrafficSystem
 		car_box_list_offset.car_box_list_offset = static_cast<uint32_t>(m_GPU_memory_render_module->GetStaticGPUMemoryOffset(m_gpu_car_box_list[car_type]));
 		//Update GPU, all the gpu instance
 		GPUBoxInstance gpu_box_instance;
-		gpu_box_instance.Fill(obb_component, car_box_list_offset.car_box_list_offset, instance_index.slot.GetIndex());
+		gpu_box_instance.Fill(obb_component, car_box_list_offset.car_box_list_offset);
 
 		//Update the GPU memory
 		m_GPU_memory_render_module->UpdateStaticGPUMemory(m_device, m_gpu_memory, &gpu_box_instance, sizeof(GPUBoxInstance), render::GetGameFrameIndex(m_render_system), car_gpu_index.gpu_slot * sizeof(GPUBoxInstance));
@@ -231,11 +231,11 @@ namespace BoxCityTrafficSystem
 						core::LogInfo("Traffic: Tile Local<%i,%i>, World<%i,%i>, moved", local_tile.i, local_tile.j, world_tile.i, world_tile.j);
 
 						//Move cars
-						ecs::Process<GameDatabase, Car, CarMovement, CarSettings, CarTarget, OBBBox, CarGPUIndex, FlagBox, CarBoxListOffset, InstanceIndex>([&]
-						(const auto& instance_iterator, Car& car, CarMovement& car_movement, CarSettings& car_settings, CarTarget& car_target, OBBBox& obb_box_component, CarGPUIndex& car_gpu_index, FlagBox& flag_box, CarBoxListOffset& car_box_index_offset, InstanceIndex& instance_index)
+						ecs::Process<GameDatabase, Car, CarMovement, CarSettings, CarTarget, OBBBox, CarGPUIndex, FlagBox, CarBoxListOffset>([&]
+						(const auto& instance_iterator, Car& car, CarMovement& car_movement, CarSettings& car_settings, CarTarget& car_target, OBBBox& obb_box_component, CarGPUIndex& car_gpu_index, FlagBox& flag_box, CarBoxListOffset& car_box_index_offset)
 							{
 								SetupCar(tile, random, begin_tile_x, begin_tile_y, position_range, position_range_z, size_range,
-								car, car_movement, car_settings, obb_box_component, car_gpu_index, car_box_index_offset, instance_index);
+								car, car_movement, car_settings, obb_box_component, car_gpu_index, car_box_index_offset);
 
 								BoxCityCarControl::SetupCarTarget(random, tile_manager, car, car_target, true);
 
@@ -268,11 +268,9 @@ namespace BoxCityTrafficSystem
 							CarBoxListOffset car_box_list_offset;
 							//Alloc GPU slot
 							car_gpu_index.gpu_slot = static_cast<uint16_t>(tile.m_zone_index * kNumCars + i);
-							InstanceIndex instance_index;
-							instance_index.slot = InstanceIndex::slot_pool.Alloc();
 
 							SetupCar(tile, random, begin_tile_x, begin_tile_y, position_range, position_range_z, size_range,
-								car, car_movement, car_settings, obb_box_component, car_gpu_index, car_box_list_offset, instance_index);
+								car, car_movement, car_settings, obb_box_component, car_gpu_index, car_box_list_offset);
 
 							CarTarget car_target;
 							BoxCityCarControl::SetupCarTarget(random, tile_manager, car, car_target, true);
@@ -288,8 +286,7 @@ namespace BoxCityTrafficSystem
 								.Init<CarGPUIndex>(car_gpu_index)
 								.Init<CarControl>(car_control)
 								.Init<FlagBox>(flag_box)
-								.Init<CarBoxListOffset>(car_box_list_offset)
-								.Init<InstanceIndex>(std::move(instance_index));
+								.Init<CarBoxListOffset>(car_box_list_offset);
 
 							if (tile.m_zone_index == 0 && i == 0)
 							{

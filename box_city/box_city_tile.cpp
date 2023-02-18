@@ -477,10 +477,9 @@ namespace BoxCityTileSystem
 		{
 			//Create Box list
 			render::AllocHandle box_list_handle = CreateBoxList(manager, building_data.m_boxes);
-			core::Slot<uint32_t> instance_slot = InstanceIndex::slot_pool.Alloc();
 			//GPU memory
 			GPUBoxInstance gpu_box_instance;
-			gpu_box_instance.Fill(building_data.oob_box, static_cast<uint32_t>(manager->GetGPUMemoryRenderModule()->GetStaticGPUMemoryOffset(box_list_handle)), instance_slot.GetIndex());
+			gpu_box_instance.Fill(building_data.oob_box, static_cast<uint32_t>(manager->GetGPUMemoryRenderModule()->GetStaticGPUMemoryOffset(box_list_handle)));
 
 			//Update the GPU memory
 			manager->GetGPUMemoryRenderModule()->UpdateStaticGPUMemory(manager->GetDevice(), instances_gpu_allocation, &gpu_box_instance, sizeof(GPUBoxInstance), render::GetGameFrameIndex(manager->GetRenderSystem()), gpu_offset * sizeof(GPUBoxInstance));
@@ -501,8 +500,7 @@ namespace BoxCityTileSystem
 				.Init<AnimationBox>(building_data.animation)
 				.Init<BoxGPUHandle>(gpu_offset, static_cast<uint32_t>(lod_group))
 				.Init<BoxListHandle>(std::move(box_list_handle))
-				.Init<InterpolatedPosition>(interpolated_position)
-				.Init<InstanceIndex>(std::move(instance_slot)));
+				.Init<InterpolatedPosition>(interpolated_position));
 
 			gpu_offset++;
 			COUNTER_INC(c_BuildingInstances_Count);
@@ -512,11 +510,10 @@ namespace BoxCityTileSystem
 		{
 			//Create Box list
 			render::AllocHandle box_list_handle = CreateBoxList(manager, building_data.m_boxes);
-			core::Slot<uint32_t> instance_slot = InstanceIndex::slot_pool.Alloc();
 
 			//GPU memory
 			GPUBoxInstance gpu_box_instance;
-			gpu_box_instance.Fill(building_data.oob_box, static_cast<uint32_t>(manager->GetGPUMemoryRenderModule()->GetStaticGPUMemoryOffset(box_list_handle)), instance_slot.GetIndex());
+			gpu_box_instance.Fill(building_data.oob_box, static_cast<uint32_t>(manager->GetGPUMemoryRenderModule()->GetStaticGPUMemoryOffset(box_list_handle)));
 
 			//Update the GPU memory
 			manager->GetGPUMemoryRenderModule()->UpdateStaticGPUMemory(manager->GetDevice(), instances_gpu_allocation, &gpu_box_instance, sizeof(GPUBoxInstance), render::GetGameFrameIndex(manager->GetRenderSystem()), gpu_offset * sizeof(GPUBoxInstance));
@@ -530,8 +527,7 @@ namespace BoxCityTileSystem
 				.Init<OBBBox>(building_data.oob_box)
 				.Init<RangeAABB>(range_aabb)
 				.Init<BoxListHandle>(std::move(box_list_handle))
-				.Init<BoxGPUHandle>(gpu_offset, static_cast<uint32_t>(lod_group))
-				.Init<InstanceIndex>(std::move(instance_slot)));
+				.Init<BoxGPUHandle>(gpu_offset, static_cast<uint32_t>(lod_group)));
 
 			gpu_offset++;
 			COUNTER_INC(c_BuildingInstances_Count);

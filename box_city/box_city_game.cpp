@@ -119,8 +119,6 @@ void BoxCityGame::OnInit()
 				}
 			}
 		});
-
-	InstanceIndex::slot_pool.Init(render::GetGameFrameIndex(m_render_system));
 }
 	
 void BoxCityGame::OnPrepareDestroy()
@@ -257,9 +255,6 @@ void BoxCityGame::OnRender(double total_time, float elapsed_time)
 {
 	m_first_logic_tick_after_render = true;
 
-	//Sync the instance index
-	InstanceIndex::slot_pool.Sync(render::GetGameFrameIndex(m_render_system), display::GetLastCompletedGPUFrame(m_device));
-
 	{
 		PROFILE_SCOPE("BoxCity", 0xFFFF77FF, "UpdateTrafficInstancesLists");
 		//Process all the moves for all the updates and update the instance lists correctly (acumulated all the frames before)
@@ -371,15 +366,15 @@ void BoxCityGame::OnRender(double total_time, float elapsed_time)
 		}, m_tile_manager.GetCameraBitSet(*camera), &g_profile_marker_Culling);
 
 	//Interpolate cars
-	ecs::AddJobs<GameDatabase, const OBBBox, const CarGPUIndex, const Car, const CarBoxListOffset, const InstanceIndex>(m_job_system, culling_fence, m_render_job_allocator, 256,
+	ecs::AddJobs<GameDatabase, const OBBBox, const CarGPUIndex, const Car, const CarBoxListOffset>(m_job_system, culling_fence, m_render_job_allocator, 256,
 		[camera = camera, render_system = m_render_system, device = m_device, render_gpu_memory_module = m_GPU_memory_render_module, traffic_manager = &m_traffic_system, render_frame_index]
-	(const auto& instance_iterator, const OBBBox& obb_box, const CarGPUIndex& car_gpu_index, const Car& car, const CarBoxListOffset& car_box_list_offset, const InstanceIndex& instance_index)
+	(const auto& instance_iterator, const OBBBox& obb_box, const CarGPUIndex& car_gpu_index, const Car& car, const CarBoxListOffset& car_box_list_offset)
 		{
 			if (car_gpu_index.IsValid())
 			{
 				//Update GPU
 				GPUBoxInstance gpu_box_instance;
-				gpu_box_instance.Fill(car.position.GetInterpolated(), obb_box.extents, car.rotation.GetInterpolated(), car_box_list_offset.car_box_list_offset, instance_index.slot.GetIndex());
+				gpu_box_instance.Fill(car.position.GetInterpolated(), obb_box.extents, car.rotation.GetInterpolated(), car_box_list_offset.car_box_list_offset);
 
 				//Only the first 3 float4
 				render_gpu_memory_module->UpdateStaticGPUMemory(device, traffic_manager->GetGPUHandle(), &gpu_box_instance, sizeof(GPUBoxInstance), render_frame_index, car_gpu_index.gpu_slot * sizeof(GPUBoxInstance));
