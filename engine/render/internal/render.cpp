@@ -240,28 +240,57 @@ namespace render
 		}
 	}
 
-	std::pair<std::unique_ptr<Resource>, display::TranstitionState> System::AllocPoolResource(ResourceName resource_name, PoolResourceType type, uint16_t width, uint16_t height, const display::Format& format, const float default_depth, const uint8_t default_stencil)
+	std::pair<std::unique_ptr<Resource>, display::TranstitionState> System::AllocPoolResource(ResourceName resource_name, PoolResourceType type, bool get_or_alloc_allocation, uint16_t width, uint16_t height, const display::Format& format, const float default_depth, const uint8_t default_stencil)
 	{
-		//Look in the pool for one free with the same parameters
-		for (auto& pool_resource : m_pool_resources)
+		if (get_or_alloc_allocation)
 		{
-			if (pool_resource.can_be_reuse
-				&& pool_resource.name != ResourceName()
-				&& pool_resource.type == type
-				&& pool_resource.format == format
-				&& pool_resource.width == width
-				&& pool_resource.height == height
-				&& pool_resource.default_depth == default_depth
-				&& pool_resource.default_stencil == default_stencil)
+			//Look for last frame non free one, or allocate a new one
+			for (auto& pool_resource : m_pool_resources)
 			{
-				assert(pool_resource.resource.get());
-				//It can be use
-				pool_resource.can_be_reuse = false;
-				pool_resource.last_render_frame_used = m_render_frame_index;
-				//TODO, change debug name
+				if (!pool_resource.can_be_reuse
+					&& pool_resource.name == resource_name
+					&& pool_resource.type == type
+					&& pool_resource.format == format
+					&& pool_resource.width == width
+					&& pool_resource.height == height
+					&& pool_resource.default_depth == default_depth
+					&& pool_resource.default_stencil == default_stencil)
+				{
+					assert(pool_resource.resource.get());
+					//It can be use
+					pool_resource.can_be_reuse = false;
+					pool_resource.last_render_frame_used = m_render_frame_index;
+					//TODO, change debug name
 
-				//Give ownership to the resource info
-				return std::make_pair<>(std::move(pool_resource.resource), pool_resource.m_access);
+					//Give ownership to the resource info
+					return std::make_pair<>(std::move(pool_resource.resource), pool_resource.m_access);
+				}
+			}
+
+		}
+		else
+		{
+			//Look in the pool for one free with the same parameters
+			for (auto& pool_resource : m_pool_resources)
+			{
+				if (pool_resource.can_be_reuse
+					&& pool_resource.name != ResourceName()
+					&& pool_resource.type == type
+					&& pool_resource.format == format
+					&& pool_resource.width == width
+					&& pool_resource.height == height
+					&& pool_resource.default_depth == default_depth
+					&& pool_resource.default_stencil == default_stencil)
+				{
+					assert(pool_resource.resource.get());
+					//It can be use
+					pool_resource.can_be_reuse = false;
+					pool_resource.last_render_frame_used = m_render_frame_index;
+					//TODO, change debug name
+
+					//Give ownership to the resource info
+					return std::make_pair<>(std::move(pool_resource.resource), pool_resource.m_access);
+				}
 			}
 		}
 
@@ -1072,7 +1101,7 @@ namespace render
 					//Request new pool resources
 					for (auto& pool_resource : render_context->GetContextRootPass()->GetResourcePoolDependencies())
 					{
-						if (pool_resource.needs_to_be_allocated)
+						if (pool_resource.needs_to_be_allocated != ResourcePoolAllocationType::None)
 						{
 							//Calculate the resolution needed
 							uint16_t width = render_context->m_pass_info.width * pool_resource.width_factor / 256;
@@ -1083,7 +1112,7 @@ namespace render
 							height = (((height - 1) / pool_resource.tile_size_height) + 1) * pool_resource.tile_size_height;
 
 							//Pass the control to the resource in the resource map
-							auto allocated_pool_resource = AllocPoolResource(pool_resource.name, pool_resource.type, width, height, pool_resource.format, pool_resource.default_depth, pool_resource.default_stencil);
+							auto allocated_pool_resource = AllocPoolResource(pool_resource.name, pool_resource.type, pool_resource.needs_to_be_allocated == ResourcePoolAllocationType::GetOrAlloc, width, height, pool_resource.format, pool_resource.default_depth, pool_resource.default_stencil);
 							auto resource_info = m_resources_map.Find(pool_resource.name)->get();
 							resource_info->resource = std::move(allocated_pool_resource.first);
 							resource_info->access = allocated_pool_resource.second;

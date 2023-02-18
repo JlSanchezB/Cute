@@ -208,8 +208,16 @@ namespace render
 							uint32_t default_stencil = 0;
 							dependencies_xml_element->QueryUnsignedAttribute("default_stencil", &default_stencil);
 
+							ResourcePoolAllocationType allocation_type;
+							if (pre_condition == "Alloc"_sh32)
+								allocation_type = ResourcePoolAllocationType::Alloc;
+							else if (pre_condition == "GetOrAlloc"_sh32)
+								allocation_type = ResourcePoolAllocationType::GetOrAlloc;
+							else
+								allocation_type = ResourcePoolAllocationType::None;
+
 							//Add resource dependency, so the pass will request the resource to the pool
-							m_resource_pool_dependencies.emplace_back(resource_name, type, pre_condition == "Alloc"_sh32, post_condition == "Free"_sh32, width_factor, heigth_factor, static_cast<uint16_t>(tile_size_width), static_cast<uint16_t>(tile_size_height),format, default_depth, static_cast<uint8_t>(default_stencil));
+							m_resource_pool_dependencies.emplace_back(resource_name, type, allocation_type, post_condition == "Free"_sh32, width_factor, heigth_factor, static_cast<uint16_t>(tile_size_width), static_cast<uint16_t>(tile_size_height),format, default_depth, static_cast<uint8_t>(default_stencil));
 
 
 							//Needs to access the resource, it will be empty at the moment, as it is going to get assigned during the pass

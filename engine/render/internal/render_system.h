@@ -238,7 +238,7 @@ namespace render
 		Pass* LoadPass(LoadContext& load_context);
 
 		//Alloc pool resource
-		std::pair<std::unique_ptr<Resource>, display::TranstitionState> AllocPoolResource(ResourceName resource_name, PoolResourceType type, uint16_t width, uint16_t weight, const display::Format& format, const float default_clear, const uint8_t default_stencil);
+		std::pair<std::unique_ptr<Resource>, display::TranstitionState> AllocPoolResource(ResourceName resource_name, PoolResourceType type, bool get_or_alloc_allocation, uint16_t width, uint16_t weight, const display::Format& format, const float default_clear, const uint8_t default_stencil);
 
 		//Dealloc pool resource
 		void DeallocPoolResource(ResourceName resource_name, std::unique_ptr<Resource>& resource, const display::TranstitionState state);
