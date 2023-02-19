@@ -29,9 +29,9 @@ struct BoxCityResources
 	display::RootSignatureHandle m_box_render_root_signature;
 	display::PipelineStateHandle m_box_render_pipeline_state;
 
-	display::VertexBufferHandle m_box_vertex_position_buffer;
-	display::VertexBufferHandle m_box_vertex_normal_buffer;
-	display::IndexBufferHandle m_box_index_buffer;
+	display::ResourceHandle m_box_vertex_position_buffer;
+	display::ResourceHandle m_box_vertex_normal_buffer;
+	display::ResourceHandle m_box_index_buffer;
 
 	static const uint32_t kIndirectBoxBufferCount = 1024 * 1024;
 	display::UnorderedAccessBufferHandle m_indirect_box_buffer;

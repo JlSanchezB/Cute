@@ -359,6 +359,30 @@ namespace display
 			desc.default_stencil = default_stencil;
 			return desc;
 		}
+
+		static ResourceDesc CreateVertexBuffer(Access access, size_t size, uint32_t vertex_stride, const void* init_data = nullptr)
+		{
+			ResourceDesc desc;
+			desc.access = access;
+			desc.type = ResourceType::Buffer;
+			desc.buffer_type = ResourceBufferType::VertexBuffer;
+			desc.size = size;
+			desc.structure_stride = vertex_stride;
+			desc.init_data = init_data;
+			return desc;
+		}
+
+		static ResourceDesc CreateIndexBuffer(Access access, size_t size, Format format, const void* init_data = nullptr)
+		{
+			ResourceDesc desc;
+			desc.access = access;
+			desc.type = ResourceType::Buffer;
+			desc.buffer_type = ResourceBufferType::IndexBuffer;
+			desc.size = size;
+			desc.format = format;
+			desc.init_data = init_data;
+			return desc;
+		}
 	};
 
 	struct RenderTargetDesc

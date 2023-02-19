@@ -208,12 +208,14 @@ namespace display
 
 		//Set Vertex buffers
 		void SetVertexBuffers(uint8_t start_slot_index, uint8_t num_vertex_buffers, WeakVertexBufferHandle* vertex_buffers);
+		void SetVertexBuffers(uint8_t start_slot_index, uint8_t num_vertex_buffers, WeakResourceHandle* vertex_buffers);
 
 		//Set Shader resource as a vertex buffer
 		void SetShaderResourceAsVertexBuffer(uint8_t start_slot_index, const WeakShaderResourceHandle& shader_resource, const SetShaderResourceAsVertexBufferDesc& desc);
 
 		//Set Index Buffer
 		void SetIndexBuffer(const WeakIndexBufferHandle& index_buffer);
+		void SetIndexBuffer(const WeakResourceHandle& index_buffer);
 
 		//Set constants
 		void SetConstants(const Pipe& pipe, uint8_t root_parameter, const void* data, size_t num_constants);

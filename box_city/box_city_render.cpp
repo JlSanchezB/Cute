@@ -63,7 +63,7 @@ void DrawCityBoxesPass::Render(render::RenderContext& render_context) const
 	//Render
 	context->SetPipelineState(m_display_resources->m_box_render_pipeline_state);
 
-	display::WeakVertexBufferHandle vertex_buffers[] = { m_display_resources->m_box_vertex_position_buffer, m_display_resources->m_box_vertex_normal_buffer };
+	display::WeakResourceHandle vertex_buffers[] = { m_display_resources->m_box_vertex_position_buffer, m_display_resources->m_box_vertex_normal_buffer };
 	context->SetVertexBuffers(0, 1, &m_display_resources->m_box_vertex_position_buffer);
 	context->SetVertexBuffers(1, 1, &m_display_resources->m_box_vertex_normal_buffer);
 	context->SetIndexBuffer(m_display_resources->m_box_index_buffer);

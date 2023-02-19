@@ -110,6 +110,21 @@ namespace display
 
 		command_list->IASetVertexBuffers(static_cast<UINT>(start_slot_index), static_cast<UINT>(num_vertex_buffers), vertex_buffer_views.data());
 	}
+	void Context::SetVertexBuffers(uint8_t start_slot_index, uint8_t num_vertex_buffers, WeakResourceHandle* vertex_buffers_handles)
+	{
+		auto dx12_context = reinterpret_cast<DX12Context*>(this);
+		Device* device = dx12_context->device;
+		const auto& command_list = dx12_context->command_list;
+
+		std::array<D3D12_VERTEX_BUFFER_VIEW, 32> vertex_buffer_views;
+
+		for (size_t i = 0; i < num_vertex_buffers; i++)
+		{
+			vertex_buffer_views[i] = device->Get(GetRingResource(device, vertex_buffers_handles[i], device->m_frame_index)).vertex_buffer_view;
+		}
+
+		command_list->IASetVertexBuffers(static_cast<UINT>(start_slot_index), static_cast<UINT>(num_vertex_buffers), vertex_buffer_views.data());
+	}
 	void Context::SetShaderResourceAsVertexBuffer(uint8_t start_slot_index, const WeakShaderResourceHandle& handle, const SetShaderResourceAsVertexBufferDesc& desc)
 	{
 		auto dx12_context = reinterpret_cast<DX12Context*>(this);
@@ -135,6 +150,17 @@ namespace display
 		auto& index_buffer = device->Get(GetRingResource(device, index_buffer_handle, device->m_frame_index));
 
 		command_list->IASetIndexBuffer(&index_buffer.view);
+	}
+
+	void Context::SetIndexBuffer(const WeakResourceHandle& index_buffer_handle)
+	{
+		auto dx12_context = reinterpret_cast<DX12Context*>(this);
+		Device* device = dx12_context->device;
+		const auto& command_list = dx12_context->command_list;
+
+		auto& index_buffer = device->Get(GetRingResource(device, index_buffer_handle, device->m_frame_index));
+
+		command_list->IASetIndexBuffer(&index_buffer.index_buffer_view);
 	}
 	
 	void Context::SetConstants(const Pipe& pipe, uint8_t root_parameter, const void * data, size_t num_constants)

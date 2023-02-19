@@ -112,16 +112,11 @@ void BoxCityResources::Load(display::Device* device, render::System* render_syst
 			vertex_normal_data[i * 4 + 0] = vertex_normal_data[i * 4 + 1] = vertex_normal_data[i * 4 + 2] = vertex_normal_data[i * 4 + 3] = rot * vertex_normal_data[0];
 		}
 
-		display::VertexBufferDesc vertex_buffer_desc;
-		vertex_buffer_desc.init_data = vertex_position_data;
-		vertex_buffer_desc.size = sizeof(vertex_position_data);
-		vertex_buffer_desc.stride = sizeof(glm::vec3);
+		display::ResourceDesc vertex_buffer_position_desc = display::ResourceDesc::CreateVertexBuffer(display::Access::Static, sizeof(vertex_position_data), sizeof(glm::vec3), vertex_position_data);
+		m_box_vertex_position_buffer = display::CreateResource(device, vertex_buffer_position_desc, "box_position_vertex_buffer");
 
-		m_box_vertex_position_buffer = display::CreateVertexBuffer(device, vertex_buffer_desc, "box_position_vertex_buffer");
-
-		vertex_buffer_desc.init_data = vertex_normal_data;
-
-		m_box_vertex_normal_buffer = display::CreateVertexBuffer(device, vertex_buffer_desc, "box_normal_vertex_buffer");
+		display::ResourceDesc vertex_buffer_normal_desc = display::ResourceDesc::CreateVertexBuffer(display::Access::Static, sizeof(vertex_position_data), sizeof(glm::vec3), vertex_normal_data);
+		m_box_vertex_normal_buffer = display::CreateResource(device, vertex_buffer_normal_desc, "box_normal_vertex_buffer");
 	}
 
 	//Quad Index buffer
@@ -132,11 +127,9 @@ void BoxCityResources::Load(display::Device* device, render::System* render_syst
 			0 + 4 * 3, 3 + 4 * 3, 1 + 4 * 3, 0 + 4 * 3, 2 + 4 * 3, 3 + 4 * 3,
 			0 + 4 * 4, 3 + 4 * 4, 1 + 4 * 4, 0 + 4 * 4, 2 + 4 * 4, 3 + 4 * 4,
 			0 + 4 * 5, 3 + 4 * 5, 1 + 4 * 5, 0 + 4 * 5, 2 + 4 * 5, 3 + 4 * 5 };
-		display::IndexBufferDesc index_buffer_desc;
-		index_buffer_desc.init_data = index_buffer_data;
-		index_buffer_desc.size = sizeof(index_buffer_data);
 
-		m_box_index_buffer = display::CreateIndexBuffer(device, index_buffer_desc, "box_index_buffer");
+		display::ResourceDesc index_buffer_desc = display::ResourceDesc::CreateIndexBuffer(display::Access::Static, sizeof(index_buffer_data), display::Format::R16_UINT, index_buffer_data);
+		m_box_index_buffer = display::CreateResource(device, index_buffer_desc, "box_index_buffer");
 	}
 
 	//Box culling root signature
