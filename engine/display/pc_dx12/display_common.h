@@ -357,19 +357,9 @@ namespace display
 		ComPtr<ID3D12Resource> resource;
 	};
 
-	struct ResourceAccess
-	{
-		static constexpr uint32_t UAV = 1;
-		static constexpr uint32_t RenderTarget = 1;
-		static constexpr uint32_t DepthBuffer = 1;
-		static constexpr uint32_t Vertexbuffer = 1;
-		static constexpr uint32_t IndexBuffer = 1;
-		static constexpr uint32_t ConstantBuffer = 1;
-	};
-
 	struct Resource : RingResourceSupport<ResourceHandle>
 	{
-		static constexpr size_t kShaderResourceDescriptorIndex = 0;
+		static constexpr size_t kShaderResourceOrConstantBufferDescriptorIndex = 0;
 		static constexpr size_t kShaderUnorderedAccessDescriptorIndex = 1;
 		static constexpr size_t kRenderTargetDescriptorIndex = 2;
 		static constexpr size_t kDepthBufferDescriptorIndex = 3;
@@ -377,8 +367,8 @@ namespace display
 		ComPtr<ID3D12Resource> resource;
 		D3D12_RESOURCE_STATES current_state;
 
-		//Resource acccess flags
-		uint32_t access = 0;
+		bool UAV = false; //Can be set as UAV
+		bool ShaderAccess = false; //Can be set as shader resource or constant buffer
 		
 		//Union of data for all the resource types
 		union

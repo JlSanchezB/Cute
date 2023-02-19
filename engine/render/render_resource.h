@@ -123,6 +123,16 @@ namespace render
 		display::TranstitionState GetDefaultAccess() const override { return display::TranstitionState::VertexAndConstantBuffer; };
 	};
 
+	//Constant buffer resource
+	class ConstantBuffer2Resource : public DisplayHandleResource<display::ResourceHandle>
+	{
+	public:
+		DECLARE_RENDER_CLASS("ConstantBuffer2");
+
+		void Load(LoadContext& load_context) override;
+		display::TranstitionState GetDefaultAccess() const override { return display::TranstitionState::VertexAndConstantBuffer; };
+	};
+
 	//Unordered access buffer resource
 	class UnorderedAccessBufferResource : public DisplayHandleResource<display::UnorderedAccessBufferHandle>
 	{

@@ -693,6 +693,20 @@ namespace display
 							device->m_native_device->CopyDescriptorsSimple(1, device->m_descriptor_table_pool.GetDescriptor(handle, i),
 							device->m_render_target_pool.GetDescriptor(render_target, 1), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 						},
+						[&](WeakResourceHandle resource)
+						{
+							assert(device->m_resource_pool[resource].ShaderAccess);
+							//Set it as shader resource or constant buffer
+							device->m_native_device->CopyDescriptorsSimple(1, device->m_descriptor_table_pool.GetDescriptor(handle, i),
+							device->m_resource_pool.GetDescriptor(resource, Resource::kShaderResourceOrConstantBufferDescriptorIndex), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+						},
+						[&](WeakAsUnorderedAccessBufferResourceHandle resource)
+						{
+							assert(device->m_resource_pool[resource].UAV);
+							//Set it as unordered access buffer
+							device->m_native_device->CopyDescriptorsSimple(1, device->m_descriptor_table_pool.GetDescriptor(handle, i),
+							device->m_resource_pool.GetDescriptor(resource, Resource::kShaderUnorderedAccessDescriptorIndex), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+						},
 						[&](DescriptorTableDesc::NullDescriptor null_descriptor)
 						{
 							//Nothing to do
@@ -744,6 +758,20 @@ namespace display
 							{
 								device->m_native_device->CopyDescriptorsSimple(1, device->m_descriptor_table_pool.GetDescriptor(handle_it, i),
 								device->m_render_target_pool.GetDescriptor(render_target, 1), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+							},
+							[&](WeakResourceHandle resource)
+							{
+								assert(device->m_resource_pool[resource].ShaderAccess);
+								//Set it as shader resource or constant buffer
+								device->m_native_device->CopyDescriptorsSimple(1, device->m_descriptor_table_pool.GetDescriptor(handle_it, i),
+								device->m_resource_pool.GetDescriptor(GetRingResource(device, resource, frame_index), Resource::kShaderResourceOrConstantBufferDescriptorIndex), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+							},
+							[&](WeakAsUnorderedAccessBufferResourceHandle resource)
+							{
+								assert(device->m_resource_pool[resource].UAV);
+								//Set it as unordered access buffer
+								device->m_native_device->CopyDescriptorsSimple(1, device->m_descriptor_table_pool.GetDescriptor(handle_it, i),
+								device->m_resource_pool.GetDescriptor(GetRingResource(device, WeakResourceHandle(resource), frame_index), Resource::kShaderUnorderedAccessDescriptorIndex), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 							},
 							[&](DescriptorTableDesc::NullDescriptor null_descriptor)
 							{
@@ -797,12 +825,26 @@ namespace display
 					[&](WeakShaderResourceHandle shader_resource)
 					{
 						device->m_native_device->CopyDescriptorsSimple(1, device->m_descriptor_table_pool.GetDescriptor(current_frame_descriptor_table_handle, i),
-							device->m_shader_resource_pool.GetDescriptor(shader_resource), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+						device->m_shader_resource_pool.GetDescriptor(shader_resource), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 					},
 					[&](WeakRenderTargetHandle render_target)
 					{
 						device->m_native_device->CopyDescriptorsSimple(1, device->m_descriptor_table_pool.GetDescriptor(current_frame_descriptor_table_handle, i),
 						device->m_render_target_pool.GetDescriptor(render_target, 1), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+					},
+					[&](WeakResourceHandle resource)
+					{
+						assert(device->m_resource_pool[resource].ShaderAccess);
+						//Set it as shader resource or constant buffer
+						device->m_native_device->CopyDescriptorsSimple(1, device->m_descriptor_table_pool.GetDescriptor(handle, i),
+						device->m_resource_pool.GetDescriptor(resource, Resource::kShaderResourceOrConstantBufferDescriptorIndex), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+					},
+					[&](WeakAsUnorderedAccessBufferResourceHandle resource)
+					{
+						assert(device->m_resource_pool[resource].UAV);
+						//Set it as unordered access buffer
+						device->m_native_device->CopyDescriptorsSimple(1, device->m_descriptor_table_pool.GetDescriptor(handle, i),
+						device->m_resource_pool.GetDescriptor(resource, Resource::kShaderUnorderedAccessDescriptorIndex), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 					},
 					[&](DescriptorTableDesc::NullDescriptor null_descriptor)
 					{
@@ -836,9 +878,18 @@ namespace display
 	{
 		D3D12_RESOURCE_STATES init_resource_state;
 		D3D12_RESOURCE_DESC d12_resource_desc = {};
+
+		size_t size = resource_desc.size;
+
 		if (resource_desc.type == ResourceType::Buffer)
 		{
-			d12_resource_desc = CD3DX12_RESOURCE_DESC::Buffer(resource_desc.size);
+			if (resource_desc.buffer_type == ResourceBufferType::ConstantBuffer)
+			{
+				//Size needs to be 256bytes multiple
+				size = (size + 255) & ~255;	// CB size is required to be 256-byte aligned.
+			}
+
+			d12_resource_desc = CD3DX12_RESOURCE_DESC::Buffer(size);
 			if (resource_desc.is_UAV) d12_resource_desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 
 			switch (resource_desc.buffer_type)
@@ -887,7 +938,7 @@ namespace display
 			}
 		}
 
-		auto CreateViewsForResource = [&](display::Device* device, const ResourceHandle& handle, display::Resource& resource)
+		auto CreateViewsForResource = [&resource_desc, size, &d12_resource_desc, name](display::Device* device, const ResourceHandle& handle, display::Resource& resource)
 		{
 			//All resources have resource view
 			D3D12_SHADER_RESOURCE_VIEW_DESC dx12_shader_resource_desc = {};
@@ -924,12 +975,17 @@ namespace display
 			}
 
 			if (needs_shader_resource_view)
-				device->m_native_device->CreateShaderResourceView(resource.resource.Get(), &dx12_shader_resource_desc, device->m_resource_pool.GetDescriptor(handle, Resource::kShaderResourceDescriptorIndex));
+			{
+				resource.ShaderAccess = true;
+				device->m_native_device->CreateShaderResourceView(resource.resource.Get(), &dx12_shader_resource_desc, device->m_resource_pool.GetDescriptor(handle, Resource::kShaderResourceOrConstantBufferDescriptorIndex));
+			}
 
 			if (resource_desc.is_UAV)
 			{
 				assert(resource_desc.type == ResourceType::Buffer && resource_desc.buffer_type != ResourceBufferType::ConstantBuffer);
 				assert(resource_desc.type == ResourceType::Buffer && resource_desc.buffer_type != ResourceBufferType::VertexBuffer);
+
+				resource.UAV = true;
 
 				//Create UAV
 				D3D12_UNORDERED_ACCESS_VIEW_DESC dx12_unordered_access_buffer_desc_desc = {};
@@ -1004,12 +1060,23 @@ namespace display
 					resource.index_buffer_view.Format = Convert(resource_desc.format);
 					resource.index_buffer_view.SizeInBytes = static_cast<UINT>(resource_desc.size);
 				}
-				else
+				else if (resource_desc.buffer_type == ResourceBufferType::VertexBuffer)
 				{
 					// Initialize the vertex buffer view.
 					resource.vertex_buffer_view.BufferLocation = resource.resource->GetGPUVirtualAddress();
 					resource.vertex_buffer_view.StrideInBytes = static_cast<UINT>(resource_desc.structure_stride);
 					resource.vertex_buffer_view.SizeInBytes = static_cast<UINT>(resource_desc.size);
+				}
+				else if (resource_desc.buffer_type == ResourceBufferType::ConstantBuffer)
+				{
+					D3D12_CONSTANT_BUFFER_VIEW_DESC dx12_constant_buffer_desc = {};
+					dx12_constant_buffer_desc.BufferLocation = resource.resource->GetGPUVirtualAddress();
+					dx12_constant_buffer_desc.SizeInBytes = static_cast<UINT>(size);
+					device->m_native_device->CreateConstantBufferView(&dx12_constant_buffer_desc, device->m_resource_pool.GetDescriptor(handle, Resource::kShaderResourceOrConstantBufferDescriptorIndex));
+
+					resource.ShaderAccess = true;
+
+					SetObjectName(resource.resource.Get(), name);
 				}
 			}
 
@@ -1043,6 +1110,8 @@ namespace display
 				{
 					CreateViewsForResource(device, handle, resource);
 				});
+
+			return handle;
 		}
 
 		return ResourceHandle();
@@ -1065,9 +1134,9 @@ namespace display
 			{
 				[&](auto handle)
 				{
-					auto& constant_buffer = device->Get(GetRingResource(device, handle, device->m_frame_index));
-					memory_data = constant_buffer.memory_data;
-					memory_size = constant_buffer.memory_size;
+					auto& buffer = device->Get(GetRingResource(device, handle, device->m_frame_index));
+					memory_data = buffer.memory_data;
+					memory_size = buffer.memory_size;
 				}
 			},
 			handle);

@@ -7,10 +7,8 @@ void BoxCityResources::Load(display::Device* device, render::System* render_syst
 	auto* gpu_memory = render::GetModule<render::GPUMemoryRenderModule>(render_system, "GPUMemory"_sh32);
 	{
 		//Create view constant buffer
-		display::ConstantBufferDesc view_constant_desc;
-		view_constant_desc.size = sizeof(ViewConstantBuffer);
-		view_constant_desc.access = display::Access::Dynamic;
-		m_view_constant_buffer = display::CreateConstantBuffer(device, view_constant_desc, "ViewConstantBuffer");
+		display::ResourceDesc view_constant_desc = display::ResourceDesc::CreateConstantBuffer(display::Access::Dynamic, sizeof(ViewConstantBuffer));
+		m_view_constant_buffer = display::CreateResource(device, view_constant_desc, "ViewConstantBuffer");
 	}
 
 	//Box render root signature

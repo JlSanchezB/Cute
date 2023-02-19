@@ -136,10 +136,10 @@ namespace display
 
 	//Create resource
 	ResourceHandle CreateResource(Device* device, const ResourceDesc& resource_desc, const char* name);
-	void DestroyResource(Device* device, ResourceHandle& handle, const char* name);
+	void DestroyResource(Device* device, ResourceHandle& handle);
 
 	//Update resource buffer (only Access::Dynamic)
-	using UpdatableResourceHandle = std::variant<WeakConstantBufferHandle, WeakVertexBufferHandle, WeakIndexBufferHandle>;
+	using UpdatableResourceHandle = std::variant<WeakConstantBufferHandle, WeakVertexBufferHandle, WeakIndexBufferHandle, WeakResourceHandle>;
 	void UpdateResourceBuffer(Device* device, const UpdatableResourceHandle& handle, const void* data, size_t size);
 
 	//Get Resource memory
@@ -339,6 +339,12 @@ namespace display
 	inline void DestroyHandleInternal(Device* device, DepthBufferHandle& handle)
 	{
 		DestroyDepthBuffer(device, handle);
+	}
+
+	template<>
+	inline void DestroyHandleInternal(Device* device, ResourceHandle& handle)
+	{
+		DestroyResource(device, handle);
 	}
 
 }

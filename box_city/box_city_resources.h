@@ -24,7 +24,7 @@ struct ViewConstantBuffer
 
 struct BoxCityResources
 {
-	display::ConstantBufferHandle m_view_constant_buffer;
+	display::ResourceHandle m_view_constant_buffer;
 	display::DescriptorTableHandle m_box_render_description_table_handle;
 	display::RootSignatureHandle m_box_render_root_signature;
 	display::PipelineStateHandle m_box_render_pipeline_state;
