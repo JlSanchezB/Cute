@@ -254,6 +254,113 @@ namespace display
 		const void* init_data = nullptr;
 	};
 
+	struct ResourceDesc
+	{
+		Access access = Access::Static;
+		Format format = Format::R8G8B8A8_UNORM; //Used for textures, index buffer and vertex buffers
+		ResourceType type = ResourceType::Texture2D;
+		
+		ResourceBufferType buffer_type;
+		ResourceTexture2DType texture_2d_type;
+
+		//Texture2D
+		uint32_t width = 0;
+		uint32_t height = 0;
+		uint32_t pitch = 0;
+		uint32_t slice_pitch = 0;
+		uint16_t mips = 0;
+		const void* init_data = nullptr;
+
+		//Raw buffers, index buffers, vertex buffers, constant buffers, all needs the correct size
+		size_t size = 0;
+
+		//StructuredBuffers
+		uint32_t num_elements = 0;
+		uint32_t structure_stride = 0; //Used in vertex buffers as well
+		
+		//Depth buffers
+		float default_clear = 1.f;
+		uint8_t default_stencil = 0;
+
+		//UAV access
+		bool is_UAV = false;
+		
+		//Helpers to create the different types of buffes
+		static ResourceDesc CreateStructuredBuffer(uint32_t num_elements, uint32_t structure_stride, bool is_UAV = false)
+		{
+			ResourceDesc desc;
+			desc.access = Access::Static;
+			desc.type = ResourceType::Buffer;
+			desc.buffer_type = ResourceBufferType::StructuredBuffer;
+			desc.num_elements = num_elements;
+			desc.structure_stride = structure_stride;
+			desc.size = num_elements * structure_stride;
+			desc.is_UAV = is_UAV;
+			return desc;
+		}
+		static ResourceDesc CreateRawAccessBuffer(uint32_t size, bool is_UAV = false)
+		{
+			ResourceDesc desc;
+			desc.access = Access::Static;
+			desc.type = ResourceType::Buffer;
+			desc.buffer_type = ResourceBufferType::RawAccessBuffer;
+			desc.size = size;
+			desc.is_UAV = is_UAV;
+			return desc;
+		}
+		static ResourceDesc CreateTexture2D(Format format, uint32_t width, uint32_t height, uint32_t pitch, uint32_t slice_pitch, uint16_t mips, const void* init_data = nullptr, bool is_UAV = false)
+		{
+			ResourceDesc desc;
+			desc.access = Access::Static;
+			desc.type = ResourceType::Texture2D;
+			desc.texture_2d_type = ResourceTexture2DType::Texture;
+			desc.format = format;
+			desc.width = width;
+			desc.height = height;
+			desc.pitch = pitch;
+			desc.slice_pitch = slice_pitch;
+			desc.mips = mips;
+			desc.init_data = init_data;
+			desc.is_UAV = is_UAV;
+			return desc;
+		}
+
+		static ResourceDesc CreateConstantBuffer(Access access, size_t size)
+		{
+			assert(access != Access::Static);
+			ResourceDesc desc;
+			desc.access = access;
+			desc.type = ResourceType::Buffer;
+			desc.buffer_type = ResourceBufferType::ConstantBuffer;
+			desc.size = size;
+			return desc;
+		}
+
+		static ResourceDesc CreateRenderTarget(Format format, uint32_t width, uint32_t height)
+		{
+			ResourceDesc desc;
+			desc.access = Access::Static;
+			desc.type = ResourceType::Texture2D;
+			desc.texture_2d_type = ResourceTexture2DType::RenderTarget;
+			desc.width = width;
+			desc.height = height;
+			return desc;
+		}
+
+		static ResourceDesc CreateDepthBuffer(Format format, uint32_t width, uint32_t height, float default_clear = 1.f, uint8_t default_stencil = 0)
+		{
+			ResourceDesc desc;
+			desc.access = Access::Static;
+			desc.type = ResourceType::Texture2D;
+			desc.texture_2d_type = ResourceTexture2DType::DepthBuffer;
+			desc.width = width;
+			desc.height = height;
+			desc.default_clear = default_clear;
+			desc.default_stencil = default_stencil;
+			return desc;
+		}
+	};
+
 	struct RenderTargetDesc
 	{
 		Format format;

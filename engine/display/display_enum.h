@@ -129,6 +129,28 @@ namespace display
 		Texture2D
 	};
 
+	enum class ResourceType : uint8_t
+	{
+		Buffer,
+		Texture2D
+	};
+
+	enum class ResourceBufferType : uint8_t
+	{
+		VertexBuffer,
+		IndexBuffer,
+		ConstantBuffer,
+		StructuredBuffer,
+		RawAccessBuffer
+	};
+
+	enum class ResourceTexture2DType : uint8_t
+	{
+		Texture,
+		RenderTarget,
+		DepthBuffer
+	};
+
 	enum class UnorderedAccessBufferType : uint8_t
 	{
 		RawBuffer,

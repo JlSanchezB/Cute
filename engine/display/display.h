@@ -134,6 +134,10 @@ namespace display
 	//Destroy sampler descriptor table
 	void DestroySamplerDescriptorTable(Device * device, SamplerDescriptorTableHandle& handle);
 
+	//Create resource
+	ResourceHandle CreateResource(Device* device, const ResourceDesc& resource_desc, const char* name);
+	void DestroyResource(Device* device, ResourceHandle& handle, const char* name);
+
 	//Update resource buffer (only Access::Dynamic)
 	using UpdatableResourceHandle = std::variant<WeakConstantBufferHandle, WeakVertexBufferHandle, WeakIndexBufferHandle>;
 	void UpdateResourceBuffer(Device* device, const UpdatableResourceHandle& handle, const void* data, size_t size);

@@ -356,6 +356,43 @@ namespace display
 	{
 		ComPtr<ID3D12Resource> resource;
 	};
+
+	struct ResourceAccess
+	{
+		static constexpr uint32_t UAV = 1;
+		static constexpr uint32_t RenderTarget = 1;
+		static constexpr uint32_t DepthBuffer = 1;
+		static constexpr uint32_t Vertexbuffer = 1;
+		static constexpr uint32_t IndexBuffer = 1;
+		static constexpr uint32_t ConstantBuffer = 1;
+	};
+
+	struct Resource : RingResourceSupport<ResourceHandle>
+	{
+		static constexpr size_t kShaderResourceDescriptorIndex = 0;
+		static constexpr size_t kShaderUnorderedAccessDescriptorIndex = 1;
+		static constexpr size_t kRenderTargetDescriptorIndex = 2;
+		static constexpr size_t kDepthBufferDescriptorIndex = 3;
+
+		ComPtr<ID3D12Resource> resource;
+		D3D12_RESOURCE_STATES current_state;
+
+		//Resource acccess flags
+		uint32_t access = 0;
+		
+		//Union of data for all the resource types
+		union
+		{
+			D3D12_VERTEX_BUFFER_VIEW vertex_buffer_view;
+			D3D12_INDEX_BUFFER_VIEW index_buffer_view;
+			struct
+			{
+				float default_depth;
+				uint8_t default_stencil;
+			} ClearDepthBuffer;
+		};
+	};
+
 	struct DescriptorTable : DescriptorHeapFreeList::Block, RingResourceSupport<DescriptorTableHandle>
 	{
 	};
@@ -435,6 +472,8 @@ namespace display
 		GraphicDescriptorHandlePool<ShaderResourceHandle> m_shader_resource_pool;
 		GraphicDescriptorHandleFreeList<DescriptorTableHandle> m_descriptor_table_pool;
 		GraphicDescriptorHandleFreeList<SamplerDescriptorTableHandle> m_sampler_descriptor_table_pool;
+
+		GraphicDescriptorHandlePool<ResourceHandle> m_resource_pool;
 
 		//Reload data for pipeline states
 		std::vector<PipelineReloadData> m_pipeline_reload_data;
@@ -619,6 +658,18 @@ namespace display
 	inline auto& Device::Get<WeakSamplerDescriptorTableHandle>(const WeakSamplerDescriptorTableHandle& handle)
 	{
 		return this->m_sampler_descriptor_table_pool[handle];
+	}
+
+	template<>
+	inline auto& Device::Get<ResourceHandle>(const ResourceHandle& handle)
+	{
+		return this->m_resource_pool[handle];
+	}
+
+	template<>
+	inline auto& Device::Get<WeakResourceHandle>(const WeakResourceHandle& handle)
+	{
+		return this->m_resource_pool[handle];
 	}
 
 	//Delete resources that are not needed by the GPU

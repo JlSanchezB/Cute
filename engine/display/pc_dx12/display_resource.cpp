@@ -832,6 +832,229 @@ namespace display
 		device->m_sampler_descriptor_table_pool.Free(handle);
 	}
 
+	ResourceHandle CreateResource(Device* device, const ResourceDesc& resource_desc, const char* name)
+	{
+		D3D12_RESOURCE_STATES init_resource_state;
+		D3D12_RESOURCE_DESC d12_resource_desc = {};
+		if (resource_desc.type == ResourceType::Buffer)
+		{
+			d12_resource_desc = CD3DX12_RESOURCE_DESC::Buffer(resource_desc.size);
+			if (resource_desc.is_UAV) d12_resource_desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+
+			switch (resource_desc.buffer_type)
+			{
+			case ResourceBufferType::VertexBuffer:
+			case ResourceBufferType::ConstantBuffer:
+				init_resource_state = D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
+				break;
+			case ResourceBufferType::IndexBuffer:
+				init_resource_state = D3D12_RESOURCE_STATE_INDEX_BUFFER;
+				break;
+			case ResourceBufferType::StructuredBuffer:
+			case ResourceBufferType::RawAccessBuffer:
+				init_resource_state = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+				break;
+			}
+		}
+		else if (resource_desc.type == ResourceType::Texture2D)
+		{
+			d12_resource_desc.MipLevels = static_cast<UINT>(resource_desc.mips);
+			d12_resource_desc.Format = Convert(resource_desc.format);
+			d12_resource_desc.Width = static_cast<UINT>(resource_desc.width);
+			d12_resource_desc.Height = static_cast<UINT>(resource_desc.height);
+			d12_resource_desc.Flags = D3D12_RESOURCE_FLAG_NONE;
+
+			if (resource_desc.is_UAV) d12_resource_desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+
+			d12_resource_desc.DepthOrArraySize = 1;
+			d12_resource_desc.SampleDesc.Count = 1;
+			d12_resource_desc.SampleDesc.Quality = 0;
+			d12_resource_desc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+
+			switch (resource_desc.texture_2d_type)
+			{
+			case ResourceTexture2DType::Texture:
+				init_resource_state = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+				break;
+			case ResourceTexture2DType::RenderTarget:
+				init_resource_state = D3D12_RESOURCE_STATE_RENDER_TARGET;
+				d12_resource_desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
+				break;
+			case ResourceTexture2DType::DepthBuffer:
+				init_resource_state = D3D12_RESOURCE_STATE_DEPTH_WRITE;
+				d12_resource_desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+				break;
+			}
+		}
+
+		auto CreateViewsForResource = [&](display::Device* device, const ResourceHandle& handle, display::Resource& resource)
+		{
+			//All resources have resource view
+			D3D12_SHADER_RESOURCE_VIEW_DESC dx12_shader_resource_desc = {};
+			dx12_shader_resource_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+			bool needs_shader_resource_view = true;
+			if (resource_desc.type == ResourceType::Buffer)
+			{
+				dx12_shader_resource_desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
+				switch (resource_desc.buffer_type)
+				{
+				case ResourceBufferType::VertexBuffer:
+				case ResourceBufferType::ConstantBuffer:
+				case ResourceBufferType::IndexBuffer:
+					//Nothing to create
+					needs_shader_resource_view = false;
+					break;
+				
+				case ResourceBufferType::StructuredBuffer:
+					dx12_shader_resource_desc.Format = DXGI_FORMAT_UNKNOWN;
+					dx12_shader_resource_desc.Buffer.NumElements = static_cast<UINT>(resource_desc.num_elements);
+					dx12_shader_resource_desc.Buffer.StructureByteStride = static_cast<UINT>(resource_desc.structure_stride);
+					break;
+				case ResourceBufferType::RawAccessBuffer:
+					dx12_shader_resource_desc.Format = DXGI_FORMAT_R32_TYPELESS;
+					dx12_shader_resource_desc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_RAW;
+					dx12_shader_resource_desc.Buffer.NumElements = static_cast<UINT>(resource_desc.size / 4);
+					break;
+				}
+			}
+			else if (resource_desc.type == ResourceType::Texture2D)
+			{
+				dx12_shader_resource_desc.Format = d12_resource_desc.Format;
+				dx12_shader_resource_desc.Texture2D.MipLevels = d12_resource_desc.MipLevels;
+			}
+
+			if (needs_shader_resource_view)
+				device->m_native_device->CreateShaderResourceView(resource.resource.Get(), &dx12_shader_resource_desc, device->m_resource_pool.GetDescriptor(handle, Resource::kShaderResourceDescriptorIndex));
+
+			if (resource_desc.is_UAV)
+			{
+				assert(resource_desc.type == ResourceType::Buffer && resource_desc.buffer_type != ResourceBufferType::ConstantBuffer);
+				assert(resource_desc.type == ResourceType::Buffer && resource_desc.buffer_type != ResourceBufferType::VertexBuffer);
+
+				//Create UAV
+				D3D12_UNORDERED_ACCESS_VIEW_DESC dx12_unordered_access_buffer_desc_desc = {};
+				if (resource_desc.type == ResourceType::Buffer)
+				{
+					dx12_unordered_access_buffer_desc_desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
+					dx12_unordered_access_buffer_desc_desc.Buffer.FirstElement = 0;
+					dx12_unordered_access_buffer_desc_desc.Buffer.CounterOffsetInBytes = 0;
+
+					switch (resource_desc.buffer_type)
+					{
+					case ResourceBufferType::ConstantBuffer:
+					case ResourceBufferType::VertexBuffer:
+						assert(false);
+						break;
+					case ResourceBufferType::IndexBuffer:
+						dx12_shader_resource_desc.Format = Convert(resource_desc.format);
+						dx12_shader_resource_desc.Buffer.NumElements = static_cast<UINT>(resource_desc.num_elements);
+						dx12_shader_resource_desc.Buffer.StructureByteStride = static_cast<UINT>(resource_desc.structure_stride);
+						break;
+
+					case ResourceBufferType::StructuredBuffer:
+						dx12_shader_resource_desc.Format = DXGI_FORMAT_UNKNOWN;
+						dx12_shader_resource_desc.Buffer.NumElements = static_cast<UINT>(resource_desc.num_elements);
+						dx12_shader_resource_desc.Buffer.StructureByteStride = static_cast<UINT>(resource_desc.structure_stride);
+						break;
+					case ResourceBufferType::RawAccessBuffer:
+						dx12_shader_resource_desc.Format = DXGI_FORMAT_R32_TYPELESS;
+						dx12_shader_resource_desc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_RAW;
+						dx12_shader_resource_desc.Buffer.NumElements = static_cast<UINT>(resource_desc.size / 4);
+						break;
+					}
+				}
+
+				device->m_native_device->CreateUnorderedAccessView(resource.resource.Get(), nullptr, &dx12_unordered_access_buffer_desc_desc, device->m_resource_pool.GetDescriptor(handle, Resource::kShaderUnorderedAccessDescriptorIndex));
+			}
+
+			if (resource_desc.type == ResourceType::Texture2D)
+			{
+				if (resource_desc.texture_2d_type == ResourceTexture2DType::RenderTarget)
+				{
+					assert(resource_desc.access == Access::Static);
+					assert(resource_desc.type == ResourceType::Texture2D);
+
+					//Create render target view
+					D3D12_RENDER_TARGET_VIEW_DESC dx12_render_target_view_desc = {};
+					dx12_render_target_view_desc.Format = Convert(resource_desc.format);
+					dx12_render_target_view_desc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
+					dx12_render_target_view_desc.Texture2D.MipSlice = 0;
+					dx12_render_target_view_desc.Texture2D.PlaneSlice = 0;
+					device->m_native_device->CreateRenderTargetView(resource.resource.Get(), &dx12_render_target_view_desc, device->m_resource_pool.GetDescriptor(handle, Resource::kRenderTargetDescriptorIndex));
+				}
+				else if (resource_desc.texture_2d_type == ResourceTexture2DType::DepthBuffer)
+				{
+					assert(resource_desc.access == Access::Static);
+					assert(resource_desc.type == ResourceType::Texture2D);
+
+					D3D12_DEPTH_STENCIL_VIEW_DESC dx12_depth_stencil_desc = {};
+					dx12_depth_stencil_desc.Format = Convert(resource_desc.format);;
+					dx12_depth_stencil_desc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
+					dx12_depth_stencil_desc.Flags = D3D12_DSV_FLAG_NONE;
+
+					device->m_native_device->CreateDepthStencilView(resource.resource.Get(), &dx12_depth_stencil_desc, device->m_resource_pool.GetDescriptor(handle, Resource::kDepthBufferDescriptorIndex));
+				}
+			}
+			else if (resource_desc.type == ResourceType::Buffer)
+			{
+				if (resource_desc.buffer_type == ResourceBufferType::IndexBuffer)
+				{
+					// Initialize the vertex buffer view.
+					resource.index_buffer_view.BufferLocation = resource.resource->GetGPUVirtualAddress();
+					resource.index_buffer_view.Format = Convert(resource_desc.format);
+					resource.index_buffer_view.SizeInBytes = static_cast<UINT>(resource_desc.size);
+				}
+				else
+				{
+					// Initialize the vertex buffer view.
+					resource.vertex_buffer_view.BufferLocation = resource.resource->GetGPUVirtualAddress();
+					resource.vertex_buffer_view.StrideInBytes = static_cast<UINT>(resource_desc.structure_stride);
+					resource.vertex_buffer_view.SizeInBytes = static_cast<UINT>(resource_desc.size);
+				}
+			}
+
+			SetObjectName(resource.resource.Get(), name);
+		};
+
+
+		if (resource_desc.access == Access::Static || resource_desc.access == Access::Upload)
+		{
+			ResourceHandle handle = device->m_resource_pool.Alloc();
+			auto& resource = device->Get(handle);
+
+			SourceResourceData data(resource_desc.init_data, resource_desc.size, resource_desc.pitch, resource_desc.slice_pitch);
+
+			if (!CreateResource(device, data, resource_desc.access == Access::Static, d12_resource_desc, resource.resource, resource, init_resource_state))
+			{
+				device->m_resource_pool.Free(handle);
+				return ResourceHandle();
+			}
+
+			CreateViewsForResource(device, handle, resource);
+
+			return handle;
+		}
+		else if (resource_desc.access == Access::Dynamic)
+		{
+			SourceResourceData data(resource_desc.init_data, resource_desc.size);
+
+			ResourceHandle handle = CreateRingResources(device, data, d12_resource_desc, device->m_resource_pool, init_resource_state,
+				[&](display::Device* device, const ResourceHandle& handle, display::Resource& resource)
+				{
+					CreateViewsForResource(device, handle, resource);
+				});
+		}
+
+		return ResourceHandle();
+	}
+
+	void DestroyResource(Device* device, ResourceHandle& handle)
+	{
+		//Delete handle and linked ones
+		DeleteRingResource(device, handle, device->m_resource_pool);
+	}
+
+
 	void UpdateResourceBuffer(Device * device, const UpdatableResourceHandle& handle, const void * data, size_t size)
 	{
 		void* memory_data = nullptr;
