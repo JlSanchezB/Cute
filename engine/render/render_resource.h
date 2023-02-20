@@ -103,6 +103,16 @@ namespace render
 		void Load(LoadContext& load_context) override;
 	};
 
+	//Resource
+	class RenderResource : public DisplayHandleResource<display::ResourceHandle>
+	{
+	public:
+		DECLARE_RENDER_CLASS("Resource");
+
+		void Load(LoadContext& load_context) override;
+		display::TranstitionState GetDefaultAccess() const override { return display::TranstitionState::AllShaderResource; };
+	};
+
 	//Texture resource
 	class TextureResource : public DisplayHandleResource<display::ShaderResourceHandle>
 	{

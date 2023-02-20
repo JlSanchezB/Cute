@@ -1158,6 +1158,10 @@ namespace render
 									{
 										resource_barriers_to_execute.emplace_back(handle, current_access, next_access);
 									},
+									[&](const display::WeakResourceHandle& handle)
+									{
+										resource_barriers_to_execute.emplace_back(handle, current_access, next_access);
+									},
 									[&](const std::monostate& handle)
 									{
 									}

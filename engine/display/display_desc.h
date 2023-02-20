@@ -286,10 +286,10 @@ namespace display
 		bool is_UAV = false;
 		
 		//Helpers to create the different types of buffes
-		static ResourceDesc CreateStructuredBuffer(uint32_t num_elements, uint32_t structure_stride, bool is_UAV = false)
+		static ResourceDesc CreateStructuredBuffer(Access access, uint32_t num_elements, uint32_t structure_stride, bool is_UAV = false)
 		{
 			ResourceDesc desc;
-			desc.access = Access::Static;
+			desc.access = access;
 			desc.type = ResourceType::Buffer;
 			desc.buffer_type = ResourceBufferType::StructuredBuffer;
 			desc.num_elements = num_elements;
@@ -298,10 +298,10 @@ namespace display
 			desc.is_UAV = is_UAV;
 			return desc;
 		}
-		static ResourceDesc CreateRawAccessBuffer(uint32_t size, bool is_UAV = false)
+		static ResourceDesc CreateRawAccessBuffer(Access access, uint32_t size, bool is_UAV = false)
 		{
 			ResourceDesc desc;
-			desc.access = Access::Static;
+			desc.access = access;
 			desc.type = ResourceType::Buffer;
 			desc.buffer_type = ResourceBufferType::RawAccessBuffer;
 			desc.size = size;
@@ -479,7 +479,7 @@ namespace display
 	struct IndirectDrawIndexedInstancedDesc
 	{
 		PrimitiveTopology primitive_topology = PrimitiveTopology::TriangleList;
-		WeakUnorderedAccessBufferHandle parameters_buffer; //5 values, UINT IndexCountPerInstance; UINT InstanceCount; UINT StartIndexLocation;	INT BaseVertexLocation;	UINT StartInstanceLocation;
+		WeakResourceHandle parameters_buffer; //5 values, UINT IndexCountPerInstance; UINT InstanceCount; UINT StartIndexLocation;	INT BaseVertexLocation;	UINT StartInstanceLocation;
 		size_t parameters_offset = 0;
 	};
 

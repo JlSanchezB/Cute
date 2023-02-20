@@ -158,13 +158,19 @@ namespace display
 	{
 		ResourceBarrierType type;
 
-		using ResourceHandle = std::variant<WeakUnorderedAccessBufferHandle,  WeakRenderTargetHandle, WeakDepthBufferHandle>;
+		using ResourceHandle = std::variant<WeakUnorderedAccessBufferHandle,  WeakRenderTargetHandle, WeakDepthBufferHandle, WeakResourceHandle>;
 		ResourceHandle resource;
 
 		TranstitionState state_before;
 		TranstitionState state_after;
 
 		ResourceBarrier(const WeakUnorderedAccessBufferHandle& handle)
+		{
+			type = ResourceBarrierType::UnorderAccess;
+			resource = handle;
+		}
+
+		ResourceBarrier(const WeakResourceHandle& handle)
 		{
 			type = ResourceBarrierType::UnorderAccess;
 			resource = handle;

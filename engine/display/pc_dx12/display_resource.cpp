@@ -28,8 +28,6 @@ namespace
 
 		if (static_buffer)
 		{
-			assert(source_data.data); //It is a static resource and this is the only oportunity to copy data
-
 			if (FAILED(device->m_native_device->CreateCommittedResource(
 				&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
 				D3D12_HEAP_FLAG_NONE,
@@ -42,16 +40,20 @@ namespace
 				return false;
 			}
 
-			if (FAILED(device->m_native_device->CreateCommittedResource(
-				&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
-				D3D12_HEAP_FLAG_NONE,
-				&CD3DX12_RESOURCE_DESC::Buffer(source_data.size),
-				D3D12_RESOURCE_STATE_GENERIC_READ,
-				nullptr,
-				IID_PPV_ARGS(&upload_resource))))
+			if (source_data.data)
 			{
-				SetLastErrorMessage(device, "Error creating the copy resource helper in the upload heap");
-				return false;
+
+				if (FAILED(device->m_native_device->CreateCommittedResource(
+					&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
+					D3D12_HEAP_FLAG_NONE,
+					&CD3DX12_RESOURCE_DESC::Buffer(source_data.size),
+					D3D12_RESOURCE_STATE_GENERIC_READ,
+					nullptr,
+					IID_PPV_ARGS(&upload_resource))))
+				{
+					SetLastErrorMessage(device, "Error creating the copy resource helper in the upload heap");
+					return false;
+				}
 			}
 		}
 		else
@@ -62,7 +64,7 @@ namespace
 				&resource_desc,
 				D3D12_RESOURCE_STATE_GENERIC_READ,
 				nullptr,
-				IID_PPV_ARGS(&upload_resource))))
+				IID_PPV_ARGS(&resource))))
 			{
 				SetLastErrorMessage(device, "Error creating a resource in the upload heap");
 				return false;
@@ -70,7 +72,7 @@ namespace
 
 			//capture memory pointer and size
 			CD3DX12_RANGE readRange(0, 0);		// We do not intend to read from this resource on the CPU.
-			if (FAILED(upload_resource->Map(0, &readRange, reinterpret_cast<void**>(&resource_memory_access.memory_data))))
+			if (FAILED(resource->Map(0, &readRange, reinterpret_cast<void**>(&resource_memory_access.memory_data))))
 			{
 				SetLastErrorMessage(device, "Error mapping to CPU memory a resource");
 				return false;
@@ -78,7 +80,7 @@ namespace
 			resource_memory_access.memory_size = source_data.size;
 		}
 
-		if (static_buffer)
+		if (static_buffer && source_data.data)
 		{
 			// Copy data to the intermediate upload heap and then schedule a copy 
 			// from the upload heap to the vertex buffer.
@@ -108,8 +110,7 @@ namespace
 		}
 		else
 		{
-			resource = upload_resource;
-			if (source_data.data)
+			if (source_data.data) //We copy it directly as it is in the upload heap
 			{
 				//We only support here simple buffers
 				//Copy to the upload heap
@@ -1002,20 +1003,21 @@ namespace display
 						assert(false);
 						break;
 					case ResourceBufferType::IndexBuffer:
-						dx12_shader_resource_desc.Format = Convert(resource_desc.format);
-						dx12_shader_resource_desc.Buffer.NumElements = static_cast<UINT>(resource_desc.num_elements);
-						dx12_shader_resource_desc.Buffer.StructureByteStride = static_cast<UINT>(resource_desc.structure_stride);
+						dx12_unordered_access_buffer_desc_desc.Format = Convert(resource_desc.format);
+						dx12_unordered_access_buffer_desc_desc.Buffer.NumElements = static_cast<UINT>(resource_desc.num_elements);
+						dx12_unordered_access_buffer_desc_desc.Buffer.StructureByteStride = static_cast<UINT>(resource_desc.structure_stride);
 						break;
 
 					case ResourceBufferType::StructuredBuffer:
-						dx12_shader_resource_desc.Format = DXGI_FORMAT_UNKNOWN;
-						dx12_shader_resource_desc.Buffer.NumElements = static_cast<UINT>(resource_desc.num_elements);
-						dx12_shader_resource_desc.Buffer.StructureByteStride = static_cast<UINT>(resource_desc.structure_stride);
+						dx12_unordered_access_buffer_desc_desc.Format = DXGI_FORMAT_UNKNOWN;
+						dx12_unordered_access_buffer_desc_desc.Buffer.NumElements = static_cast<UINT>(resource_desc.num_elements);
+						dx12_unordered_access_buffer_desc_desc.Buffer.StructureByteStride = static_cast<UINT>(resource_desc.structure_stride);
+						dx12_unordered_access_buffer_desc_desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_NONE;
 						break;
 					case ResourceBufferType::RawAccessBuffer:
-						dx12_shader_resource_desc.Format = DXGI_FORMAT_R32_TYPELESS;
-						dx12_shader_resource_desc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_RAW;
-						dx12_shader_resource_desc.Buffer.NumElements = static_cast<UINT>(resource_desc.size / 4);
+						dx12_unordered_access_buffer_desc_desc.Format = DXGI_FORMAT_R32_TYPELESS;
+						dx12_unordered_access_buffer_desc_desc.Buffer.NumElements = static_cast<UINT>(resource_desc.size / 4);
+						dx12_unordered_access_buffer_desc_desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_RAW;
 						break;
 					}
 				}
@@ -1075,10 +1077,15 @@ namespace display
 					device->m_native_device->CreateConstantBufferView(&dx12_constant_buffer_desc, device->m_resource_pool.GetDescriptor(handle, Resource::kShaderResourceOrConstantBufferDescriptorIndex));
 
 					resource.ShaderAccess = true;
-
-					SetObjectName(resource.resource.Get(), name);
 				}
 			}
+			resource.type = resource_desc.type;
+			if (resource_desc.type == ResourceType::Buffer)
+				resource.buffer_type = resource_desc.buffer_type;
+			else if (resource_desc.type == ResourceType::Texture2D)
+				resource.texture_2d_type = resource_desc.texture_2d_type;
+
+			resource.name = name;
 
 			SetObjectName(resource.resource.Get(), name);
 		};

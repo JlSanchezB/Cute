@@ -184,19 +184,11 @@ void BoxCityResources::Load(display::Device* device, render::System* render_syst
 
 	{
 		//Create indirect culling buffers
-		display::UnorderedAccessBufferDesc indirect_box_buffer_desc;
-		indirect_box_buffer_desc.type = display::UnorderedAccessBufferType::StructuredBuffer;
-		indirect_box_buffer_desc.element_size = sizeof(uint32_t);
-		indirect_box_buffer_desc.element_count = kIndirectBoxBufferCount;
+		display::ResourceDesc indirect_box_buffer_desc = display::ResourceDesc::CreateStructuredBuffer(display::Access::Static, kIndirectBoxBufferCount, sizeof(uint32_t), true);
+		m_indirect_box_buffer = display::CreateResource(device, indirect_box_buffer_desc, "IndirectBoxBuffer");
 
-		m_indirect_box_buffer = display::CreateUnorderedAccessBuffer(device, indirect_box_buffer_desc, "IndirectBoxBuffer");
-
-		display::UnorderedAccessBufferDesc indirect_parameters_buffer_desc;
-		indirect_parameters_buffer_desc.type = display::UnorderedAccessBufferType::StructuredBuffer;
-		indirect_parameters_buffer_desc.element_size = sizeof(uint32_t);
-		indirect_parameters_buffer_desc.element_count = 5;
-
-		m_indirect_parameters_buffer = display::CreateUnorderedAccessBuffer(device, indirect_parameters_buffer_desc, "IndirectParametersBuffer");
+		display::ResourceDesc indirect_parameters_buffer_desc = display::ResourceDesc::CreateStructuredBuffer(display::Access::Static, 5, sizeof(uint32_t), true);
+		m_indirect_parameters_buffer = display::CreateResource(device, indirect_parameters_buffer_desc, "IndirectParametersBuffer");
 	}
 
 	{
@@ -206,7 +198,7 @@ void BoxCityResources::Load(display::Device* device, render::System* render_syst
 		description_table_desc.descriptors[0] = m_view_constant_buffer;
 		description_table_desc.descriptors[1] = display::WeakUnorderedAccessBufferHandleAsShaderResource(gpu_memory->GetStaticGPUMemoryResource());
 		description_table_desc.descriptors[2] = gpu_memory->GetDynamicGPUMemoryResource();
-		description_table_desc.descriptors[3] = display::WeakUnorderedAccessBufferHandleAsShaderResource(m_indirect_box_buffer);
+		description_table_desc.descriptors[3] = m_indirect_box_buffer;
 
 		//Create the descriptor table
 		m_box_render_description_table_handle = display::CreateDescriptorTable(device, description_table_desc);
@@ -219,8 +211,8 @@ void BoxCityResources::Load(display::Device* device, render::System* render_syst
 		description_table_desc.descriptors[0] = m_view_constant_buffer;
 		description_table_desc.descriptors[1] = display::WeakUnorderedAccessBufferHandleAsShaderResource(gpu_memory->GetStaticGPUMemoryResource());
 		description_table_desc.descriptors[2] = gpu_memory->GetDynamicGPUMemoryResource();
-		description_table_desc.descriptors[3] = m_indirect_parameters_buffer;
-		description_table_desc.descriptors[4] = m_indirect_box_buffer;
+		description_table_desc.descriptors[3] = display::WeakAsUnorderedAccessBufferResourceHandle(m_indirect_parameters_buffer);
+		description_table_desc.descriptors[4] = display::WeakAsUnorderedAccessBufferResourceHandle(m_indirect_box_buffer);
 
 		//Create the descriptor table
 		m_box_culling_description_table_handle = display::CreateDescriptorTable(device, description_table_desc);

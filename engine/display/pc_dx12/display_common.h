@@ -369,7 +369,14 @@ namespace display
 
 		bool UAV = false; //Can be set as UAV
 		bool ShaderAccess = false; //Can be set as shader resource or constant buffer
-		
+		ResourceType type;
+		union
+		{
+			ResourceBufferType buffer_type;
+			ResourceTexture2DType texture_2d_type;
+		};
+		const char* name;
+
 		//Union of data for all the resource types
 		union
 		{

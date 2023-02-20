@@ -74,8 +74,8 @@ void BoxCityGame::OnInit()
 	render::RegisterPassFactory<CullCityBoxesPass>(m_render_system);
 
 	//Register the ViewConstantBuffer for Main pass, ID 0
-	render::AddGameResource(m_render_system, "IndirectBoxBuffer"_sh32, CreateResourceFromHandle<render::UnorderedAccessBufferResource>(display::WeakUnorderedAccessBufferHandle(m_display_resources.m_indirect_box_buffer)));
-	render::AddGameResource(m_render_system, "IndirectParametersBuffer"_sh32, CreateResourceFromHandle<render::UnorderedAccessBufferResource>(display::WeakUnorderedAccessBufferHandle(m_display_resources.m_indirect_parameters_buffer)));
+	render::AddGameResource(m_render_system, "IndirectBoxBuffer"_sh32, CreateResourceFromHandle<render::RenderResource>(display::WeakResourceHandle(m_display_resources.m_indirect_box_buffer)));
+	render::AddGameResource(m_render_system, "IndirectParametersBuffer"_sh32, CreateResourceFromHandle<render::RenderResource>(display::WeakResourceHandle(m_display_resources.m_indirect_parameters_buffer)));
 
 	m_render_passes_loader.Load("box_city_render_passes.xml", m_render_system, m_device);
 

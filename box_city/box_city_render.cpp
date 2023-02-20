@@ -52,6 +52,14 @@ void DrawCityBoxesPass::Render(render::RenderContext& render_context) const
 {
 	//The indirect box buffer and parameters buffers should have the correct information, we just need to call indirect drawcall
 	auto context = render_context.GetContext();
+	const render::PointOfView* point_of_view = render_context.GetPointOfView();
+	const BoxCityCustomPointOfViewData& box_city_custom_data = point_of_view->GetData<BoxCityCustomPointOfViewData>();
+
+	if (box_city_custom_data.num_instance_lists == 0)
+	{
+		//Nothing to do
+		return;
+	}
 
 	context->SetRootSignature(display::Pipe::Graphics, m_display_resources->m_box_render_root_signature);
 	//Set the offset as a root constant, zero means use the indirect path

@@ -413,11 +413,32 @@ namespace display
 
 			if (resource_barrier.type == ResourceBarrierType::UnorderAccess)
 			{
-				//Set resource
-				auto& uav = device->Get(std::get<WeakUnorderedAccessBufferHandle>(resource_barrier.resource));
+				std::visit(
+					overloaded
+					{
+						[&](const WeakUnorderedAccessBufferHandle& handle)
+						{
+							//Set resource
+							auto& uav = device->Get(std::get<WeakUnorderedAccessBufferHandle>(resource_barrier.resource));
 
-				dx12_resource_barriers[i].Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
-				dx12_resource_barriers[i].UAV.pResource = uav.resource.Get();
+							dx12_resource_barriers[i].Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
+							dx12_resource_barriers[i].UAV.pResource = uav.resource.Get();
+						},
+						[&](const WeakResourceHandle& handle)
+						{
+							//Set resource
+							auto& resource = device->Get(std::get<WeakResourceHandle>(resource_barrier.resource));
+							assert(resource.UAV);
+
+							dx12_resource_barriers[i].Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
+							dx12_resource_barriers[i].UAV.pResource = resource.resource.Get();
+						},
+						[&](const auto& handle)
+						{
+							assert(false);
+						}
+
+					}, resource_barrier.resource);	
 			}
 			else if (resource_barrier.type == ResourceBarrierType::Transition)
 			{
@@ -443,6 +464,12 @@ namespace display
 							auto& depth_buffer = device->Get(GetRingResource(device, handle, device->m_frame_index));
 							dx12_resource_barriers[i].Transition.pResource = depth_buffer.resource.Get();
 							depth_buffer.current_state = Convert(resource_barrier.state_after);
+						},
+						[&](const WeakResourceHandle& handle)
+						{
+							auto& resource = device->Get(GetRingResource(device, handle, device->m_frame_index));
+							dx12_resource_barriers[i].Transition.pResource = resource.resource.Get();
+							resource.current_state = Convert(resource_barrier.state_after);
 						}
 					}, resource_barrier.resource);
 				

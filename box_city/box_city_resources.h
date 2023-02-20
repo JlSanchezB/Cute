@@ -34,8 +34,8 @@ struct BoxCityResources
 	display::ResourceHandle m_box_index_buffer;
 
 	static const uint32_t kIndirectBoxBufferCount = 1024 * 1024;
-	display::UnorderedAccessBufferHandle m_indirect_box_buffer;
-	display::UnorderedAccessBufferHandle m_indirect_parameters_buffer;
+	display::ResourceHandle m_indirect_box_buffer;
+	display::ResourceHandle m_indirect_parameters_buffer;
 	display::DescriptorTableHandle m_box_culling_description_table_handle;
 	display::RootSignatureHandle m_box_culling_root_signature;
 	display::PipelineStateHandle m_box_culling_pipeline_state;
