@@ -196,7 +196,7 @@ void BoxCityResources::Load(display::Device* device, render::System* render_syst
 		description_table_desc.num_descriptors = 4;
 		description_table_desc.access = display::Access::Dynamic;
 		description_table_desc.descriptors[0] = m_view_constant_buffer;
-		description_table_desc.descriptors[1] = display::WeakUnorderedAccessBufferHandleAsShaderResource(gpu_memory->GetStaticGPUMemoryResource());
+		description_table_desc.descriptors[1] = gpu_memory->GetStaticGPUMemoryResource();
 		description_table_desc.descriptors[2] = gpu_memory->GetDynamicGPUMemoryResource();
 		description_table_desc.descriptors[3] = m_indirect_box_buffer;
 
@@ -209,7 +209,7 @@ void BoxCityResources::Load(display::Device* device, render::System* render_syst
 		description_table_desc.num_descriptors = 5;
 		description_table_desc.access = display::Access::Dynamic;
 		description_table_desc.descriptors[0] = m_view_constant_buffer;
-		description_table_desc.descriptors[1] = display::WeakUnorderedAccessBufferHandleAsShaderResource(gpu_memory->GetStaticGPUMemoryResource());
+		description_table_desc.descriptors[1] = gpu_memory->GetStaticGPUMemoryResource();
 		description_table_desc.descriptors[2] = gpu_memory->GetDynamicGPUMemoryResource();
 		description_table_desc.descriptors[3] = display::WeakAsUnorderedAccessBufferResourceHandle(m_indirect_parameters_buffer);
 		description_table_desc.descriptors[4] = display::WeakAsUnorderedAccessBufferResourceHandle(m_indirect_box_buffer);

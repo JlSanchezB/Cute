@@ -143,7 +143,7 @@ namespace display
 	void UpdateResourceBuffer(Device* device, const UpdatableResourceHandle& handle, const void* data, size_t size);
 
 	//Get Resource memory
-	using DirectAccessResourceHandle = std::variant<WeakShaderResourceHandle, WeakConstantBufferHandle, WeakVertexBufferHandle, WeakIndexBufferHandle>;
+	using DirectAccessResourceHandle = std::variant<WeakShaderResourceHandle, WeakConstantBufferHandle, WeakVertexBufferHandle, WeakIndexBufferHandle, WeakResourceHandle>;
 	void* GetResourceMemoryBuffer(Device* device, const DirectAccessResourceHandle& handle);
 
 	//Pipe used
@@ -230,9 +230,10 @@ namespace display
 		void SetConstantBuffer(const Pipe& pipe, uint8_t root_parameter, const WeakConstantBufferHandle& constant_buffer);
 
 		//Set unordered access buffer
-		void SetUnorderedAccessBuffer(const Pipe& pipe, uint8_t root_parameter, const WeakUnorderedAccessBufferHandle& unordered_access_buffer);
+		using UnorderedAccessBufferSet = std::variant<WeakUnorderedAccessBufferHandle, WeakResourceHandle>;
+		void SetUnorderedAccessBuffer(const Pipe& pipe, uint8_t root_parameter, const UnorderedAccessBufferSet& unordered_access_buffer);
 
-		using ShaderResourceSet = std::variant<WeakShaderResourceHandle, WeakUnorderedAccessBufferHandle>;
+		using ShaderResourceSet = std::variant<WeakShaderResourceHandle, WeakUnorderedAccessBufferHandle, WeakResourceHandle>;
 		//Set shader resource
 		void SetShaderResource(const Pipe& pipe, uint8_t root_parameter, const ShaderResourceSet& shader_resource);
 

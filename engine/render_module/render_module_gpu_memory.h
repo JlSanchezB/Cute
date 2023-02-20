@@ -41,12 +41,12 @@ namespace render
 		};
 
 		//Static buffer resource in the GPU
-		display::UnorderedAccessBufferHandle m_static_gpu_memory_buffer;
+		display::ResourceHandle m_static_gpu_memory_buffer;
 		//Static gpu allocator
 		FreeListAllocator m_static_gpu_memory_allocator;
 
 		//Dynamic buffer resource in the GPU
-		display::ShaderResourceHandle m_dynamic_gpu_memory_buffer;
+		display::ResourceHandle m_dynamic_gpu_memory_buffer;
 		//Dynamic buffer resource in the GPU
 		SegmentAllocator m_dynamic_gpu_memory_allocator;
 
@@ -116,7 +116,7 @@ namespace render
 		void* AllocDynamicGPUMemory(display::Device* device, const size_t size, const uint64_t frame_index);
 
 		//Get static gpu memory resource
-		display::WeakUnorderedAccessBufferHandle GetStaticGPUMemoryResource();
+		display::WeakResourceHandle GetStaticGPUMemoryResource();
 
 		//Get offset from a AllocHandle
 		size_t GetStaticGPUMemoryOffset(const AllocHandle& handle) const;
@@ -125,7 +125,7 @@ namespace render
 		size_t GetDynamicGPUMemoryOffset(display::Device* device, void* allocation) const;
 
 		//Get dynamic gpu memory resource
-		display::WeakShaderResourceHandle GetDynamicGPUMemoryResource();
+		display::WeakResourceHandle GetDynamicGPUMemoryResource();
 
 		//Get dynamic segment size
 		size_t GetDynamicSegmentSize() const { return m_dynamic_gpu_memory_segment_size; }

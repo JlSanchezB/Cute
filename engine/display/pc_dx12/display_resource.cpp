@@ -1169,6 +1169,7 @@ namespace display
 				[&](auto handle)
 				{
 					auto& buffer = device->Get(GetRingResource(device, handle, device->m_frame_index));
+					assert(buffer.memory_data);
 					memory_data = buffer.memory_data;
 					memory_size = buffer.memory_size;
 				}
