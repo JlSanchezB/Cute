@@ -139,7 +139,7 @@ namespace
 		//Create a ring of num frames of resources, starting with the first one
 		size_t count = device->m_frame_resources.size();
 
-		auto* resource_handle_ptr = &resource_handle;
+		POOL::HandleType::WeakHandleVersion resource_handle_ptr = resource_handle;
 		while (count)
 		{
 			//Create a dynamic resource
@@ -150,14 +150,14 @@ namespace
 			}
 
 			//Create views for it
-			view_create(device, *resource_handle_ptr, *resource);
+			view_create(device, resource_handle_ptr, *resource);
 
 			if (count > 1)
 			{
 				//Create next handle in the ring
-				(*resource).next_handle = pool.Alloc();
-				resource_handle_ptr = &(*resource).next_handle;
-				resource = &device->Get(*resource_handle_ptr);
+				device->Get(resource_handle_ptr).next_handle = pool.Alloc();
+				resource_handle_ptr = device->Get(resource_handle_ptr).next_handle;
+				resource = &device->Get(resource_handle_ptr);
 			}
 			count--;
 		}
@@ -261,7 +261,7 @@ namespace display
 		else if (vertex_buffer_desc.access == Access::Dynamic)
 		{
 			VertexBufferHandle handle = CreateRingResources(device, data, CD3DX12_RESOURCE_DESC::Buffer(vertex_buffer_desc.size), device->m_vertex_buffer_pool, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER,
-			[&](display::Device* device, const VertexBufferHandle& handle, display::VertexBuffer& vertex_buffer)
+			[&](display::Device* device, const WeakVertexBufferHandle& handle, display::VertexBuffer& vertex_buffer)
 			{
 				// Initialize the vertex buffer view.
 				vertex_buffer.view.BufferLocation = vertex_buffer.resource->GetGPUVirtualAddress();
@@ -311,7 +311,7 @@ namespace display
 		else if (index_buffer_desc.access == Access::Dynamic)
 		{
 			IndexBufferHandle handle = CreateRingResources(device, data, CD3DX12_RESOURCE_DESC::Buffer(index_buffer_desc.size), device->m_index_buffer_pool, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER,
-				[&](display::Device* device, const IndexBufferHandle& handle, display::IndexBuffer& index_buffer)
+				[&](display::Device* device, const WeakIndexBufferHandle& handle, display::IndexBuffer& index_buffer)
 			{
 				// Initialize the vertex buffer view.
 				index_buffer.view.BufferLocation = index_buffer.resource->GetGPUVirtualAddress();
@@ -361,7 +361,7 @@ namespace display
 		else if (constant_buffer_desc.access == Access::Dynamic)
 		{
 			ConstantBufferHandle handle = CreateRingResources(device, data, CD3DX12_RESOURCE_DESC::Buffer(size), device->m_constant_buffer_pool, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER,
-				[&](display::Device* device, const ConstantBufferHandle& handle, display::ConstantBuffer& constant_buffer)
+				[&](display::Device* device, const WeakConstantBufferHandle& handle, display::ConstantBuffer& constant_buffer)
 			{
 				//Size needs to be 256byte aligned
 				D3D12_CONSTANT_BUFFER_VIEW_DESC dx12_constant_buffer_desc = {};
@@ -542,7 +542,7 @@ namespace display
 			if (shader_resource_desc.type == ShaderResourceType::StructuredBuffer)
 			{
 				ShaderResourceHandle handle = CreateRingResources(device, data, d12_resource_desc, device->m_shader_resource_pool, init_resource_state,
-					[&](display::Device* device, const ShaderResourceHandle& handle, display::ShaderResource& shader_resource)
+					[&](display::Device* device, const WeakShaderResourceHandle& handle, display::ShaderResource& shader_resource)
 				{
 					D3D12_SHADER_RESOURCE_VIEW_DESC dx12_shader_resource_desc = {};
 					dx12_shader_resource_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
@@ -945,7 +945,7 @@ namespace display
 			break;
 		}
 
-		auto CreateViewsForResource = [&buffer_desc, size, &d12_resource_desc, name](display::Device* device, const BufferHandle& handle, display::Buffer& resource)
+		auto CreateViewsForResource = [&buffer_desc, size, &d12_resource_desc, name](display::Device* device, const WeakBufferHandle& handle, display::Buffer& resource)
 		{
 			//All resources have resource view
 			D3D12_SHADER_RESOURCE_VIEW_DESC dx12_shader_resource_desc = {};
@@ -1075,7 +1075,7 @@ namespace display
 			SourceResourceData data(buffer_desc.init_data, buffer_desc.size);
 
 			BufferHandle handle = CreateRingResources(device, data, d12_resource_desc, device->m_buffer_pool, init_resource_state,
-				[&](display::Device* device, const BufferHandle& handle, display::Buffer& resource)
+				[&](display::Device* device, const WeakBufferHandle& handle, display::Buffer& resource)
 				{
 					CreateViewsForResource(device, handle, resource);
 				});
@@ -1127,7 +1127,7 @@ namespace display
 			init_resource_state = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
 		}
 
-		auto CreateViewsForResource = [&texture_2d_desc, size, &d12_resource_desc, name](display::Device* device, const Texture2DHandle& handle, display::Texture2D& resource)
+		auto CreateViewsForResource = [&texture_2d_desc, size, &d12_resource_desc, name](display::Device* device, const WeakTexture2DHandle& handle, display::Texture2D& resource)
 		{
 			//All resources have resource view
 			D3D12_SHADER_RESOURCE_VIEW_DESC dx12_shader_resource_desc = {};
@@ -1201,7 +1201,7 @@ namespace display
 			SourceResourceData data(texture_2d_desc.init_data, texture_2d_desc.size);
 
 			Texture2DHandle handle = CreateRingResources(device, data, d12_resource_desc, device->m_texture_2d_pool, init_resource_state,
-				[&](display::Device* device, const Texture2DHandle& handle, display::Texture2D& resource)
+				[&](display::Device* device, const WeakTexture2DHandle& handle, display::Texture2D& resource)
 				{
 					CreateViewsForResource(device, handle, resource);
 				});

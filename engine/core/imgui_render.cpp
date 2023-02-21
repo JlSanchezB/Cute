@@ -16,11 +16,11 @@ namespace
 	//Resources for rendering imgui
 	display::RootSignatureHandle g_rootsignature;
 	display::PipelineStateHandle g_pipeline_state;
-	display::ShaderResourceHandle g_texture;
-	display::VertexBufferHandle g_vertex_buffer;
+	display::Texture2DHandle g_texture;
+	display::BufferHandle g_vertex_buffer;
 	size_t current_vertex_buffer_size = 4000;
 	size_t current_index_buffer_size = 4000;
-	display::IndexBufferHandle g_index_buffer;
+	display::BufferHandle g_index_buffer;
 	display::DescriptorTableHandle g_descriptor_table;
 
 	ImGuiMouseCursor g_LastMouseCursor = ImGuiMouseCursor_COUNT;
@@ -110,7 +110,7 @@ void imgui_render::Init(HWND hwnd)
 	io.KeyMap[ImGuiKey_Z] = 'Z';
 }
 
-void imgui_render::CreateResources(display::Device * device)
+void imgui_render::CreateResources(display::Device* device)
 {
 	//Create root signature
 	display::RootSignatureDesc rootsignature_desc;
@@ -221,27 +221,16 @@ void imgui_render::CreateResources(display::Device * device)
 	int width, height;
 	io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
 
-	display::ShaderResourceDesc shader_resource_desc;
-	shader_resource_desc.width = width;
-	shader_resource_desc.height = height;
-	shader_resource_desc.pitch = 4 * width;
-	shader_resource_desc.init_data = pixels;
-	shader_resource_desc.size = width * height * 4;
-	shader_resource_desc.mips = 1;
-	g_texture = display::CreateShaderResource(device, shader_resource_desc, "imgui");
+	display::Texture2DDesc texture_desc = display::Texture2DDesc::CreateTexture2D(display::Access::Static, display::Format::R8G8B8A8_UNORM_SRGB, width, height, 4 * width, width * height * 4, 1, pixels);
+	g_texture = display::CreateTexture2D(device, texture_desc, "imgui");
 
 	//Create Vertex buffer (inited in some size and it will grow by demand)
-	display::VertexBufferDesc vertex_buffer_desc;
-	vertex_buffer_desc.access = display::Access::Dynamic;
-	vertex_buffer_desc.size = current_vertex_buffer_size * sizeof(ImDrawVert);
-	vertex_buffer_desc.stride = 20;
-	g_vertex_buffer = display::CreateVertexBuffer(device, vertex_buffer_desc, "imgui");
+	display::BufferDesc vertex_buffer_desc = display::BufferDesc::CreateVertexBuffer(display::Access::Dynamic, current_vertex_buffer_size * sizeof(ImDrawVert), 20);
+	g_vertex_buffer = display::CreateBuffer(device, vertex_buffer_desc, "imgui");
 
 	//Create Index buffer
-	display::IndexBufferDesc index_buffer_desc;
-	index_buffer_desc.access = display::Access::Dynamic;
-	index_buffer_desc.size = current_index_buffer_size * sizeof(ImDrawIdx);
-	g_index_buffer = display::CreateIndexBuffer(device, index_buffer_desc, "imgui");
+	display::BufferDesc index_buffer_desc = display::BufferDesc::CreateIndexBuffer(display::Access::Dynamic, current_index_buffer_size * sizeof(ImDrawIdx));
+	g_index_buffer = display::CreateBuffer(device, index_buffer_desc, "imgui");
 
 	//Descritor table
 	display::DescriptorTableDesc descriptor_table_desc;
@@ -254,13 +243,13 @@ void imgui_render::CreateResources(display::Device * device)
 	io.Fonts->TexID = (ImTextureID)&g_descriptor_table;
 }
 
-void imgui_render::DestroyResources(display::Device * device)
+void imgui_render::DestroyResources(display::Device* device)
 {
 	display::DestroyRootSignature(device, g_rootsignature);
 	display::DestroyPipelineState(device, g_pipeline_state);
-	display::DestroyShaderResource(device, g_texture);
-	display::DestroyVertexBuffer(device, g_vertex_buffer);
-	display::DestroyIndexBuffer(device, g_index_buffer);
+	display::DestroyTexture2D(device, g_texture);
+	display::DestroyBuffer(device, g_vertex_buffer);
+	display::DestroyBuffer(device, g_index_buffer);
 	display::DestroyDescriptorTable(device, g_descriptor_table);
 }
 
@@ -379,14 +368,11 @@ void imgui_render::Draw(display::Context* context, ImDrawData* draw_data)
 			current_vertex_buffer_size = draw_data->TotalVtxCount + 5000;
 
 			//Destroy old vertex buffer
-			display::DestroyVertexBuffer(device, g_vertex_buffer);
+			display::DestroyBuffer(device, g_vertex_buffer);
 
 			//Create a new one
-			display::VertexBufferDesc vertex_buffer_desc;
-			vertex_buffer_desc.access = display::Access::Dynamic;
-			vertex_buffer_desc.size = current_vertex_buffer_size * sizeof(ImDrawVert);
-			vertex_buffer_desc.stride = 20;
-			g_vertex_buffer = display::CreateVertexBuffer(device, vertex_buffer_desc, "imgui");
+			display::BufferDesc vertex_buffer_desc = display::BufferDesc::CreateVertexBuffer(display::Access::Dynamic, current_vertex_buffer_size * sizeof(ImDrawVert), 20);
+			g_vertex_buffer = display::CreateBuffer(device, vertex_buffer_desc, "imgui");
 		}
 
 		//Check if we need to create a index buffer
@@ -396,13 +382,11 @@ void imgui_render::Draw(display::Context* context, ImDrawData* draw_data)
 			current_index_buffer_size = draw_data->TotalIdxCount + 10000;
 
 			//Destroy old index buffer
-			display::DestroyIndexBuffer(device, g_index_buffer);
+			display::DestroyBuffer(device, g_index_buffer);
 
 			//Create new one
-			display::IndexBufferDesc index_buffer_desc;
-			index_buffer_desc.access = display::Access::Dynamic;
-			index_buffer_desc.size = current_index_buffer_size * sizeof(ImDrawIdx);
-			g_index_buffer = display::CreateIndexBuffer(device, index_buffer_desc, "imgui");
+			display::BufferDesc index_buffer_desc = display::BufferDesc::CreateIndexBuffer(display::Access::Dynamic, current_index_buffer_size * sizeof(ImDrawIdx));
+			g_index_buffer = display::CreateBuffer(device, index_buffer_desc, "imgui");
 		}
 
 		//Update constant buffer

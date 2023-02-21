@@ -222,7 +222,11 @@ namespace core
 		}
 	};
 
-	
+	template<typename DATA, typename TYPE>
+	inline WeakHandle<DATA, TYPE> AsWeak(const Handle<DATA, TYPE>& handle)
+	{
+		return WeakHandle<DATA, TYPE>(handle);
+	}
 
 
 	//Pool of resources
@@ -239,6 +243,8 @@ namespace core
 		using Accessor = HandleAccessor<typename HANDLE::data_param, typename HANDLE::type_param>;
 
 	public:
+		using HandleType = HANDLE;
+
 #ifdef WEAKHANDLE_TRACKING
 		HandlePool()
 		{
@@ -287,7 +293,7 @@ namespace core
 			return m_data[index].next_free_slot;
 		}
 
-		void GrowDataStorage(size_t new_size);
+		void GrowDataStorage(size_t new_size, bool init = false);
 
 		//Max size the pool can grow
 		size_t m_max_size = 0;
@@ -298,9 +304,9 @@ namespace core
 		//Data storage of our DATA and free list
 		using DataStorage = union
 		{
-			typename std::aligned_storage<sizeof(DATA), alignof(DATA)>::type data;
-			typename HANDLE::type_param next_free_slot;
-		};
+				typename std::aligned_storage<sizeof(DATA), alignof(DATA)>::type data;
+				typename HANDLE::type_param next_free_slot;
+			};
 
 		//List of free slots
 		typename HANDLE::type_param m_first_free_allocated;
@@ -362,7 +368,7 @@ namespace core
 		m_first_free_allocated = HANDLE::kInvalid;
 		m_size = 0;
 
-		GrowDataStorage(init_size);		
+		GrowDataStorage(init_size, true);		
 	}
 
 
@@ -444,15 +450,32 @@ namespace core
 	}
 
 	template<typename HANDLE>
-	inline void HandlePool<HANDLE>::GrowDataStorage(size_t new_size)
+	inline void HandlePool<HANDLE>::GrowDataStorage(size_t new_size, bool init)
 	{
 		//assert(m_first_free_allocated == 1);
 
 		//Old size
 		size_t old_size = m_data.size();
 
-		//Reserve the data
-		m_data.resize(new_size);
+		if (init)
+		{
+			//Reserve the data
+			m_data.resize(new_size);
+		}
+		else
+		{
+			//We need to move all the objects from the old data to the new
+			//The vector is just an storage container
+			std::vector<DataStorage> new_data;
+			new_data.resize(new_size);
+
+			for (size_t i = 0; i < old_size; ++i)
+			{
+				new(&new_data[i]) DATA(std::move(*reinterpret_cast<DATA*>(&m_data[i])));
+			}
+			//Move the array
+			m_data = std::move(new_data);
+		}
 
 		//Fill all the free slots
 		for (size_t i = old_size; i < new_size; ++i)
