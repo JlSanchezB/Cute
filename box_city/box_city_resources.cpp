@@ -211,8 +211,8 @@ void BoxCityResources::Load(display::Device* device, render::System* render_syst
 		description_table_desc.descriptors[0] = m_view_constant_buffer;
 		description_table_desc.descriptors[1] = gpu_memory->GetStaticGPUMemoryResource();
 		description_table_desc.descriptors[2] = gpu_memory->GetDynamicGPUMemoryResource();
-		description_table_desc.descriptors[3] = display::WeakAsUnorderedAccessBufferResourceHandle(m_indirect_parameters_buffer);
-		description_table_desc.descriptors[4] = display::WeakAsUnorderedAccessBufferResourceHandle(m_indirect_box_buffer);
+		description_table_desc.descriptors[3] = display::AsUAVBuffer(m_indirect_parameters_buffer);
+		description_table_desc.descriptors[4] = display::AsUAVBuffer(m_indirect_box_buffer);
 
 		//Create the descriptor table
 		m_box_culling_description_table_handle = display::CreateDescriptorTable(device, description_table_desc);

@@ -316,7 +316,7 @@ namespace display
 			return desc;
 		}
 
-		static BufferDesc CreateIndexBuffer(Access access, size_t size, Format format, const void* init_data = nullptr)
+		static BufferDesc CreateIndexBuffer(Access access, size_t size, Format format = Format::R16_UINT, const void* init_data = nullptr)
 		{
 			BufferDesc desc;
 			desc.access = access;
@@ -347,15 +347,16 @@ namespace display
 		bool is_render_target = false;
 		bool is_depth_buffer = false;
 
-		static Texture2DDesc CreateTexture2D(Format format, uint32_t width, uint32_t height, uint32_t pitch, uint32_t slice_pitch, uint16_t mips, const void* init_data = nullptr, bool is_UAV = false)
+		static Texture2DDesc CreateTexture2D(Access _access, Format format, uint32_t width, uint32_t height, uint32_t pitch, uint32_t size, uint16_t mips, const void* init_data = nullptr, bool is_UAV = false)
 		{
 			Texture2DDesc desc;
-			desc.access = Access::Static;
+			desc.access = _access;
 			desc.format = format;
 			desc.width = width;
 			desc.height = height;
 			desc.pitch = pitch;
-			desc.slice_pitch = slice_pitch;
+			desc.slice_pitch = size;
+			desc.size = size;
 			desc.mips = mips;
 			desc.init_data = init_data;
 			desc.is_UAV = is_UAV;
@@ -410,17 +411,48 @@ namespace display
 		}
 	};
 
-	struct WeakAsUnorderedAccessBufferResourceHandle : WeakBufferHandle
+	struct AsUAVBuffer : WeakBufferHandle
 	{
-		WeakAsUnorderedAccessBufferResourceHandle(const WeakBufferHandle& in) : WeakBufferHandle(in)
+		AsUAVBuffer(const WeakBufferHandle& in) : WeakBufferHandle(in)
 		{
+			//Check if it is a UAV
+		}
+	};
+
+	struct AsRenderTarget : WeakTexture2DHandle
+	{
+		uint32_t index;
+
+		AsRenderTarget(const WeakTexture2DHandle& in, uint32_t _index = 0) : WeakTexture2DHandle(in), index(_index)
+		{
+			//Check if it is a valid render target
+		}
+	};
+
+	struct AsDepthBuffer: WeakTexture2DHandle
+	{
+		uint32_t index;
+
+		AsDepthBuffer(const WeakTexture2DHandle& in, uint32_t _index = 0) : WeakTexture2DHandle(in), index(_index)
+		{
+			//Check if it is a valid depth buffer
+		}
+	};
+
+	struct AsUAVTexture2D : WeakTexture2DHandle
+	{
+		uint32_t index;
+
+		AsUAVTexture2D(const WeakTexture2DHandle& in, uint32_t _index = 0) : WeakTexture2DHandle(in), index(_index)
+		{
+			//Check if it is a valid UAV
 		}
 	};
 
 	struct DescriptorTableDesc
 	{
 		struct NullDescriptor {}; //Used to reserve a slot, but not setting a handle
-		using Descritor = std::variant<NullDescriptor, WeakConstantBufferHandle, WeakUnorderedAccessBufferHandle, WeakUnorderedAccessBufferHandleAsShaderResource, WeakShaderResourceHandle, WeakRenderTargetHandle, WeakBufferHandle, WeakAsUnorderedAccessBufferResourceHandle>;
+		using Descritor = std::variant<NullDescriptor, WeakConstantBufferHandle, WeakUnorderedAccessBufferHandle, WeakUnorderedAccessBufferHandleAsShaderResource, WeakShaderResourceHandle, WeakRenderTargetHandle, WeakBufferHandle, AsUAVBuffer, WeakTexture2DHandle, AsUAVTexture2D>;
 		Access access = Access::Static; //With static, only static handles are supported
 		static constexpr size_t kNumMaxDescriptors = 32;
 

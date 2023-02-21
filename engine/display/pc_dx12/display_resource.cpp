@@ -701,12 +701,25 @@ namespace display
 							device->m_native_device->CopyDescriptorsSimple(1, device->m_descriptor_table_pool.GetDescriptor(handle, i),
 							device->m_buffer_pool.GetDescriptor(resource, Buffer::kShaderResourceOrConstantBufferDescriptorIndex), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 						},
-						[&](WeakAsUnorderedAccessBufferResourceHandle resource)
+						[&](AsUAVBuffer resource)
 						{
 							assert(device->m_buffer_pool[resource].UAV);
 							//Set it as unordered access buffer
 							device->m_native_device->CopyDescriptorsSimple(1, device->m_descriptor_table_pool.GetDescriptor(handle, i),
 							device->m_buffer_pool.GetDescriptor(resource, Buffer::kShaderUnorderedAccessDescriptorIndex), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+						},
+						[&](WeakTexture2DHandle resource)
+						{
+							//Set it as shader resource or constant buffer
+							device->m_native_device->CopyDescriptorsSimple(1, device->m_descriptor_table_pool.GetDescriptor(handle, i),
+							device->m_texture_2d_pool.GetDescriptor(resource, Texture2D::kShaderResourceDescriptorIndex), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+						},
+						[&](AsUAVTexture2D resource)
+						{
+							assert(device->m_texture_2d_pool[resource].UAV);
+							//Set it as unordered access buffer
+							device->m_native_device->CopyDescriptorsSimple(1, device->m_descriptor_table_pool.GetDescriptor(handle, i),
+							device->m_texture_2d_pool.GetDescriptor(resource, Texture2D::kShaderUnorderedAccessDescriptorIndex), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 						},
 						[&](DescriptorTableDesc::NullDescriptor null_descriptor)
 						{
@@ -767,12 +780,25 @@ namespace display
 								device->m_native_device->CopyDescriptorsSimple(1, device->m_descriptor_table_pool.GetDescriptor(handle_it, i),
 								device->m_buffer_pool.GetDescriptor(GetRingResource(device, resource, frame_index), Buffer::kShaderResourceOrConstantBufferDescriptorIndex), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 							},
-							[&](WeakAsUnorderedAccessBufferResourceHandle resource)
+							[&](AsUAVBuffer resource)
 							{
 								assert(device->m_buffer_pool[resource].UAV);
 								//Set it as unordered access buffer
 								device->m_native_device->CopyDescriptorsSimple(1, device->m_descriptor_table_pool.GetDescriptor(handle_it, i),
 								device->m_buffer_pool.GetDescriptor(GetRingResource(device, WeakBufferHandle(resource), frame_index), Buffer::kShaderUnorderedAccessDescriptorIndex), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+							},
+							[&](WeakTexture2DHandle resource)
+							{
+								//Set it as shader resource or constant buffer
+								device->m_native_device->CopyDescriptorsSimple(1, device->m_descriptor_table_pool.GetDescriptor(handle_it, i),
+								device->m_texture_2d_pool.GetDescriptor(GetRingResource(device, resource, frame_index), Texture2D::kShaderResourceDescriptorIndex), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+							},
+							[&](AsUAVTexture2D resource)
+							{
+								assert(device->m_texture_2d_pool[resource].UAV);
+								//Set it as unordered access buffer
+								device->m_native_device->CopyDescriptorsSimple(1, device->m_descriptor_table_pool.GetDescriptor(handle_it, i),
+								device->m_texture_2d_pool.GetDescriptor(GetRingResource(device, WeakTexture2DHandle(resource), frame_index), Texture2D::kShaderUnorderedAccessDescriptorIndex), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 							},
 							[&](DescriptorTableDesc::NullDescriptor null_descriptor)
 							{
@@ -840,12 +866,25 @@ namespace display
 						device->m_native_device->CopyDescriptorsSimple(1, device->m_descriptor_table_pool.GetDescriptor(handle, i),
 						device->m_buffer_pool.GetDescriptor(resource, Buffer::kShaderResourceOrConstantBufferDescriptorIndex), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 					},
-					[&](WeakAsUnorderedAccessBufferResourceHandle resource)
+					[&](AsUAVBuffer resource)
 					{
 						assert(device->m_buffer_pool[resource].UAV);
 						//Set it as unordered access buffer
 						device->m_native_device->CopyDescriptorsSimple(1, device->m_descriptor_table_pool.GetDescriptor(handle, i),
 						device->m_buffer_pool.GetDescriptor(resource, Buffer::kShaderUnorderedAccessDescriptorIndex), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+					},
+					[&](WeakTexture2DHandle resource)
+					{
+						//Set it as shader resource or constant buffer
+						device->m_native_device->CopyDescriptorsSimple(1, device->m_descriptor_table_pool.GetDescriptor(handle, i),
+						device->m_texture_2d_pool.GetDescriptor(resource, Texture2D::kShaderResourceDescriptorIndex), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+					},
+					[&](AsUAVTexture2D resource)
+					{
+						assert(device->m_texture_2d_pool[resource].UAV);
+						//Set it as unordered access buffer
+						device->m_native_device->CopyDescriptorsSimple(1, device->m_descriptor_table_pool.GetDescriptor(handle, i),
+						device->m_texture_2d_pool.GetDescriptor(resource, Texture2D::kShaderUnorderedAccessDescriptorIndex), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 					},
 					[&](DescriptorTableDesc::NullDescriptor null_descriptor)
 					{
@@ -1095,8 +1134,9 @@ namespace display
 			dx12_shader_resource_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 			dx12_shader_resource_desc.Format = d12_resource_desc.Format;
 			dx12_shader_resource_desc.Texture2D.MipLevels = d12_resource_desc.MipLevels;
+			dx12_shader_resource_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
 
-			device->m_native_device->CreateShaderResourceView(resource.resource.Get(), &dx12_shader_resource_desc, device->m_texture_2d_pool.GetDescriptor(handle, Texture2D::kShaderResourceOrConstantBufferDescriptorIndex));
+			device->m_native_device->CreateShaderResourceView(resource.resource.Get(), &dx12_shader_resource_desc, device->m_texture_2d_pool.GetDescriptor(handle, Texture2D::kShaderResourceDescriptorIndex));
 
 			if (texture_2d_desc.is_UAV)
 			{

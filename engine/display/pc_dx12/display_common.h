@@ -381,7 +381,7 @@ namespace display
 
 	struct Texture2D : RingResourceSupport<Texture2DHandle>
 	{
-		static constexpr size_t kShaderResourceOrConstantBufferDescriptorIndex = 0;
+		static constexpr size_t kShaderResourceDescriptorIndex = 0;
 		static constexpr size_t kShaderUnorderedAccessDescriptorIndex = 1;
 		static constexpr size_t kRenderTargetDescriptorIndex = 2;
 		static constexpr size_t kDepthBufferDescriptorIndex = 3;

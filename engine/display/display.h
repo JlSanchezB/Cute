@@ -140,7 +140,7 @@ namespace display
 
 	//Create texture2D
 	Texture2DHandle CreateTexture2D(Device* device, const Texture2DDesc & texture_2d_desc, const char* name);
-	void DestroyBuffer(Device* device, Texture2DHandle& handle);
+	void DestroyTexture2D(Device* device, Texture2DHandle& handle);
 
 	//Update resource buffer (only Access::Dynamic)
 	using UpdatableResourceHandle = std::variant<WeakConstantBufferHandle, WeakVertexBufferHandle, WeakIndexBufferHandle, WeakBufferHandle>;
