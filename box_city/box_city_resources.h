@@ -24,18 +24,18 @@ struct ViewConstantBuffer
 
 struct BoxCityResources
 {
-	display::ResourceHandle m_view_constant_buffer;
+	display::BufferHandle m_view_constant_buffer;
 	display::DescriptorTableHandle m_box_render_description_table_handle;
 	display::RootSignatureHandle m_box_render_root_signature;
 	display::PipelineStateHandle m_box_render_pipeline_state;
 
-	display::ResourceHandle m_box_vertex_position_buffer;
-	display::ResourceHandle m_box_vertex_normal_buffer;
-	display::ResourceHandle m_box_index_buffer;
+	display::BufferHandle m_box_vertex_position_buffer;
+	display::BufferHandle m_box_vertex_normal_buffer;
+	display::BufferHandle m_box_index_buffer;
 
 	static const uint32_t kIndirectBoxBufferCount = 1024 * 1024;
-	display::ResourceHandle m_indirect_box_buffer;
-	display::ResourceHandle m_indirect_parameters_buffer;
+	display::BufferHandle m_indirect_box_buffer;
+	display::BufferHandle m_indirect_parameters_buffer;
 	display::DescriptorTableHandle m_box_culling_description_table_handle;
 	display::RootSignatureHandle m_box_culling_root_signature;
 	display::PipelineStateHandle m_box_culling_pipeline_state;

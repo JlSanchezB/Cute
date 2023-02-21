@@ -273,8 +273,11 @@ namespace display
 		device->m_descriptor_table_pool.Init(2000, 100, params.num_frames, 8, device, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 		device->m_sampler_descriptor_table_pool.Init(200, 10, params.num_frames, 8, device, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
 
-		D3D12_DESCRIPTOR_HEAP_TYPE resource_heap_types[4] = { D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, D3D12_DESCRIPTOR_HEAP_TYPE_DSV};
-		device->m_resource_pool.InitMultipleHeaps(100, 10, params.num_frames, device, 4, resource_heap_types);
+		D3D12_DESCRIPTOR_HEAP_TYPE buffer_heap_types[2] = { D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV};
+		device->m_buffer_pool.InitMultipleHeaps(100, 10, params.num_frames, device, 2, buffer_heap_types);
+
+		D3D12_DESCRIPTOR_HEAP_TYPE texture_2d_heap_types[4] = { D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, D3D12_DESCRIPTOR_HEAP_TYPE_DSV };
+		device->m_texture_2d_pool.InitMultipleHeaps(100, 10, params.num_frames, device, 4, texture_2d_heap_types);
 
 		//Create frame resources
 		device->m_frame_resources.resize(params.num_frames);
@@ -415,7 +418,8 @@ namespace display
 		device->m_descriptor_table_pool.Destroy();
 		device->m_sampler_descriptor_table_pool.Destroy();
 
-		device->m_resource_pool.Destroy();
+		device->m_buffer_pool.Destroy();
+		device->m_texture_2d_pool.Destroy();
 
 		//Empty reload pipeline state buffers
 		device->m_pipeline_reload_data.clear();

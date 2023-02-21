@@ -134,16 +134,20 @@ namespace display
 	//Destroy sampler descriptor table
 	void DestroySamplerDescriptorTable(Device * device, SamplerDescriptorTableHandle& handle);
 
-	//Create resource
-	ResourceHandle CreateResource(Device* device, const ResourceDesc& resource_desc, const char* name);
-	void DestroyResource(Device* device, ResourceHandle& handle);
+	//Create buffer 1D
+	BufferHandle CreateBuffer(Device* device, const BufferDesc& buffer_desc, const char* name);
+	void DestroyBuffer(Device* device, BufferHandle& handle);
+
+	//Create texture2D
+	Texture2DHandle CreateTexture2D(Device* device, const Texture2DDesc & texture_2d_desc, const char* name);
+	void DestroyBuffer(Device* device, Texture2DHandle& handle);
 
 	//Update resource buffer (only Access::Dynamic)
-	using UpdatableResourceHandle = std::variant<WeakConstantBufferHandle, WeakVertexBufferHandle, WeakIndexBufferHandle, WeakResourceHandle>;
+	using UpdatableResourceHandle = std::variant<WeakConstantBufferHandle, WeakVertexBufferHandle, WeakIndexBufferHandle, WeakBufferHandle>;
 	void UpdateResourceBuffer(Device* device, const UpdatableResourceHandle& handle, const void* data, size_t size);
 
 	//Get Resource memory
-	using DirectAccessResourceHandle = std::variant<WeakShaderResourceHandle, WeakConstantBufferHandle, WeakVertexBufferHandle, WeakIndexBufferHandle, WeakResourceHandle>;
+	using DirectAccessResourceHandle = std::variant<WeakShaderResourceHandle, WeakConstantBufferHandle, WeakVertexBufferHandle, WeakIndexBufferHandle, WeakBufferHandle>;
 	void* GetResourceMemoryBuffer(Device* device, const DirectAccessResourceHandle& handle);
 
 	//Pipe used
@@ -158,7 +162,7 @@ namespace display
 	{
 		ResourceBarrierType type;
 
-		using ResourceHandle = std::variant<WeakUnorderedAccessBufferHandle,  WeakRenderTargetHandle, WeakDepthBufferHandle, WeakResourceHandle>;
+		using ResourceHandle = std::variant<WeakUnorderedAccessBufferHandle,  WeakRenderTargetHandle, WeakDepthBufferHandle, WeakBufferHandle>;
 		ResourceHandle resource;
 
 		TranstitionState state_before;
@@ -170,7 +174,7 @@ namespace display
 			resource = handle;
 		}
 
-		ResourceBarrier(const WeakResourceHandle& handle)
+		ResourceBarrier(const WeakBufferHandle& handle)
 		{
 			type = ResourceBarrierType::UnorderAccess;
 			resource = handle;
@@ -214,14 +218,14 @@ namespace display
 
 		//Set Vertex buffers
 		void SetVertexBuffers(uint8_t start_slot_index, uint8_t num_vertex_buffers, WeakVertexBufferHandle* vertex_buffers);
-		void SetVertexBuffers(uint8_t start_slot_index, uint8_t num_vertex_buffers, WeakResourceHandle* vertex_buffers);
+		void SetVertexBuffers(uint8_t start_slot_index, uint8_t num_vertex_buffers, WeakBufferHandle* vertex_buffers);
 
 		//Set Shader resource as a vertex buffer
 		void SetShaderResourceAsVertexBuffer(uint8_t start_slot_index, const WeakShaderResourceHandle& shader_resource, const SetShaderResourceAsVertexBufferDesc& desc);
 
 		//Set Index Buffer
 		void SetIndexBuffer(const WeakIndexBufferHandle& index_buffer);
-		void SetIndexBuffer(const WeakResourceHandle& index_buffer);
+		void SetIndexBuffer(const WeakBufferHandle& index_buffer);
 
 		//Set constants
 		void SetConstants(const Pipe& pipe, uint8_t root_parameter, const void* data, size_t num_constants);
@@ -230,10 +234,10 @@ namespace display
 		void SetConstantBuffer(const Pipe& pipe, uint8_t root_parameter, const WeakConstantBufferHandle& constant_buffer);
 
 		//Set unordered access buffer
-		using UnorderedAccessBufferSet = std::variant<WeakUnorderedAccessBufferHandle, WeakResourceHandle>;
+		using UnorderedAccessBufferSet = std::variant<WeakUnorderedAccessBufferHandle, WeakBufferHandle>;
 		void SetUnorderedAccessBuffer(const Pipe& pipe, uint8_t root_parameter, const UnorderedAccessBufferSet& unordered_access_buffer);
 
-		using ShaderResourceSet = std::variant<WeakShaderResourceHandle, WeakUnorderedAccessBufferHandle, WeakResourceHandle>;
+		using ShaderResourceSet = std::variant<WeakShaderResourceHandle, WeakUnorderedAccessBufferHandle, WeakBufferHandle>;
 		//Set shader resource
 		void SetShaderResource(const Pipe& pipe, uint8_t root_parameter, const ShaderResourceSet& shader_resource);
 
@@ -351,9 +355,9 @@ namespace display
 	}
 
 	template<>
-	inline void DestroyHandleInternal(Device* device, ResourceHandle& handle)
+	inline void DestroyHandleInternal(Device* device, BufferHandle& handle)
 	{
-		DestroyResource(device, handle);
+		DestroyBuffer(device, handle);
 	}
 
 }

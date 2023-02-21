@@ -7,8 +7,8 @@ void BoxCityResources::Load(display::Device* device, render::System* render_syst
 	auto* gpu_memory = render::GetModule<render::GPUMemoryRenderModule>(render_system, "GPUMemory"_sh32);
 	{
 		//Create view constant buffer
-		display::ResourceDesc view_constant_desc = display::ResourceDesc::CreateConstantBuffer(display::Access::Dynamic, sizeof(ViewConstantBuffer));
-		m_view_constant_buffer = display::CreateResource(device, view_constant_desc, "ViewConstantBuffer");
+		display::BufferDesc view_constant_desc = display::BufferDesc::CreateConstantBuffer(display::Access::Dynamic, sizeof(ViewConstantBuffer));
+		m_view_constant_buffer = display::CreateBuffer(device, view_constant_desc, "ViewConstantBuffer");
 	}
 
 	//Box render root signature
@@ -112,11 +112,11 @@ void BoxCityResources::Load(display::Device* device, render::System* render_syst
 			vertex_normal_data[i * 4 + 0] = vertex_normal_data[i * 4 + 1] = vertex_normal_data[i * 4 + 2] = vertex_normal_data[i * 4 + 3] = rot * vertex_normal_data[0];
 		}
 
-		display::ResourceDesc vertex_buffer_position_desc = display::ResourceDesc::CreateVertexBuffer(display::Access::Static, sizeof(vertex_position_data), sizeof(glm::vec3), vertex_position_data);
-		m_box_vertex_position_buffer = display::CreateResource(device, vertex_buffer_position_desc, "box_position_vertex_buffer");
+		display::BufferDesc vertex_buffer_position_desc = display::BufferDesc::CreateVertexBuffer(display::Access::Static, sizeof(vertex_position_data), sizeof(glm::vec3), vertex_position_data);
+		m_box_vertex_position_buffer = display::CreateBuffer(device, vertex_buffer_position_desc, "box_position_vertex_buffer");
 
-		display::ResourceDesc vertex_buffer_normal_desc = display::ResourceDesc::CreateVertexBuffer(display::Access::Static, sizeof(vertex_position_data), sizeof(glm::vec3), vertex_normal_data);
-		m_box_vertex_normal_buffer = display::CreateResource(device, vertex_buffer_normal_desc, "box_normal_vertex_buffer");
+		display::BufferDesc vertex_buffer_normal_desc = display::BufferDesc::CreateVertexBuffer(display::Access::Static, sizeof(vertex_position_data), sizeof(glm::vec3), vertex_normal_data);
+		m_box_vertex_normal_buffer = display::CreateBuffer(device, vertex_buffer_normal_desc, "box_normal_vertex_buffer");
 	}
 
 	//Quad Index buffer
@@ -128,8 +128,8 @@ void BoxCityResources::Load(display::Device* device, render::System* render_syst
 			0 + 4 * 4, 3 + 4 * 4, 1 + 4 * 4, 0 + 4 * 4, 2 + 4 * 4, 3 + 4 * 4,
 			0 + 4 * 5, 3 + 4 * 5, 1 + 4 * 5, 0 + 4 * 5, 2 + 4 * 5, 3 + 4 * 5 };
 
-		display::ResourceDesc index_buffer_desc = display::ResourceDesc::CreateIndexBuffer(display::Access::Static, sizeof(index_buffer_data), display::Format::R16_UINT, index_buffer_data);
-		m_box_index_buffer = display::CreateResource(device, index_buffer_desc, "box_index_buffer");
+		display::BufferDesc index_buffer_desc = display::BufferDesc::CreateIndexBuffer(display::Access::Static, sizeof(index_buffer_data), display::Format::R16_UINT, index_buffer_data);
+		m_box_index_buffer = display::CreateBuffer(device, index_buffer_desc, "box_index_buffer");
 	}
 
 	//Box culling root signature
@@ -184,11 +184,11 @@ void BoxCityResources::Load(display::Device* device, render::System* render_syst
 
 	{
 		//Create indirect culling buffers
-		display::ResourceDesc indirect_box_buffer_desc = display::ResourceDesc::CreateStructuredBuffer(display::Access::Static, kIndirectBoxBufferCount, sizeof(uint32_t), true);
-		m_indirect_box_buffer = display::CreateResource(device, indirect_box_buffer_desc, "IndirectBoxBuffer");
+		display::BufferDesc indirect_box_buffer_desc = display::BufferDesc::CreateStructuredBuffer(display::Access::Static, kIndirectBoxBufferCount, sizeof(uint32_t), true);
+		m_indirect_box_buffer = display::CreateBuffer(device, indirect_box_buffer_desc, "IndirectBoxBuffer");
 
-		display::ResourceDesc indirect_parameters_buffer_desc = display::ResourceDesc::CreateStructuredBuffer(display::Access::Static, 5, sizeof(uint32_t), true);
-		m_indirect_parameters_buffer = display::CreateResource(device, indirect_parameters_buffer_desc, "IndirectParametersBuffer");
+		display::BufferDesc indirect_parameters_buffer_desc = display::BufferDesc::CreateStructuredBuffer(display::Access::Static, 5, sizeof(uint32_t), true);
+		m_indirect_parameters_buffer = display::CreateBuffer(device, indirect_parameters_buffer_desc, "IndirectParametersBuffer");
 	}
 
 	{

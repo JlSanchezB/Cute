@@ -110,7 +110,7 @@ namespace display
 
 		command_list->IASetVertexBuffers(static_cast<UINT>(start_slot_index), static_cast<UINT>(num_vertex_buffers), vertex_buffer_views.data());
 	}
-	void Context::SetVertexBuffers(uint8_t start_slot_index, uint8_t num_vertex_buffers, WeakResourceHandle* vertex_buffers_handles)
+	void Context::SetVertexBuffers(uint8_t start_slot_index, uint8_t num_vertex_buffers, WeakBufferHandle* vertex_buffers_handles)
 	{
 		auto dx12_context = reinterpret_cast<DX12Context*>(this);
 		Device* device = dx12_context->device;
@@ -152,7 +152,7 @@ namespace display
 		command_list->IASetIndexBuffer(&index_buffer.view);
 	}
 
-	void Context::SetIndexBuffer(const WeakResourceHandle& index_buffer_handle)
+	void Context::SetIndexBuffer(const WeakBufferHandle& index_buffer_handle)
 	{
 		auto dx12_context = reinterpret_cast<DX12Context*>(this);
 		Device* device = dx12_context->device;
@@ -217,7 +217,7 @@ namespace display
 		std::visit(
 			overloaded
 			{
-				[&](const WeakResourceHandle &handle)
+				[&](const WeakBufferHandle &handle)
 				{
 					auto& resource = device->Get(GetRingResource(device, handle, device->m_frame_index));
 					assert(resource.UAV);
@@ -264,7 +264,7 @@ namespace display
 					auto& shader_resource = device->Get(handle);
 					gpu_virtual_address = shader_resource.resource->GetGPUVirtualAddress();
 				},
-				[&](const WeakResourceHandle& handle)
+				[&](const WeakBufferHandle& handle)
 				{
 					auto& resource = device->Get(handle);
 					assert(resource.ShaderAccess);
@@ -447,10 +447,10 @@ namespace display
 							dx12_resource_barriers[i].Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
 							dx12_resource_barriers[i].UAV.pResource = uav.resource.Get();
 						},
-						[&](const WeakResourceHandle& handle)
+						[&](const WeakBufferHandle& handle)
 						{
 							//Set resource
-							auto& resource = device->Get(std::get<WeakResourceHandle>(resource_barrier.resource));
+							auto& resource = device->Get(std::get<WeakBufferHandle>(resource_barrier.resource));
 							assert(resource.UAV);
 
 							dx12_resource_barriers[i].Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
@@ -488,7 +488,7 @@ namespace display
 							dx12_resource_barriers[i].Transition.pResource = depth_buffer.resource.Get();
 							depth_buffer.current_state = Convert(resource_barrier.state_after);
 						},
-						[&](const WeakResourceHandle& handle)
+						[&](const WeakBufferHandle& handle)
 						{
 							auto& resource = device->Get(GetRingResource(device, handle, device->m_frame_index));
 							dx12_resource_barriers[i].Transition.pResource = resource.resource.Get();

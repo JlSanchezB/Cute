@@ -20,16 +20,16 @@ namespace render
 		assert(m_dynamic_gpu_memory_size % 16 == 0);
 
 		//Init static buffer
-		display::ResourceDesc static_buffer_desc = display::ResourceDesc::CreateRawAccessBuffer(display::Access::Static, m_static_gpu_memory_size, true);
-		m_static_gpu_memory_buffer = display::CreateResource(device, static_buffer_desc, "StaticGpuMemoryBuffer");
+		display::BufferDesc static_buffer_desc = display::BufferDesc::CreateRawAccessBuffer(display::Access::Static, m_static_gpu_memory_size, true);
+		m_static_gpu_memory_buffer = display::CreateBuffer(device, static_buffer_desc, "StaticGpuMemoryBuffer");
 		
 		//Init static allocator
 		m_static_gpu_memory_allocator.Init(m_static_gpu_memory_size);
 
 		//Init dynamic buffer
 
-		display::ResourceDesc dynamic_buffer_desc = display::ResourceDesc::CreateRawAccessBuffer(display::Access::Upload, m_dynamic_gpu_memory_size);
-		m_dynamic_gpu_memory_buffer = display::CreateResource(device, dynamic_buffer_desc, "DynamicGpuMemoryBuffer");
+		display::BufferDesc dynamic_buffer_desc = display::BufferDesc::CreateRawAccessBuffer(display::Access::Upload, m_dynamic_gpu_memory_size);
+		m_dynamic_gpu_memory_buffer = display::CreateBuffer(device, dynamic_buffer_desc, "DynamicGpuMemoryBuffer");
 		m_dynamic_gpu_memory_base_ptr = reinterpret_cast<uint8_t*>(display::GetResourceMemoryBuffer(device, m_dynamic_gpu_memory_buffer));
 
 		//Init dynamic allocator
@@ -91,8 +91,8 @@ namespace render
 			m_copy_data_compute_pipeline_state = display::CreateComputePipelineState(device, pipeline_state_desc, "Copy Data Compute");
 
 			//Register resources
-			AddGameResource(system, "StaticGPUMemoryBuffer"_sh32, CreateResourceFromHandle<render::RenderResource>(display::WeakResourceHandle(m_static_gpu_memory_buffer)));
-			AddGameResource(system, "DynamicGPUMemoryBuffer"_sh32, CreateResourceFromHandle<render::RenderResource>(display::WeakResourceHandle(m_dynamic_gpu_memory_buffer)));
+			AddGameResource(system, "StaticGPUMemoryBuffer"_sh32, CreateResourceFromHandle<render::RenderResource>(display::WeakBufferHandle(m_static_gpu_memory_buffer)));
+			AddGameResource(system, "DynamicGPUMemoryBuffer"_sh32, CreateResourceFromHandle<render::RenderResource>(display::WeakBufferHandle(m_dynamic_gpu_memory_buffer)));
 
 
 			//Register pass
@@ -218,7 +218,7 @@ namespace render
 		}
 	}
 
-	display::WeakResourceHandle GPUMemoryRenderModule::GetStaticGPUMemoryResource()
+	display::WeakBufferHandle GPUMemoryRenderModule::GetStaticGPUMemoryResource()
 	{
 		return m_static_gpu_memory_buffer;
 	}
@@ -242,7 +242,7 @@ namespace render
 		return allocation_uint8 - dynamic_memory_base;
 	}
 
-	display::WeakResourceHandle GPUMemoryRenderModule::GetDynamicGPUMemoryResource()
+	display::WeakBufferHandle GPUMemoryRenderModule::GetDynamicGPUMemoryResource()
 	{
 		return m_dynamic_gpu_memory_buffer;
 	}

@@ -357,7 +357,29 @@ namespace display
 		ComPtr<ID3D12Resource> resource;
 	};
 
-	struct Resource : RingResourceSupport<ResourceHandle>
+	struct Buffer : RingResourceSupport<BufferHandle>
+	{
+		static constexpr size_t kShaderResourceOrConstantBufferDescriptorIndex = 0;
+		static constexpr size_t kShaderUnorderedAccessDescriptorIndex = 1;
+
+		ComPtr<ID3D12Resource> resource;
+		D3D12_RESOURCE_STATES current_state;
+
+		BufferType type;
+
+		bool UAV = false; //Can be set as UAV
+		bool ShaderAccess = false; //Can be set as shader resource or constant buffer
+		const char* name;
+
+		//Union of data for all the resource types
+		union
+		{
+			D3D12_VERTEX_BUFFER_VIEW vertex_buffer_view;
+			D3D12_INDEX_BUFFER_VIEW index_buffer_view;
+		};
+	};
+
+	struct Texture2D : RingResourceSupport<Texture2DHandle>
 	{
 		static constexpr size_t kShaderResourceOrConstantBufferDescriptorIndex = 0;
 		static constexpr size_t kShaderUnorderedAccessDescriptorIndex = 1;
@@ -369,25 +391,10 @@ namespace display
 
 		bool UAV = false; //Can be set as UAV
 		bool ShaderAccess = false; //Can be set as shader resource or constant buffer
-		ResourceType type;
-		union
-		{
-			ResourceBufferType buffer_type;
-			ResourceTexture2DType texture_2d_type;
-		};
 		const char* name;
 
-		//Union of data for all the resource types
-		union
-		{
-			D3D12_VERTEX_BUFFER_VIEW vertex_buffer_view;
-			D3D12_INDEX_BUFFER_VIEW index_buffer_view;
-			struct
-			{
-				float default_depth;
-				uint8_t default_stencil;
-			} ClearDepthBuffer;
-		};
+		float default_depth;
+		uint8_t default_stencil;
 	};
 
 	struct DescriptorTable : DescriptorHeapFreeList::Block, RingResourceSupport<DescriptorTableHandle>
@@ -470,7 +477,8 @@ namespace display
 		GraphicDescriptorHandleFreeList<DescriptorTableHandle> m_descriptor_table_pool;
 		GraphicDescriptorHandleFreeList<SamplerDescriptorTableHandle> m_sampler_descriptor_table_pool;
 
-		GraphicDescriptorHandlePool<ResourceHandle> m_resource_pool;
+		GraphicDescriptorHandlePool<BufferHandle> m_buffer_pool;
+		GraphicDescriptorHandlePool<Texture2DHandle> m_texture_2d_pool;
 
 		//Reload data for pipeline states
 		std::vector<PipelineReloadData> m_pipeline_reload_data;
@@ -658,15 +666,27 @@ namespace display
 	}
 
 	template<>
-	inline auto& Device::Get<ResourceHandle>(const ResourceHandle& handle)
+	inline auto& Device::Get<BufferHandle>(const BufferHandle& handle)
 	{
-		return this->m_resource_pool[handle];
+		return this->m_buffer_pool[handle];
 	}
 
 	template<>
-	inline auto& Device::Get<WeakResourceHandle>(const WeakResourceHandle& handle)
+	inline auto& Device::Get<WeakBufferHandle>(const WeakBufferHandle& handle)
 	{
-		return this->m_resource_pool[handle];
+		return this->m_buffer_pool[handle];
+	}
+
+	template<>
+	inline auto& Device::Get<Texture2DHandle>(const Texture2DHandle& handle)
+	{
+		return this->m_texture_2d_pool[handle];
+	}
+
+	template<>
+	inline auto& Device::Get<WeakTexture2DHandle>(const WeakTexture2DHandle& handle)
+	{
+		return this->m_texture_2d_pool[handle];
 	}
 
 	//Delete resources that are not needed by the GPU

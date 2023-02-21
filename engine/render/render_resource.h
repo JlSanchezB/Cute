@@ -104,7 +104,7 @@ namespace render
 	};
 
 	//Resource
-	class RenderResource : public DisplayHandleResource<display::ResourceHandle>
+	class RenderResource : public DisplayHandleResource<display::BufferHandle>
 	{
 	public:
 		DECLARE_RENDER_CLASS("Resource");
@@ -134,7 +134,7 @@ namespace render
 	};
 
 	//Constant buffer resource
-	class ConstantBuffer2Resource : public DisplayHandleResource<display::ResourceHandle>
+	class ConstantBuffer2Resource : public DisplayHandleResource<display::BufferHandle>
 	{
 	public:
 		DECLARE_RENDER_CLASS("ConstantBuffer2");
