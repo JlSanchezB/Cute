@@ -104,13 +104,18 @@ namespace render
 	};
 
 	//Resource
-	class RenderResource : public DisplayHandleResource<display::BufferHandle>
+	class BufferResource : public DisplayHandleResource<display::BufferHandle>
 	{
 	public:
-		DECLARE_RENDER_CLASS("Resource");
+		DECLARE_RENDER_CLASS("Buffer");
 
 		void Load(LoadContext& load_context) override;
 		display::TranstitionState GetDefaultAccess() const override { return display::TranstitionState::AllShaderResource; };
+
+		DisplayHandle GetDisplayHandle() override
+		{
+			return DisplayHandleResource<display::BufferHandle>::GetHandle();
+		}
 	};
 
 	//Texture resource

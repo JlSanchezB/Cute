@@ -91,8 +91,8 @@ namespace render
 			m_copy_data_compute_pipeline_state = display::CreateComputePipelineState(device, pipeline_state_desc, "Copy Data Compute");
 
 			//Register resources
-			AddGameResource(system, "StaticGPUMemoryBuffer"_sh32, CreateResourceFromHandle<render::RenderResource>(display::WeakBufferHandle(m_static_gpu_memory_buffer)));
-			AddGameResource(system, "DynamicGPUMemoryBuffer"_sh32, CreateResourceFromHandle<render::RenderResource>(display::WeakBufferHandle(m_dynamic_gpu_memory_buffer)));
+			AddGameResource(system, "StaticGPUMemoryBuffer"_sh32, CreateResourceFromHandle<render::BufferResource>(display::WeakBufferHandle(m_static_gpu_memory_buffer)));
+			AddGameResource(system, "DynamicGPUMemoryBuffer"_sh32, CreateResourceFromHandle<render::BufferResource>(display::WeakBufferHandle(m_dynamic_gpu_memory_buffer)));
 
 
 			//Register pass

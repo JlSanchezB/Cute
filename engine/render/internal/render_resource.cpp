@@ -248,7 +248,7 @@ namespace render
 
 	}
 
-	void RenderResource::Load(LoadContext& load_context)
+	void BufferResource::Load(LoadContext& load_context)
 	{
 		AddError(load_context, "Constant buffer declaraction not supported from render passes, only game");
 	}
