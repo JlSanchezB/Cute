@@ -85,43 +85,6 @@ namespace display
 	//Reload updated shaders
 	void ReloadUpdatedShaders(Device* device);
 
-	//Create vertex buffer
-	VertexBufferHandle CreateVertexBuffer(Device* device, const VertexBufferDesc& vertex_buffer_desc, const char* name = nullptr);
-	//Destroy vertex buffer
-	void DestroyVertexBuffer(Device* device, VertexBufferHandle& handle);
-
-	//Create vertex buffer
-	IndexBufferHandle CreateIndexBuffer(Device* device, const IndexBufferDesc& index_buffer_desc, const char* name = nullptr);
-	//Destroy vertex buffer
-	void DestroyIndexBuffer(Device* device, IndexBufferHandle& handle);
-
-	//Create render target
-	RenderTargetHandle CreateRenderTarget(Device* device, const RenderTargetDesc& render_target_desc, const char* name = nullptr);
-	//Destroy render target
-	void DestroyRenderTarget(Device* device, RenderTargetHandle& handle);
-
-	//Create depth buffer
-	DepthBufferHandle CreateDepthBuffer(Device* device, const DepthBufferDesc& depth_buffer_desc, const char* name = nullptr);
-	//Destroy depth buffer
-	void DestroyDepthBuffer(Device* device, DepthBufferHandle& handle);
-
-	//Create constant buffer
-	ConstantBufferHandle CreateConstantBuffer(Device* device, const ConstantBufferDesc& constant_buffer_desc, const char* name = nullptr);
-	//Destroy constant buffer
-	void DestroyConstantBuffer(Device* device, ConstantBufferHandle& handle);
-
-	//Create unordered access buffer
-	UnorderedAccessBufferHandle CreateUnorderedAccessBuffer(Device* device, const UnorderedAccessBufferDesc& unordered_access_buffer_desc, const char* name = nullptr);
-	//Destroy unordered access buffer
-	void DestroyUnorderedAccessBuffer(Device* device, UnorderedAccessBufferHandle& handle);
-
-	//Create a generic shader resource
-	ShaderResourceHandle CreateShaderResource(Device* device, const ShaderResourceDesc& shader_resource_desc, const char* name = nullptr);
-	//Create a texture from platform dependent buffer
-	ShaderResourceHandle CreateTextureResource(Device* device, const void* data, size_t size, const char* name = nullptr);
-	//Destroy shader resource
-	void DestroyShaderResource(Device * device, ShaderResourceHandle& handle);
-
 	//Create descriptor table
 	DescriptorTableHandle CreateDescriptorTable(Device* device, const DescriptorTableDesc& descriptor_table_desc);
 	//Destroy descriptor table
@@ -143,11 +106,11 @@ namespace display
 	void DestroyTexture2D(Device* device, Texture2DHandle& handle);
 
 	//Update resource buffer (only Access::Dynamic)
-	using UpdatableResourceHandle = std::variant<WeakConstantBufferHandle, WeakVertexBufferHandle, WeakIndexBufferHandle, WeakBufferHandle>;
+	using UpdatableResourceHandle = std::variant<WeakBufferHandle>;
 	void UpdateResourceBuffer(Device* device, const UpdatableResourceHandle& handle, const void* data, size_t size);
 
 	//Get Resource memory
-	using DirectAccessResourceHandle = std::variant<WeakShaderResourceHandle, WeakConstantBufferHandle, WeakVertexBufferHandle, WeakIndexBufferHandle, WeakBufferHandle>;
+	using DirectAccessResourceHandle = std::variant<WeakBufferHandle>;
 	void* GetResourceMemoryBuffer(Device* device, const DirectAccessResourceHandle& handle);
 
 	//Pipe used
@@ -162,17 +125,11 @@ namespace display
 	{
 		ResourceBarrierType type;
 
-		using ResourceHandle = std::variant<WeakUnorderedAccessBufferHandle,  WeakRenderTargetHandle, WeakDepthBufferHandle, WeakBufferHandle, WeakTexture2DHandle>;
+		using ResourceHandle = std::variant<WeakBufferHandle, WeakTexture2DHandle>;
 		ResourceHandle resource;
 
 		TranstitionState state_before;
 		TranstitionState state_after;
-
-		ResourceBarrier(const WeakUnorderedAccessBufferHandle& handle)
-		{
-			type = ResourceBarrierType::UnorderAccess;
-			resource = handle;
-		}
 
 		ResourceBarrier(const WeakBufferHandle& handle)
 		{
@@ -196,15 +153,6 @@ namespace display
 		Device* GetDevice();
 
 		//Set render target
-		void SetRenderTargets(uint8_t num_targets, WeakRenderTargetHandle* render_target_array, WeakDepthBufferHandle depth_stencil);
-
-		//Clear Render Target
-		void ClearRenderTargetColour(const WeakRenderTargetHandle& render_target, const float colour[4]);
-		
-		//Clear Depth Stencil
-		void ClearDepthStencil(const WeakDepthBufferHandle& depth_stencil, const ClearType& clear_type, std::optional<float> depth, std::optional <uint8_t> stencil);
-
-		//Set render target
 		void SetRenderTargets(uint8_t num_targets, AsRenderTarget* render_target_array, AsDepthBuffer depth_stencil);
 
 		//Clear Render Target
@@ -226,30 +174,22 @@ namespace display
 		void SetPipelineState(const WeakPipelineStateHandle& pipeline_state);
 
 		//Set Vertex buffers
-		void SetVertexBuffers(uint8_t start_slot_index, uint8_t num_vertex_buffers, WeakVertexBufferHandle* vertex_buffers);
 		void SetVertexBuffers(uint8_t start_slot_index, uint8_t num_vertex_buffers, WeakBufferHandle* vertex_buffers);
 
-		//Set Shader resource as a vertex buffer
-		void SetShaderResourceAsVertexBuffer(uint8_t start_slot_index, const WeakShaderResourceHandle& shader_resource, const SetShaderResourceAsVertexBufferDesc& desc);
-
 		//Set Index Buffer
-		void SetIndexBuffer(const WeakIndexBufferHandle& index_buffer);
 		void SetIndexBuffer(const WeakBufferHandle& index_buffer);
 
 		//Set constants
 		void SetConstants(const Pipe& pipe, uint8_t root_parameter, const void* data, size_t num_constants);
 
 		//Set constant buffer
-		using ConstantBufferSet = std::variant<WeakConstantBufferHandle, WeakBufferHandle>;
-		void SetConstantBuffer(const Pipe& pipe, uint8_t root_parameter, const ConstantBufferSet& constant_buffer);
+		void SetConstantBuffer(const Pipe& pipe, uint8_t root_parameter, const WeakBufferHandle& constant_buffer);
 
 		//Set unordered access buffer
-		using UnorderedAccessBufferSet = std::variant<WeakUnorderedAccessBufferHandle, WeakBufferHandle>;
-		void SetUnorderedAccessBuffer(const Pipe& pipe, uint8_t root_parameter, const UnorderedAccessBufferSet& unordered_access_buffer);
+		void SetUnorderedAccessBuffer(const Pipe& pipe, uint8_t root_parameter, const WeakBufferHandle& unordered_access_buffer);
 
-		using ShaderResourceSet = std::variant<WeakShaderResourceHandle, WeakUnorderedAccessBufferHandle, WeakBufferHandle>;
 		//Set shader resource
-		void SetShaderResource(const Pipe& pipe, uint8_t root_parameter, const ShaderResourceSet& shader_resource);
+		void SetShaderResource(const Pipe& pipe, uint8_t root_parameter, const WeakBufferHandle& shader_resource);
 
 		//Set descriptor table
 		void SetDescriptorTable(const Pipe& pipe, uint8_t root_parameter, const WeakDescriptorTableHandle& descriptor_table);
@@ -277,9 +217,6 @@ namespace display
 
 		//Resource barriers
 		void AddResourceBarriers(const std::vector<ResourceBarrier>& resource_barriers);
-
-		//Clear Unordered Access buffer
-		void ClearUnsignedIntegerUnorderedAccessBuffer(const WeakUnorderedAccessBufferHandle& unordered_access_buffer_handle, const uint32_t values[4]);
 	};
 
 	template<typename HANDLE>
@@ -311,57 +248,16 @@ namespace display
 	}
 
 	template<>
-	inline void DestroyHandleInternal(Device* device, UnorderedAccessBufferHandle& handle)
-	{
-		DestroyUnorderedAccessBuffer(device, handle);
-	}
-
-	template<>
-	inline void DestroyHandleInternal(Device* device, ConstantBufferHandle& handle)
-	{
-		DestroyConstantBuffer(device, handle);
-	}
-
-	template<>
-	inline void DestroyHandleInternal(Device* device, RenderTargetHandle& handle)
-	{
-		DestroyRenderTarget(device, handle);
-	}
-
-	template<>
-	inline void DestroyHandleInternal(Device* device, ShaderResourceHandle& handle)
-	{
-		DestroyShaderResource(device, handle);
-	}
-
-	template<>
 	inline void DestroyHandleInternal(Device* device, DescriptorTableHandle& handle)
 	{
 		DestroyDescriptorTable(device, handle);
 	}
 
-	template<>
-	inline void DestroyHandleInternal(Device* device, VertexBufferHandle& handle)
-	{
-		DestroyVertexBuffer(device, handle);
-	}
-
-	template<>
-	inline void DestroyHandleInternal(Device* device, IndexBufferHandle& handle)
-	{
-		DestroyIndexBuffer(device, handle);
-	}
 
 	template<>
 	inline void DestroyHandleInternal(Device* device, CommandListHandle& handle)
 	{
 		DestroyCommandList(device, handle);
-	}
-
-	template<>
-	inline void DestroyHandleInternal(Device* device, DepthBufferHandle& handle)
-	{
-		DestroyDepthBuffer(device, handle);
 	}
 
 	template<>

@@ -62,20 +62,11 @@ namespace render
 		//Set Vertex buffers
 		void SetVertexBuffers(uint8_t start_slot_index, uint8_t num_vertex_buffers, display::WeakBufferHandle* vertex_buffers);
 
-		//Set shader resource as a vertex buffer
-		void SetShaderResourceAsVertexBuffer(uint8_t start_slot_index, const display::WeakBufferHandle& handle, const display::SetShaderResourceAsVertexBufferDesc& desc);
-
 		//Set Index Buffer
 		void SetIndexBuffer(const display::WeakBufferHandle& index_buffer);
 
 		//Set constant buffer
 		void SetConstantBuffer(const display::Pipe& pipe, uint8_t root_parameter, const display::WeakBufferHandle& constant_buffer);
-
-		//Set unordered access buffer
-		void SetUnorderedAccessBuffer(const display::Pipe& pipe, uint8_t root_parameter, const display::WeakUnorderedAccessBufferHandle& unordered_access_buffer);
-
-		//Set shader resource
-		void SetShaderResource(const display::Pipe& pipe, uint8_t root_parameter, const display::Context::ShaderResourceSet& shader_resource);
 
 		//Set descriptor table
 		void SetDescriptorTable(const display::Pipe& pipe, uint8_t root_parameter, const display::WeakDescriptorTableHandle& descriptor_table);

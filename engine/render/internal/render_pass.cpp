@@ -433,7 +433,7 @@ namespace render
 	}
 	void SetRootUnorderedAccessBufferPass::Render(RenderContext& render_context) const
 	{
-		UnorderedAccessBufferResource* unordered_access_buffer = m_unordered_access_buffer.Get(render_context);
+		BufferResource* unordered_access_buffer = m_unordered_access_buffer.Get(render_context);
 		if (unordered_access_buffer)
 		{
 			render_context.GetContext()->SetUnorderedAccessBuffer(m_pipe, m_root_parameter, unordered_access_buffer->GetHandle());
@@ -447,7 +447,7 @@ namespace render
 	}
 	void SetRootShaderResourcePass::Render(RenderContext& render_context) const
 	{
-		ShaderResourceResource* shader_resource = m_shader_resource.Get(render_context);
+		BufferResource* shader_resource = m_shader_resource.Get(render_context);
 		if (shader_resource)
 		{
 			render_context.GetContext()->SetShaderResource(m_pipe, m_root_parameter, shader_resource->GetHandle());
@@ -535,16 +535,16 @@ namespace render
 				}
 				else if (resource->Type() == "UnorderedAccessBuffer"_sh32)
 				{
-					UnorderedAccessBufferResource* unordered_access_buffer_resource = dynamic_cast<UnorderedAccessBufferResource*>(resource);
+					BufferResource* unordered_access_buffer_resource = dynamic_cast<BufferResource*>(resource);
 					if (descriptor.second)
 						//Used as shader source
-						descriptor_table_desc.AddDescriptor(display::WeakUnorderedAccessBufferHandleAsShaderResource(unordered_access_buffer_resource->GetHandle()));
+						descriptor_table_desc.AddDescriptor(display::AsUAVBuffer(unordered_access_buffer_resource->GetHandle()));
 					else
 						descriptor_table_desc.AddDescriptor(unordered_access_buffer_resource->GetHandle());
 				}
 				else if (resource->Type() == "ShaderResource"_sh32)
 				{
-					ShaderResourceResource* shader_resource_resource = dynamic_cast<ShaderResourceResource*>(resource);
+					BufferResource* shader_resource_resource = dynamic_cast<BufferResource*>(resource);
 					descriptor_table_desc.AddDescriptor(shader_resource_resource->GetHandle());
 				}
 			}
@@ -611,21 +611,17 @@ namespace render
 				{{-1.f, -3.f, 1.f, 1.f},{0.f, 2.f}}
 			};
 
-			display::VertexBufferDesc vertex_buffer_desc;
-			vertex_buffer_desc.init_data = vertex_data;
-			vertex_buffer_desc.size = sizeof(vertex_data);
-			vertex_buffer_desc.stride = sizeof(VertexData);
-
-			display::VertexBufferHandle vertex_buffer = display::CreateVertexBuffer(load_context.device, vertex_buffer_desc, "fullscreen_quad");
+			display::BufferDesc vertex_buffer_desc = display::BufferDesc::CreateVertexBuffer(display::Access::Static, sizeof(vertex_data), sizeof(VertexData), vertex_data);
+			display::BufferHandle vertex_buffer = display::CreateBuffer(load_context.device, vertex_buffer_desc, "fullscreen_quad");
 
 			//Add the resource
-			load_context.AddResource("DrawFullScreenQuadPassVertexBuffer"_sh32, CreateResourceFromHandle<VertexBufferResource>(vertex_buffer));
+			load_context.AddResource("DrawFullScreenQuadPassVertexBuffer"_sh32, CreateResourceFromHandle<BufferResource>(vertex_buffer));
 		}
 	}
 	void DrawFullScreenQuadPass::Render(RenderContext & render_context) const
 	{
 		bool pass_resource;
-		VertexBufferResource* vertex_buffer = render_context.GetResource<VertexBufferResource>("DrawFullScreenQuadPassVertexBuffer"_sh32, pass_resource);
+		BufferResource* vertex_buffer = render_context.GetResource<BufferResource>("DrawFullScreenQuadPassVertexBuffer"_sh32, pass_resource);
 		if (vertex_buffer)
 		{
 			render_context.GetContext()->SetVertexBuffers(0, 1, &vertex_buffer->GetHandle());

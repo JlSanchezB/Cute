@@ -196,7 +196,7 @@ namespace render
 		//Root parameter
 		uint8_t m_root_parameter = 0;
 		//Root signature name
-		ResourceReference<UnorderedAccessBufferResource> m_unordered_access_buffer;
+		ResourceReference<BufferResource> m_unordered_access_buffer;
 
 	public:
 		DECLARE_RENDER_CLASS("SetRootUnorderedAccessBuffer");
@@ -212,7 +212,7 @@ namespace render
 		//Root parameter
 		uint8_t m_root_parameter = 0;
 		//Root signature name
-		ResourceReference<ShaderResourceResource> m_shader_resource;
+		ResourceReference<BufferResource> m_shader_resource;
 
 	public:
 		DECLARE_RENDER_CLASS("SetRootShaderResource");

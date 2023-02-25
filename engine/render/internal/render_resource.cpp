@@ -234,7 +234,7 @@ namespace render
 		if (texture_buffer.size() > 0)
 		{
 			//Load the texture
-			Init(display::CreateTextureResource(load_context.device, reinterpret_cast<void*>(&texture_buffer[0]), texture_buffer.size(), load_context.name));
+			//Init(display::CreateTextureResource(load_context.device, reinterpret_cast<void*>(&texture_buffer[0]), texture_buffer.size(), load_context.name));
 
 			if (!GetHandle().IsValid())
 			{
@@ -256,16 +256,6 @@ namespace render
 	void ConstantBufferResource::Load(LoadContext& load_context)
 	{
 		AddError(load_context, "Constant buffer declaraction not supported from render passes, only game");
-	}
-
-	void UnorderedAccessBufferResource::Load(LoadContext& load_context)
-	{
-		AddError(load_context, "Unordered access buffer buffer declaraction not supported from render passes, only game");
-	}
-
-	void ShaderResourceResource::Load(LoadContext& load_context)
-	{
-		AddError(load_context, "Shader Resource declaraction not supported from render passes, only game");
 	}
 
 	void RootSignatureResource::Load(LoadContext& load_context)

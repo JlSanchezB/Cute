@@ -215,29 +215,6 @@ namespace display
 		return ret;
 	}
 
-	template<>
-	inline D3D12_RESOURCE_DIMENSION Convert<D3D12_RESOURCE_DIMENSION, ShaderResourceType>(ShaderResourceType shader_resource_type)
-	{
-		switch (shader_resource_type)
-		{
-		default:
-		case ShaderResourceType::StructuredBuffer: return D3D12_RESOURCE_DIMENSION_BUFFER;
-		case ShaderResourceType::RawBuffer: return D3D12_RESOURCE_DIMENSION_BUFFER;
-		case ShaderResourceType::Texture2D: return D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-		}
-	}
-
-	template<>
-	inline D3D12_SRV_DIMENSION Convert<D3D12_SRV_DIMENSION, ShaderResourceType>(ShaderResourceType shader_resource_type)
-	{
-		switch (shader_resource_type)
-		{
-		default:
-		case ShaderResourceType::StructuredBuffer: return D3D12_SRV_DIMENSION_BUFFER;
-		case ShaderResourceType::Texture2D: return D3D12_SRV_DIMENSION_TEXTURE2D;
-		}
-	}
-
 	inline D3D12_RESOURCE_BARRIER_TYPE Convert(ResourceBarrierType resource_barrier_type)
 	{
 		switch (resource_barrier_type)

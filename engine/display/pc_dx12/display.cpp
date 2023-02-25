@@ -123,17 +123,13 @@ namespace display
 			ImGui::Text("Uploaded memory each frame (%s)", buffer);
 			ImGui::Separator();
 			ImGui::Text("Command list handles (%zu/%zu)", device->m_command_list_pool.Size(), device->m_command_list_pool.MaxSize());
-			ImGui::Text("Render target handles (%zu/%zu)", device->m_render_target_pool.Size(), device->m_render_target_pool.MaxSize());
-			ImGui::Text("Depth buffer handles (%zu/%zu)", device->m_depth_buffer_pool.Size(), device->m_depth_buffer_pool.MaxSize());
 			ImGui::Text("Root signature handles (%zu/%zu)", device->m_root_signature_pool.Size(), device->m_root_signature_pool.MaxSize());
 			ImGui::Text("Pipeline state handles (%zu/%zu)", device->m_pipeline_state_pool.Size(), device->m_pipeline_state_pool.MaxSize());
-			ImGui::Text("Vertex buffer handles (%zu/%zu)", device->m_vertex_buffer_pool.Size(), device->m_vertex_buffer_pool.MaxSize());
-			ImGui::Text("Index buffer handles (%zu/%zu)", device->m_index_buffer_pool.Size(), device->m_index_buffer_pool.MaxSize());
-			ImGui::Text("Constant buffer handles (%zu/%zu)", device->m_constant_buffer_pool.Size(), device->m_constant_buffer_pool.MaxSize());
-			ImGui::Text("Unordered access buffer handles (%zu/%zu)", device->m_unordered_access_buffer_pool.Size(), device->m_unordered_access_buffer_pool.MaxSize());
-			ImGui::Text("Shader resource handles (%zu/%zu)", device->m_shader_resource_pool.Size(), device->m_shader_resource_pool.MaxSize());
 			ImGui::Text("Descriptor table handles (%zu/%zu)", device->m_descriptor_table_pool.Size(), device->m_descriptor_table_pool.MaxSize());
 			ImGui::Text("Sampler descriptor table handles (%zu/%zu)", device->m_sampler_descriptor_table_pool.Size(), device->m_sampler_descriptor_table_pool.MaxSize());
+
+			//TODO, list of buffers and texture2D
+
 			ImGui::End();	
 		}
 	}
@@ -259,17 +255,9 @@ namespace display
 
 		//Alloc pools
 		D3D12_DESCRIPTOR_HEAP_TYPE render_target_heap_types[2] = { D3D12_DESCRIPTOR_HEAP_TYPE_RTV , D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV };
-		device->m_render_target_pool.InitMultipleHeaps(100, 10, params.num_frames, device, 2, render_target_heap_types);
-		device->m_depth_buffer_pool.Init(100, 10, params.num_frames, device, D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
 		device->m_command_list_pool.Init(500, 10, params.num_frames);
 		device->m_root_signature_pool.Init(100, 10, params.num_frames);
 		device->m_pipeline_state_pool.Init(2000, 100, params.num_frames);
-		device->m_vertex_buffer_pool.Init(2000, 100, params.num_frames);
-		device->m_index_buffer_pool.Init(2000, 100, params.num_frames);
-		device->m_constant_buffer_pool.Init(2000, 100, params.num_frames, device, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-		D3D12_DESCRIPTOR_HEAP_TYPE unordered_access_heap_types[2] = { D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV , D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV };
-		device->m_unordered_access_buffer_pool.InitMultipleHeaps(1000, 10, params.num_frames, device, 2, unordered_access_heap_types);
-		device->m_shader_resource_pool.Init(2000, 100, params.num_frames, device, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 		device->m_descriptor_table_pool.Init(2000, 100, params.num_frames, 8, device, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 		device->m_sampler_descriptor_table_pool.Init(200, 10, params.num_frames, 8, device, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
 
@@ -408,16 +396,9 @@ namespace display
 		device->m_command_list_pool.Free(device->m_resource_command_list);
 
 		//Destroy pools
-		device->m_render_target_pool.Destroy();
-		device->m_depth_buffer_pool.Destroy();
 		device->m_command_list_pool.Destroy();
 		device->m_root_signature_pool.Destroy();
 		device->m_pipeline_state_pool.Destroy();
-		device->m_vertex_buffer_pool.Destroy();
-		device->m_index_buffer_pool.Destroy();
-		device->m_constant_buffer_pool.Destroy();
-		device->m_unordered_access_buffer_pool.Destroy();
-		device->m_shader_resource_pool.Destroy();
 		device->m_descriptor_table_pool.Destroy();
 		device->m_sampler_descriptor_table_pool.Destroy();
 
@@ -568,18 +549,14 @@ namespace display
 		ThrowIfFailed(GetCommandAllocator(device)->Reset());
 
 		//Delete deferred handles
-		device->m_render_target_pool.NextFrame();
-		device->m_depth_buffer_pool.NextFrame();
 		device->m_command_list_pool.NextFrame();
 		device->m_root_signature_pool.NextFrame();
 		device->m_pipeline_state_pool.NextFrame();
-		device->m_vertex_buffer_pool.NextFrame();
-		device->m_index_buffer_pool.NextFrame();
-		device->m_constant_buffer_pool.NextFrame();
-		device->m_unordered_access_buffer_pool.NextFrame();
-		device->m_shader_resource_pool.NextFrame();
 		device->m_descriptor_table_pool.NextFrame();
 		device->m_sampler_descriptor_table_pool.NextFrame();
+
+		device->m_buffer_pool.NextFrame();
+		device->m_texture_2d_pool.NextFrame();
 
 		//Delete deferred resources
 		DeletePendingResources(device);
@@ -1177,103 +1154,5 @@ namespace display
 					}, reload_pipeline.pipeline_desc);
 			}
 		}
-	}
-
-	//Create render target
-	RenderTargetHandle CreateRenderTarget(Device* device, const RenderTargetDesc& render_target_desc, const char* name)
-	{
-		RenderTargetHandle handle = device->m_render_target_pool.Alloc();
-		auto& render_target = device->Get(handle);
-		
-		D3D12_CLEAR_VALUE clear_value;
-		clear_value.Color[0] = clear_value.Color[1] = clear_value.Color[2] = clear_value.Color[3] = 0.f;
-		clear_value.Format = Convert(render_target_desc.format);
-		
-		//Create commited resource
-		if (FAILED(device->m_native_device->CreateCommittedResource(
-			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
-			D3D12_HEAP_FLAG_NONE,
-			&CD3DX12_RESOURCE_DESC::Tex2D(Convert(render_target_desc.format), static_cast<UINT>(render_target_desc.width), static_cast<UINT>(render_target_desc.height), 1, 0, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET),
-			D3D12_RESOURCE_STATE_RENDER_TARGET,
-			&clear_value,
-			IID_PPV_ARGS(&render_target.resource))))
-		{
-			device->m_render_target_pool.Free(handle);
-			SetLastErrorMessage(device, "Error creating render target <%s>", name);
-			return RenderTargetHandle();
-		}
-
-		render_target.current_state = D3D12_RESOURCE_STATE_RENDER_TARGET;
-
-		//Create render target view
-		D3D12_RENDER_TARGET_VIEW_DESC dx12_render_target_view_desc = {};
-		dx12_render_target_view_desc.Format = Convert(render_target_desc.format);
-		dx12_render_target_view_desc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
-		dx12_render_target_view_desc.Texture2D.MipSlice = 0;
-		dx12_render_target_view_desc.Texture2D.PlaneSlice = 0;
-		device->m_native_device->CreateRenderTargetView(render_target.resource.Get(), &dx12_render_target_view_desc, device->m_render_target_pool.GetDescriptor(handle, 0));
-
-		//Create shader resource view
-		D3D12_SHADER_RESOURCE_VIEW_DESC dx12_shader_resource_view_desc = {};
-		dx12_shader_resource_view_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-		dx12_shader_resource_view_desc.Format = Convert(render_target_desc.format);
-		dx12_shader_resource_view_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-		dx12_shader_resource_view_desc.Texture2D.MipLevels = 1;
-		device->m_native_device->CreateShaderResourceView(render_target.resource.Get(), &dx12_shader_resource_view_desc, device->m_render_target_pool.GetDescriptor(handle, 1));
-
-		SetObjectName(render_target.resource.Get(), name);
-
-		return handle;
-	}
-	//Destroy render target
-	void DestroyRenderTarget(Device* device, RenderTargetHandle& handle)
-	{
-		device->m_render_target_pool.Free(handle);
-	}
-
-	//Create depth buffer
-	DepthBufferHandle CreateDepthBuffer(Device* device, const DepthBufferDesc& depth_buffer_desc, const char* name)
-	{
-		DepthBufferHandle handle = device->m_depth_buffer_pool.Alloc();
-		auto& depth_buffer = device->Get(handle);
-
-		D3D12_CLEAR_VALUE clear_value;
-		clear_value.DepthStencil = { depth_buffer_desc.default_clear, depth_buffer_desc.default_stencil };
-		clear_value.Format = DXGI_FORMAT_D32_FLOAT;
-
-		depth_buffer.default_depth = depth_buffer_desc.default_clear;
-		depth_buffer.default_stencil = depth_buffer_desc.default_stencil;
-
-		//Create commited resource
-		if (FAILED(device->m_native_device->CreateCommittedResource(
-			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
-			D3D12_HEAP_FLAG_NONE,
-			&CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_D32_FLOAT, static_cast<UINT>(depth_buffer_desc.width), static_cast<UINT>(depth_buffer_desc.height), 1, 0, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL),
-			D3D12_RESOURCE_STATE_DEPTH_WRITE,
-			&clear_value,
-			IID_PPV_ARGS(&depth_buffer.resource))))
-		{
-			device->m_depth_buffer_pool.Free(handle);
-			SetLastErrorMessage(device, "Error creating depth buffer <%s>", name);
-			return DepthBufferHandle();
-		}
-
-		depth_buffer.current_state = D3D12_RESOURCE_STATE_DEPTH_WRITE;
-
-		D3D12_DEPTH_STENCIL_VIEW_DESC dx12_depth_stencil_desc = {};
-		dx12_depth_stencil_desc.Format = DXGI_FORMAT_D32_FLOAT;
-		dx12_depth_stencil_desc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
-		dx12_depth_stencil_desc.Flags = D3D12_DSV_FLAG_NONE;
-
-		device->m_native_device->CreateDepthStencilView(depth_buffer.resource.Get(), &dx12_depth_stencil_desc, device->m_depth_buffer_pool.GetDescriptor(handle));
-
-		SetObjectName(depth_buffer.resource.Get(), name);
-
-		return handle;
-	}
-	//Destroy depth buffer
-	void DestroyDepthBuffer(Device* device, DepthBufferHandle& handle)
-	{
-		device->m_depth_buffer_pool.Free(handle);
 	}
 }

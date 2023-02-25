@@ -322,41 +322,6 @@ namespace display
 		}
 	};
 
-	struct RenderTarget : RingResourceSupport<RenderTargetHandle>
-	{
-		ComPtr<ID3D12Resource> resource;
-		D3D12_RESOURCE_STATES current_state;
-	};
-	struct DepthBuffer : RingResourceSupport<DepthBufferHandle>
-	{
-		ComPtr<ID3D12Resource> resource;
-		D3D12_RESOURCE_STATES current_state;
-		float default_depth;
-		uint8_t default_stencil;
-	};
-	struct VertexBuffer : RingResourceSupport<VertexBufferHandle>
-	{
-		ComPtr<ID3D12Resource> resource;
-		D3D12_VERTEX_BUFFER_VIEW view;
-	};
-	struct IndexBuffer : RingResourceSupport<IndexBufferHandle>
-	{
-		ComPtr<ID3D12Resource> resource;
-		D3D12_INDEX_BUFFER_VIEW view;
-	};
-	struct ConstantBuffer : RingResourceSupport<ConstantBufferHandle>
-	{
-		ComPtr<ID3D12Resource> resource;
-	};
-	struct UnorderedAccessBuffer
-	{
-		ComPtr<ID3D12Resource> resource;
-	};
-	struct ShaderResource : RingResourceSupport<ShaderResourceHandle>
-	{
-		ComPtr<ID3D12Resource> resource;
-	};
-
 	struct Buffer : RingResourceSupport<BufferHandle>
 	{
 		static constexpr size_t kShaderResourceOrConstantBufferDescriptorIndex = 0;
@@ -466,15 +431,8 @@ namespace display
 		core::SimplePool<DX12Context, 256> m_context_pool;
 
 		GraphicHandlePool<CommandListHandle> m_command_list_pool;
-		GraphicDescriptorHandlePool<RenderTargetHandle> m_render_target_pool;
-		GraphicDescriptorHandlePool<DepthBufferHandle> m_depth_buffer_pool;
 		GraphicHandlePool<RootSignatureHandle> m_root_signature_pool;
 		GraphicHandlePool<PipelineStateHandle> m_pipeline_state_pool;
-		GraphicHandlePool<VertexBufferHandle> m_vertex_buffer_pool;
-		GraphicHandlePool<IndexBufferHandle> m_index_buffer_pool;
-		GraphicDescriptorHandlePool<ConstantBufferHandle> m_constant_buffer_pool;
-		GraphicDescriptorHandlePool<UnorderedAccessBufferHandle> m_unordered_access_buffer_pool;
-		GraphicDescriptorHandlePool<ShaderResourceHandle> m_shader_resource_pool;
 		GraphicDescriptorHandleFreeList<DescriptorTableHandle> m_descriptor_table_pool;
 		GraphicDescriptorHandleFreeList<SamplerDescriptorTableHandle> m_sampler_descriptor_table_pool;
 
@@ -535,30 +493,6 @@ namespace display
 	}
 
 	template<>
-	inline auto& Device::Get<RenderTargetHandle>(const RenderTargetHandle& handle)
-	{
-		return this->m_render_target_pool[handle];
-	}
-
-	template<>
-	inline auto& Device::Get<WeakRenderTargetHandle>(const WeakRenderTargetHandle& handle)
-	{
-		return this->m_render_target_pool[handle];
-	}
-
-	template<>
-	inline auto& Device::Get<DepthBufferHandle>(const DepthBufferHandle& handle)
-	{
-		return this->m_depth_buffer_pool[handle];
-	}
-
-	template<>
-	inline auto& Device::Get<WeakDepthBufferHandle>(const WeakDepthBufferHandle& handle)
-	{
-		return this->m_depth_buffer_pool[handle];
-	}
-
-	template<>
 	inline auto& Device::Get<RootSignatureHandle>(const RootSignatureHandle& handle)
 	{
 		return this->m_root_signature_pool[handle];
@@ -580,66 +514,6 @@ namespace display
 	inline auto& Device::Get<WeakPipelineStateHandle>(const WeakPipelineStateHandle& handle)
 	{
 		return this->m_pipeline_state_pool[handle];
-	}
-
-	template<>
-	inline auto& Device::Get<VertexBufferHandle>(const VertexBufferHandle& handle)
-	{
-		return this->m_vertex_buffer_pool[handle];
-	}
-
-	template<>
-	inline auto& Device::Get<WeakVertexBufferHandle>(const WeakVertexBufferHandle& handle)
-	{
-		return this->m_vertex_buffer_pool[handle];
-	}
-
-	template<>
-	inline auto& Device::Get<IndexBufferHandle>(const IndexBufferHandle& handle)
-	{
-		return this->m_index_buffer_pool[handle];
-	}
-
-	template<>
-	inline auto& Device::Get<WeakIndexBufferHandle>(const WeakIndexBufferHandle& handle)
-	{
-		return this->m_index_buffer_pool[handle];
-	}
-
-	template<>
-	inline auto& Device::Get<ConstantBufferHandle>(const ConstantBufferHandle& handle)
-	{
-		return this->m_constant_buffer_pool[handle];
-	}
-
-	template<>
-	inline auto& Device::Get<WeakConstantBufferHandle>(const WeakConstantBufferHandle& handle)
-	{
-		return this->m_constant_buffer_pool[handle];
-	}
-
-	template<>
-	inline auto& Device::Get<UnorderedAccessBufferHandle>(const UnorderedAccessBufferHandle& handle)
-	{
-		return this->m_unordered_access_buffer_pool[handle];
-	}
-
-	template<>
-	inline auto& Device::Get<WeakUnorderedAccessBufferHandle>(const WeakUnorderedAccessBufferHandle& handle)
-	{
-		return this->m_unordered_access_buffer_pool[handle];
-	}
-
-	template<>
-	inline auto& Device::Get<ShaderResourceHandle>(const ShaderResourceHandle& handle)
-	{
-		return this->m_shader_resource_pool[handle];
-	}
-
-	template<>
-	inline auto& Device::Get<WeakShaderResourceHandle>(const WeakShaderResourceHandle& handle)
-	{
-		return this->m_shader_resource_pool[handle];
 	}
 
 	template<>

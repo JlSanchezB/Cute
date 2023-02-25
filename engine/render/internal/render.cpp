@@ -599,7 +599,6 @@ namespace render
 		RegisterResourceFactory<BoolResource>(system);
 		RegisterResourceFactory<TextureResource>(system);
 		RegisterResourceFactory<ConstantBufferResource>(system);
-		RegisterResourceFactory<VertexBufferResource>(system);
 		RegisterResourceFactory<RenderTargetResource>(system);
 		RegisterResourceFactory<RootSignatureResource>(system);
 		RegisterResourceFactory<GraphicsPipelineStateResource>(system);
@@ -1147,18 +1146,6 @@ namespace render
 							std::visit(
 								overloaded
 								{
-									[&](const display::WeakRenderTargetHandle& handle)
-									{
-										resource_barriers_to_execute.emplace_back(handle, current_access, next_access);
-									},
-									[&](const display::WeakDepthBufferHandle& handle)
-									{
-										resource_barriers_to_execute.emplace_back(handle, current_access, next_access);
-									},
-									[&](const display::WeakUnorderedAccessBufferHandle& handle)
-									{
-										resource_barriers_to_execute.emplace_back(handle, current_access, next_access);
-									},
 									[&](const display::WeakBufferHandle& handle)
 									{
 										resource_barriers_to_execute.emplace_back(handle, current_access, next_access);

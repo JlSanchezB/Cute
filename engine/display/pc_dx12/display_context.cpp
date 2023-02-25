@@ -16,54 +16,6 @@ namespace display
 		auto dx12_context = reinterpret_cast<DX12Context*>(this);
 		return dx12_context->device;
 	}
-	void Context::SetRenderTargets(uint8_t num_targets, WeakRenderTargetHandle* render_target_array, WeakDepthBufferHandle depth_stencil)
-	{
-		auto dx12_context = reinterpret_cast<DX12Context*>(this);
-		Device* device = dx12_context->device;
-		const auto& command_list = dx12_context->command_list;
-
-		CD3DX12_CPU_DESCRIPTOR_HANDLE render_target_handles[kMaxNumRenderTargets];
-
-		//Transfert resources to render target and calculate the handles in the render target heap
-		for (size_t i = 0; i < num_targets; ++i)
-		{
-			//Render target handle inside the ring buffer (if it exist)
-			auto frame_render_target = GetRingResource(device, render_target_array[i], device->m_frame_index);
-			auto& render_target = device->Get(frame_render_target);
-			render_target_handles[i] = device->m_render_target_pool.GetDescriptor(frame_render_target);
-		}
-
-		command_list->OMSetRenderTargets(static_cast<UINT>(num_targets), render_target_handles, FALSE, depth_stencil.IsValid() ? &device->m_depth_buffer_pool.GetDescriptor(GetRingResource(device, depth_stencil, device->m_frame_index)) : nullptr);
-	}
-
-	void Context::ClearRenderTargetColour(const WeakRenderTargetHandle& render_target_handle, const float colour[4])
-	{
-		auto dx12_context = reinterpret_cast<DX12Context*>(this);
-		Device* device = dx12_context->device;
-		const auto& command_list = dx12_context->command_list;
-
-		auto& frame_render_target_handle = GetRingResource(device, render_target_handle, device->m_frame_index);
-
-		auto& render_target = device->Get(frame_render_target_handle);
-
-		command_list->ClearRenderTargetView(device->m_render_target_pool.GetDescriptor(frame_render_target_handle), colour, 0, nullptr);
-	}
-
-	void Context::ClearDepthStencil(const WeakDepthBufferHandle& depth_stencil_handle, const ClearType& clear_type, std::optional<float> depth, std::optional <uint8_t> stencil)
-	{
-		auto dx12_context = reinterpret_cast<DX12Context*>(this);
-		Device* device = dx12_context->device;
-		const auto& command_list = dx12_context->command_list;
-
-		auto& frame_depth_stencil_handle = GetRingResource(device, depth_stencil_handle, device->m_frame_index);
-
-		auto& depth_stencil = device->Get(frame_depth_stencil_handle);
-		D3D12_CLEAR_FLAGS flags;
-		if (clear_type == ClearType::Depth)  flags = D3D12_CLEAR_FLAG_DEPTH;
-		if (clear_type == ClearType::Stencil)  flags = D3D12_CLEAR_FLAG_STENCIL;
-		if (clear_type == ClearType::DepthStencil)  flags = D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL;
-		command_list->ClearDepthStencilView(device->m_depth_buffer_pool.GetDescriptor(depth_stencil_handle), flags, depth.has_value() ? depth.value() : depth_stencil.default_depth, stencil.has_value() ? stencil.value() : depth_stencil.default_stencil, 0, nullptr);
-	}
 
 	void Context::SetRenderTargets(uint8_t num_targets, AsRenderTarget* render_target_array, AsDepthBuffer depth_stencil_handle)
 	{
@@ -156,21 +108,7 @@ namespace display
 
 		command_list->SetPipelineState(pipeline_state.Get());
 	}
-	void Context::SetVertexBuffers(uint8_t start_slot_index, uint8_t num_vertex_buffers, WeakVertexBufferHandle * vertex_buffer_handles)
-	{
-		auto dx12_context = reinterpret_cast<DX12Context*>(this);
-		Device* device = dx12_context->device;
-		const auto& command_list = dx12_context->command_list;
-
-		std::array<D3D12_VERTEX_BUFFER_VIEW, 32> vertex_buffer_views;
-
-		for (size_t i = 0; i < num_vertex_buffers; i++)
-		{
-			vertex_buffer_views[i] = device->Get(GetRingResource(device, vertex_buffer_handles[i], device->m_frame_index)).view;
-		}
-
-		command_list->IASetVertexBuffers(static_cast<UINT>(start_slot_index), static_cast<UINT>(num_vertex_buffers), vertex_buffer_views.data());
-	}
+	
 	void Context::SetVertexBuffers(uint8_t start_slot_index, uint8_t num_vertex_buffers, WeakBufferHandle* vertex_buffers_handles)
 	{
 		auto dx12_context = reinterpret_cast<DX12Context*>(this);
@@ -185,32 +123,6 @@ namespace display
 		}
 
 		command_list->IASetVertexBuffers(static_cast<UINT>(start_slot_index), static_cast<UINT>(num_vertex_buffers), vertex_buffer_views.data());
-	}
-	void Context::SetShaderResourceAsVertexBuffer(uint8_t start_slot_index, const WeakShaderResourceHandle& handle, const SetShaderResourceAsVertexBufferDesc& desc)
-	{
-		auto dx12_context = reinterpret_cast<DX12Context*>(this);
-		Device* device = dx12_context->device;
-		const auto& command_list = dx12_context->command_list;
-
-		auto& shader_resource = device->Get(GetRingResource(device, handle, device->m_frame_index));
-
-		D3D12_VERTEX_BUFFER_VIEW vertex_buffer_view;
-		vertex_buffer_view.SizeInBytes = static_cast<UINT>(desc.size);
-		vertex_buffer_view.StrideInBytes = static_cast<UINT>(desc.stride);
-		vertex_buffer_view.BufferLocation = shader_resource.resource->GetGPUVirtualAddress();
-
-		command_list->IASetVertexBuffers(static_cast<UINT>(start_slot_index), 1, &vertex_buffer_view);
-	}
-
-	void Context::SetIndexBuffer(const WeakIndexBufferHandle & index_buffer_handle)
-	{
-		auto dx12_context = reinterpret_cast<DX12Context*>(this);
-		Device* device = dx12_context->device;
-		const auto& command_list = dx12_context->command_list;
-
-		auto& index_buffer = device->Get(GetRingResource(device, index_buffer_handle, device->m_frame_index));
-
-		command_list->IASetIndexBuffer(&index_buffer.view);
 	}
 
 	void Context::SetIndexBuffer(const WeakBufferHandle& index_buffer_handle)
@@ -246,28 +158,16 @@ namespace display
 		}
 	}
 
-	void Context::SetConstantBuffer(const Pipe& pipe, uint8_t root_parameter, const ConstantBufferSet& constant_buffer_handle)
+	void Context::SetConstantBuffer(const Pipe& pipe, uint8_t root_parameter, const WeakBufferHandle& constant_buffer_handle)
 	{
 		auto dx12_context = reinterpret_cast<DX12Context*>(this);
 		Device* device = dx12_context->device;
 		const auto& command_list = dx12_context->command_list;
-		D3D12_GPU_VIRTUAL_ADDRESS gpu_virtual_address;
-
-		std::visit(
-			overloaded
-			{
-				[&](const WeakBufferHandle& handle)
-				{
-					auto& resource = device->Get(GetRingResource(device, handle, device->m_frame_index));
-					gpu_virtual_address = resource.resource->GetGPUVirtualAddress();
-				},
-				[&](const WeakConstantBufferHandle& handle)
-				{
-					auto& shader_resource = device->Get(handle);
-					gpu_virtual_address = shader_resource.resource->GetGPUVirtualAddress();
-				}
-			}, constant_buffer_handle);
-
+	
+		auto& resource = device->Get(GetRingResource(device, constant_buffer_handle, device->m_frame_index));
+		assert(resource.ShaderAccess);
+		D3D12_GPU_VIRTUAL_ADDRESS gpu_virtual_address = resource.resource->GetGPUVirtualAddress();
+		
 		if (pipe == Pipe::Graphics)
 		{
 			auto& root_signature = device->Get(dx12_context->current_graphics_root_signature);
@@ -283,30 +183,15 @@ namespace display
 			command_list->SetComputeRootConstantBufferView(static_cast<UINT>(root_parameter), gpu_virtual_address);
 		}
 	}
-	void Context::SetUnorderedAccessBuffer(const Pipe& pipe, uint8_t root_parameter, const UnorderedAccessBufferSet& unordered_access_buffer_handle)
+	void Context::SetUnorderedAccessBuffer(const Pipe& pipe, uint8_t root_parameter, const WeakBufferHandle& unordered_access_buffer_handle)
 	{
 		auto dx12_context = reinterpret_cast<DX12Context*>(this);
 		Device* device = dx12_context->device;
 		const auto& command_list = dx12_context->command_list;
-		D3D12_GPU_VIRTUAL_ADDRESS gpu_virtual_address;
+		auto& resource = device->Get(GetRingResource(device, unordered_access_buffer_handle, device->m_frame_index));
+		assert(resource.UAV);
+		D3D12_GPU_VIRTUAL_ADDRESS gpu_virtual_address = resource.resource->GetGPUVirtualAddress();
 		
-		std::visit(
-			overloaded
-			{
-				[&](const WeakBufferHandle &handle)
-				{
-					auto& resource = device->Get(GetRingResource(device, handle, device->m_frame_index));
-					assert(resource.UAV);
-					gpu_virtual_address = resource.resource->GetGPUVirtualAddress();
-				},
-				[&](const WeakUnorderedAccessBufferHandle& handle)
-				{
-					auto& shader_resource = device->Get(handle);
-					gpu_virtual_address = shader_resource.resource->GetGPUVirtualAddress();
-				}
-			}, unordered_access_buffer_handle);
-
-
 		if (pipe == Pipe::Graphics)
 		{
 			auto& root_signature = device->Get(dx12_context->current_graphics_root_signature);
@@ -320,34 +205,15 @@ namespace display
 			command_list->SetComputeRootUnorderedAccessView(static_cast<UINT>(root_parameter), gpu_virtual_address);
 		}
 	}
-	void Context::SetShaderResource(const Pipe& pipe, uint8_t root_parameter, const ShaderResourceSet & shader_resource_handle)
+	void Context::SetShaderResource(const Pipe& pipe, uint8_t root_parameter, const WeakBufferHandle& shader_resource_handle)
 	{
 		auto dx12_context = reinterpret_cast<DX12Context*>(this);
 		Device* device = dx12_context->device;
 		const auto& command_list = dx12_context->command_list;
-		D3D12_GPU_VIRTUAL_ADDRESS gpu_virtual_address;
-
-		std::visit(
-			overloaded
-			{
-				[&](const WeakShaderResourceHandle& handle)
-				{
-					auto& shader_resource = device->Get(GetRingResource(device, handle, device->m_frame_index));
-					gpu_virtual_address = shader_resource.resource->GetGPUVirtualAddress();
-				},
-				[&](const WeakUnorderedAccessBufferHandle& handle)
-				{
-					auto& shader_resource = device->Get(handle);
-					gpu_virtual_address = shader_resource.resource->GetGPUVirtualAddress();
-				},
-				[&](const WeakBufferHandle& handle)
-				{
-					auto& resource = device->Get(handle);
-					assert(resource.ShaderAccess);
-					gpu_virtual_address = resource.resource->GetGPUVirtualAddress();
-				}
-			}, shader_resource_handle);
-
+		auto& shader_resource = device->Get(GetRingResource(device, shader_resource_handle, device->m_frame_index));
+		assert(shader_resource.ShaderAccess);
+		D3D12_GPU_VIRTUAL_ADDRESS gpu_virtual_address = shader_resource.resource->GetGPUVirtualAddress();
+		
 		if (pipe == Pipe::Graphics)
 		{
 			auto& root_signature = device->Get(dx12_context->current_graphics_root_signature);
@@ -515,14 +381,6 @@ namespace display
 				std::visit(
 					overloaded
 					{
-						[&](const WeakUnorderedAccessBufferHandle& handle)
-						{
-							//Set resource
-							auto& uav = device->Get(std::get<WeakUnorderedAccessBufferHandle>(resource_barrier.resource));
-
-							dx12_resource_barriers[i].Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
-							dx12_resource_barriers[i].UAV.pResource = uav.resource.Get();
-						},
 						[&](const WeakBufferHandle& handle)
 						{
 							//Set resource
@@ -546,24 +404,6 @@ namespace display
 				std::visit(
 					overloaded
 					{
-						[&](const WeakRenderTargetHandle& handle)
-						{
-							auto& render_target = device->Get(GetRingResource(device, handle, device->m_frame_index));
-							dx12_resource_barriers[i].Transition.pResource = render_target.resource.Get();
-							render_target.current_state = Convert(resource_barrier.state_after);
-							
-						},
-						[&](const WeakUnorderedAccessBufferHandle& handle)
-						{
-							auto& unordered_access_buffer = device->Get(handle);
-							dx12_resource_barriers[i].Transition.pResource = unordered_access_buffer.resource.Get();
-						},
-						[&](const WeakDepthBufferHandle& handle)
-						{
-							auto& depth_buffer = device->Get(GetRingResource(device, handle, device->m_frame_index));
-							dx12_resource_barriers[i].Transition.pResource = depth_buffer.resource.Get();
-							depth_buffer.current_state = Convert(resource_barrier.state_after);
-						},
 						[&](const WeakBufferHandle& handle)
 						{
 							auto& resource = device->Get(GetRingResource(device, handle, device->m_frame_index));
@@ -585,18 +425,5 @@ namespace display
 		}
 
 		command_list->ResourceBarrier(static_cast<UINT>(num_barriers), dx12_resource_barriers.get());
-	}
-	void Context::ClearUnsignedIntegerUnorderedAccessBuffer(const WeakUnorderedAccessBufferHandle& unordered_access_buffer_handle, const uint32_t values[4])
-	{
-		auto dx12_context = reinterpret_cast<DX12Context*>(this);
-		Device* device = dx12_context->device;
-		const auto& command_list = dx12_context->command_list;
-		auto& unordered_access_buffer = device->Get(unordered_access_buffer_handle);
-		ID3D12DescriptorHeap* descriptor_heap_array[1] = { device->m_unordered_access_buffer_pool.GetHeap() };
-		command_list->SetDescriptorHeaps(1, descriptor_heap_array);
-
-		command_list->ClearUnorderedAccessViewUint(device->m_unordered_access_buffer_pool.GetGPUDescriptor(unordered_access_buffer_handle),
-			device->m_unordered_access_buffer_pool.GetDescriptor(unordered_access_buffer_handle),
-			unordered_access_buffer.resource.Get(), values, 0, nullptr);
 	}
 }

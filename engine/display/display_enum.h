@@ -123,13 +123,6 @@ namespace display
 		Upload //It is a resource that lives in the upload heap, user needs to sync CPU and GPU
 	};
 
-	enum class ShaderResourceType : uint8_t
-	{
-		RawBuffer,
-		StructuredBuffer,
-		Texture2D
-	};
-
 	enum class BufferType : uint8_t
 	{
 		VertexBuffer,
@@ -137,17 +130,6 @@ namespace display
 		ConstantBuffer,
 		StructuredBuffer,
 		RawAccessBuffer
-	};
-
-	enum class UnorderedAccessBufferType : uint8_t
-	{
-		RawBuffer,
-		StructuredBuffer
-	};
-
-	enum class RenderTargetType : uint8_t
-	{
-		Texture2D
 	};
 
 	//Type of resource barrier

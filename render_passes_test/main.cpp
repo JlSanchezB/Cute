@@ -28,7 +28,7 @@ public:
 	render::RenderPassesLoader m_render_passes_loader;
 
 	//Game constant buffer
-	display::ConstantBufferHandle m_game_constant_buffer;
+	display::BufferHandle m_game_constant_buffer;
 
 	//Show errors in imguid modal window
 	bool m_show_errors = false;
@@ -56,16 +56,13 @@ public:
 		SetDevice(m_device);
 
 		//Create constant buffer with the time
-		display::ConstantBufferDesc constant_buffer_desc;
-		constant_buffer_desc.access = display::Access::Dynamic;
-		constant_buffer_desc.size = 16;
-		m_game_constant_buffer = display::CreateConstantBuffer(m_device, constant_buffer_desc, "GameConstantBuffer");
+		display::BufferDesc constant_buffer_desc = display::BufferDesc::CreateConstantBuffer(display::Access::Dynamic, 16);
+		m_game_constant_buffer = display::CreateBuffer(m_device, constant_buffer_desc, "GameConstantBuffer");
 
 		//Create render pass system
 		m_render_pass_system = render::CreateRenderSystem(m_device, nullptr, this);
 
-		render::AddGameResource(m_render_pass_system, "GameGlobal"_sh32, CreateResourceFromHandle<render::ConstantBufferResource>(display::WeakConstantBufferHandle(m_game_constant_buffer)));
-		render::AddGameResource(m_render_pass_system, "BackBuffer"_sh32, CreateResourceFromHandle<render::RenderTargetResource>(display::GetBackBuffer(m_device), m_width, m_height));
+		render::AddGameResource(m_render_pass_system, "GameGlobal"_sh32, CreateResourceFromHandle<render::BufferResource>(display::WeakBufferHandle(m_game_constant_buffer)));
 
 		//Load render passes descriptor
 		m_render_passes_loader.Load("render_pass_sample.xml", m_render_pass_system, m_device);

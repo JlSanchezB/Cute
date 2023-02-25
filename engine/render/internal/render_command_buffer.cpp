@@ -9,8 +9,6 @@ namespace render
 		SetVertexBuffers,
 		SetIndexBuffer,
 		SetConstantBuffer,
-		SetUnorderedAccessBuffer,
-		SetShaderResource,
 		SetDescriptorTable,
 		SetSamplerDescriptorTable,
 		Draw,
@@ -18,7 +16,6 @@ namespace render
 		DrawIndexedInstanced,
 		ExecuteCompute,
 		UploadResourceBuffer,
-		SetShaderResourceAsVertexBuffer,
 		Custom
 	};
 
@@ -87,12 +84,6 @@ namespace render
 			case Commands::SetConstantBuffer:
 				context.SetConstantBuffer(GetData<display::Pipe>(data_offset), GetData<uint8_t>(data_offset), GetData<display::WeakBufferHandle>(data_offset));
 				break;
-			case Commands::SetUnorderedAccessBuffer:
-				context.SetUnorderedAccessBuffer(GetData<display::Pipe>(data_offset), GetData<uint8_t>(data_offset), GetData<display::WeakUnorderedAccessBufferHandle>(data_offset));
-				break;
-			case Commands::SetShaderResource:
-				context.SetShaderResource(GetData<display::Pipe>(data_offset), GetData<uint8_t>(data_offset), GetData<display::Context::ShaderResourceSet>(data_offset));
-				break;
 			case Commands::SetDescriptorTable:
 				context.SetDescriptorTable(GetData<display::Pipe>(data_offset), GetData<uint8_t>(data_offset), GetData<display::WeakDescriptorTableHandle>(data_offset));
 				break;
@@ -117,13 +108,6 @@ namespace render
 				const std::byte* buffer = GetBuffer(data_offset, size);
 				
 				display::UpdateResourceBuffer(context.GetDevice(), GetData<display::UpdatableResourceHandle>(data_offset), buffer, size);
-			}
-			break;
-			case Commands::SetShaderResourceAsVertexBuffer:
-			{
-				uint8_t start_slot_index = GetData<uint8_t>(data_offset);
-				display::WeakBufferHandle handle = GetData<display::WeakBufferHandle>(data_offset);
-				context.SetVertexBuffers(start_slot_index, 1, &handle);
 			}
 			break;
 			default:
@@ -160,13 +144,6 @@ namespace render
 		PushDataArray(vertex_buffers, num_vertex_buffers);
 	}
 
-	void CommandBuffer::SetShaderResourceAsVertexBuffer(uint8_t start_slot_index, const display::WeakBufferHandle& handle, const display::SetShaderResourceAsVertexBufferDesc& desc)
-	{
-		PushCommand(static_cast<uint8_t>(Commands::SetShaderResourceAsVertexBuffer));
-		PushData(start_slot_index);
-		PushData(handle);
-	}
-
 	void CommandBuffer::SetIndexBuffer(const display::WeakBufferHandle& index_buffer)
 	{
 		PushCommand(static_cast<uint8_t>(Commands::SetIndexBuffer));
@@ -179,22 +156,6 @@ namespace render
 		PushData(pipe);
 		PushData(root_parameter);
 		PushData(constant_buffer);
-	}
-
-	void CommandBuffer::SetUnorderedAccessBuffer(const display::Pipe & pipe, uint8_t root_parameter, const display::WeakUnorderedAccessBufferHandle & unordered_access_buffer)
-	{
-		PushCommand(static_cast<uint8_t>(Commands::SetUnorderedAccessBuffer));
-		PushData(pipe);
-		PushData(root_parameter);
-		PushData(unordered_access_buffer);
-	}
-
-	void CommandBuffer::SetShaderResource(const display::Pipe & pipe, uint8_t root_parameter, const display::Context::ShaderResourceSet & shader_resource)
-	{
-		PushCommand(static_cast<uint8_t>(Commands::SetShaderResource));
-		PushData(pipe);
-		PushData(root_parameter);
-		PushData(shader_resource);
 	}
 
 	void CommandBuffer::SetDescriptorTable(const display::Pipe & pipe, uint8_t root_parameter, const display::WeakDescriptorTableHandle & descriptor_table)

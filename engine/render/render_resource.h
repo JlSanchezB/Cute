@@ -119,7 +119,7 @@ namespace render
 	};
 
 	//Texture resource
-	class TextureResource : public DisplayHandleResource<display::ShaderResourceHandle>
+	class TextureResource : public DisplayHandleResource<display::Texture2DHandle>
 	{
 	public:
 		DECLARE_RENDER_CLASS("Texture");
@@ -137,41 +137,6 @@ namespace render
 		void Load(LoadContext& load_context) override;
 		display::TranstitionState GetDefaultAccess() const override { return display::TranstitionState::VertexAndConstantBuffer; };
 	};
-
-	//Unordered access buffer resource
-	class UnorderedAccessBufferResource : public DisplayHandleResource<display::UnorderedAccessBufferHandle>
-	{
-	public:
-		DECLARE_RENDER_CLASS("UnorderedAccessBuffer");
-
-		void Load(LoadContext& load_context) override;
-		display::TranstitionState GetDefaultAccess() const override { return display::TranstitionState::AllShaderResource; };
-		DisplayHandle GetDisplayHandle() override
-		{
-			return DisplayHandleResource<display::UnorderedAccessBufferHandle>::GetHandle();
-		}
-	};
-
-	//Shader Resource resource
-	class ShaderResourceResource : public DisplayHandleResource<display::ShaderResourceHandle>
-	{
-	public:
-		DECLARE_RENDER_CLASS("ShaderResource");
-
-		void Load(LoadContext& load_context) override;
-		display::TranstitionState GetDefaultAccess() const override { return display::TranstitionState::AllShaderResource; };
-	};
-
-	//Vertex buffer resource
-	class VertexBufferResource : public DisplayHandleResource<display::VertexBufferHandle>
-	{
-	public:
-		DECLARE_RENDER_CLASS("VertexBuffer");
-
-		void Load(LoadContext& load_context) override {};
-		display::TranstitionState GetDefaultAccess() const override { return display::TranstitionState::VertexAndConstantBuffer; };
-	};
-
 
 	//Root signature resource
 	class RootSignatureResource : public DisplayHandleResource<display::RootSignatureHandle>

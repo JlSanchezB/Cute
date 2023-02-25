@@ -207,53 +207,6 @@ namespace display
 		}
 	};
 
-	struct VertexBufferDesc
-	{
-		Access access = Access::Static;
-		size_t size = 0;
-		const void* init_data = nullptr;
-		uint32_t stride = 0;
-	};
-
-	struct IndexBufferDesc
-	{
-		Access access = Access::Static;
-		size_t size = 0;
-		const void* init_data = nullptr;
-		Format format = Format::R16_UINT;
-	};
-
-	struct ConstantBufferDesc
-	{
-		Access access = Access::Static;
-		size_t size = 0;
-		const void* init_data = nullptr;
-	};
-
-	struct UnorderedAccessBufferDesc
-	{
-		UnorderedAccessBufferType type = UnorderedAccessBufferType::StructuredBuffer;
-		uint32_t element_size = 0;
-		uint32_t element_count = 0;
-		size_t size = 0;
-	};
-
-	struct ShaderResourceDesc
-	{
-		Access access = Access::Static;
-		Format format = Format::R8G8B8A8_UNORM;
-		ShaderResourceType type = ShaderResourceType::Texture2D;
-		uint32_t width = 0;
-		uint32_t height = 0;
-		uint32_t pitch = 0;
-		uint32_t slice_pitch = 0;
-		uint16_t mips = 0;
-		size_t size = 0;
-		uint32_t num_elements = 0; //Used for structured buffers
-		uint32_t structure_stride = 0; //Used for structured buffers
-		const void* init_data = nullptr;
-	};
-
 	struct BufferDesc
 	{
 		Access access = Access::Static;
@@ -391,29 +344,6 @@ namespace display
 		}
 	};
 
-	struct RenderTargetDesc
-	{
-		Format format;
-		RenderTargetType render_target_type = RenderTargetType::Texture2D;
-		uint32_t width = 0;
-		uint32_t height = 0;
-	};
-
-	struct DepthBufferDesc
-	{
-		uint32_t width = 0;
-		uint32_t height = 0;
-		float default_clear = 1.f;
-		uint8_t default_stencil = 0;
-	};
-
-	struct WeakUnorderedAccessBufferHandleAsShaderResource : WeakUnorderedAccessBufferHandle
-	{
-		WeakUnorderedAccessBufferHandleAsShaderResource(const WeakUnorderedAccessBufferHandle& in) : WeakUnorderedAccessBufferHandle(in)
-		{
-		}
-	};
-
 	struct AsUAVBuffer : WeakBufferHandle
 	{
 		AsUAVBuffer(const WeakBufferHandle& in) : WeakBufferHandle(in)
@@ -461,7 +391,7 @@ namespace display
 	struct DescriptorTableDesc
 	{
 		struct NullDescriptor {}; //Used to reserve a slot, but not setting a handle
-		using Descritor = std::variant<NullDescriptor, WeakConstantBufferHandle, WeakUnorderedAccessBufferHandle, WeakUnorderedAccessBufferHandleAsShaderResource, WeakShaderResourceHandle, WeakRenderTargetHandle, WeakBufferHandle, AsUAVBuffer, WeakTexture2DHandle, AsUAVTexture2D>;
+		using Descritor = std::variant<NullDescriptor, WeakBufferHandle, AsUAVBuffer, WeakTexture2DHandle, AsUAVTexture2D>;
 		Access access = Access::Static; //With static, only static handles are supported
 		static constexpr size_t kNumMaxDescriptors = 32;
 
@@ -515,7 +445,7 @@ namespace display
 	struct IndirectDrawIndexedDesc
 	{
 		PrimitiveTopology primitive_topology = PrimitiveTopology::TriangleList;
-		WeakUnorderedAccessBufferHandle parameters_buffer; //4 values, UINT VertexCountPerInstance;	UINT InstanceCount;	UINT StartVertexLocation; UINT StartInstanceLocation;
+		WeakBufferHandle parameters_buffer; //4 values, UINT VertexCountPerInstance;	UINT InstanceCount;	UINT StartVertexLocation; UINT StartInstanceLocation;
 		size_t parameters_offset = 0;
 	};
 
