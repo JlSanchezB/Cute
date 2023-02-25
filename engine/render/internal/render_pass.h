@@ -180,7 +180,7 @@ namespace render
 		//Root parameter
 		uint8_t m_root_parameter = 0;
 		//Root signature name
-		ResourceReference<ConstantBufferResource> m_constant_buffer;
+		ResourceReference<BufferResource> m_constant_buffer;
 
 	public:
 		DECLARE_RENDER_CLASS("SetRootConstantBuffer");

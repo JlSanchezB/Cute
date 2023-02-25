@@ -246,26 +246,41 @@ namespace display
 		}
 	}
 
-	void Context::SetConstantBuffer(const Pipe& pipe, uint8_t root_parameter, const WeakConstantBufferHandle & constant_buffer_handle)
+	void Context::SetConstantBuffer(const Pipe& pipe, uint8_t root_parameter, const ConstantBufferSet& constant_buffer_handle)
 	{
 		auto dx12_context = reinterpret_cast<DX12Context*>(this);
 		Device* device = dx12_context->device;
 		const auto& command_list = dx12_context->command_list;
-		auto& constant_buffer = device->Get(GetRingResource(device, constant_buffer_handle, device->m_frame_index));
+		D3D12_GPU_VIRTUAL_ADDRESS gpu_virtual_address;
+
+		std::visit(
+			overloaded
+			{
+				[&](const WeakBufferHandle& handle)
+				{
+					auto& resource = device->Get(GetRingResource(device, handle, device->m_frame_index));
+					gpu_virtual_address = resource.resource->GetGPUVirtualAddress();
+				},
+				[&](const WeakConstantBufferHandle& handle)
+				{
+					auto& shader_resource = device->Get(handle);
+					gpu_virtual_address = shader_resource.resource->GetGPUVirtualAddress();
+				}
+			}, constant_buffer_handle);
 
 		if (pipe == Pipe::Graphics)
 		{
 			auto& root_signature = device->Get(dx12_context->current_graphics_root_signature);
 			assert(root_parameter < root_signature.desc.num_root_parameters);
 
-			command_list->SetGraphicsRootConstantBufferView(static_cast<UINT>(root_parameter), constant_buffer.resource->GetGPUVirtualAddress());
+			command_list->SetGraphicsRootConstantBufferView(static_cast<UINT>(root_parameter), gpu_virtual_address);
 		}
 		else if (pipe == Pipe::Compute)
 		{
 			auto& root_signature = device->Get(dx12_context->current_compute_root_signature);
 			assert(root_parameter < root_signature.desc.num_root_parameters);
 
-			command_list->SetComputeRootConstantBufferView(static_cast<UINT>(root_parameter), constant_buffer.resource->GetGPUVirtualAddress());
+			command_list->SetComputeRootConstantBufferView(static_cast<UINT>(root_parameter), gpu_virtual_address);
 		}
 	}
 	void Context::SetUnorderedAccessBuffer(const Pipe& pipe, uint8_t root_parameter, const UnorderedAccessBufferSet& unordered_access_buffer_handle)

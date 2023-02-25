@@ -6,13 +6,13 @@
 
 struct DisplayResource
 {
-	display::VertexBufferHandle m_quad_vertex_buffer;
-	display::IndexBufferHandle m_quad_index_buffer;
+	display::BufferHandle m_quad_vertex_buffer;
+	display::BufferHandle m_quad_index_buffer;
 	display::RootSignatureHandle m_root_signature;
 	display::PipelineStateHandle m_grass_pipeline_state;
 	display::PipelineStateHandle m_gazelle_pipeline_state;
 	display::PipelineStateHandle m_lion_pipeline_state;
-	display::ConstantBufferHandle m_zoom_position;
+	display::BufferHandle m_zoom_position;
 
 	void Load(display::Device* device)
 	{
@@ -84,7 +84,6 @@ struct DisplayResource
 		//Create pipeline state
 		const char* gazelle_shader_code =
 			"	float4 zoom_position : register(b0);\
-				StructuredBuffer<float4> instance_buffer : register(t0);\
 				struct PSInput\
 				{\
 					float4 position : SV_POSITION;\
@@ -122,7 +121,6 @@ struct DisplayResource
 		//Create pipeline state
 		const char* lion_shader_code =
 			"	float4 zoom_position : register(b0);\
-				StructuredBuffer<float4> instance_buffer : register(t0);\
 				struct PSInput\
 				{\
 					float4 position : SV_POSITION;\
@@ -176,33 +174,23 @@ struct DisplayResource
 				{-1.f, -1.f}
 			};
 
-			display::VertexBufferDesc vertex_buffer_desc;
-			vertex_buffer_desc.init_data = vertex_data;
-			vertex_buffer_desc.size = sizeof(vertex_data);
-			vertex_buffer_desc.stride = sizeof(VertexData);
-
-			m_quad_vertex_buffer = display::CreateVertexBuffer(device, vertex_buffer_desc, "quad_vertex_buffer");
+			display::BufferDesc vertex_buffer_desc = display::BufferDesc::CreateVertexBuffer(display::Access::Static, sizeof(vertex_data), sizeof(VertexData), vertex_data);
+			m_quad_vertex_buffer = display::CreateBuffer(device, vertex_buffer_desc, "quad_vertex_buffer");
 		}
 
 		//Quad Index buffer
 		{
 			uint16_t index_buffer_data[6] = { 0, 2, 1, 1, 2, 3 };
-			display::IndexBufferDesc index_buffer_desc;
-			index_buffer_desc.init_data = index_buffer_data;
-			index_buffer_desc.size = sizeof(index_buffer_data);
-
-			m_quad_index_buffer = display::CreateIndexBuffer(device, index_buffer_desc, "quad_index_buffer");
+			display::BufferDesc index_buffer_desc = display::BufferDesc::CreateIndexBuffer(display::Access::Static, sizeof(index_buffer_data), display::Format::R16_UINT, index_buffer_data);
+			m_quad_index_buffer = display::CreateBuffer(device, index_buffer_desc, "quad_index_buffer");
 		}
 
 		//Create constant buffer zoom position
 		{
 			float zoom_position_buffer[] = {1.f, 1.f, 0.f, 0.f};
-			display::ConstantBufferDesc constant_buffer_desc;
-			constant_buffer_desc.access = display::Access::Dynamic;
-			constant_buffer_desc.init_data = &zoom_position_buffer;
-			constant_buffer_desc.size = sizeof(zoom_position_buffer);
-
-			m_zoom_position = display::CreateConstantBuffer(device, constant_buffer_desc);
+		
+			display::BufferDesc constant_buffer_desc = display::BufferDesc::CreateConstantBuffer(display::Access::Dynamic, sizeof(zoom_position_buffer), zoom_position_buffer);
+			m_zoom_position = display::CreateBuffer(device, constant_buffer_desc, "ZoomConstantBuffer");
 		}
 
 	}

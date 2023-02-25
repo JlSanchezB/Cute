@@ -1017,7 +1017,8 @@ namespace display
 				resource.index_buffer_view.Format = Convert(buffer_desc.format);
 				resource.index_buffer_view.SizeInBytes = static_cast<UINT>(buffer_desc.size);
 			}
-			else if (buffer_desc.type == BufferType::VertexBuffer)
+			//Access as a vertex buffer
+			else if (buffer_desc.type == BufferType::VertexBuffer || buffer_desc.type == BufferType::StructuredBuffer || buffer_desc.type == BufferType::RawAccessBuffer)
 			{
 				// Initialize the vertex buffer view.
 				resource.vertex_buffer_view.BufferLocation = resource.resource->GetGPUVirtualAddress();

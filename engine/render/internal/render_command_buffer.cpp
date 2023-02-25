@@ -73,19 +73,19 @@ namespace render
 			{
 				const uint8_t start_slot_index = GetData<uint8_t>(data_offset);
 				const uint8_t num_vertex_buffers = GetData<uint8_t>(data_offset);
-				display::WeakVertexBufferHandle handles[16];
+				display::WeakBufferHandle handles[16];
 				for (size_t i = 0; i < num_vertex_buffers; ++i)
 				{
-					handles[i] = GetData<display::WeakVertexBufferHandle>(data_offset);
+					handles[i] = GetData<display::WeakBufferHandle>(data_offset);
 				}
 				context.SetVertexBuffers(start_slot_index, num_vertex_buffers, handles);
 			}
 				break;
 			case Commands::SetIndexBuffer:
-				context.SetIndexBuffer(GetData<display::WeakIndexBufferHandle>(data_offset));
+				context.SetIndexBuffer(GetData<display::WeakBufferHandle>(data_offset));
 				break;
 			case Commands::SetConstantBuffer:
-				context.SetConstantBuffer(GetData<display::Pipe>(data_offset), GetData<uint8_t>(data_offset), GetData<display::WeakConstantBufferHandle>(data_offset));
+				context.SetConstantBuffer(GetData<display::Pipe>(data_offset), GetData<uint8_t>(data_offset), GetData<display::WeakBufferHandle>(data_offset));
 				break;
 			case Commands::SetUnorderedAccessBuffer:
 				context.SetUnorderedAccessBuffer(GetData<display::Pipe>(data_offset), GetData<uint8_t>(data_offset), GetData<display::WeakUnorderedAccessBufferHandle>(data_offset));
@@ -122,9 +122,8 @@ namespace render
 			case Commands::SetShaderResourceAsVertexBuffer:
 			{
 				uint8_t start_slot_index = GetData<uint8_t>(data_offset);
-				display::WeakShaderResourceHandle handle = GetData<display::WeakShaderResourceHandle>(data_offset);
-				display::SetShaderResourceAsVertexBufferDesc desc = GetData<display::SetShaderResourceAsVertexBufferDesc>(data_offset);
-				context.SetShaderResourceAsVertexBuffer(1, handle, desc);
+				display::WeakBufferHandle handle = GetData<display::WeakBufferHandle>(data_offset);
+				context.SetVertexBuffers(start_slot_index, 1, &handle);
 			}
 			break;
 			default:
@@ -153,7 +152,7 @@ namespace render
 		PushData(pipeline_state);
 	}
 
-	void CommandBuffer::SetVertexBuffers(uint8_t start_slot_index, uint8_t num_vertex_buffers, display::WeakVertexBufferHandle * vertex_buffers)
+	void CommandBuffer::SetVertexBuffers(uint8_t start_slot_index, uint8_t num_vertex_buffers, display::WeakBufferHandle* vertex_buffers)
 	{
 		PushCommand(static_cast<uint8_t>(Commands::SetVertexBuffers));
 		PushData(start_slot_index);
@@ -161,21 +160,20 @@ namespace render
 		PushDataArray(vertex_buffers, num_vertex_buffers);
 	}
 
-	void CommandBuffer::SetShaderResourceAsVertexBuffer(uint8_t start_slot_index, const display::WeakShaderResourceHandle& handle, const display::SetShaderResourceAsVertexBufferDesc& desc)
+	void CommandBuffer::SetShaderResourceAsVertexBuffer(uint8_t start_slot_index, const display::WeakBufferHandle& handle, const display::SetShaderResourceAsVertexBufferDesc& desc)
 	{
 		PushCommand(static_cast<uint8_t>(Commands::SetShaderResourceAsVertexBuffer));
 		PushData(start_slot_index);
 		PushData(handle);
-		PushData(desc);
 	}
 
-	void CommandBuffer::SetIndexBuffer(const display::WeakIndexBufferHandle & index_buffer)
+	void CommandBuffer::SetIndexBuffer(const display::WeakBufferHandle& index_buffer)
 	{
 		PushCommand(static_cast<uint8_t>(Commands::SetIndexBuffer));
 		PushData(index_buffer);
 	}
 
-	void CommandBuffer::SetConstantBuffer(const display::Pipe & pipe, uint8_t root_parameter, const display::WeakConstantBufferHandle & constant_buffer)
+	void CommandBuffer::SetConstantBuffer(const display::Pipe & pipe, uint8_t root_parameter, const display::WeakBufferHandle& constant_buffer)
 	{
 		PushCommand(static_cast<uint8_t>(Commands::SetConstantBuffer));
 		PushData(pipe);

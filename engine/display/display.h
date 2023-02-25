@@ -240,7 +240,8 @@ namespace display
 		void SetConstants(const Pipe& pipe, uint8_t root_parameter, const void* data, size_t num_constants);
 
 		//Set constant buffer
-		void SetConstantBuffer(const Pipe& pipe, uint8_t root_parameter, const WeakConstantBufferHandle& constant_buffer);
+		using ConstantBufferSet = std::variant<WeakConstantBufferHandle, WeakBufferHandle>;
+		void SetConstantBuffer(const Pipe& pipe, uint8_t root_parameter, const ConstantBufferSet& constant_buffer);
 
 		//Set unordered access buffer
 		using UnorderedAccessBufferSet = std::variant<WeakUnorderedAccessBufferHandle, WeakBufferHandle>;

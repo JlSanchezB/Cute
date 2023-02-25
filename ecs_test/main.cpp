@@ -161,6 +161,7 @@ public:
 		size = m_size.load(std::memory_order_acquire);
 		return m_size.compare_exchange_strong(size, 0.f, std::memory_order_release);
 	}
+	EntitySize() {};
 
 	EntitySize(float init_size)
 	{
@@ -196,6 +197,7 @@ struct PositionComponent
 	glm::vec2 position;
 	float angle;
 
+	PositionComponent() {};
 	PositionComponent(float x, float y, float _angle) : position(x, y), angle(_angle)
 	{
 	}
@@ -208,6 +210,7 @@ struct VelocityComponent
 	glm::vec2 lineal;
 	float angular;
 
+	VelocityComponent() {};
 	VelocityComponent(float x, float y, float m) : lineal(x, y), angular(m)
 	{
 	}
@@ -229,6 +232,7 @@ struct GrassStateComponent
 	EntitySize size;
 	bool stop_growing;
 
+	GrassStateComponent() {};
 	GrassStateComponent(float _size) : size(_size), stop_growing(false)
 	{
 	}
@@ -240,6 +244,7 @@ struct GrassComponent
 	float grow_speed;
 	float top_size;
 
+	GrassComponent() {};
 	GrassComponent(float _grow_speed, float _top_size) : grow_speed(_grow_speed), top_size(_top_size)
 	{
 	}
@@ -250,6 +255,7 @@ struct GazelleStateComponent
 {
 	EntitySize size;
 
+	GazelleStateComponent() {};
 	GazelleStateComponent(float _size) : size(_size)
 	{
 	}
@@ -263,6 +269,7 @@ struct GazelleComponent
 	float offset_time;
 	float size_distance_rate;
 
+	GazelleComponent() {};
 	GazelleComponent(float _repro_size, float _grow_speed, float _offset_time, float _size_distance_rate) :
 		repro_size(_repro_size), grow_speed(_grow_speed),
 		offset_time(_offset_time), size_distance_rate(_size_distance_rate)
@@ -276,6 +283,7 @@ struct  LionStateComponent
 	float size;
 	float attack;
 
+	LionStateComponent() {};
 	LionStateComponent(float _size, float _attack) : size(_size), attack(_attack)
 	{
 	}
@@ -289,6 +297,7 @@ struct LionComponent
 	float size_distance_rate;
 	float attack_recharge;
 
+	LionComponent() {};
 	LionComponent(float _repro_size, float _grow_speed, float _size_distance_rate, float _attack_recharge) :
 		repro_size(_repro_size), grow_speed(_grow_speed), size_distance_rate(_size_distance_rate), attack_recharge(_attack_recharge)
 	{
@@ -324,7 +333,7 @@ public:
 	std::unique_ptr<job::JobAllocator<1024 * 1024>> m_update_job_allocator;
 
 	//Game constant buffer
-	display::ConstantBufferHandle m_game_constant_buffer;
+	display::BufferHandle m_game_constant_buffer;
 
 	//Command buffer
 	display::CommandListHandle m_render_command_list;
@@ -498,10 +507,8 @@ public:
 		SetDevice(m_device);
 
 		//Create constant buffer with the time
-		display::ConstantBufferDesc constant_buffer_desc;
-		constant_buffer_desc.access = display::Access::Dynamic;
-		constant_buffer_desc.size = 16;
-		m_game_constant_buffer = display::CreateConstantBuffer(m_device, constant_buffer_desc, "GameConstantBuffer");
+		display::BufferDesc constant_buffer_desc = display::BufferDesc::CreateConstantBuffer(display::Access::Dynamic, 16);
+		m_game_constant_buffer = display::CreateBuffer(m_device, constant_buffer_desc, "GameConstantBuffer");
 
 		m_display_resources.Load(m_device);
 
@@ -534,9 +541,9 @@ public:
 		m_gpu_memory_render_module = render::RegisterModule<render::GPUMemoryRenderModule>(m_render_system, "GPUMemory"_sh32, gpu_memory_desc);
 
 		//Add game resources
-		render::AddGameResource(m_render_system, "GameGlobal"_sh32, CreateResourceFromHandle<render::ConstantBufferResource>(display::WeakConstantBufferHandle(m_game_constant_buffer)));
+		render::AddGameResource(m_render_system, "GameGlobal"_sh32, CreateResourceFromHandle<render::BufferResource>(display::WeakBufferHandle(m_game_constant_buffer)));
 		render::AddGameResource(m_render_system, "GameRootSignature"_sh32, CreateResourceFromHandle<render::RootSignatureResource>(display::WeakRootSignatureHandle(m_display_resources.m_root_signature)));
-		render::AddGameResource(m_render_system, "ZoomPosition"_sh32, CreateResourceFromHandle<render::ConstantBufferResource>(display::WeakConstantBufferHandle(m_display_resources.m_zoom_position)));
+		render::AddGameResource(m_render_system, "ZoomPosition"_sh32, CreateResourceFromHandle<render::BufferResource>(display::WeakBufferHandle(m_display_resources.m_zoom_position)));
 
 		//Get render priorities
 		m_solid_render_priority = render::GetRenderItemPriority(m_render_system, "Solid"_sh32);

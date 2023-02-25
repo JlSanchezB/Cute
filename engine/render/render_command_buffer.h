@@ -60,16 +60,16 @@ namespace render
 		void SetPipelineState(const display::WeakPipelineStateHandle& pipeline_state);
 
 		//Set Vertex buffers
-		void SetVertexBuffers(uint8_t start_slot_index, uint8_t num_vertex_buffers, display::WeakVertexBufferHandle* vertex_buffers);
+		void SetVertexBuffers(uint8_t start_slot_index, uint8_t num_vertex_buffers, display::WeakBufferHandle* vertex_buffers);
 
 		//Set shader resource as a vertex buffer
-		void SetShaderResourceAsVertexBuffer(uint8_t start_slot_index, const display::WeakShaderResourceHandle& handle, const display::SetShaderResourceAsVertexBufferDesc& desc);
+		void SetShaderResourceAsVertexBuffer(uint8_t start_slot_index, const display::WeakBufferHandle& handle, const display::SetShaderResourceAsVertexBufferDesc& desc);
 
 		//Set Index Buffer
-		void SetIndexBuffer(const display::WeakIndexBufferHandle& index_buffer);
+		void SetIndexBuffer(const display::WeakBufferHandle& index_buffer);
 
 		//Set constant buffer
-		void SetConstantBuffer(const display::Pipe& pipe, uint8_t root_parameter, const display::WeakConstantBufferHandle& constant_buffer);
+		void SetConstantBuffer(const display::Pipe& pipe, uint8_t root_parameter, const display::WeakBufferHandle& constant_buffer);
 
 		//Set unordered access buffer
 		void SetUnorderedAccessBuffer(const display::Pipe& pipe, uint8_t root_parameter, const display::WeakUnorderedAccessBufferHandle& unordered_access_buffer);

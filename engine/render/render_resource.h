@@ -129,20 +129,10 @@ namespace render
 	};
 
 	//Constant buffer resource
-	class ConstantBufferResource : public DisplayHandleResource<display::ConstantBufferHandle>
+	class ConstantBufferResource : public DisplayHandleResource<display::BufferHandle>
 	{
 	public:
 		DECLARE_RENDER_CLASS("ConstantBuffer");
-
-		void Load(LoadContext& load_context) override;
-		display::TranstitionState GetDefaultAccess() const override { return display::TranstitionState::VertexAndConstantBuffer; };
-	};
-
-	//Constant buffer resource
-	class ConstantBuffer2Resource : public DisplayHandleResource<display::BufferHandle>
-	{
-	public:
-		DECLARE_RENDER_CLASS("ConstantBuffer2");
 
 		void Load(LoadContext& load_context) override;
 		display::TranstitionState GetDefaultAccess() const override { return display::TranstitionState::VertexAndConstantBuffer; };

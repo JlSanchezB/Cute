@@ -419,7 +419,7 @@ namespace render
 	}
 	void SetRootConstantBufferPass::Render(RenderContext & render_context) const
 	{
-		ConstantBufferResource* constant_buffer = m_constant_buffer.Get(render_context);
+		BufferResource* constant_buffer = m_constant_buffer.Get(render_context);
 		if (constant_buffer)
 		{
 			render_context.GetContext()->SetConstantBuffer(m_pipe, m_root_parameter, constant_buffer->GetHandle());

@@ -291,17 +291,19 @@ namespace display
 			desc.access = access;
 			desc.type = BufferType::RawAccessBuffer;
 			desc.size = size;
+			desc.structure_stride = 16;
 			desc.is_UAV = is_UAV;
 			return desc;
 		}
 		
-		static BufferDesc CreateConstantBuffer(Access access, size_t size)
+		static BufferDesc CreateConstantBuffer(Access access, size_t size, const void* init_data = nullptr)
 		{
 			assert(access != Access::Static);
 			BufferDesc desc;
 			desc.access = access;
 			desc.type = BufferType::ConstantBuffer;
 			desc.size = size;
+			desc.init_data = init_data;
 			return desc;
 		}
 
