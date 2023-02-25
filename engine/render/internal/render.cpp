@@ -302,11 +302,8 @@ namespace render
 		{
 		case PoolResourceType::RenderTarget:
 		{
-			display::RenderTargetDesc desc;
-			desc.width = width;
-			desc.height = height;
-			desc.format = format;
-			display::RenderTargetHandle handle = display::CreateRenderTarget(m_device, desc, resource_name.GetValue());
+			display::Texture2DDesc desc = display::Texture2DDesc::CreateRenderTarget(format, width, height);
+			display::Texture2DHandle handle = display::CreateTexture2D(m_device, desc, resource_name.GetValue());
 
 			resource = CreateResourceFromHandle<RenderTargetResource>(handle, width, height);
 			access = resource->GetDefaultAccess();
@@ -314,18 +311,22 @@ namespace render
 		break;
 		case PoolResourceType::DepthBuffer:
 		{
-			display::DepthBufferDesc desc;
-			desc.width = width;
-			desc.height = height;
-			//desc.format = format;
-			desc.default_clear = default_depth;
-			desc.default_stencil = default_stencil;
-			display::DepthBufferHandle handle = display::CreateDepthBuffer(m_device, desc, resource_name.GetValue());
+			display::Texture2DDesc desc = display::Texture2DDesc::CreateDepthBuffer(display::Format::D32_FLOAT, width, height, default_depth, default_stencil);
+			display::Texture2DHandle handle = display::CreateTexture2D(m_device, desc, resource_name.GetValue());
 
 			resource = CreateResourceFromHandle<DepthBufferResource>(handle);
 			access = resource->GetDefaultAccess();
 		}
-			break;
+		break;
+		/*case PoolResourceType::Texture2D:
+		{
+			display::Texture2DDesc desc = display::Texture2DDesc::CreateTexture2D(display::Access::Static, format, width, height, 0, 0, 1, nullptr, true);
+			display::Texture2DHandle handle = display::CreateTexture2D(m_device, desc, resource_name.GetValue());
+
+			resource = CreateResourceFromHandle<TextureResource>(handle);
+			access = resource->GetDefaultAccess();
+		}
+		break;*/
 		}
 
 		//Look for empty slot (no name)
@@ -1159,6 +1160,10 @@ namespace render
 										resource_barriers_to_execute.emplace_back(handle, current_access, next_access);
 									},
 									[&](const display::WeakBufferHandle& handle)
+									{
+										resource_barriers_to_execute.emplace_back(handle, current_access, next_access);
+									},
+									[&](const display::WeakTexture2DHandle& handle)
 									{
 										resource_barriers_to_execute.emplace_back(handle, current_access, next_access);
 									},

@@ -65,7 +65,7 @@ namespace display
 	void ExecuteCommandLists(Device* device, const std::vector<WeakCommandListHandle>& handles);
 	
 	//Back buffer access
-	WeakRenderTargetHandle GetBackBuffer(Device* device);
+	WeakTexture2DHandle GetBackBuffer(Device* device);
 
 	//Create root signature
 	RootSignatureHandle CreateRootSignature(Device* device, const RootSignatureDesc& root_signature_desc, const char* name = nullptr);
@@ -162,7 +162,7 @@ namespace display
 	{
 		ResourceBarrierType type;
 
-		using ResourceHandle = std::variant<WeakUnorderedAccessBufferHandle,  WeakRenderTargetHandle, WeakDepthBufferHandle, WeakBufferHandle>;
+		using ResourceHandle = std::variant<WeakUnorderedAccessBufferHandle,  WeakRenderTargetHandle, WeakDepthBufferHandle, WeakBufferHandle, WeakTexture2DHandle>;
 		ResourceHandle resource;
 
 		TranstitionState state_before;
@@ -203,6 +203,15 @@ namespace display
 		
 		//Clear Depth Stencil
 		void ClearDepthStencil(const WeakDepthBufferHandle& depth_stencil, const ClearType& clear_type, std::optional<float> depth, std::optional <uint8_t> stencil);
+
+		//Set render target
+		void SetRenderTargets(uint8_t num_targets, AsRenderTarget* render_target_array, AsDepthBuffer depth_stencil);
+
+		//Clear Render Target
+		void ClearRenderTargetColour(const AsRenderTarget& render_target, const float colour[4]);
+
+		//Clear Depth Stencil
+		void ClearDepthStencil(const AsDepthBuffer& depth_stencil, const ClearType& clear_type, std::optional<float> depth, std::optional <uint8_t> stencil);
 
 		//Set Viewport
 		void SetViewport(const Viewport& viewport);
@@ -358,6 +367,12 @@ namespace display
 	inline void DestroyHandleInternal(Device* device, BufferHandle& handle)
 	{
 		DestroyBuffer(device, handle);
+	}
+
+	template<>
+	inline void DestroyHandleInternal(Device* device, Texture2DHandle& handle)
+	{
+		DestroyTexture2D(device, handle);
 	}
 
 }

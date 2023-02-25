@@ -43,7 +43,8 @@ namespace display
 		R8G8B8A8_UNORM_SRGB,
 		R32_UINT,
 		R16_UINT,
-		D32_FLOAT
+		D32_FLOAT,
+		R32_FLOAT
 	};
 
 	enum class FillMode : uint8_t

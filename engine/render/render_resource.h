@@ -193,7 +193,7 @@ namespace render
 	};
 
 	//Render target resource
-	class RenderTargetResource : public DisplayHandleResource<display::RenderTargetHandle>
+	class RenderTargetResource : public DisplayHandleResource<display::Texture2DHandle>
 	{
 		uint32_t m_width = 0;
 		uint32_t m_heigth = 0;
@@ -214,7 +214,7 @@ namespace render
 
 		DisplayHandle GetDisplayHandle() override
 		{
-			return DisplayHandleResource<display::RenderTargetHandle>::GetHandle();
+			return DisplayHandleResource<display::Texture2DHandle>::GetHandle();
 		}
 		display::TranstitionState GetDefaultAccess() const override { return display::TranstitionState::RenderTarget; };
 
@@ -232,7 +232,7 @@ namespace render
 	};
 
 	//Depth buffer
-	class DepthBufferResource : public DisplayHandleResource<display::DepthBufferHandle>
+	class DepthBufferResource : public DisplayHandleResource<display::Texture2DHandle>
 	{
 	public:
 		DECLARE_RENDER_CLASS("DepthBuffer");
@@ -240,7 +240,7 @@ namespace render
 		void Load(LoadContext& load_context) override;
 		DisplayHandle GetDisplayHandle() override
 		{
-			return DisplayHandleResource<display::DepthBufferHandle>::GetHandle();
+			return DisplayHandleResource<display::Texture2DHandle>::GetHandle();
 		}
 		display::TranstitionState GetDefaultAccess() const override { return display::TranstitionState::Depth; };
 	};

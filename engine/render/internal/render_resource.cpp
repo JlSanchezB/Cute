@@ -384,13 +384,9 @@ namespace render
 		QueryAttribute(load_context, load_context.current_xml_element, "width", width, AttributeType::NonOptional);
 		QueryAttribute(load_context, load_context.current_xml_element, "height", height, AttributeType::NonOptional);
 
-		display::RenderTargetDesc render_target_desc;
-		render_target_desc.width = width;
-		render_target_desc.height = height;
-		render_target_desc.format = format;
-
+		display::Texture2DDesc render_target_desc = display::Texture2DDesc::CreateRenderTarget(format, width, height);
 		//Create render target
-		Init(display::CreateRenderTarget(load_context.device, render_target_desc, load_context.name));
+		Init(display::CreateTexture2D(load_context.device, render_target_desc, load_context.name));
 		m_width = width;
 		m_heigth = height;
 	}

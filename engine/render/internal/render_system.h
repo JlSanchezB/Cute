@@ -28,7 +28,8 @@ namespace render
 	enum class PoolResourceType
 	{
 		RenderTarget,
-		DepthBuffer
+		DepthBuffer,
+		Texture2D
 	};
 
 	class RenderContextInternal : public RenderContext

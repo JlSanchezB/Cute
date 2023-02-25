@@ -145,6 +145,11 @@ namespace render
 							valid = true;
 							type = PoolResourceType::DepthBuffer;
 						}
+						else if (strcmp(dependencies_xml_element->Name(), "Texture") == 0)
+						{
+							valid = true;
+							type = PoolResourceType::Texture2D;
+						}
 
 						if (valid)
 						{
@@ -324,18 +329,18 @@ namespace render
 	void SetRenderTargetPass::Render(RenderContext & render_context) const
 	{
 		//Get render target
-		std::array<display::WeakRenderTargetHandle, display::kMaxNumRenderTargets> render_targets;
+		std::array<display::AsRenderTarget, display::kMaxNumRenderTargets> render_targets;
 		for (uint8_t i = 0; i < m_num_render_targets; ++i)
 		{
 			RenderTargetResource* render_target = m_render_target[i].Get(render_context);
 			if (render_target)
 			{
-				render_targets[i] = render_target->GetHandle();
+				render_targets[i] = display::AsRenderTarget(render_target->GetHandle());
 			}
 		}
 		DepthBufferResource* depth_buffer = m_depth_buffer.Get(render_context);
 
-		render_context.GetContext()->SetRenderTargets(m_num_render_targets, render_targets.data(), (depth_buffer) ? depth_buffer->GetHandle() : display::WeakDepthBufferHandle());
+		render_context.GetContext()->SetRenderTargets(m_num_render_targets, render_targets.data(), (depth_buffer) ? display::AsDepthBuffer(depth_buffer->GetHandle()) : display::AsDepthBuffer());
 		
 		//Set Viewport and Scissors
 		//Set viewport

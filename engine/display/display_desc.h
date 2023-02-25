@@ -337,7 +337,7 @@ namespace display
 		uint32_t height = 0;
 		uint32_t pitch = 0;
 		uint32_t slice_pitch = 0;
-		uint16_t mips = 0;
+		uint16_t mips = 1;
 		size_t size = 0;
 		const void* init_data = nullptr;
 		float default_clear = 1.f;
@@ -379,6 +379,7 @@ namespace display
 		{
 			Texture2DDesc desc;
 			desc.access = Access::Static;
+			desc.format = format;
 			desc.width = width;
 			desc.height = height;
 			desc.default_clear = default_clear;
@@ -421,8 +422,11 @@ namespace display
 
 	struct AsRenderTarget : WeakTexture2DHandle
 	{
-		uint32_t index;
+		uint32_t index = 0;
 
+		AsRenderTarget() : WeakTexture2DHandle()
+		{
+		}
 		AsRenderTarget(const WeakTexture2DHandle& in, uint32_t _index = 0) : WeakTexture2DHandle(in), index(_index)
 		{
 			//Check if it is a valid render target
@@ -431,8 +435,11 @@ namespace display
 
 	struct AsDepthBuffer: WeakTexture2DHandle
 	{
-		uint32_t index;
+		uint32_t index = 0;
 
+		AsDepthBuffer() : WeakTexture2DHandle()
+		{
+		}
 		AsDepthBuffer(const WeakTexture2DHandle& in, uint32_t _index = 0) : WeakTexture2DHandle(in), index(_index)
 		{
 			//Check if it is a valid depth buffer

@@ -105,7 +105,7 @@ namespace render
 		virtual const RenderClassType Type() const = 0;
 		
 		//Fast access to the resource internal handle
-		using DisplayHandle = std::variant<std::monostate, display::WeakRenderTargetHandle, display::WeakDepthBufferHandle, display::WeakUnorderedAccessBufferHandle, display::WeakBufferHandle>;
+		using DisplayHandle = std::variant<std::monostate, display::WeakRenderTargetHandle, display::WeakDepthBufferHandle, display::WeakUnorderedAccessBufferHandle, display::WeakBufferHandle, display::WeakTexture2DHandle>;
 		virtual DisplayHandle GetDisplayHandle() { return std::monostate{}; };
 
 		//Default access for this type of resource

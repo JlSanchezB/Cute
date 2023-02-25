@@ -21,7 +21,7 @@ namespace
 	};
 
 	//Create a commited resource
-	bool CreateResource(display::Device* device, const SourceResourceData& source_data, bool static_buffer, const D3D12_RESOURCE_DESC& buffer_desc, ComPtr<ID3D12Resource>& resource, display::ResourceMemoryAccess& resource_memory_access, D3D12_RESOURCE_STATES resource_state)
+	bool CreateResource(display::Device* device, const SourceResourceData& source_data, bool static_buffer, const D3D12_RESOURCE_DESC& buffer_desc, ComPtr<ID3D12Resource>& resource, display::ResourceMemoryAccess& resource_memory_access, D3D12_RESOURCE_STATES resource_state, D3D12_CLEAR_VALUE* clear_values = nullptr)
 	{
 		//Upload resource
 		ComPtr<ID3D12Resource> upload_resource;
@@ -32,8 +32,8 @@ namespace
 				&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
 				D3D12_HEAP_FLAG_NONE,
 				&buffer_desc,
-				D3D12_RESOURCE_STATE_COMMON,
-				nullptr,
+				resource_state,
+				clear_values,
 				IID_PPV_ARGS(&resource))))
 			{
 				SetLastErrorMessage(device, "Error creating a resource in the default heap");
@@ -54,6 +54,7 @@ namespace
 					SetLastErrorMessage(device, "Error creating the copy resource helper in the upload heap");
 					return false;
 				}
+				SetObjectName(upload_resource.Get(), "CopyResource");
 			}
 		}
 		else
@@ -130,7 +131,7 @@ namespace
 
 	//Helper function to create a ring resources
 	template <typename FUNCTION, typename POOL>
-	auto CreateRingResources(display::Device* device, const SourceResourceData& source_data, const D3D12_RESOURCE_DESC& buffer_desc, POOL& pool, D3D12_RESOURCE_STATES resource_state, FUNCTION&& view_create)
+	auto CreateRingResources(display::Device* device, const SourceResourceData& source_data, const D3D12_RESOURCE_DESC& buffer_desc, POOL& pool, D3D12_RESOURCE_STATES resource_state, FUNCTION&& view_create, D3D12_CLEAR_VALUE* clear_values = nullptr)
 	{
 		//Allocs first resource from the pool
 		auto resource_handle = pool.Alloc();
@@ -143,7 +144,7 @@ namespace
 		while (count)
 		{
 			//Create a dynamic resource
-			if (!CreateResource(device, source_data, false, buffer_desc, resource->resource, *resource, resource_state))
+			if (!CreateResource(device, source_data, false, buffer_desc, resource->resource, *resource, resource_state, clear_values))
 			{
 				DeleteRingResource(device, resource_handle, pool);
 				return resource_handle;
@@ -930,20 +931,7 @@ namespace display
 		d12_resource_desc = CD3DX12_RESOURCE_DESC::Buffer(size);
 		if (buffer_desc.is_UAV) d12_resource_desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 
-		switch (buffer_desc.type)
-		{
-		case BufferType::VertexBuffer:
-		case BufferType::ConstantBuffer:
-			init_resource_state = D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
-			break;
-		case BufferType::IndexBuffer:
-			init_resource_state = D3D12_RESOURCE_STATE_INDEX_BUFFER;
-			break;
-		case BufferType::StructuredBuffer:
-		case BufferType::RawAccessBuffer:
-			init_resource_state = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
-			break;
-		}
+		init_resource_state = D3D12_RESOURCE_STATE_COMMON;
 
 		auto CreateViewsForResource = [&buffer_desc, size, &d12_resource_desc, name](display::Device* device, const WeakBufferHandle& handle, display::Buffer& resource)
 		{
@@ -1096,6 +1084,8 @@ namespace display
 	{
 		D3D12_RESOURCE_STATES init_resource_state;
 		D3D12_RESOURCE_DESC d12_resource_desc = {};
+		D3D12_CLEAR_VALUE clear_values;
+		D3D12_CLEAR_VALUE* clear_values_ptr = nullptr;
 
 		size_t size = texture_2d_desc.size;
 
@@ -1121,18 +1111,28 @@ namespace display
 		{
 			init_resource_state = D3D12_RESOURCE_STATE_DEPTH_WRITE;
 			d12_resource_desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+
+			clear_values.DepthStencil = { texture_2d_desc.default_clear, texture_2d_desc.default_stencil };
+			clear_values.Format = Convert(texture_2d_desc.format);
+
+			clear_values_ptr = &clear_values;
 		}
 		else
 		{
-			init_resource_state = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+			init_resource_state = D3D12_RESOURCE_STATE_COMMON;
 		}
 
 		auto CreateViewsForResource = [&texture_2d_desc, size, &d12_resource_desc, name](display::Device* device, const WeakTexture2DHandle& handle, display::Texture2D& resource)
 		{
+			Format read_format = texture_2d_desc.format;
+			if (texture_2d_desc.is_depth_buffer && read_format == Format::D32_FLOAT)
+			{
+				read_format = Format::R32_FLOAT;
+			}
 			//All resources have resource view
 			D3D12_SHADER_RESOURCE_VIEW_DESC dx12_shader_resource_desc = {};
 			dx12_shader_resource_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-			dx12_shader_resource_desc.Format = d12_resource_desc.Format;
+			dx12_shader_resource_desc.Format = Convert(read_format);
 			dx12_shader_resource_desc.Texture2D.MipLevels = d12_resource_desc.MipLevels;
 			dx12_shader_resource_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
 
@@ -1142,9 +1142,15 @@ namespace display
 			{
 				resource.UAV = true;
 
+				Format uav_read_format = texture_2d_desc.format;
+				if (texture_2d_desc.is_depth_buffer && uav_read_format == Format::D32_FLOAT)
+				{
+					uav_read_format = Format::R32_FLOAT;
+				}
+
 				//Create UAV
 				D3D12_UNORDERED_ACCESS_VIEW_DESC dx12_unordered_access_buffer_desc_desc = {};
-				dx12_unordered_access_buffer_desc_desc.Format = Convert(texture_2d_desc.format);
+				dx12_unordered_access_buffer_desc_desc.Format = Convert(uav_read_format);
 				dx12_unordered_access_buffer_desc_desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
 
 				device->m_native_device->CreateUnorderedAccessView(resource.resource.Get(), nullptr, &dx12_unordered_access_buffer_desc_desc, device->m_texture_2d_pool.GetDescriptor(handle, Texture2D::kShaderUnorderedAccessDescriptorIndex));
@@ -1154,6 +1160,7 @@ namespace display
 			{
 				assert(texture_2d_desc.access == Access::Static);
 
+				resource.RenderTarget = true;
 				//Create render target view
 				D3D12_RENDER_TARGET_VIEW_DESC dx12_render_target_view_desc = {};
 				dx12_render_target_view_desc.Format = Convert(texture_2d_desc.format);
@@ -1166,8 +1173,9 @@ namespace display
 			{
 				assert(texture_2d_desc.access == Access::Static);
 
+				resource.DepthBuffer = true;
 				D3D12_DEPTH_STENCIL_VIEW_DESC dx12_depth_stencil_desc = {};
-				dx12_depth_stencil_desc.Format = Convert(texture_2d_desc.format);;
+				dx12_depth_stencil_desc.Format = Convert(texture_2d_desc.format);
 				dx12_depth_stencil_desc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
 				dx12_depth_stencil_desc.Flags = D3D12_DSV_FLAG_NONE;
 
@@ -1186,7 +1194,7 @@ namespace display
 
 			SourceResourceData data(texture_2d_desc.init_data, texture_2d_desc.size, texture_2d_desc.pitch, texture_2d_desc.slice_pitch);
 
-			if (!CreateResource(device, data, texture_2d_desc.access == Access::Static, d12_resource_desc, resource.resource, resource, init_resource_state))
+			if (!CreateResource(device, data, texture_2d_desc.access == Access::Static, d12_resource_desc, resource.resource, resource, init_resource_state, clear_values_ptr))
 			{
 				device->m_texture_2d_pool.Free(handle);
 				return Texture2DHandle();
@@ -1204,7 +1212,7 @@ namespace display
 				[&](display::Device* device, const WeakTexture2DHandle& handle, display::Texture2D& resource)
 				{
 					CreateViewsForResource(device, handle, resource);
-				});
+				}, clear_values_ptr);
 
 			return handle;
 		}

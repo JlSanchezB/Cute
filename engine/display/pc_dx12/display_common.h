@@ -390,7 +390,8 @@ namespace display
 		D3D12_RESOURCE_STATES current_state;
 
 		bool UAV = false; //Can be set as UAV
-		bool ShaderAccess = false; //Can be set as shader resource or constant buffer
+		bool RenderTarget = false; //Can be set as RenderTarget
+		bool DepthBuffer = false; //Can be set as DepthBuffe
 		const char* name;
 
 		float default_depth;
@@ -431,7 +432,7 @@ namespace display
 		std::vector< FrameResources> m_frame_resources;
 
 		//Back buffer (ring resource buffer)
-		RenderTargetHandle m_back_buffer_render_target;
+		Texture2DHandle m_back_buffer_render_target;
 
 		//Global resources
 		ComPtr<ID3D12CommandQueue> m_command_queue;

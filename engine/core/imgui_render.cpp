@@ -357,9 +357,9 @@ void imgui_render::Draw(display::Context* context, ImDrawData* draw_data)
 		PROFILE_SCOPE_GPU(context, "Imgui", 0xFFFF00FF, "RenderImgui");
 
 		display::Device* device = context->GetDevice();
-
+		display::AsRenderTarget render_target_table = display::GetBackBuffer(device);
 		//Set back buffer
-		context->SetRenderTargets(1, &display::GetBackBuffer(device), display::WeakDepthBufferHandle());
+		context->SetRenderTargets(1, &render_target_table, display::AsDepthBuffer());
 
 		//Check if we need to create a vertex buffer
 		if (current_vertex_buffer_size < draw_data->TotalVtxCount)
