@@ -76,5 +76,6 @@
     <None Include="packages.config" />
     <None Include="box_rendering.hlsl" />
     <None Include="box_culling.hlsl" />
+    <None Include="build_hz.hlsl" />
   </ItemGroup>
 </Project>

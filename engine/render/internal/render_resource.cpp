@@ -121,7 +121,8 @@ namespace
 			{"R8G8B8A8_UNORM_SRGB", display::Format::R8G8B8A8_UNORM_SRGB},
 			{"R32_UINT", display::Format::R32_UINT},
 			{"R16_UINT", display::Format::R16_UINT},
-			{"D32_FLOAT", display::Format::D32_FLOAT}
+			{"D32_FLOAT", display::Format::D32_FLOAT},
+			{"R32_FLOAT", display::Format::R32_FLOAT}
 		};
 	};
 

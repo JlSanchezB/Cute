@@ -9,6 +9,9 @@
 
 namespace
 {
+	template<class... Ts> struct overloaded : Ts... { using Ts::operator()...; };
+	template<class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
+
 	//Conversion tables
 	template<>
 	struct ConversionTable<display::Pipe>
@@ -51,7 +54,8 @@ namespace
 			{"R8G8B8A8_UNORM_SRGB", display::Format::R8G8B8A8_UNORM_SRGB},
 			{"R32_UINT", display::Format::R32_UINT},
 			{"R16_UINT", display::Format::R16_UINT},
-			{"D32_FLOAT", display::Format::D32_FLOAT}
+			{"D32_FLOAT", display::Format::D32_FLOAT},
+			{"R32_FLOAT", display::Format::R32_FLOAT}
 		};
 	};
 
@@ -145,7 +149,7 @@ namespace render
 							valid = true;
 							type = PoolResourceType::DepthBuffer;
 						}
-						else if (strcmp(dependencies_xml_element->Name(), "Texture") == 0)
+						else if (strcmp(dependencies_xml_element->Name(), "Texture2D") == 0)
 						{
 							valid = true;
 							type = PoolResourceType::Texture2D;
@@ -464,7 +468,28 @@ namespace render
 		{
 			render_context.GetContext()->SetPipelineState(pipeline_state->GetHandle());
 		}
+		else
+		{
+			core::LogError("Pipeline <%s> doesn't exist", m_pipeline_state.GetResourceName().GetValue());
+		}
 	}
+	void SetComputePipelineStatePass::Load(LoadContext& load_context)
+	{
+		m_pipeline_state.UpdateName(load_context.GetResourceReference(load_context));
+	}
+	void SetComputePipelineStatePass::Render(RenderContext& render_context) const
+	{
+		ComputePipelineStateResource* pipeline_state = m_pipeline_state.Get(render_context);
+		if (pipeline_state)
+		{
+			render_context.GetContext()->SetPipelineState(pipeline_state->GetHandle());
+		}
+		else
+		{
+			core::LogError("Pipeline <%s> doesn't exist", m_pipeline_state.GetResourceName().GetValue());
+		}
+	}
+
 	void SetDescriptorTablePass::Load(LoadContext & load_context)
 	{
 		QueryAttribute(load_context, load_context.current_xml_element, "root_param", m_root_parameter, AttributeType::NonOptional);
@@ -486,17 +511,17 @@ namespace render
 
 			while (xml_element_descriptor)
 			{
-				bool as_shader_resource = false;
+				display::DescriptorTableParameterType parameter_type = display::DescriptorTableParameterType::ShaderResource;
 				const char* string_value;
 				if (xml_element_descriptor->QueryStringAttribute("as", &string_value) == tinyxml2::XML_SUCCESS)
 				{
-					if (strcmp("ShaderResource", string_value) == 0)
+					if (strcmp("UnorderedAccess", string_value) == 0)
 					{
-						as_shader_resource = true;
+						parameter_type = display::DescriptorTableParameterType::UnorderedAccessBuffer;
 					}
 				}
 
-				m_descriptor_table_names.emplace_back(xml_element_descriptor->GetText(), as_shader_resource);
+				m_descriptor_table_names.emplace_back(xml_element_descriptor->GetText(), parameter_type);
 
 				//It is a descriptor list, names need to be solve during render
 				xml_element_descriptor = xml_element_descriptor->NextSiblingElement();
@@ -518,35 +543,29 @@ namespace render
 
 			if (resource)
 			{
-				if (resource->Type() == "ConstantBuffer"_sh32)
-				{
-					ConstantBufferResource* constant_buffer_resource = dynamic_cast<ConstantBufferResource*>(resource);
-					descriptor_table_desc.AddDescriptor(constant_buffer_resource->GetHandle());
-				}
-				else if (resource->Type() == "Texture"_sh32)
-				{
-					TextureResource* texture_resource = dynamic_cast<TextureResource*>(resource);
-					descriptor_table_desc.AddDescriptor(texture_resource->GetHandle());
-				}
-				else if (resource->Type() == "RenderTarget"_sh32)
-				{
-					RenderTargetResource* render_target_resource = dynamic_cast<RenderTargetResource*>(resource);
-					descriptor_table_desc.AddDescriptor(render_target_resource->GetHandle());
-				}
-				else if (resource->Type() == "UnorderedAccessBuffer"_sh32)
-				{
-					BufferResource* unordered_access_buffer_resource = dynamic_cast<BufferResource*>(resource);
-					if (descriptor.second)
-						//Used as shader source
-						descriptor_table_desc.AddDescriptor(display::AsUAVBuffer(unordered_access_buffer_resource->GetHandle()));
-					else
-						descriptor_table_desc.AddDescriptor(unordered_access_buffer_resource->GetHandle());
-				}
-				else if (resource->Type() == "ShaderResource"_sh32)
-				{
-					BufferResource* shader_resource_resource = dynamic_cast<BufferResource*>(resource);
-					descriptor_table_desc.AddDescriptor(shader_resource_resource->GetHandle());
-				}
+				auto display_handle = resource->GetDisplayHandle();
+
+				std::visit(
+					overloaded
+					{
+						[&](display::WeakBufferHandle handle)
+						{
+							if (descriptor.second == display::DescriptorTableParameterType::UnorderedAccessBuffer)
+								descriptor_table_desc.AddDescriptor(display::AsUAVBuffer(handle));
+							else
+								descriptor_table_desc.AddDescriptor(handle);
+						},
+						[&](display::WeakTexture2DHandle handle)
+						{
+							if (descriptor.second == display::DescriptorTableParameterType::UnorderedAccessBuffer)
+								descriptor_table_desc.AddDescriptor(display::AsUAVTexture2D(handle));
+							else
+								descriptor_table_desc.AddDescriptor(handle);
+						},
+						[&](std::monostate handle)
+						{
+						}
+					}, display_handle);
 			}
 			else
 			{
@@ -587,7 +606,7 @@ namespace render
 				FillDescriptorTableDesc(render_context, descriptor_table_desc);
 
 				//update descriptors
-				display::UpdateDescriptorTable(render_context.GetDevice(), descriptor_table->GetHandle(), descriptor_table_desc.descriptors.data(), descriptor_table_desc.descriptors.size());
+				display::UpdateDescriptorTable(render_context.GetDevice(), descriptor_table->GetHandle(), descriptor_table_desc.descriptors.data(), descriptor_table_desc.num_descriptors);
 			}
 
 			render_context.GetContext()->SetDescriptorTable(m_pipe, m_root_parameter, descriptor_table->GetHandle());
@@ -631,6 +650,23 @@ namespace render
 			render_context.GetContext()->Draw(draw_desc);
 		}
 	}
+
+	void DispatchViewComputePass::Load(LoadContext& load_context)
+	{
+		QueryAttribute(load_context, load_context.current_xml_element, "tile_width", m_tile_width, AttributeType::NonOptional);
+		QueryAttribute(load_context, load_context.current_xml_element, "tile_height", m_tile_height, AttributeType::NonOptional);
+	}
+	void DispatchViewComputePass::Render(RenderContext& render_context) const
+	{
+		//Knowing the view size and the tile size, calculate how many groups needs to dispatch
+		display::ExecuteComputeDesc desc;
+		desc.group_count_x = display::ExecuteComputeDesc::CalculateGroupCount(render_context.GetPassInfo().width, m_tile_width);
+		desc.group_count_y = display::ExecuteComputeDesc::CalculateGroupCount(render_context.GetPassInfo().height, m_tile_height);
+		desc.group_count_z = 1;
+
+		render_context.GetContext()->ExecuteCompute(desc);
+	}
+
 	void DrawRenderItemsPass::Load(LoadContext & load_context)
 	{
 		const char* value;

@@ -54,8 +54,6 @@ namespace
 
 namespace render
 {
-	
-
 	Resource * RenderContext::GetResource(const ResourceName& name, bool& can_not_be_cached) const
 	{
 		auto render_context = reinterpret_cast<const RenderContextInternal*>(this);
@@ -615,8 +613,10 @@ namespace render
 		RegisterPassFactory<SetRootShaderResourcePass>(system);
 		RegisterPassFactory<SetRootUnorderedAccessBufferPass>(system);
 		RegisterPassFactory<SetPipelineStatePass>(system);
+		RegisterPassFactory<SetComputePipelineStatePass>(system);
 		RegisterPassFactory<SetDescriptorTablePass>(system);
 		RegisterPassFactory<DrawFullScreenQuadPass>(system);
+		RegisterPassFactory<DispatchViewComputePass>(system);
 		RegisterPassFactory<DrawRenderItemsPass>(system);
 
 		system->m_device = device;
@@ -758,7 +758,6 @@ namespace render
 
 		return success;
 	}
-
 
 	RenderContextInternal * System::GetCachedRenderContext(const PassName & pass_name, uint16_t id, const PassInfo& pass_info)
 	{
@@ -1003,6 +1002,7 @@ namespace render
 				//All actived passes will add here all the state updates, so all are accumulated until no more passes can be activated
 				std::vector<ResourceStateSync> deferred_update_states;
 
+				size_t pass_processed = -1;
 				//Check if any pass is able to run
 				for (auto& pass_index : render_passes_to_process)
 				{
@@ -1023,27 +1023,52 @@ namespace render
 
 					if (all_dependencies_passed)
 					{
-						//This pass can be run as all the dependencies are in a correct state
-						render_passes_sorted.push_back(pass_index);
-						render_passes_to_process.erase(render_passes_to_process.begin() + pass_index);
-
-						//Add update states to the deferred list
-						auto& update_states = render_pass_contexts[pass_index]->GetContextRootPass()->GetPostUpdateCondition();
-
-						deferred_update_states.insert(deferred_update_states.end(), update_states.begin(), update_states.end());
+						pass_processed = pass_index;
+						break;
+						
 					}
 				}
 
-				//Update all deferred states
-				for (auto& update_state : deferred_update_states)
+				if (pass_processed != -1)
 				{
-					update_state.resource.Get(this)->state = update_state.state;
-				}
+					//This pass can be run as all the dependencies are in a correct state
+					render_passes_sorted.push_back(pass_processed);
+					render_passes_to_process.erase(std::find(render_passes_to_process.begin(), render_passes_to_process.end(), pass_processed));
 
-				if (num_render_passes_left == render_passes_to_process.size())
+					//Add update states to the deferred list
+					auto& update_states = render_pass_contexts[pass_processed]->GetContextRootPass()->GetPostUpdateCondition();
+
+					//Update all deferred states
+					for (auto& update_state : update_states)
+					{
+						update_state.resource.Get(this)->state = update_state.state;
+					}
+				}
+				else
 				{
 					//The depedency graph can not be built, no render
 					core::LogError("The render graph can not be built because the depedencies can not be match. Render is cancel.");
+					core::LogError("Passes added to render in order <%d>", render_passes_sorted.size());
+					for (const auto& index : render_passes_sorted)
+					{
+						auto& render_pass = render_frame.m_render_passes[index];
+						core::LogError("Pass <%s>, ID<%d>", render_pass.pass_name.GetValue(), render_pass.id);
+					}
+					core::LogError("Resources states");
+					for (auto& [key, resource_info] : m_resources_map)
+					{
+						core::LogError("	Resource <%s>, State <%s>", key.GetValue(), resource_info->state.GetValue());
+					}
+					core::LogError("Passes that could not render:", render_passes_to_process.size());
+					for (const auto& index : render_passes_to_process)
+					{
+						auto& render_pass = render_frame.m_render_passes[index];
+						core::LogError("Pass <%s>, ID<%d>", render_pass.pass_name.GetValue(), render_pass.id);
+						auto& dependencies = render_pass_contexts[index]->GetContextRootPass()->GetPreResourceCondition();
+						for (const auto& dependency : dependencies)
+							core::LogError("	Depends of <%s>, State <%s>, State Requested <%s>", dependency.resource.GetResourceName().GetValue(), dependency.resource.Get(this)->state.GetValue(), dependency.state.GetValue());
+					}
+
 					render_graph_built = false;
 					break;
 				}

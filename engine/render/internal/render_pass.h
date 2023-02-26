@@ -232,6 +232,17 @@ namespace render
 		void Render(RenderContext& render_context) const override;
 	};
 
+	class SetComputePipelineStatePass : public Pass
+	{
+		ResourceReference<ComputePipelineStateResource> m_pipeline_state;
+
+	public:
+		DECLARE_RENDER_CLASS("SetComputePipelineState");
+
+		void Load(LoadContext& load_context) override;
+		void Render(RenderContext& render_context) const override;
+	};
+
 	class SetDescriptorTablePass : public Pass
 	{
 		//Root parameter
@@ -239,7 +250,7 @@ namespace render
 		//Pipe
 		display::Pipe m_pipe = display::Pipe::Graphics;
 		//If there is a descriptor table, that resource will be build the first time that it is executed, as it knows the constants buffer
-		std::vector<std::pair<std::string, bool>> m_descriptor_table_names;
+		std::vector<std::pair<std::string, display::DescriptorTableParameterType>> m_descriptor_table_names;
 		//Descriptor has a pool resource and needs to be updated each frame
 		bool m_update_each_frame = false;
 
@@ -263,6 +274,17 @@ namespace render
 	{
 	public:
 		DECLARE_RENDER_CLASS("DrawFullScreenQuad");
+
+		void Load(LoadContext& load_context) override;
+		void Render(RenderContext& render_context) const override;
+	};
+
+	class DispatchViewComputePass : public Pass
+	{
+		uint32_t m_tile_width;
+		uint32_t m_tile_height;
+	public:
+		DECLARE_RENDER_CLASS("DispatchViewCompute");
 
 		void Load(LoadContext& load_context) override;
 		void Render(RenderContext& render_context) const override;

@@ -461,6 +461,8 @@ namespace display
 		uint32_t group_count_x = 1;
 		uint32_t group_count_y = 1;
 		uint32_t group_count_z = 1;
+
+		static uint32_t CalculateGroupCount(uint32_t num_threads, uint32_t group_size) { return static_cast<uint32_t>(((num_threads - 1) / group_size) + 1); };
 	};
 
 	struct SetShaderResourceAsVertexBufferDesc
