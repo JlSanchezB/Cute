@@ -318,7 +318,7 @@ namespace render
 			access = resource->GetDefaultAccess();
 		}
 		break;
-		/*case PoolResourceType::Texture2D:
+		case PoolResourceType::Texture2D:
 		{
 			display::Texture2DDesc desc = display::Texture2DDesc::CreateTexture2D(display::Access::Static, format, width, height, 0, 0, 1, nullptr, true);
 			display::Texture2DHandle handle = display::CreateTexture2D(m_device, desc, resource_name.GetValue());
@@ -326,7 +326,7 @@ namespace render
 			resource = CreateResourceFromHandle<TextureResource>(handle);
 			access = resource->GetDefaultAccess();
 		}
-		break;*/
+		break;
 		}
 
 		//Look for empty slot (no name)
