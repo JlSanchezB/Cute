@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <cassert>
 #include <core/sync.h>
+#include <set>
 
 #ifdef _DEBUG
 #define WEAKHANDLE_TRACKING
@@ -94,10 +95,17 @@ namespace core
 #ifdef WEAKHANDLE_TRACKING
 		//Access to the pool associated to this handle
 		inline static WeakHandleTracking* s_tracking_pool = nullptr;
+#endif
 
+		//Private, just for the handlepool
+		WeakHandle(TYPE index)
+		{
+			//The destination handle needs to be invalid
+			assert(Accessor::m_index == Accessor::kInvalid);
+			Accessor::m_index = index;
+		}
 		template<typename HANDLE>
 		friend class HandlePool;
-#endif
 
 	public:
 		//Default constructor
@@ -287,6 +295,9 @@ namespace core
 			return m_max_size;
 		}
 
+		template<typename FUNCTION>
+		void VisitSlow(FUNCTION&& visitor);
+
 	private:
 		typename HANDLE::type_param& GetNextFreeSlot(const typename HANDLE::type_param& index)
 		{
@@ -412,6 +423,28 @@ namespace core
 #endif
 		
 		return HANDLE(handle_slot);
+	}
+
+	template<typename HANDLE>
+	template<typename FUNCTION>
+	inline void HandlePool<HANDLE>::VisitSlow(FUNCTION&& visitor)
+	{
+		std::set<typename HANDLE::type_param> free_slots;
+		
+		typename HANDLE::type_param next_free_slot = m_first_free_allocated;
+		while (next_free_slot != HANDLE::kInvalid)
+		{
+			free_slots.insert(next_free_slot);
+			next_free_slot = GetNextFreeSlot(next_free_slot);
+		}
+
+		for (typename HANDLE::type_param i = 0; i < m_data.size(); ++i)
+		{
+			if (free_slots.find(i) == free_slots.end())
+			{
+				visitor(HANDLE::WeakHandle(i));
+			}
+		}
 	}
 
 	//Free unused handle

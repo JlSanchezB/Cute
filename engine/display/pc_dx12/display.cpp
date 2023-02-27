@@ -128,7 +128,25 @@ namespace display
 			ImGui::Text("Descriptor table handles (%zu/%zu)", device->m_descriptor_table_pool.Size(), device->m_descriptor_table_pool.MaxSize());
 			ImGui::Text("Sampler descriptor table handles (%zu/%zu)", device->m_sampler_descriptor_table_pool.Size(), device->m_sampler_descriptor_table_pool.MaxSize());
 
-			//TODO, list of buffers and texture2D
+			if (ImGui::TreeNode("Buffer handles ","Buffer handles (%zu/%zu)", device->m_buffer_pool.Size(), device->m_buffer_pool.MaxSize()))
+			{
+				device->m_buffer_pool.VisitSlow([&](WeakBufferHandle handle)
+					{
+						const auto& buffer = device->Get(handle);
+						ImGui::Text("Buffer (%s), ShaderResource(%d), UAV(%d), Updatable(%d)", buffer.name, (buffer.ShaderAccess) ? 1 : 0, (buffer.UAV) ? 1 : 0, (buffer.memory_data) ? 1 : 0);
+					});
+				ImGui::TreePop();
+			}
+
+			if (ImGui::TreeNode("Texture2D handles ", "Texture2D handles (%zu/%zu)", device->m_texture_2d_pool.Size(), device->m_texture_2d_pool.MaxSize()))
+			{
+				device->m_texture_2d_pool.VisitSlow([&](WeakTexture2DHandle handle)
+					{
+						const auto& texture = device->Get(handle);
+						ImGui::Text("Buffer (%s), UAV(%d), RenderTarget(%d), DepthBuffer(%d)", texture.name, (texture.UAV) ? 1 : 0, (texture.RenderTarget) ? 1 : 0, (texture.DepthBuffer) ? 1 : 0);
+					});
+				ImGui::TreePop();
+			}
 
 			ImGui::End();	
 		}
