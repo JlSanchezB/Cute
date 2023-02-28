@@ -655,13 +655,15 @@ namespace render
 	{
 		QueryAttribute(load_context, load_context.current_xml_element, "tile_width", m_tile_width, AttributeType::NonOptional);
 		QueryAttribute(load_context, load_context.current_xml_element, "tile_height", m_tile_height, AttributeType::NonOptional);
+		QueryAttribute(load_context, load_context.current_xml_element, "scale_down", m_scale_down, AttributeType::Optional);
 	}
 	void DispatchViewComputePass::Render(RenderContext& render_context) const
 	{
 		//Knowing the view size and the tile size, calculate how many groups needs to dispatch
 		display::ExecuteComputeDesc desc;
-		desc.group_count_x = display::ExecuteComputeDesc::CalculateGroupCount(render_context.GetPassInfo().width, m_tile_width);
-		desc.group_count_y = display::ExecuteComputeDesc::CalculateGroupCount(render_context.GetPassInfo().height, m_tile_height);
+
+		desc.group_count_x = display::ExecuteComputeDesc::CalculateGroupCount(render_context.GetPassInfo().width, m_tile_width * m_scale_down);
+		desc.group_count_y = display::ExecuteComputeDesc::CalculateGroupCount(render_context.GetPassInfo().height, m_tile_height * m_scale_down);
 		desc.group_count_z = 1;
 
 		render_context.GetContext()->ExecuteCompute(desc);

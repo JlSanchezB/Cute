@@ -60,7 +60,7 @@
         <Descriptor as="ShaderResource">SceneDepth</Descriptor>
       </SetDescriptorTable>
       <SetComputePipelineState>BuildHZ</SetComputePipelineState>
-      <DispatchViewCompute tile_width="8" tile_height="8"/>
+      <DispatchViewCompute tile_width="64" tile_height="64"/>
     </Commands>
   </Pass>
 </Passes>

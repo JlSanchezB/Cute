@@ -283,6 +283,8 @@ namespace render
 	{
 		uint32_t m_tile_width;
 		uint32_t m_tile_height;
+		uint32_t m_scale_down = 1;
+
 	public:
 		DECLARE_RENDER_CLASS("DispatchViewCompute");
 
