@@ -296,6 +296,19 @@ namespace render
 		void Render(RenderContext& render_context) const override;
 	};
 
+	class DispatchComputePass : public Pass
+	{
+		uint32_t m_group_count_x = 1;
+		uint32_t m_group_count_y = 1;
+		uint32_t m_group_count_z = 1;
+
+	public:
+		DECLARE_RENDER_CLASS("DispatchCompute");
+
+		void Load(LoadContext& load_context) override;
+		void Render(RenderContext& render_context) const override;
+	};
+
 	class DrawRenderItemsPass : public Pass
 	{
 		uint8_t m_priority;

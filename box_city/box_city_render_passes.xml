@@ -50,7 +50,7 @@
   </Pass>
   <Pass name="BuildHZ" group="Solids">
     <Dependencies>
-      <Texture2D name="HZ" pre_condition_state="Alloc" post_update_state="Free" access="UnorderedAccess" format="R32_FLOAT" width_factor="0.1875" heigth_factor="0.125"/>
+      <Texture2D name="HZ" pre_condition_state="Alloc" post_update_state="Free" access="UnorderedAccess" format="R32_FLOAT" width="768" height="512"/>
       <DepthBuffer name="SceneDepth" pre_condition_state="Ready" post_update_state="Free" format="D32_FLOAT" default_depth="0.f" access="AllShaderResource"/>
     </Dependencies>
     <Commands>
@@ -60,7 +60,7 @@
         <Descriptor as="ShaderResource">SceneDepth</Descriptor>
       </SetDescriptorTable>
       <SetComputePipelineState>BuildHZ</SetComputePipelineState>
-      <DispatchViewCompute tile_width="64" tile_height="64"/>
+      <DispatchCompute group_count_x="64" group_count_y="64"/>
     </Commands>
   </Pass>
 </Passes>

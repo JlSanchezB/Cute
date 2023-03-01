@@ -29,7 +29,7 @@ void build_hz(uint3 group : SV_GroupID, uint3 group_thread_id : SV_GroupThreadID
 	{
 		min_z_value_mip2[group_thread_id.x][group_thread_id.y] = asuint(1.f);
 	}
-	if (group_thread_id.x == 0 && group_thread_id.y == 8)
+	if (group_thread_id.x == 0 && group_thread_id.y == 0)
 	{
 		min_z_value_mip3 = asuint(1.f);
 	}
@@ -50,6 +50,10 @@ void build_hz(uint3 group : SV_GroupID, uint3 group_thread_id : SV_GroupThreadID
 			uint2 thread_texel;
 			thread_texel.x = thread_id.x * 4 + i;
 			thread_texel.y = thread_id.y * 4 + j;
+
+			//Adjust to the current resolution, it is design for the worst case 4096x4096
+			thread_texel.x = thread_texel.x * width / 4096;
+			thread_texel.y = thread_texel.y * height / 4096;
 
 			thread_texel.x = min(thread_texel.x, width - 1);
 			thread_texel.y = min(thread_texel.y, height - 1);
@@ -81,7 +85,7 @@ void build_hz(uint3 group : SV_GroupID, uint3 group_thread_id : SV_GroupThreadID
 	if (group_thread_id.x < 4 && group_thread_id.y < 4)
 	{
 		uint2 offset;
-		offset.x = width / 8;
+		offset.x = 512;
 		offset.y = 0;
 		hz_texture[offset + group.xy * 4 + group_thread_id.xy] = asfloat(min_z_value_mip1[group_thread_id.x][group_thread_id.y]);
 	}
@@ -89,16 +93,16 @@ void build_hz(uint3 group : SV_GroupID, uint3 group_thread_id : SV_GroupThreadID
 	if (group_thread_id.x < 2 && group_thread_id.y < 2)
 	{
 		uint2 offset;
-		offset.x = width / 8;
-		offset.y = height / 16;
+		offset.x = 512;
+		offset.y = 256;
 		hz_texture[offset + group.xy * 2 + group_thread_id.xy] = asfloat(min_z_value_mip2[group_thread_id.x][group_thread_id.y]);
 	}
 	//from 16x16 to 1x1, mip3
 	if (group_thread_id.x < 1 && group_thread_id.y < 1)
 	{
 		uint2 offset;
-		offset.x = width / 8;
-		offset.y = height / 16 + height/32;
+		offset.x = 512;
+		offset.y = 256 + 128;
 		hz_texture[offset + group.xy + group_thread_id.xy] = asfloat(min_z_value_mip3);
 	}
 

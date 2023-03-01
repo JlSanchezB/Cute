@@ -658,6 +658,7 @@ namespace render
 		RegisterPassFactory<SetDescriptorTablePass>(system);
 		RegisterPassFactory<DrawFullScreenQuadPass>(system);
 		RegisterPassFactory<DispatchViewComputePass>(system);
+		RegisterPassFactory<DispatchComputePass>(system);
 		RegisterPassFactory<DrawRenderItemsPass>(system);
 
 		system->m_device = device;

@@ -686,6 +686,24 @@ namespace render
 		render_context.GetContext()->ExecuteCompute(desc);
 	}
 
+	void DispatchComputePass::Load(LoadContext& load_context)
+	{
+		QueryAttribute(load_context, load_context.current_xml_element, "group_count_x", m_group_count_x, AttributeType::Optional);
+		QueryAttribute(load_context, load_context.current_xml_element, "group_count_y", m_group_count_y, AttributeType::Optional);
+		QueryAttribute(load_context, load_context.current_xml_element, "group_count_z", m_group_count_z, AttributeType::Optional);
+	}
+	void DispatchComputePass::Render(RenderContext& render_context) const
+	{
+		//Knowing the view size and the tile size, calculate how many groups needs to dispatch
+		display::ExecuteComputeDesc desc;
+
+		desc.group_count_x = m_group_count_x;
+		desc.group_count_y = m_group_count_y;
+		desc.group_count_z = m_group_count_z;
+
+		render_context.GetContext()->ExecuteCompute(desc);
+	}
+
 	void DrawRenderItemsPass::Load(LoadContext & load_context)
 	{
 		const char* value;
