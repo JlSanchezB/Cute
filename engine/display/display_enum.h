@@ -129,7 +129,8 @@ namespace display
 		IndexBuffer,
 		ConstantBuffer,
 		StructuredBuffer,
-		RawAccessBuffer
+		RawAccessBuffer,
+		Buffer
 	};
 
 	//Type of resource barrier

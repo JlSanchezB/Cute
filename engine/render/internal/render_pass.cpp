@@ -154,6 +154,11 @@ namespace render
 							valid = true;
 							type = PoolResourceType::Texture2D;
 						}
+						else if (strcmp(dependencies_xml_element->Name(), "Buffer") == 0)
+						{
+							valid = true;
+							type = PoolResourceType::Buffer;
+						}
 
 						if (valid)
 						{
@@ -208,6 +213,18 @@ namespace render
 							uint32_t tile_size_height = 1;
 							dependencies_xml_element->QueryUnsignedAttribute("tile_size_height", &tile_size_height);
 
+							uint32_t width = 0;
+							dependencies_xml_element->QueryUnsignedAttribute("width", &width);
+
+							uint32_t height = 0;
+							dependencies_xml_element->QueryUnsignedAttribute("height", &height);
+
+							uint32_t size = 0;
+							dependencies_xml_element->QueryUnsignedAttribute("size", &size);
+
+							bool clear = false;
+							dependencies_xml_element->QueryBoolAttribute("clear", &clear);
+
 							display::Format format;
 							QueryTableAttribute(load_context, dependencies_xml_element, "format", format, AttributeType::NonOptional);
 
@@ -226,7 +243,7 @@ namespace render
 								allocation_type = ResourcePoolAllocationType::None;
 
 							//Add resource dependency, so the pass will request the resource to the pool
-							m_resource_pool_dependencies.emplace_back(resource_name, type, allocation_type, post_condition == "Free"_sh32, width_factor, heigth_factor, static_cast<uint16_t>(tile_size_width), static_cast<uint16_t>(tile_size_height),format, default_depth, static_cast<uint8_t>(default_stencil));
+							m_resource_pool_dependencies.emplace_back(resource_name, type, allocation_type, post_condition == "Free"_sh32, width, height, size, width_factor, heigth_factor, static_cast<uint16_t>(tile_size_width), static_cast<uint16_t>(tile_size_height),format, default_depth, static_cast<uint8_t>(default_stencil), clear);
 
 
 							//Needs to access the resource, it will be empty at the moment, as it is going to get assigned during the pass

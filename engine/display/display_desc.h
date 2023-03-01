@@ -227,7 +227,7 @@ namespace display
 		bool is_UAV = false;
 		
 		//Helpers to create the different types of buffes
-		static BufferDesc CreateStructuredBuffer(Access access, uint32_t num_elements, uint32_t structure_stride, bool is_UAV = false)
+		static BufferDesc CreateStructuredBuffer(Access access, uint32_t num_elements, uint32_t structure_stride, bool is_UAV = false, const void* init_data = nullptr)
 		{
 			BufferDesc desc;
 			desc.access = access;
@@ -236,6 +236,7 @@ namespace display
 			desc.structure_stride = structure_stride;
 			desc.size = num_elements * structure_stride;
 			desc.is_UAV = is_UAV;
+			desc.init_data = init_data;
 			return desc;
 		}
 		static BufferDesc CreateRawAccessBuffer(Access access, uint32_t size, bool is_UAV = false)

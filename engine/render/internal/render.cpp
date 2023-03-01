@@ -238,7 +238,7 @@ namespace render
 		}
 	}
 
-	std::pair<std::unique_ptr<Resource>, display::TranstitionState> System::AllocPoolResource(ResourceName resource_name, PoolResourceType type, bool get_or_alloc_allocation, uint16_t width, uint16_t height, const display::Format& format, const float default_depth, const uint8_t default_stencil)
+	std::pair<std::unique_ptr<Resource>, display::TranstitionState> System::AllocPoolResource(ResourceName resource_name, PoolResourceType type, bool get_or_alloc_allocation, uint16_t width, uint16_t height, uint32_t size, const display::Format& format, const float default_depth, const uint8_t default_stencil, const bool clear)
 	{
 		if (get_or_alloc_allocation)
 		{
@@ -249,10 +249,12 @@ namespace render
 					&& pool_resource.name == resource_name
 					&& pool_resource.type == type
 					&& pool_resource.format == format
+					&& pool_resource.size == size
 					&& pool_resource.width == width
 					&& pool_resource.height == height
 					&& pool_resource.default_depth == default_depth
-					&& pool_resource.default_stencil == default_stencil)
+					&& pool_resource.default_stencil == default_stencil
+					&& pool_resource.clear == clear)
 				{
 					assert(pool_resource.resource.get());
 					//It can be use
@@ -277,8 +279,10 @@ namespace render
 					&& pool_resource.format == format
 					&& pool_resource.width == width
 					&& pool_resource.height == height
+					&& pool_resource.size == size
 					&& pool_resource.default_depth == default_depth
-					&& pool_resource.default_stencil == default_stencil)
+					&& pool_resource.default_stencil == default_stencil
+					&& pool_resource.clear == clear)
 				{
 					assert(pool_resource.resource.get());
 					//It can be use
@@ -325,6 +329,27 @@ namespace render
 			access = resource->GetDefaultAccess();
 		}
 		break;
+		case PoolResourceType::Buffer:
+		{
+			void* init_data = nullptr;
+			if (clear)
+			{
+				//Needs to be clear
+				init_data = new uint8_t[size];
+			}
+			assert(size % 4 == 0);
+			display::BufferDesc desc = display::BufferDesc::CreateStructuredBuffer(display::Access::Static, size / 4, 4, true, init_data);
+			display::BufferHandle handle = display::CreateBuffer(m_device, desc, resource_name.GetValue());
+
+			resource = CreateResourceFromHandle<BufferResource>(handle);
+			access = resource->GetDefaultAccess();
+
+			if (init_data)
+			{
+				delete[] init_data;
+			}
+		}
+		break;
 		}
 
 		//Look for empty slot (no name)
@@ -333,14 +358,14 @@ namespace render
 			if (pool_resource.name == ResourceName())
 			{
 				//Use this slot to add the new resource
-				pool_resource = PoolResource{ {}, resource_name, type, width, height, format, default_depth, default_stencil, false, m_render_frame_index, access};
+				pool_resource = PoolResource{ {}, resource_name, type, width, height, size, format, default_depth, default_stencil, clear, false, m_render_frame_index, access};
 
 				return std::make_pair<>(std::move(resource), access);
 			}
 		}
 
 		//Add into the pool
-		m_pool_resources.emplace_back(PoolResource{ {}, resource_name, type, width, height, format, default_depth, default_stencil, false, m_render_frame_index, access });
+		m_pool_resources.emplace_back(PoolResource{ {}, resource_name, type, width, height, size, format, default_depth, default_stencil, clear, false, m_render_frame_index, access });
 
 		return std::make_pair<>(std::move(resource), access);
 	}
@@ -1151,16 +1176,34 @@ namespace render
 					{
 						if (pool_resource.needs_to_be_allocated != ResourcePoolAllocationType::None)
 						{
-							//Calculate the resolution needed
-							uint16_t width = render_context->m_pass_info.width * pool_resource.width_factor / 256;
-							uint16_t height = render_context->m_pass_info.height * pool_resource.height_factor / 256;
+							uint16_t width;
+							uint16_t height;
+							uint32_t size;
+							if (pool_resource.type == PoolResourceType::DepthBuffer || pool_resource.type == PoolResourceType::RenderTarget || pool_resource.type == PoolResourceType::Texture2D)
+							{
+								if (pool_resource.width == 0 || pool_resource.height == 0)
+								{
+									//Calculate the resolution needed from the pass info
+									width = render_context->m_pass_info.width * pool_resource.width_factor / 256;
+									height = render_context->m_pass_info.height * pool_resource.height_factor / 256;
 
-							//Adjust to the tile size
-							width = (((width - 1) / pool_resource.tile_size_width) + 1) * pool_resource.tile_size_width;
-							height = (((height - 1) / pool_resource.tile_size_height) + 1) * pool_resource.tile_size_height;
+									//Adjust to the tile size
+									width = (((width - 1) / pool_resource.tile_size_width) + 1) * pool_resource.tile_size_width;
+									height = (((height - 1) / pool_resource.tile_size_height) + 1) * pool_resource.tile_size_height;
+								}
+								else
+								{
+									width = static_cast<uint16_t>(pool_resource.width);
+									height = static_cast<uint16_t>(pool_resource.height);
+								}
+							}
+							else if (pool_resource.type == PoolResourceType::Buffer)
+							{
+								size = pool_resource.size;
+							}
 
 							//Pass the control to the resource in the resource map
-							auto allocated_pool_resource = AllocPoolResource(pool_resource.name, pool_resource.type, pool_resource.needs_to_be_allocated == ResourcePoolAllocationType::GetOrAlloc, width, height, pool_resource.format, pool_resource.default_depth, pool_resource.default_stencil);
+							auto allocated_pool_resource = AllocPoolResource(pool_resource.name, pool_resource.type, pool_resource.needs_to_be_allocated == ResourcePoolAllocationType::GetOrAlloc, width, height, size, pool_resource.format, pool_resource.default_depth, pool_resource.default_stencil, pool_resource.clear);
 							auto resource_info = m_resources_map.Find(pool_resource.name)->get();
 							resource_info->resource = std::move(allocated_pool_resource.first);
 							resource_info->access = allocated_pool_resource.second;

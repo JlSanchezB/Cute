@@ -49,6 +49,9 @@ namespace render
 		PoolResourceType type;
 		ResourcePoolAllocationType needs_to_be_allocated; //Needs to be allocated this pass
 		bool will_be_free; //It is free after this pass
+		uint32_t width;
+		uint32_t height;
+		uint32_t size;
 		uint16_t width_factor; //fixed point, 256 is factor 1
 		uint16_t height_factor;
 		uint16_t tile_size_width;
@@ -56,9 +59,10 @@ namespace render
 		display::Format format;
 		float default_depth;
 		uint8_t default_stencil;
+		bool clear;
 
-		ResourcePoolDependency(ResourceName _name, PoolResourceType& _type, ResourcePoolAllocationType _needs_to_be_allocated, bool _will_be_free, float _width_factor, float _height_factor, uint16_t _tile_size_width, uint16_t _tile_size_height, const display::Format& _format, const float _default_depth, const uint8_t _default_stencil) :
-			name(_name), type(_type), needs_to_be_allocated(_needs_to_be_allocated), will_be_free(_will_be_free), tile_size_width(_tile_size_width), tile_size_height(_tile_size_height), format(_format), default_depth(_default_depth), default_stencil(_default_stencil)
+		ResourcePoolDependency(ResourceName _name, PoolResourceType& _type, ResourcePoolAllocationType _needs_to_be_allocated, bool _will_be_free, uint32_t _width, uint32_t _height, uint32_t _size, float _width_factor, float _height_factor, uint16_t _tile_size_width, uint16_t _tile_size_height, const display::Format& _format, const float _default_depth, const uint8_t _default_stencil, const bool _clear) :
+			name(_name), type(_type), needs_to_be_allocated(_needs_to_be_allocated), will_be_free(_will_be_free), width(_width), height(_height), size(_size), tile_size_width(_tile_size_width), tile_size_height(_tile_size_height), format(_format), default_depth(_default_depth), default_stencil(_default_stencil), clear(_clear)
 		{
 			width_factor = static_cast<uint16_t>(_width_factor * 256.f);
 			height_factor = static_cast<uint16_t>(_height_factor * 256.f);
