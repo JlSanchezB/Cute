@@ -331,10 +331,7 @@ void BoxCityGame::OnRender(double total_time, float elapsed_time)
 	auto& point_of_view = render_frame.AllocPointOfView<BoxCityCustomPointOfViewData>("Main_Render"_sh32, 0, point_of_view_data);
 
 	//Add render passes
-	render_frame.AddRenderPass("Main_Render"_sh32, 0, pass_info, "Main_Render"_sh32, 0);
-	render_frame.AddRenderPass("Main_Culling"_sh32, 0, pass_info, "Main_Render"_sh32, 0);
-	render_frame.AddRenderPass("SyncStaticGPUMemory"_sh32, 0, pass_info);
-	render_frame.AddRenderPass("BuildHZ"_sh32, 0, pass_info, "Main_Render"_sh32, 0);
+	render_frame.AddGroupRenderPass("Solids"_sh32, 0, pass_info, "Main_Render"_sh32, 0);
 
 	job::Fence culling_fence;
 	uint64_t render_frame_index = render::GetGameFrameIndex(m_render_system);

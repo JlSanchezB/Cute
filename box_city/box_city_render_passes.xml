@@ -12,7 +12,7 @@
   </Resource>
 </Global>
 <Passes>
-  <Pass name="SyncStaticGPUMemory">
+  <Pass name="SyncStaticGPUMemory" group="Auto">
     <Dependencies>
       <Resource name="StaticGPUMemoryBuffer" pre_condition_state="Init" post_update_state="Ready" access="UnorderedAccess"/>
     </Dependencies>
@@ -20,7 +20,7 @@
       <SyncStaticGPUMemoryPass/>
     </Commands>
   </Pass>
-  <Pass name="Main_Culling">
+  <Pass name="Main_Culling" group="Solids">
     <Dependencies>
       <Resource name="IndirectBoxBuffer" pre_condition_state="Init" post_update_state="Ready" access="UnorderedAccess"/>
       <Resource name="IndirectParametersBuffer" pre_condition_state="Init" post_update_state="Ready" access="UnorderedAccess"/>
@@ -30,7 +30,7 @@
       <CullCityBoxes/>
     </Commands>
   </Pass>
-  <Pass name="Main_Render">
+  <Pass name="Main_Render" group="Solids">
     <Dependencies>
       <Resource name="IndirectBoxBuffer" pre_condition_state="Ready" access="AllShaderResource"/>
       <Resource name="IndirectParametersBuffer" pre_condition_state="Ready" access="IndirectArgument"/>
@@ -48,7 +48,7 @@
       <DrawCityBoxes/>
     </Commands>
   </Pass>
-  <Pass name="BuildHZ">
+  <Pass name="BuildHZ" group="Solids">
     <Dependencies>
       <Texture2D name="HZ" pre_condition_state="Alloc" post_update_state="Free" access="UnorderedAccess" format="R32_FLOAT" width_factor="0.1875" heigth_factor="0.125"/>
       <DepthBuffer name="SceneDepth" pre_condition_state="Ready" post_update_state="Free" format="D32_FLOAT" default_depth="0.f" access="AllShaderResource"/>

@@ -37,6 +37,7 @@ namespace render
 	using ResourceName = StringHash32<"ResourceName"_namespace>;
 	using ResourceState = StringHash32<"ResourceState"_namespace>;
 	using PassName = StringHash32<"PassName"_namespace>;
+	using GroupPassName = StringHash32<"GroupPassName"_namespace>;
 	using PriorityName = StringHash32<"PriorityName"_namespace>;
 	using ModuleName = StringHash32<"ModuleName"_namespace>;
 	using Priority = uint8_t;

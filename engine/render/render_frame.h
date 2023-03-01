@@ -148,6 +148,14 @@ namespace render
 		PointOfViewName associated_point_of_view_name;
 		uint16_t associated_point_of_view_id;
 	};
+	struct GroupRenderPass
+	{
+		GroupPassName group_pass_name;
+		uint16_t id; //Used for split screens or shadows
+		PassInfo pass_info;
+		PointOfViewName associated_point_of_view_name;
+		uint16_t associated_point_of_view_id;
+	};
 
 	struct EmptyData
 	{
@@ -177,6 +185,12 @@ namespace render
 			m_render_passes.push_back({ pass_name, id, pass_info, associated_point_of_view_name, associated_point_of_view_id });
 		}
 
+		//Add render pass group to execute
+		void AddGroupRenderPass(GroupPassName group_pass_name, uint16_t id, const PassInfo& pass_info, PointOfViewName associated_point_of_view_name = PointOfViewName("None"), uint16_t associated_point_of_view_id = 0)
+		{
+			m_group_render_passes.push_back({ group_pass_name, id, pass_info, associated_point_of_view_name, associated_point_of_view_id });
+		}
+
 		//Get begin frame command buffer
 		CommandBuffer& GetBeginFrameCommandBuffer()
 		{
@@ -187,6 +201,8 @@ namespace render
 		std::list<PointOfView> m_point_of_views;
 		//List of all the render passes that the renderer needs to execute
 		std::vector<RenderPass> m_render_passes;
+		//List of all the group render passes that the renderer needs to execute
+		std::vector<GroupRenderPass> m_group_render_passes;
 		//Command buffer with commands that will run during the start of the frame
 		job::ThreadData<CommandBuffer> m_begin_frame_command_buffer;
 
@@ -253,6 +269,7 @@ namespace render
 			data.Reset();
 		});
 		m_render_passes.clear();
+		m_group_render_passes.clear();
 	}
 }
 #endif //RENDER_FRAME_H

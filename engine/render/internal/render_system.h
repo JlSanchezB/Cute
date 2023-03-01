@@ -163,13 +163,17 @@ namespace render
 		};
 
 		using ResourceMap = core::FastMap<ResourceName, std::unique_ptr<ResourceInfo>>;
-		using PassMap =core::FastMap<PassName, std::unique_ptr<Pass>>;
+		using PassMap = core::FastMap<PassName, std::unique_ptr<Pass>>;
+		using GroupPassMap = core::FastMap<GroupPassName, std::vector<PassName>>;
 
 		//Gobal resources
 		ResourceMap m_resources_map;
 
 		//Passes defined in the passes declaration
 		PassMap m_passes_map;
+
+		//Group passes
+		GroupPassMap m_group_passes_map;
 
 		//List of modules
 		core::FastMap<ModuleName, std::unique_ptr<Module>> m_modules;

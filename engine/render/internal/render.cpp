@@ -495,6 +495,7 @@ namespace render
 				if (CheckNodeName(pass_element, "Pass"))
 				{
 					const char* pass_name_string = pass_element->Attribute("name");
+					const char* pass_group_name_string = pass_element->Attribute("group");
 					PassName pass_name(pass_name_string);
 					if (pass_name_string)
 					{
@@ -511,6 +512,21 @@ namespace render
 
 							//Add it to the pass map
 							m_passes_map.Insert(pass_name, std::unique_ptr<Pass>(pass));
+
+							//Check if it is part of a group
+							if (pass_group_name_string)
+							{
+								GroupPassName group_name(pass_group_name_string);
+								auto it = m_group_passes_map.Find(group_name);
+								if (it)
+								{
+									(*it).push_back(pass_name);
+								}
+								else
+								{
+									m_group_passes_map.Insert(group_name, std::vector<PassName>{ pass_name });
+								}
+							}
 
 							core::LogInfo("Created Pass <%s>", pass_name_string);
 						}
@@ -971,6 +987,24 @@ namespace render
 			}
 		}
 
+		//Expand group render passes and auto
+		auto it = m_group_passes_map.Find("Auto"_sh32);
+		if (it)
+		{
+			for (auto& pass_name : *it)
+			{
+				render_frame.m_render_passes.push_back(render::RenderPass{ pass_name, 0, PassInfo(), PointOfViewName(""_sh32), 0});
+			}
+		}
+		for (auto& group_pass : render_frame.m_group_render_passes)
+		{
+			auto it = m_group_passes_map.Find(group_pass.group_pass_name);
+			for (auto& pass_name : *it)
+			{
+				render_frame.m_render_passes.push_back(render::RenderPass{ pass_name, group_pass.id, group_pass.pass_info, group_pass.associated_point_of_view_name, group_pass.associated_point_of_view_id });
+			}
+		}
+
 		//Cached render contexts
 		std::vector<RenderContextInternal*> render_pass_contexts(render_frame.m_render_passes.size());
 		for (size_t i = 0; i < render_frame.m_render_passes.size(); ++i)
@@ -1100,17 +1134,6 @@ namespace render
 							break;
 						}
 					}
-
-					if (render_context->m_point_of_view == nullptr)
-					{
-						//Point of view was not found, as the render pass is removed I expect the graph to fail to be build
-						core::LogWarning("Render pass <%s><%i> can not find associated point of view <%s><%i>, render pass removed",
-							render_pass.pass_name.GetValue(), render_pass.id,
-							render_pass.associated_point_of_view_name, render_pass.associated_point_of_view_id);
-
-						continue;
-					}
-
 				}
 				else
 				{
