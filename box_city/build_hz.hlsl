@@ -17,10 +17,12 @@ static const uint mip_size = 8 * 8 + 4 * 4 + 2 * 2 + 1;
 [numthreads(256, 1, 1)]
 void build_hz(uint3 group : SV_GroupID, uint3 group_thread_id : SV_GroupThreadID)
 {
+	uint thread_index = group_thread_id.x;
+
 	//Clear the groupshaded data
-	if (group_thread_id.x < mip_size)
+	if (thread_index < mip_size)
 	{
-		min_z_value_mip[group_thread_id.x] = asuint(1.f);
+		min_z_value_mip[thread_index] = asuint(1.f);
 	}
 
 	GroupMemoryBarrierWithGroupSync();
@@ -31,31 +33,31 @@ void build_hz(uint3 group : SV_GroupID, uint3 group_thread_id : SV_GroupThreadID
 
 	float min_value = 1.f;
 
-	uint2 quad = uint2(group_thread_id.x % 16, group_thread_id.x / 16);
+	uint2 quad = uint2(thread_index % 16, thread_index / 16);
 	uint2 texture_access;
 	texture_access = group.xy * 64 + quad * 4;
 
-	[[unroll]]
-	for (uint i = 0; i < 4; ++i)
+	[unroll]
+	for (uint texel_index = 0; texel_index < 16; ++texel_index)
 	{
-		[[unroll]]
-		for (uint j = 0; j < 4; ++j)
-		{
-			//Calculate the index
-			uint2 thread_texel;
-			thread_texel.x = texture_access.x + i;
-			thread_texel.y = texture_access.y + j;
+		//Morton codes
+		uint i = (((texel_index >> 2) & 0x0007) & 0xFFFE) | (texel_index & 0x0001);
+		uint j = ((texel_index >> 1) & 0x0003) | (((texel_index >> 3) & 0x0007) & 0xFFFC);
 
-			//Adjust to the current resolution, it is design for the worst case 4096x4096
-			thread_texel.x = thread_texel.x * width / 4096;
-			thread_texel.y = thread_texel.y * height / 4096;
+		//Calculate the index
+		uint2 thread_texel;
+		thread_texel.x = texture_access.x + i;
+		thread_texel.y = texture_access.y + j;
 
-			thread_texel.x = min(thread_texel.x, width - 1);
-			thread_texel.y = min(thread_texel.y, height - 1);
+		//Adjust to the current resolution, it is design for the worst case 4096x4096
+		thread_texel.x = thread_texel.x * width / 4096;
+		thread_texel.y = thread_texel.y * height / 4096;
+
+		thread_texel.x = min(thread_texel.x, width - 1);
+		thread_texel.y = min(thread_texel.y, height - 1);
 		
-			float value = scene_depth[thread_texel.xy];
-			min_value = min(min_value, value);
-		}
+		float value = scene_depth[thread_texel.xy];
+		min_value = min(min_value, value);
 	}
 
 	{
@@ -75,32 +77,32 @@ void build_hz(uint3 group : SV_GroupID, uint3 group_thread_id : SV_GroupThreadID
 	float output_value;
 	bool write_out = false;
 	//From 16x16 -> 8x8 the top mip
-	if (group_thread_id.x < mip1_offset)
+	if (thread_index < mip1_offset)
 	{
-		uint2 coords = uint2(group_thread_id.x % 8, group_thread_id.x / 8);
+		uint2 coords = uint2(thread_index % 8, thread_index / 8);
 		output_coords = group.xy * 8 + coords;
 		output_value = asfloat(min_z_value_mip[coords.x + coords.y * 8]);
 		write_out = true;
 	}
-	else if (group_thread_id.x < mip2_offset)
+	else if (thread_index < mip2_offset)
 	{
 		uint2 offset = uint2(512, 0);
-		uint local_thread_id = group_thread_id.x - mip1_offset;
+		uint local_thread_id = thread_index - mip1_offset;
 		uint2 coords = uint2(local_thread_id % 4, local_thread_id / 4);
 		output_coords = offset + group.xy * 4 + coords;
 		output_value = asfloat(min_z_value_mip[mip1_offset + coords.x + coords.y * 4]);
 		write_out = true;
 	}
-	else if (group_thread_id.x < mip3_offset)
+	else if (thread_index < mip3_offset)
 	{
 		uint2 offset = uint2(512, 256);
-		uint local_thread_id = group_thread_id.x - mip2_offset;
+		uint local_thread_id = thread_index - mip2_offset;
 		uint2 coords = uint2(local_thread_id % 2, local_thread_id / 2);
 		output_coords = offset + group.xy * 2 + coords;
 		output_value = asfloat(min_z_value_mip[mip2_offset + coords.x + coords.y * 2]);
 		write_out = true;
 	}
-	else if (group_thread_id.x < mip_size)
+	else if (thread_index < mip_size)
 	{
 		uint2 offset = uint2(512, 256 + 128);
 		output_coords = offset + group.xy;
@@ -112,42 +114,7 @@ void build_hz(uint3 group : SV_GroupID, uint3 group_thread_id : SV_GroupThreadID
 	{
 		hz_texture[output_coords] = output_value;
 	}
-	//From 16x16 -> 4x4, mip1
-/*	else if (group_thread_id.x < mip2_offset)
-	{
-		uint2 offset(512, 0);
-		uint local_thread_id = group_thread_id.x - mip1_offset;
-		uint2 coords = uint2(local_thread_id % 4, local_thread_id / 4);
-		output_coords = offset uint2(group.xy * 8 + coords);
-		output_value = asfloat(min_z_value_mip[coords.x + coords.y * 8]);
-	}
 
-	hz_texture[group.xy * 8 + group_thread_id.xy] = asfloat(min_z_value_mip0[group_thread_id.x][group_thread_id.y]);
-
-	if (group_thread_id.x < 4 && group_thread_id.y < 4)
-	{
-		uint2 offset(512, 0);
-		offset.x = 512;
-		offset.y = 0;
-		hz_texture[offset + group.xy * 4 + group_thread_id.xy] = asfloat(min_z_value_mip1[group_thread_id.x][group_thread_id.y]);
-	}
-	//from 16x16 to 2x2, mip2
-	if (group_thread_id.x < 2 && group_thread_id.y < 2)
-	{
-		uint2 offset;
-		offset.x = 512;
-		offset.y = 256;
-		hz_texture[offset + group.xy * 2 + group_thread_id.xy] = asfloat(min_z_value_mip2[group_thread_id.x][group_thread_id.y]);
-	}
-	//from 16x16 to 1x1, mip3
-	if (group_thread_id.x < 1 && group_thread_id.y < 1)
-	{
-		uint2 offset;
-		offset.x = 512;
-		offset.y = 256 + 128;
-		hz_texture[offset + group.xy + group_thread_id.xy] = asfloat(min_z_value_mip3);
-	}
-	*/
-	//Just leave one group alive and
+	//Just leave the last group alive to create the last mips
 	//Build the rest of the mips, from width/64 x height/64 to 1x1
 };
