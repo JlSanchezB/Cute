@@ -225,8 +225,8 @@ namespace render
 							bool clear = false;
 							dependencies_xml_element->QueryBoolAttribute("clear", &clear);
 
-							display::Format format;
-							QueryTableAttribute(load_context, dependencies_xml_element, "format", format, AttributeType::NonOptional);
+							display::Format format = display::Format::UNKNOWN;
+							QueryTableAttribute(load_context, dependencies_xml_element, "format", format, AttributeType::Optional);
 
 							float default_depth = 1.f;
 							dependencies_xml_element->QueryFloatAttribute("default_depth", &default_depth);

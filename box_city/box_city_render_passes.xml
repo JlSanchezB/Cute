@@ -1,13 +1,13 @@
 <Root>
 <Global>
-  <Resource type="RootSignature" name="BuildHZRootSignature">
+  <Resource type="RootSignature" name="BuildHiZRootSignature">
     <RootParam index="0" type="DescriptorTable">
-      <Range base_shader_register="0" size="1" type="UnorderedAccessBuffer"/>
+      <Range base_shader_register="0" size="2" type="UnorderedAccessBuffer"/>
       <Range base_shader_register="0" size="1" type="ShaderResource"/>
     </RootParam>
   </Resource>
-  <Resource type="ComputePipelineState" name="BuildHZ">
-    <RootSignature>BuildHZRootSignature</RootSignature>
+  <Resource type="ComputePipelineState" name="BuildHiZ">
+    <RootSignature>BuildHiZRootSignature</RootSignature>
     <ComputeShader entry_point="build_hz" target="cs_6_6">build_hz.hlsl</ComputeShader>
   </Resource>
 </Global>
@@ -48,18 +48,20 @@
       <DrawCityBoxes/>
     </Commands>
   </Pass>
-  <Pass name="BuildHZ" group="Solids">
+  <Pass name="BuildHiZ" group="Solids">
     <Dependencies>
-      <Texture2D name="HZ" pre_condition_state="Alloc" post_update_state="Free" access="UnorderedAccess" format="R32_FLOAT" width="768" height="512"/>
+      <Texture2D name="HiZ" pre_condition_state="Alloc" post_update_state="Free" access="UnorderedAccess" format="R32_FLOAT" width="768" height="512"/>
       <DepthBuffer name="SceneDepth" pre_condition_state="Ready" post_update_state="Free" format="D32_FLOAT" default_depth="0.f" access="AllShaderResource"/>
+      <Buffer name="HiZ_atomic" pre_condition_state="Alloc" post_update_state="Free" access="UnorderedAccess" size ="4"/>
     </Dependencies>
     <Commands>
-      <SetRootSignature pipe="Compute">BuildHZRootSignature</SetRootSignature>
+      <SetRootSignature pipe="Compute">BuildHiZRootSignature</SetRootSignature>
       <SetDescriptorTable pipe="Compute" root_param="0">
-        <Descriptor as="UnorderedAccess">HZ</Descriptor>
+        <Descriptor as="UnorderedAccess">HiZ</Descriptor>
+        <Descriptor as="UnorderedAccess">HiZ_atomic</Descriptor>
         <Descriptor as="ShaderResource">SceneDepth</Descriptor>
       </SetDescriptorTable>
-      <SetComputePipelineState>BuildHZ</SetComputePipelineState>
+      <SetComputePipelineState>BuildHiZ</SetComputePipelineState>
       <DispatchCompute group_count_x="64" group_count_y="64"/>
     </Commands>
   </Pass>
