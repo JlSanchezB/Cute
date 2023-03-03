@@ -36,30 +36,23 @@ void build_hz(uint3 group : SV_GroupID, uint3 group_thread_id : SV_GroupThreadID
 
 		float min_value = 1.f;
 
-		uint2 texture_access;
-		texture_access = (group.xy * 64 + quad * 4);
+		uint2 source_min = group.xy * 64 + quad * 4;
+		uint2 source_max = group.xy * 64 + quad * 4 + uint2(1,1);
 
-		texture_access.x = texture_access.x * width / 4096;
-		texture_access.y = texture_access.y * height / 4096;
+		uint2 dest_min = uint2(float2(source_min) * float2(float(width) / 3840.f, float(height) / 2160.f));
+		uint2 dest_max = uint2(float2(source_max) * float2(float(width) / 3840.f, float(height) / 2160.f));
 
-		uint2 range;
-		range.x = 1 + (width / 1024);
-		range.y = 1 + (height / 1024);
+		uint2 range = dest_max - dest_min + uint2(1, 1);
 
-		for (uint texel_index = 0; texel_index < (range.x * range.y); ++texel_index)
+		float2 step = (dest_max - dest_min) / 4.f;
+
+		[unroll] for (uint i = 0; i < 4; ++i)
+			[unroll] for (uint j = 0; j < 3; ++j)
 		{
-			//Morton codes
-			uint i = (((texel_index >> 2) & 0x0007) & 0xFFFE) | (texel_index & 0x0001);
-			uint j = ((texel_index >> 1) & 0x0003) | (((texel_index >> 3) & 0x0007) & 0xFFFC);
-
 			//Calculate the index
 			uint2 thread_texel;
-			thread_texel.x = texture_access.x + i;
-			thread_texel.y = texture_access.y + j;
-
-			//Adjust to the current resolution, it is design for the worst case 4096x4096
-			thread_texel.x = thread_texel.x;
-			thread_texel.y = thread_texel.y;
+			thread_texel.x = dest_min.x + i * step.x;
+			thread_texel.y = dest_min.y + j * step.y;
 
 			thread_texel.x = min(thread_texel.x, width - 1);
 			thread_texel.y = min(thread_texel.y, height - 1);
