@@ -169,8 +169,6 @@ void build_hz(uint3 group : SV_GroupID, uint3 group_thread_id : SV_GroupThreadID
 			min_z_value_mip[thread_index] = asuint(1.f);
 		}
 
-		GroupMemoryBarrierWithGroupSync();
-
 		//Each thread, 16x16 reads 4x4
 		[unroll]
 		for (uint texel_index = 0; texel_index < 16; ++texel_index)
@@ -199,6 +197,8 @@ void build_hz(uint3 group : SV_GroupID, uint3 group_thread_id : SV_GroupThreadID
 			hz_texture[offset + quad.xy * 2 + uint2(1, 0)] = thread_local_mip0[1][0];
 			hz_texture[offset + quad.xy * 2 + uint2(1, 1)] = thread_local_mip0[1][1];
 		}
+
+		GroupMemoryBarrierWithGroupSync();
 		{
 			//Mip1, 16x16 and build the mip2,3,4,5 in the group shared memory
 			uint2 offset = uint2(512, 256 + 128 + 64 + 32);
