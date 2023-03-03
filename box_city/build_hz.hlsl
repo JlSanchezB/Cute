@@ -124,6 +124,7 @@ void build_hz(uint3 group : SV_GroupID, uint3 group_thread_id : SV_GroupThreadID
 		else [flatten] if (thread_index < mip_size)
 		{
 			uint2 offset = uint2(512, 256 + 128);
+			output_coords = offset + group.xy;
 			output_value = asfloat(min_z_value_mip[mip3_offset]);
 			write_out = true;
 		}
