@@ -39,12 +39,12 @@ void build_hz(uint3 group : SV_GroupID, uint3 group_thread_id : SV_GroupThreadID
 		uint2 source_min = group.xy * 64 + quad * 4;
 		uint2 source_max = group.xy * 64 + quad * 4 + uint2(1,1);
 
-		uint2 dest_min = uint2(float2(source_min) * float2(float(width) / 3840.f, float(height) / 2160.f));
-		uint2 dest_max = uint2(float2(source_max) * float2(float(width) / 3840.f, float(height) / 2160.f));
+		uint2 dest_min = uint2(float2(source_min) * float2(float(width) / 4096.f, float(height) / 4096.f));
+		uint2 dest_max = uint2(float2(source_max) * float2(float(width) / 4096.f, float(height) / 4096.f));
 
 		uint2 range = dest_max - dest_min + uint2(1, 1);
 
-		float2 step = (dest_max - dest_min) / 4.f;
+		float2 step = (dest_max - dest_min) / float2(4.f, 3.f);
 
 		[unroll] for (uint i = 0; i < 4; ++i)
 			[unroll] for (uint j = 0; j < 3; ++j)
