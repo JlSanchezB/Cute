@@ -336,6 +336,7 @@ namespace render
 			{
 				//Needs to be clear
 				init_data = new uint8_t[size];
+				memset(init_data, 0, size);
 			}
 			assert(size % 4 == 0);
 			display::BufferDesc desc = display::BufferDesc::CreateStructuredBuffer(display::Access::Static, size / 4, 4, true, init_data);

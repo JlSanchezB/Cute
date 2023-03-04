@@ -3,7 +3,121 @@
 //Indirect parameters for draw call
 globallycoherent RWTexture2D<float> hz_texture : register(u0);
 Texture2D<float> scene_depth : register(t0);
-globallycoherent RWStructuredBuffer<uint> atomic_buffer : register(u1);
+globallycoherent RWStructuredBuffer<int> atomic_buffer : register(u1);
+
+#define REDUCTION_METHOD
+
+#ifdef REDUCTION_METHOD
+
+groupshared int group_dispatch_index;
+
+uint2 GetMipOffset(uint mip_index)
+{
+	if (mip_index == 0)
+	{
+		return uint2(0, 0);
+	}
+	return uint2(512, 512 - 1024 / exp2(mip_index));
+}
+
+//The first reduction needs a lot of kernel size
+[numthreads(8, 8, 1)]
+void build_hz(uint3 group : SV_GroupID, uint3 group_thread_id : SV_GroupThreadID)
+{
+	uint width, height, num_levels;
+	scene_depth.GetDimensions(0, width, height, num_levels);
+
+	{
+		//Each thread builds one pixel in the 512x512 HiZ mip0
+		float min_value = 1.f;
+
+		uint2 source_min = group.xy * 8 + group_thread_id.xy;
+		uint2 source_max = group.xy * 8 + group_thread_id.xy + uint2(1, 1);
+
+		uint2 dest_min = uint2(float2(source_min) * float2(float(width) / 512.f, float(height) / 512.f));
+		uint2 dest_max = uint2(float2(source_max) * float2(float(width) / 512.f, float(height) / 512.f));
+
+		uint2 range = dest_max - dest_min + uint2(1, 1);
+
+		float2 step = (dest_max - dest_min) / float2(4.f, 3.f);
+
+		[unroll] for (uint i = 0; i < 4; ++i)
+			[unroll] for (uint j = 0; j < 3; ++j)
+		{
+			//Calculate the index
+			uint2 thread_texel;
+			thread_texel.x = dest_min.x + i * step.x;
+			thread_texel.y = dest_min.y + j * step.y;
+
+			thread_texel.x = min(thread_texel.x, width - 1);
+			thread_texel.y = min(thread_texel.y, height - 1);
+
+			float value = scene_depth[thread_texel.xy];
+			min_value = min(min_value, value);
+		}
+
+		//Write output
+		hz_texture[source_min] = min_value;
+	}
+	AllMemoryBarrier();
+
+	//The result is a 512x512
+	//Mip 1 is 256x256 (32x8), 32x32 groups need to work
+	//Mip 2 is 128x128 (16x8), 16x16 groups need to work
+	//Mip 3 is 64x64, 8x8 groups working
+	//Mip 4 is 32x32, 4x4 groups working
+	//Mip 5 is 16x16, 2x2 groups working
+	//Mip 6 is 8x8, 1 groups working, 8x8 threads
+	//Mip 7 is 4x4, 1 group working, 4x4 threads
+	//Mip 8 is 2x2, 1 group working, 2x2 threads
+	//Mip 9 is 1x1, 1 group working, 1x1 threads
+
+	//Now to reduce the rest of the mips
+
+	uint2 group_reduced = group.xy / 2;
+	uint mip_num_groups = 32;
+
+	[unroll]
+	for (uint mip_index = 1; mip_index < 10; ++mip_index)
+	{
+		//Reduce the groups as needed
+		if (group_thread_id.x == 0 && group_thread_id.y == 0)
+		{
+			//Each group will increment the atomic to know how many groups have passed
+			InterlockedAdd(atomic_buffer[group_reduced.x + group_reduced.y * mip_num_groups], 1, group_dispatch_index);
+		}
+		GroupMemoryBarrierWithGroupSync();
+
+		if (group_dispatch_index < 3) return; //Only the last one survive
+
+		//Leave the atomic ready for the next time (mip pass or other dispatch)
+		if (group_thread_id.x == 0 && group_thread_id.y == 0)
+		{
+			atomic_buffer[group_reduced.x + group_reduced.y * mip_num_groups] = 0;
+		}
+
+		uint2 dest_tex_coords = group_reduced * 8 + group_thread_id.xy;
+		
+		//Read the 4 values
+		float value0 = hz_texture[GetMipOffset(mip_index - 1) + dest_tex_coords.xy * 2 + uint2(0, 0)];
+		float value1 = hz_texture[GetMipOffset(mip_index - 1) + dest_tex_coords.xy * 2 + uint2(0, 1)];
+		float value2 = hz_texture[GetMipOffset(mip_index - 1) + dest_tex_coords.xy * 2 + uint2(1, 0)];
+		float value3 = hz_texture[GetMipOffset(mip_index - 1) + dest_tex_coords.xy * 2 + uint2(1, 1)];
+
+		float min_value = min(value0, min(value1, min(value2, value3)));
+
+		//Write result in the correct offset
+		hz_texture[GetMipOffset(mip_index) + dest_tex_coords.xy] = min_value;
+
+		group_reduced = group_reduced / 2;
+		mip_num_groups = mip_num_groups / 2;
+
+		AllMemoryBarrier();
+	}
+}
+
+
+#else
 
 groupshared uint min_z_value_mip[8*8 + 4*4 + 2*2 + 1];
 static const uint mip0_offset = 0;
@@ -146,7 +260,10 @@ void build_hz(uint3 group : SV_GroupID, uint3 group_thread_id : SV_GroupThreadID
 		//Just leave the last group alive to create the last mips
 		//Build the rest of the mips, from width/64 x height/64 to 1x1
 		//In this point, only the last one can be alive
-		atomic_buffer[0] = 0; //Needs to be clean for the next dispatch
+		if (thread_index == 0)
+		{
+			atomic_buffer[0] = 0; //Needs to be clean for the next dispatch
+		}
 
 		float thread_local_mip0[2][2];
 		float thread_local_mip1 = 1.f;
@@ -264,3 +381,5 @@ void build_hz(uint3 group : SV_GroupID, uint3 group_thread_id : SV_GroupThreadID
 		}
 	}
 };
+
+#endif
