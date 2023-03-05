@@ -3,13 +3,13 @@
 //Indirect parameters for draw call
 globallycoherent RWTexture2D<float> hz_texture : register(u0);
 Texture2D<float> scene_depth : register(t0);
-globallycoherent RWStructuredBuffer<int> atomic_buffer : register(u1);
+globallycoherent RWStructuredBuffer<uint> atomic_buffer : register(u1);
 
 #define REDUCTION_METHOD
 
 #ifdef REDUCTION_METHOD
 
-groupshared int group_dispatch_index;
+groupshared uint group_dispatch_index;
 
 uint2 GetMipOffset(uint mip_index)
 {
@@ -59,7 +59,7 @@ void build_hz(uint3 group : SV_GroupID, uint3 group_thread_id : SV_GroupThreadID
 		//Write output
 		hz_texture[source_min] = min_value;
 	}
-	AllMemoryBarrier();
+	DeviceMemoryBarrier();
 
 	//The result is a 512x512
 	//Mip 1 is 256x256 (32x8), 32x32 groups need to work
@@ -80,24 +80,19 @@ void build_hz(uint3 group : SV_GroupID, uint3 group_thread_id : SV_GroupThreadID
 	[unroll]
 	for (uint mip_index = 1; mip_index < 10; ++mip_index)
 	{
+		const uint atomic_step = 0xFFFFFFFF / 4 + 1; //Adding this step, each 4 will go to zero
 		//Reduce the groups as needed
-		if (group_thread_id.x == 0 && group_thread_id.y == 0)
+		if (group_thread_id.x == 0 && group_thread_id.y == 0 && mip_num_groups >= 2)
 		{
 			//Each group will increment the atomic to know how many groups have passed
-			InterlockedAdd(atomic_buffer[group_reduced.x + group_reduced.y * mip_num_groups], 1, group_dispatch_index);
+			InterlockedAdd(atomic_buffer[group_reduced.x + group_reduced.y * mip_num_groups], atomic_step, group_dispatch_index);
 		}
 		GroupMemoryBarrierWithGroupSync();
 
-		if (group_dispatch_index < 3) return; //Only the last one survive
-
-		//Leave the atomic ready for the next time (mip pass or other dispatch)
-		if (group_thread_id.x == 0 && group_thread_id.y == 0)
-		{
-			atomic_buffer[group_reduced.x + group_reduced.y * mip_num_groups] = 0;
-		}
+		if (group_dispatch_index != atomic_step * 3) return; //Only the last one survive, that when the prev value was atomic_step * 3
 
 		uint2 dest_tex_coords = group_reduced * 8 + group_thread_id.xy;
-		
+
 		//Read the 4 values
 		float value0 = hz_texture[GetMipOffset(mip_index - 1) + dest_tex_coords.xy * 2 + uint2(0, 0)];
 		float value1 = hz_texture[GetMipOffset(mip_index - 1) + dest_tex_coords.xy * 2 + uint2(0, 1)];
@@ -112,14 +107,14 @@ void build_hz(uint3 group : SV_GroupID, uint3 group_thread_id : SV_GroupThreadID
 		group_reduced = group_reduced / 2;
 		mip_num_groups = mip_num_groups / 2;
 
-		AllMemoryBarrier();
+		DeviceMemoryBarrier();
 	}
 }
 
 
 #else
 
-groupshared uint min_z_value_mip[8*8 + 4*4 + 2*2 + 1];
+groupshared uint min_z_value_mip[8 * 8 + 4 * 4 + 2 * 2 + 1];
 static const uint mip0_offset = 0;
 static const uint mip1_offset = 8 * 8;
 static const uint mip2_offset = 8 * 8 + 4 * 4;
@@ -151,7 +146,7 @@ void build_hz(uint3 group : SV_GroupID, uint3 group_thread_id : SV_GroupThreadID
 		float min_value = 1.f;
 
 		uint2 source_min = group.xy * 64 + quad * 4;
-		uint2 source_max = group.xy * 64 + quad * 4 + uint2(1,1);
+		uint2 source_max = group.xy * 64 + quad * 4 + uint2(1, 1);
 
 		uint2 dest_min = uint2(float2(source_min) * float2(float(width) / 4096.f, float(height) / 4096.f));
 		uint2 dest_max = uint2(float2(source_max) * float2(float(width) / 4096.f, float(height) / 4096.f));
@@ -206,7 +201,7 @@ void build_hz(uint3 group : SV_GroupID, uint3 group_thread_id : SV_GroupThreadID
 			output_value = asfloat(min_z_value_mip[coords.x + coords.y * 8]);
 			write_out = true;
 		}
-		else [flatten] if (thread_index < mip2_offset)
+		else[flatten] if (thread_index < mip2_offset)
 		{
 			uint2 offset = uint2(512, 0);
 			uint local_thread_id = thread_index - mip1_offset;
@@ -217,7 +212,7 @@ void build_hz(uint3 group : SV_GroupID, uint3 group_thread_id : SV_GroupThreadID
 			output_value = asfloat(min_z_value_mip[mip1_offset + coords.x + coords.y * 4]);
 			write_out = true;
 		}
-		else [flatten] if (thread_index < mip3_offset)
+		else[flatten] if (thread_index < mip3_offset)
 		{
 			uint2 offset = uint2(512, 256);
 			uint local_thread_id = thread_index - mip2_offset;
@@ -228,7 +223,7 @@ void build_hz(uint3 group : SV_GroupID, uint3 group_thread_id : SV_GroupThreadID
 			output_value = asfloat(min_z_value_mip[mip2_offset + coords.x + coords.y * 2]);
 			write_out = true;
 		}
-		else [flatten] if (thread_index < mip_size)
+		else[flatten] if (thread_index < mip_size)
 		{
 			uint2 offset = uint2(512, 256 + 128);
 			output_coords = offset + group.xy;
@@ -297,7 +292,7 @@ void build_hz(uint3 group : SV_GroupID, uint3 group_thread_id : SV_GroupThreadID
 			thread_local_mip0[i / 2][j / 2] = min(thread_local_mip0[i / 2][j / 2], value);
 			thread_local_mip1 = min(thread_local_mip1, value);
 		}
-		
+
 		//Each thread can write the mip0 and mip1
 		//Mip0 is 32x32
 		{
@@ -324,7 +319,7 @@ void build_hz(uint3 group : SV_GroupID, uint3 group_thread_id : SV_GroupThreadID
 			uint value_before4;
 			InterlockedMin(min_z_value_mip[mip3_offset], asuint(thread_local_mip1), value_before4);
 		}
-		
+
 		GroupMemoryBarrierWithGroupSync();
 
 		//We distribute the job between the threads to write out the rest of the mips
@@ -343,7 +338,7 @@ void build_hz(uint3 group : SV_GroupID, uint3 group_thread_id : SV_GroupThreadID
 			write_out = true;
 		}
 		//4x4
-		else [flatten] if (thread_index < mip2_offset)
+		else[flatten] if (thread_index < mip2_offset)
 		{
 			uint2 offset = uint2(512, 256 + 128 + 64 + 32 + 16 + 8);
 			uint local_thread_id = thread_index - mip1_offset;
@@ -367,7 +362,7 @@ void build_hz(uint3 group : SV_GroupID, uint3 group_thread_id : SV_GroupThreadID
 			write_out = true;
 		}
 		//1x1
-		else [flatten] if (thread_index < mip_size)
+		else[flatten] if (thread_index < mip_size)
 		{
 			uint2 offset = uint2(512, 256 + 128 + 64 + 32 + 16 + 8 + 4 + 2);
 			output_coords = offset;
