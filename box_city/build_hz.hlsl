@@ -32,29 +32,43 @@ void build_hz(uint3 group : SV_GroupID, uint3 group_thread_id : SV_GroupThreadID
 		float min_value = 1.f;
 
 		uint2 source_min = group.xy * 8 + group_thread_id.xy;
-		uint2 source_max = group.xy * 8 + group_thread_id.xy + uint2(1, 1);
+		uint2 source_max = min(group.xy * 8 + group_thread_id.xy + uint2(1, 1), 511);
 
 		uint2 dest_min = uint2(float2(source_min) * float2(float(width) / 512.f, float(height) / 512.f));
 		uint2 dest_max = uint2(float2(source_max) * float2(float(width) / 512.f, float(height) / 512.f));
 
-		uint2 range = dest_max - dest_min + uint2(1, 1);
+		uint2 range = uint2(dest_max - dest_min) + uint2(1, 1);
 
-		float2 step = (dest_max - dest_min) / float2(4.f, 3.f);
-
-		[unroll] for (uint i = 0; i < 4; ++i)
-			[unroll] for (uint j = 0; j < 3; ++j)
-		{
-			//Calculate the index
-			uint2 thread_texel;
-			thread_texel.x = dest_min.x + i * step.x;
-			thread_texel.y = dest_min.y + j * step.y;
-
-			thread_texel.x = min(thread_texel.x, width - 1);
-			thread_texel.y = min(thread_texel.y, height - 1);
-
-			float value = scene_depth[thread_texel.xy];
-			min_value = min(min_value, value);
+#define KERNEL(size_x, size_y) \
+		[branch] if (range.x <= size_x && range.y <= size_y)\
+		{\
+			float2 step = (dest_max - dest_min) / float2(size_x, size_y);\
+			[unroll] for (uint i = 0; i < size_x; ++i)\
+				[unroll] for (uint j = 0; j < size_y; ++j)\
+			{\
+				float value = scene_depth[dest_min + uint2(i,j) * step];\
+				min_value = min(min_value, value);\
+			}\
 		}
+
+		//Have special unroll look for each kernel size
+			KERNEL(4,3)
+		else
+			KERNEL(4,4)
+		else
+			KERNEL(5,4)
+		else
+			KERNEL(5,5)
+		else
+			KERNEL(6,5)
+		else
+			KERNEL(6, 6)
+		else
+			KERNEL(7, 7)
+		else
+			KERNEL(8, 7)
+		else
+			KERNEL(8, 8)
 
 		//Write output
 		hz_texture[source_min] = min_value;
