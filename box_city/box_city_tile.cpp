@@ -479,7 +479,7 @@ namespace BoxCityTileSystem
 			render::AllocHandle box_list_handle = CreateBoxList(manager, building_data.m_boxes);
 			//GPU memory
 			GPUBoxInstance gpu_box_instance;
-			gpu_box_instance.Fill(building_data.oob_box, static_cast<uint32_t>(manager->GetGPUMemoryRenderModule()->GetStaticGPUMemoryOffset(box_list_handle)));
+			gpu_box_instance.Fill(building_data.oob_box.position, building_data.oob_box.extents, glm::toQuat(building_data.oob_box.rotation), building_data.oob_box.position, glm::toQuat(building_data.oob_box.rotation), static_cast<uint32_t>(manager->GetGPUMemoryRenderModule()->GetStaticGPUMemoryOffset(box_list_handle)));
 
 			//Update the GPU memory
 			manager->GetGPUMemoryRenderModule()->UpdateStaticGPUMemory(manager->GetDevice(), instances_gpu_allocation, &gpu_box_instance, sizeof(GPUBoxInstance), render::GetGameFrameIndex(manager->GetRenderSystem()), gpu_offset * sizeof(GPUBoxInstance));
@@ -500,7 +500,8 @@ namespace BoxCityTileSystem
 				.Init<AnimationBox>(building_data.animation)
 				.Init<BoxGPUHandle>(gpu_offset, static_cast<uint32_t>(lod_group))
 				.Init<BoxListHandle>(std::move(box_list_handle))
-				.Init<InterpolatedPosition>(interpolated_position));
+				.Init<InterpolatedPosition>(interpolated_position)
+				.Init<LastPosition>(interpolated_position.position.Last()));
 
 			gpu_offset++;
 			COUNTER_INC(c_BuildingInstances_Count);
@@ -513,7 +514,7 @@ namespace BoxCityTileSystem
 
 			//GPU memory
 			GPUBoxInstance gpu_box_instance;
-			gpu_box_instance.Fill(building_data.oob_box, static_cast<uint32_t>(manager->GetGPUMemoryRenderModule()->GetStaticGPUMemoryOffset(box_list_handle)));
+			gpu_box_instance.Fill(building_data.oob_box.position, building_data.oob_box.extents, glm::toQuat(building_data.oob_box.rotation), building_data.oob_box.position, glm::toQuat(building_data.oob_box.rotation), static_cast<uint32_t>(manager->GetGPUMemoryRenderModule()->GetStaticGPUMemoryOffset(box_list_handle)));
 
 			//Update the GPU memory
 			manager->GetGPUMemoryRenderModule()->UpdateStaticGPUMemory(manager->GetDevice(), instances_gpu_allocation, &gpu_box_instance, sizeof(GPUBoxInstance), render::GetGameFrameIndex(manager->GetRenderSystem()), gpu_offset * sizeof(GPUBoxInstance));

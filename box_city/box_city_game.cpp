@@ -338,9 +338,9 @@ void BoxCityGame::OnRender(double total_time, float elapsed_time)
 
 	//Add task
 	//Interpolate animation
-	ecs::AddJobs<GameDatabase, const OBBBox, const InterpolatedPosition, const BoxGPUHandle, const BoxListHandle>(m_job_system, culling_fence, m_render_job_allocator, 256,
+	ecs::AddJobs<GameDatabase, const OBBBox, const InterpolatedPosition, const BoxGPUHandle, const BoxListHandle, LastPosition>(m_job_system, culling_fence, m_render_job_allocator, 256,
 		[camera = camera, render_system = m_render_system, device = m_device, render_gpu_memory_module = m_GPU_memory_render_module, tile_manager = &m_tile_manager, render_frame_index]
-	(const auto& instance_iterator, const OBBBox obb_box,const InterpolatedPosition interpolated_position, const BoxGPUHandle& box_gpu_handle, const BoxListHandle& box_list_handle)
+	(const auto& instance_iterator, const OBBBox obb_box,const InterpolatedPosition interpolated_position, const BoxGPUHandle& box_gpu_handle, const BoxListHandle& box_list_handle, LastPosition& last_position)
 		{
 			//Calculate if it is in the camera and has still a gpu memory handle
 			if (box_gpu_handle.IsValid())
@@ -348,12 +348,14 @@ void BoxCityGame::OnRender(double total_time, float elapsed_time)
 				//Get GPU alloc handle
 				render::AllocHandle& gpu_handle = tile_manager->GetGPUHandle(instance_iterator.m_zone_index, box_gpu_handle.lod_group);
 
-				//We need to interpolate the position of the oobb for rendering
-				OBBBox render_obb = obb_box;
-				render_obb.position = instance_iterator.Get<InterpolatedPosition>().position.GetInterpolated();
+				//We need to interpolate the position for rendering
+				glm::vec3 position = instance_iterator.Get<InterpolatedPosition>().position.GetInterpolated();
 
 				GPUBoxInstance gpu_box_instance;
-				gpu_box_instance.FillForUpdatePosition(render_obb, static_cast<uint32_t>(render_gpu_memory_module->GetStaticGPUMemoryOffset(box_list_handle.box_list_handle)));
+				gpu_box_instance.FillForUpdatePosition(position, last_position.last_position, static_cast<uint32_t>(render_gpu_memory_module->GetStaticGPUMemoryOffset(box_list_handle.box_list_handle)));
+
+				//Update for the next time
+				last_position.last_position = position;
 
 				//Only the first 16 bytes (position and the offset)
 				render_gpu_memory_module->UpdateStaticGPUMemory(device, gpu_handle, &gpu_box_instance, sizeof(glm::vec4), render_frame_index, box_gpu_handle.offset_gpu_allocator * sizeof(GPUBoxInstance));
@@ -363,15 +365,21 @@ void BoxCityGame::OnRender(double total_time, float elapsed_time)
 		}, m_tile_manager.GetCameraBitSet(*camera), &g_profile_marker_Culling);
 
 	//Interpolate cars
-	ecs::AddJobs<GameDatabase, const OBBBox, const CarGPUIndex, const Car, const CarBoxListOffset>(m_job_system, culling_fence, m_render_job_allocator, 256,
+	ecs::AddJobs<GameDatabase, const OBBBox, const CarGPUIndex, const Car, const CarBoxListOffset, LastPositionAndRotation>(m_job_system, culling_fence, m_render_job_allocator, 256,
 		[camera = camera, render_system = m_render_system, device = m_device, render_gpu_memory_module = m_GPU_memory_render_module, traffic_manager = &m_traffic_system, render_frame_index]
-	(const auto& instance_iterator, const OBBBox& obb_box, const CarGPUIndex& car_gpu_index, const Car& car, const CarBoxListOffset& car_box_list_offset)
+	(const auto& instance_iterator, const OBBBox& obb_box, const CarGPUIndex& car_gpu_index, const Car& car, const CarBoxListOffset& car_box_list_offset, LastPositionAndRotation& last_position_and_rotation)
 		{
 			if (car_gpu_index.IsValid())
 			{
+				glm::vec3 position = car.position.GetInterpolated();
+				glm::quat rotation = car.rotation.GetInterpolated();
 				//Update GPU
 				GPUBoxInstance gpu_box_instance;
-				gpu_box_instance.Fill(car.position.GetInterpolated(), obb_box.extents, car.rotation.GetInterpolated(), car_box_list_offset.car_box_list_offset);
+				gpu_box_instance.Fill(position, obb_box.extents, rotation, last_position_and_rotation.last_position, last_position_and_rotation.last_rotation, car_box_list_offset.car_box_list_offset);
+
+				//Update last position and rotation
+				last_position_and_rotation.last_position = position;
+				last_position_and_rotation.last_rotation = rotation;
 
 				//Only the first 3 float4
 				render_gpu_memory_module->UpdateStaticGPUMemory(device, traffic_manager->GetGPUHandle(), &gpu_box_instance, sizeof(GPUBoxInstance), render_frame_index, car_gpu_index.gpu_slot * sizeof(GPUBoxInstance));

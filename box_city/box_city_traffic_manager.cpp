@@ -168,7 +168,7 @@ namespace BoxCityTrafficSystem
 		car_box_list_offset.car_box_list_offset = static_cast<uint32_t>(m_GPU_memory_render_module->GetStaticGPUMemoryOffset(m_gpu_car_box_list[car_type]));
 		//Update GPU, all the gpu instance
 		GPUBoxInstance gpu_box_instance;
-		gpu_box_instance.Fill(obb_component, car_box_list_offset.car_box_list_offset);
+		gpu_box_instance.Fill(obb_component.position, obb_component.extents, glm::toQuat(obb_component.rotation), obb_component.position, glm::toQuat(obb_component.rotation), car_box_list_offset.car_box_list_offset);
 
 		//Update the GPU memory
 		m_GPU_memory_render_module->UpdateStaticGPUMemory(m_device, m_gpu_memory, &gpu_box_instance, sizeof(GPUBoxInstance), render::GetGameFrameIndex(m_render_system), car_gpu_index.gpu_slot * sizeof(GPUBoxInstance));
@@ -286,7 +286,8 @@ namespace BoxCityTrafficSystem
 								.Init<CarGPUIndex>(car_gpu_index)
 								.Init<CarControl>(car_control)
 								.Init<FlagBox>(flag_box)
-								.Init<CarBoxListOffset>(car_box_list_offset);
+								.Init<CarBoxListOffset>(car_box_list_offset)
+								.Init<LastPositionAndRotation>(LastPositionAndRotation{ car.position.Last(), car.rotation.Last()});
 
 							if (tile.m_zone_index == 0 && i == 0)
 							{

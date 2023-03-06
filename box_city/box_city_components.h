@@ -27,6 +27,17 @@ struct InterpolatedPosition
 	platform::Interpolated<glm::vec3> position;
 };
 
+struct LastPosition
+{
+	glm::vec3 last_position;
+};
+
+struct LastPositionAndRotation
+{
+	glm::vec3 last_position;
+	glm::quat last_rotation;
+};
+
 struct AnimationBox
 {
 	glm::vec3 original_position;
@@ -174,10 +185,10 @@ struct CarBuildingsCache
 
 //ECS definition
 using BoxType = ecs::EntityType<BoxGPUHandle, OBBBox, RangeAABB, FlagBox, BoxListHandle>;
-using AnimatedBoxType = ecs::EntityType<InterpolatedPosition, BoxGPUHandle, RangeAABB, OBBBox, AnimationBox, FlagBox, BoxListHandle>;
-using CarType = ecs::EntityType<OBBBox, Car, CarMovement, CarSettings, CarTarget, CarControl, CarGPUIndex, CarBuildingsCache, FlagBox, CarBoxListOffset>;
+using AnimatedBoxType = ecs::EntityType<InterpolatedPosition, BoxGPUHandle, RangeAABB, OBBBox, AnimationBox, FlagBox, BoxListHandle, LastPosition>;
+using CarType = ecs::EntityType<OBBBox, Car, CarMovement, CarSettings, CarTarget, CarControl, CarGPUIndex, CarBuildingsCache, FlagBox, CarBoxListOffset, LastPositionAndRotation>;
 
-using GameComponents = ecs::ComponentList<InterpolatedPosition, BoxGPUHandle, OBBBox, RangeAABB, AnimationBox, BoxListHandle, FlagBox, Car, CarMovement, CarSettings, CarTarget, CarGPUIndex, CarControl, CarBuildingsCache, CarBoxListOffset>;
+using GameComponents = ecs::ComponentList<InterpolatedPosition, BoxGPUHandle, OBBBox, RangeAABB, AnimationBox, BoxListHandle, FlagBox, Car, CarMovement, CarSettings, CarTarget, CarGPUIndex, CarControl, CarBuildingsCache, CarBoxListOffset, LastPosition, LastPositionAndRotation>;
 using GameEntityTypes = ecs::EntityTypeList<BoxType, AnimatedBoxType, CarType>;
 
 using GameDatabase = ecs::DatabaseDeclaration<GameComponents, GameEntityTypes>;
@@ -199,6 +210,8 @@ ECSDEBUGNAME(CarGPUIndex);
 ECSDEBUGNAME(CarControl);;
 ECSDEBUGNAME(CarBuildingsCache);
 ECSDEBUGNAME(CarBoxListOffset);
+ECSDEBUGNAME(LastPosition);
+ECSDEBUGNAME(LastPositionAndRotation);
 
 ECSDEBUGNAME(BoxType);
 ECSDEBUGNAME(AnimatedBoxType);
@@ -215,27 +228,27 @@ struct GPUBoxInstance
 	uint32_t gap; //1
 
 	glm::quat rotation; //4
+	glm::vec3 last_position; //3
+	uint32_t gap2;
+	glm::quat last_rotation;
 
-	void FillForUpdatePosition(const helpers::OBB& obb_box, uint32_t _box_list_offset)
+	void FillForUpdatePosition(const glm::vec3& _position, const glm::vec3& _last_position,uint32_t _box_list_offset)
 	{
-		position = obb_box.position;
+		//Update position
+		position = _position;
 		box_list_offset = _box_list_offset;
+
+		last_position = _last_position;
 	}
 
-	void Fill(const glm::vec3& _position, const glm::vec3& _extents, const glm::quat& _rotation, uint32_t _box_list_offset)
+	void Fill(const glm::vec3& _position, const glm::vec3& _extents, const glm::quat& _rotation, const glm::vec3& _last_position, const glm::quat& _last_rotation, uint32_t _box_list_offset)
 	{
 		position = _position;
 		box_list_offset = _box_list_offset;
 		extents = _extents;
 		rotation = _rotation;
-	}
-
-	void Fill(const helpers::OBB& obb_box, uint32_t _box_list_offset)
-	{
-		position = obb_box.position;
-		box_list_offset = _box_list_offset;
-		extents = obb_box.extents;
-		rotation = glm::toQuat(obb_box.rotation);
+		last_position = _last_position;
+		last_rotation = _last_rotation;
 	}
 };
 
