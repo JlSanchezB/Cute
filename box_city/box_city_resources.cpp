@@ -151,7 +151,7 @@ void BoxCityResources::Load(display::Device* device, render::System* render_syst
 		desc.root_parameters[1].table.range[1].size = 3;
 		desc.root_parameters[1].table.range[1].type = display::DescriptorTableParameterType::ShaderResource;
 		desc.root_parameters[1].table.range[2].base_shader_register = 0;
-		desc.root_parameters[1].table.range[2].size = 2;
+		desc.root_parameters[1].table.range[2].size = 4;
 		desc.root_parameters[1].table.range[2].type = display::DescriptorTableParameterType::UnorderedAccessBuffer;
 		desc.num_static_samplers = 0;
 
@@ -249,7 +249,7 @@ void BoxCityResources::Load(display::Device* device, render::System* render_syst
 	{
 		display::DescriptorTableDesc description_table_desc;
 		description_table_desc.access = display::Access::Dynamic;
-		description_table_desc.num_descriptors = 6;
+		description_table_desc.num_descriptors = 8;
 		//Create the descriptor table
 		m_box_culling_description_table_handle = display::CreateDescriptorTable(device, description_table_desc);
 	}

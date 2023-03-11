@@ -54,7 +54,7 @@ PSInput vs_box_main(float3 position : POSITION, float3 normal : NORMAL, uint ins
     uint box_index = indirect_box & 0xFF;
     uint box_list_offset_byte = asuint(instance_data[0].w);
     box_list_offset_byte += 16; //Skip the box_list count
-    box_list_offset_byte += box_index * 16 * 3; //Each box is a float4 * 5
+    box_list_offset_byte += box_index * 16 * 3; //Each box is a float4 * 3
 
     //Read Box data
     float4 box_data[3];

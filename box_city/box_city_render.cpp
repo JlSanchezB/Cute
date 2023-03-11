@@ -22,15 +22,17 @@ void CullCityBoxesPass::Render(render::RenderContext& render_context) const
 	render_context.GetContext()->SetConstants(display::Pipe::Compute, 0, constants, 2);
 
 	//Update the descriptor table
-	display::DescriptorTableDesc::Descritor descriptors[6];
+	display::DescriptorTableDesc::Descritor descriptors[8];
 	descriptors[0] = m_display_resources->m_view_constant_buffer;
 	descriptors[1] = gpu_memory->GetStaticGPUMemoryResource();
 	descriptors[2] = gpu_memory->GetDynamicGPUMemoryResource();
 	descriptors[3] = std::get<display::WeakTexture2DHandle>(render::GetResource(render_context.GetRenderSystem(), "HiZ"_sh32)->GetDisplayHandle());
 	descriptors[4] = display::AsUAVBuffer(m_display_resources->m_indirect_parameters_buffer);
 	descriptors[5] = display::AsUAVBuffer(m_display_resources->m_indirect_box_buffer);
+	descriptors[6] = display::AsUAVBuffer(m_display_resources->m_second_pass_indirect_parameters_buffer);
+	descriptors[7] = display::AsUAVBuffer(m_display_resources->m_second_pass_indirect_box_buffer);
 
-	display::UpdateDescriptorTable(render_context.GetDevice(), m_display_resources->m_box_culling_description_table_handle, descriptors, 6);
+	display::UpdateDescriptorTable(render_context.GetDevice(), m_display_resources->m_box_culling_description_table_handle, descriptors, 8);
 
 	render_context.GetContext()->SetDescriptorTable(display::Pipe::Compute, 1, m_display_resources->m_box_culling_description_table_handle);
 

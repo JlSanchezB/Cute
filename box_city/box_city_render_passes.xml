@@ -24,6 +24,8 @@
     <Dependencies>
       <Resource name="IndirectBoxBuffer" pre_condition_state="Init" post_update_state="Ready" access="UnorderedAccess"/>
       <Resource name="IndirectParametersBuffer" pre_condition_state="Init" post_update_state="Ready" access="UnorderedAccess"/>
+      <Resource name="SecondPassIndirectBoxBuffer" pre_condition_state="Init" post_update_state="Ready" access="UnorderedAccess"/>
+      <Resource name="SecondPassIndirectParametersBuffer" pre_condition_state="Init" post_update_state="Ready" access="UnorderedAccess"/>
       <Resource name="StaticGPUMemoryBuffer" pre_condition_state="Ready" access="AllShaderResource"/>
       <Texture2D name="HiZ" pre_condition_state="Alloc" post_update_state="ReadyToUpdate" access="AllShaderResource" format="R32_FLOAT" width="768" height="512" not_alias="true"/>
     </Dependencies>

@@ -24,7 +24,22 @@ RWStructuredBuffer<uint> indirect_culled_boxes_parameters : register(u0);
 //Buffer with the offsets of all the culled boxes
 RWStructuredBuffer<uint> indirect_culled_boxes : register(u1);
 
-float3 quat_multiplication(float4 quat, float3 vector)
+//Indirect parameters for second pass culling, it is the group count
+RWStructuredBuffer<uint> second_pass_indirect_culled_boxes_parameters : register(u2);
+
+//Buffer with the offsets of all the culled boxes, the first element is the number of boxes in the second pass
+RWStructuredBuffer<uint> second_pass_indirect_culled_boxes : register(u3);
+
+uint2 GetMipOffset(uint mip_index)
+{
+    if (mip_index == 0)
+    {
+        return uint2(0, 0);
+    }
+    return uint2(512, 512 - 1024 / exp2(mip_index));
+}
+
+float3 QuatMultiplication(float4 quat, float3 vector)
 {
     float3 qv = float3(quat.x, quat.y, quat.z);
     float s = -quat.w;
@@ -41,6 +56,13 @@ void clear_indirect_arguments()
     indirect_culled_boxes_parameters[2] = 0;
     indirect_culled_boxes_parameters[3] = 0;
     indirect_culled_boxes_parameters[4] = 0;
+
+    second_pass_indirect_culled_boxes_parameters[0] = 0;
+    second_pass_indirect_culled_boxes_parameters[1] = 0;
+    second_pass_indirect_culled_boxes_parameters[2] = 0;
+
+    //Reset the counter
+    second_pass_indirect_culled_boxes[0] = 0;
 }
 
 //Naive implementation for culling
@@ -72,27 +94,32 @@ void box_culling(uint3 group : SV_GroupID, uint3 group_thread_id : SV_GroupThrea
             uint instance_offset = static_gpu_memory.Load(instance_list_offset + instance_index * 4);
 
             //Read Box instance data
-            float4 instance_data[3];
+            float4 instance_data[5];
 
             instance_data[0] = asfloat(static_gpu_memory.Load4(instance_offset + 0));
             instance_data[1] = asfloat(static_gpu_memory.Load4(instance_offset + 16));
             instance_data[2] = asfloat(static_gpu_memory.Load4(instance_offset + 32));
+            instance_data[3] = asfloat(static_gpu_memory.Load4(instance_offset + 48));
+            instance_data[4] = asfloat(static_gpu_memory.Load4(instance_offset + 64));
 
             float4 rotate_quat = instance_data[2];
             float3 extent = float3(instance_data[1].x, instance_data[1].y, instance_data[1].z);
             float3 translation = float3(instance_data[0].x, instance_data[0].y, instance_data[0].z);
+            float3 last_frame_translation = float3(instance_data[3].x, instance_data[3].y, instance_data[3].z);
+            float4 last_frame_rotate_quat = instance_data[4];
+            uint box_list_offset_byte = asuint(instance_data[0].w);
 
             //Frustum collision
             {
                 float3 box_points[8];
-                box_points[0] = quat_multiplication(rotate_quat, float3(-1.f, -1.f, -1.f) * extent) + translation;
-                box_points[1] = quat_multiplication(rotate_quat, float3(-1.f, -1.f, 1.f) * extent) + translation;
-                box_points[2] = quat_multiplication(rotate_quat, float3(-1.f, 1.f, -1.f) * extent) + translation;
-                box_points[3] = quat_multiplication(rotate_quat, float3(-1.f, 1.f, 1.f) * extent) + translation;
-                box_points[4] = quat_multiplication(rotate_quat, float3(1.f, -1.f, -1.f) * extent) + translation;
-                box_points[5] = quat_multiplication(rotate_quat, float3(1.f, -1.f, 1.f) * extent) + translation;
-                box_points[6] = quat_multiplication(rotate_quat, float3(1.f, 1.f, -1.f) * extent) + translation;
-                box_points[7] = quat_multiplication(rotate_quat, float3(1.f, 1.f, 1.f) * extent) + translation;
+                box_points[0] = QuatMultiplication(rotate_quat, float3(-1.f, -1.f, -1.f) * extent) + translation;
+                box_points[1] = QuatMultiplication(rotate_quat, float3(-1.f, -1.f, 1.f) * extent) + translation;
+                box_points[2] = QuatMultiplication(rotate_quat, float3(-1.f, 1.f, -1.f) * extent) + translation;
+                box_points[3] = QuatMultiplication(rotate_quat, float3(-1.f, 1.f, 1.f) * extent) + translation;
+                box_points[4] = QuatMultiplication(rotate_quat, float3(1.f, -1.f, -1.f) * extent) + translation;
+                box_points[5] = QuatMultiplication(rotate_quat, float3(1.f, -1.f, 1.f) * extent) + translation;
+                box_points[6] = QuatMultiplication(rotate_quat, float3(1.f, 1.f, -1.f) * extent) + translation;
+                box_points[7] = QuatMultiplication(rotate_quat, float3(1.f, 1.f, 1.f) * extent) + translation;
 
                 // check box outside/inside of frustum
                 for (int ii = 0; ii < 6; ii++)
@@ -127,6 +154,9 @@ void box_culling(uint3 group : SV_GroupID, uint3 group_thread_id : SV_GroupThrea
                 {outside = 0; for (int k = 0; k < 8; k++) outside += ((frustum_points[k].z > box_max.z) ? 1 : 0); if (outside == 8) continue;};
                 {outside = 0; for (int k = 0; k < 8; k++) outside += ((frustum_points[k].z < box_min.z) ? 1 : 0); if (outside == 8) continue;};
             }
+
+            //TODO, implement small instance culling
+
             
             //Read the GPUBoxList number of boxes
             uint box_list_offset = asuint(instance_data[0].w);
@@ -135,23 +165,79 @@ void box_culling(uint3 group : SV_GroupID, uint3 group_thread_id : SV_GroupThrea
             {
                 uint box_list_count = static_gpu_memory.Load(box_list_offset);
 
-                //Reserve space in the indirect box buffer
-                uint offset;
-                InterlockedAdd(indirect_culled_boxes_parameters[1], box_list_count, offset);
-
                 //Loop for each box, REALLY BAD for performance
                 for (uint j = 0; j < box_list_count; ++j)
                 {
+                    //Check the Hiz to decide if it needs to be render in the first pass or in the second pass
+                    bool first_pass = true;
+
+                    uint box_offset_byte = box_list_offset_byte;
+                    box_offset_byte += 16; //Skip the box_list count
+                    box_offset_byte += j * 16 * 3; //Each box is a float4 * 3
+
+                    //Read Box data
+                    float4 box_data[2];
+                    box_data[0] = asfloat(static_gpu_memory.Load4(box_offset_byte + 0));
+                    box_data[1] = asfloat(static_gpu_memory.Load4(box_offset_byte + 16));
+
+                    float3 box_extent = float3(box_data[1].x, box_data[1].y, box_data[1].z);
+                    float3 box_translation = float3(box_data[0].x, box_data[0].y, box_data[0].z);
+
+                    {
+                        //Calculate 8 points in the box, last frame
+                        float3 box_points[8];
+                        box_points[0] = QuatMultiplication(last_frame_rotate_quat, float3(-1.f, -1.f, -1.f) * box_extent + box_translation) + last_frame_translation;
+                        box_points[1] = QuatMultiplication(last_frame_rotate_quat, float3(-1.f, -1.f, 1.f) * box_extent + box_translation) + last_frame_translation;
+                        box_points[2] = QuatMultiplication(last_frame_rotate_quat, float3(-1.f, 1.f, -1.f) * box_extent + box_translation) + last_frame_translation;
+                        box_points[3] = QuatMultiplication(last_frame_rotate_quat, float3(-1.f, 1.f, 1.f) * box_extent + box_translation) + last_frame_translation;
+                        box_points[4] = QuatMultiplication(last_frame_rotate_quat, float3(1.f, -1.f, -1.f) * box_extent + box_translation) + last_frame_translation;
+                        box_points[5] = QuatMultiplication(last_frame_rotate_quat, float3(1.f, -1.f, 1.f) * box_extent + box_translation) + last_frame_translation;
+                        box_points[6] = QuatMultiplication(last_frame_rotate_quat, float3(1.f, 1.f, -1.f) * box_extent + box_translation) + last_frame_translation;
+                        box_points[7] = QuatMultiplication(last_frame_rotate_quat, float3(1.f, 1.f, 1.f) * box_extent + box_translation) + last_frame_translation;
+
+                        //Convert in screen texel space
+
+                        //Calculate the min/max
+
+                        //Calculate the mip level
+
+                        //Sample the HiZ to decide if can be render in the first pass or it needs to be pass to the second pass
+                    }
+                    
                     uint indirect_box; //Encode the instance offset and the index of the box
                     indirect_box = ((instance_offset / 16) << 8) | j;
-                    
-                    //Add into the indirect buffer
-                    if ((offset + j) < indirect_box_buffer_count)
+
+                    if (first_pass)
                     {
-                        indirect_culled_boxes[offset + j] = indirect_box;
+                        //First pass
+                        uint offset;
+                        InterlockedAdd(indirect_culled_boxes_parameters[1], 1, offset);
+                        
+                        if (offset < indirect_box_buffer_count)
+                        {
+                            indirect_culled_boxes[offset] = indirect_box;
+                        }
+
                     }
-                }
-                
+                    else
+                    {
+                        //Second pass
+                        uint offset;
+                        InterlockedAdd(second_pass_indirect_culled_boxes[0], 1, offset);
+
+                        if (offset < (indirect_box_buffer_count - 1))
+                        {
+                            second_pass_indirect_culled_boxes[offset] = indirect_box;
+                        }
+
+                        //Check if we need a new group
+                        if (offset / 32 != (offset + 1) / 32)
+                        {
+                            //That means we need a new group
+                            InterlockedAdd(second_pass_indirect_culled_boxes_parameters[0], 1, offset);
+                        }
+                    }
+                }               
             }
         }
     }
