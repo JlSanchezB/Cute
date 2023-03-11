@@ -25,6 +25,7 @@
       <Resource name="IndirectBoxBuffer" pre_condition_state="Init" post_update_state="Ready" access="UnorderedAccess"/>
       <Resource name="IndirectParametersBuffer" pre_condition_state="Init" post_update_state="Ready" access="UnorderedAccess"/>
       <Resource name="StaticGPUMemoryBuffer" pre_condition_state="Ready" access="AllShaderResource"/>
+      <Texture2D name="HiZ" pre_condition_state="Alloc" post_update_state="ReadyToUpdate" access="AllShaderResource" format="R32_FLOAT" width="768" height="512" not_alias="true"/>
     </Dependencies>
     <Commands>
       <CullCityBoxes/>
@@ -50,7 +51,7 @@
   </Pass>
   <Pass name="BuildHiZ" group="Solids">
     <Dependencies>
-      <Texture2D name="HiZ" pre_condition_state="Alloc" post_update_state="Free" access="UnorderedAccess" format="R32_FLOAT" width="768" height="512"/>
+      <Texture2D name="HiZ" pre_condition_state="ReadyToUpdate" post_update_state="Free" access="UnorderedAccess" format="R32_FLOAT" width="768" height="512"/>
       <DepthBuffer name="SceneDepth" pre_condition_state="Ready" post_update_state="Free" format="D32_FLOAT" default_depth="0.f" access="AllShaderResource"/>
       <Buffer name="HiZ_atomic" pre_condition_state="Alloc" post_update_state="Free" access="UnorderedAccess" size ="4096" clear="true"/>
     </Dependencies>

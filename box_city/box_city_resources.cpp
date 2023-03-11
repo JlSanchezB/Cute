@@ -148,7 +148,7 @@ void BoxCityResources::Load(display::Device* device, render::System* render_syst
 		desc.root_parameters[1].table.range[0].size = 1;
 		desc.root_parameters[1].table.range[0].type = display::DescriptorTableParameterType::ConstantBuffer;
 		desc.root_parameters[1].table.range[1].base_shader_register = 0;
-		desc.root_parameters[1].table.range[1].size = 2;
+		desc.root_parameters[1].table.range[1].size = 3;
 		desc.root_parameters[1].table.range[1].type = display::DescriptorTableParameterType::ShaderResource;
 		desc.root_parameters[1].table.range[2].base_shader_register = 0;
 		desc.root_parameters[1].table.range[2].size = 2;
@@ -156,6 +156,31 @@ void BoxCityResources::Load(display::Device* device, render::System* render_syst
 		desc.num_static_samplers = 0;
 
 		m_box_culling_root_signature = display::CreateRootSignature(device, desc, "BoxCullingRootSignature");
+	}
+	//Second pass Box culling root signature
+	{
+		display::RootSignatureDesc desc;
+		desc.num_root_parameters = 2;
+		desc.root_parameters[0].type = display::RootSignatureParameterType::Constants;
+		desc.root_parameters[0].visibility = display::ShaderVisibility::All;
+		desc.root_parameters[0].root_param.shader_register = 0;
+		desc.root_parameters[0].root_param.num_constants = 2;
+
+		desc.root_parameters[1].type = display::RootSignatureParameterType::DescriptorTable;
+		desc.root_parameters[1].visibility = display::ShaderVisibility::All;
+		desc.root_parameters[1].table.num_ranges = 3;
+		desc.root_parameters[1].table.range[0].base_shader_register = 1;
+		desc.root_parameters[1].table.range[0].size = 1;
+		desc.root_parameters[1].table.range[0].type = display::DescriptorTableParameterType::ConstantBuffer;
+		desc.root_parameters[1].table.range[1].base_shader_register = 0;
+		desc.root_parameters[1].table.range[1].size = 2;
+		desc.root_parameters[1].table.range[1].type = display::DescriptorTableParameterType::ShaderResource;
+		desc.root_parameters[1].table.range[2].base_shader_register = 0;
+		desc.root_parameters[1].table.range[2].size = 1;
+		desc.root_parameters[1].table.range[2].type = display::DescriptorTableParameterType::UnorderedAccessBuffer;
+		desc.num_static_samplers = 0;
+
+		m_second_pass_box_culling_root_signature = display::CreateRootSignature(device, desc, "SecondPassBoxCullingRootSignature");
 	}
 
 	//Box culling pipeline state
@@ -168,6 +193,17 @@ void BoxCityResources::Load(display::Device* device, render::System* render_syst
 		desc.root_signature = m_box_culling_root_signature;
 
 		m_box_culling_pipeline_state = display::CreateComputePipelineState(device, desc, "BoxCulling");
+	}
+	//Second pass Box culling pipeline state
+	{
+		display::ComputePipelineStateDesc desc;
+		desc.compute_shader.name = "BoxCulling";
+		desc.compute_shader.entry_point = "box_culling";
+		desc.compute_shader.target = "cs_6_6";
+		desc.compute_shader.file_name = "box_culling.hlsl";
+		desc.root_signature = m_box_culling_root_signature;
+
+		m_second_pass_box_culling_pipeline_state = display::CreateComputePipelineState(device, desc, "SecondPassBoxCulling");
 	}
 
 	//Box culling clear pipeline state
@@ -189,6 +225,12 @@ void BoxCityResources::Load(display::Device* device, render::System* render_syst
 
 		display::BufferDesc indirect_parameters_buffer_desc = display::BufferDesc::CreateStructuredBuffer(display::Access::Static, 5, sizeof(uint32_t), true);
 		m_indirect_parameters_buffer = display::CreateBuffer(device, indirect_parameters_buffer_desc, "IndirectParametersBuffer");
+
+		display::BufferDesc second_pass_indirect_box_buffer_desc = display::BufferDesc::CreateStructuredBuffer(display::Access::Static, kSecondPassIndirectBoxBufferCount, sizeof(uint32_t), true);
+		m_second_pass_indirect_box_buffer = display::CreateBuffer(device, second_pass_indirect_box_buffer_desc, "SecondPassIndirectBoxBuffer");
+
+		display::BufferDesc second_pass_indirect_parameters_buffer_desc = display::BufferDesc::CreateStructuredBuffer(display::Access::Static, 5, sizeof(uint32_t), true);
+		m_second_pass_indirect_parameters_buffer = display::CreateBuffer(device, second_pass_indirect_parameters_buffer_desc, "SecondPassIndirectParametersBuffer");
 	}
 
 	{
@@ -206,16 +248,17 @@ void BoxCityResources::Load(display::Device* device, render::System* render_syst
 
 	{
 		display::DescriptorTableDesc description_table_desc;
-		description_table_desc.num_descriptors = 5;
 		description_table_desc.access = display::Access::Dynamic;
-		description_table_desc.descriptors[0] = m_view_constant_buffer;
-		description_table_desc.descriptors[1] = gpu_memory->GetStaticGPUMemoryResource();
-		description_table_desc.descriptors[2] = gpu_memory->GetDynamicGPUMemoryResource();
-		description_table_desc.descriptors[3] = display::AsUAVBuffer(m_indirect_parameters_buffer);
-		description_table_desc.descriptors[4] = display::AsUAVBuffer(m_indirect_box_buffer);
-
+		description_table_desc.num_descriptors = 6;
 		//Create the descriptor table
 		m_box_culling_description_table_handle = display::CreateDescriptorTable(device, description_table_desc);
+	}
+	{
+		display::DescriptorTableDesc description_table_desc;
+		description_table_desc.access = display::Access::Dynamic;
+		description_table_desc.num_descriptors = 4;
+		//Create the descriptor table
+		m_second_pass_box_culling_description_table_handle = display::CreateDescriptorTable(device, description_table_desc);
 	}
 }
 
@@ -229,9 +272,14 @@ void BoxCityResources::Unload(display::Device* device)
 	display::DestroyHandle(device, m_box_vertex_normal_buffer);
 	display::DestroyHandle(device, m_box_index_buffer);
 	display::DestroyHandle(device, m_box_culling_description_table_handle);
+	display::DestroyHandle(device, m_second_pass_box_culling_description_table_handle);
 	display::DestroyHandle(device, m_box_culling_root_signature);
+	display::DestroyHandle(device, m_second_pass_box_culling_root_signature);
 	display::DestroyHandle(device, m_box_culling_pipeline_state);
+	display::DestroyHandle(device, m_second_pass_box_culling_pipeline_state);
 	display::DestroyHandle(device, m_box_culling_clear_pipeline_state);
 	display::DestroyHandle(device, m_indirect_box_buffer);
 	display::DestroyHandle(device, m_indirect_parameters_buffer);
+	display::DestroyHandle(device, m_second_pass_indirect_box_buffer);
+	display::DestroyHandle(device, m_second_pass_indirect_parameters_buffer);
 }

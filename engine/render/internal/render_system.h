@@ -215,6 +215,7 @@ namespace render
 			uint8_t default_stencil;
 			bool clear;
 			bool can_be_reuse;
+			bool not_alias;
 			uint64_t last_render_frame_used = 0;
 			display::TranstitionState m_access;
 		};
@@ -246,7 +247,7 @@ namespace render
 		Pass* LoadPass(LoadContext& load_context);
 
 		//Alloc pool resource
-		std::pair<std::unique_ptr<Resource>, display::TranstitionState> AllocPoolResource(ResourceName resource_name, PoolResourceType type, bool get_or_alloc_allocation, uint16_t width, uint16_t weight, uint32_t size, const display::Format& format, const float default_clear, const uint8_t default_stencil, const bool clear);
+		std::pair<std::unique_ptr<Resource>, display::TranstitionState> AllocPoolResource(ResourceName resource_name, PoolResourceType type, bool not_alias, uint16_t width, uint16_t weight, uint32_t size, const display::Format& format, const float default_clear, const uint8_t default_stencil, const bool clear);
 
 		//Dealloc pool resource
 		void DeallocPoolResource(ResourceName resource_name, std::unique_ptr<Resource>& resource, const display::TranstitionState state);

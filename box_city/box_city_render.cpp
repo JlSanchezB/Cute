@@ -6,7 +6,8 @@ void CullCityBoxesPass::Render(render::RenderContext& render_context) const
 	//Collect offsets from the point of view data
 	const render::PointOfView* point_of_view = render_context.GetPointOfView();
 	const BoxCityCustomPointOfViewData& box_city_custom_data = point_of_view->GetData<BoxCityCustomPointOfViewData>();
-	
+	auto* gpu_memory = render::GetModule<render::GPUMemoryRenderModule>(render_context.GetRenderSystem(), "GPUMemory"_sh32);
+
 	if (box_city_custom_data.num_instance_lists == 0)
 	{
 		//Nothing to do
@@ -19,6 +20,18 @@ void CullCityBoxesPass::Render(render::RenderContext& render_context) const
 	uint32_t constants[2] = { box_city_custom_data.instance_lists_offset, m_display_resources->kIndirectBoxBufferCount };
 
 	render_context.GetContext()->SetConstants(display::Pipe::Compute, 0, constants, 2);
+
+	//Update the descriptor table
+	display::DescriptorTableDesc::Descritor descriptors[6];
+	descriptors[0] = m_display_resources->m_view_constant_buffer;
+	descriptors[1] = gpu_memory->GetStaticGPUMemoryResource();
+	descriptors[2] = gpu_memory->GetDynamicGPUMemoryResource();
+	descriptors[3] = std::get<display::WeakTexture2DHandle>(render::GetResource(render_context.GetRenderSystem(), "HiZ"_sh32)->GetDisplayHandle());
+	descriptors[4] = display::AsUAVBuffer(m_display_resources->m_indirect_parameters_buffer);
+	descriptors[5] = display::AsUAVBuffer(m_display_resources->m_indirect_box_buffer);
+
+	display::UpdateDescriptorTable(render_context.GetDevice(), m_display_resources->m_box_culling_description_table_handle, descriptors, 6);
+
 	render_context.GetContext()->SetDescriptorTable(display::Pipe::Compute, 1, m_display_resources->m_box_culling_description_table_handle);
 
 	{

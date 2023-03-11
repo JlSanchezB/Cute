@@ -16,6 +16,7 @@ cbuffer ViewData : register(b1)
 
 ByteAddressBuffer static_gpu_memory: register(t0);
 ByteAddressBuffer dynamic_gpu_memory: register(t1);
+Texture2D<float> HiZ : register(t2);
 
 //Indirect parameters for draw call
 RWStructuredBuffer<uint> indirect_culled_boxes_parameters : register(u0);
