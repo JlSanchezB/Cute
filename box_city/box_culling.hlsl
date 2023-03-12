@@ -196,12 +196,63 @@ void box_culling(uint3 group : SV_GroupID, uint3 group_thread_id : SV_GroupThrea
                         box_points[7] = QuatMultiplication(last_frame_rotate_quat, float3(1.f, 1.f, 1.f) * box_extent + box_translation) + last_frame_translation;
 
                         //Convert in screen texel space
+                        float4 clip_box_points[8];
+                        [unroll] for (uint point_index = 0; point_index < 8; ++point_index)
+                        {
+                            clip_box_points[point_index] = mul(view_projection_matrix, float4(box_points[point_index], 1.f));
+                            clip_box_points[point_index] = clip_box_points[point_index] / clip_box_points[point_index].w;
+                        }
 
-                        //Calculate the min/max
+                        //Calculate the min/max and min_z
+                        float2 min_box = clip_box_points[0].xy;
+                        float2 max_box = clip_box_points[0].xy;
+                        float max_box_z = clip_box_points[0].z;
 
-                        //Calculate the mip level
+                        [unroll] for (point_index = 1; point_index < 8; ++point_index)
+                        {
+                            min_box = min(min_box, clip_box_points[point_index].xy);
+                            max_box = max(max_box, clip_box_points[point_index].xy);
+                            max_box_z = max(max_box_z, clip_box_points[point_index].z);
+                        }
 
+                        //Calculate hiZ space 
+                        int2 min_box_hiz = (min_box * float2(0.5f, -0.5f) + 0.5f) * 512.f;
+                        int2 max_box_hiz = (max_box * float2(0.5f, -0.5f) + 0.5f) * 512.f;
+                        
+                        //Calculate mip index
+                        int max_distance = max(max_box_hiz.x - min_box_hiz.x, max_box_hiz.y - min_box_hiz.y);
+                        uint lod_index = 0;
+
+                        if (max_distance > 1)
+                        {
+                            lod_index = uint(ceil(log2(max_distance)));
+                        }
                         //Sample the HiZ to decide if can be render in the first pass or it needs to be pass to the second pass
+                        uint2 mip_info = GetMipOffset(lod_index);
+
+                        //Clamp
+                        min_box_hiz = max(0, min_box_hiz);
+                        min_box_hiz = min(511, min_box_hiz);
+                        max_box_hiz = max(0, max_box_hiz);
+                        max_box_hiz = min(511, max_box_hiz);
+
+                        float hiz_sample[4];
+                        hiz_sample[0] = HiZ[mip_info.xy + uint2(min_box_hiz.x >> lod_index, min_box_hiz.y >> lod_index)];
+                        hiz_sample[1] = HiZ[mip_info.xy + uint2(min_box_hiz.x >> lod_index, max_box_hiz.y >> lod_index)];
+                        hiz_sample[2] = HiZ[mip_info.xy + uint2(max_box_hiz.x >> lod_index, min_box_hiz.y >> lod_index)];
+                        hiz_sample[3] = HiZ[mip_info.xy + uint2(max_box_hiz.x >> lod_index, max_box_hiz.y >> lod_index) ];
+
+                        float min_hiz = min(hiz_sample[0], min(hiz_sample[1], min(hiz_sample[2], hiz_sample[3])));
+
+                        if (max_box_z < min_hiz)
+                        {
+                            //Occluded, it needs to go to the second pass
+                            first_pass = false;
+                        }
+                        else
+                        {
+                            first_pass = true;
+                        }
                     }
                     
                     uint indirect_box; //Encode the instance offset and the index of the box
