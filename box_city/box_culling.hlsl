@@ -61,8 +61,8 @@ void clear_indirect_arguments()
     second_pass_indirect_culled_boxes_parameters[1] = 0;
     second_pass_indirect_culled_boxes_parameters[2] = 0;
 
-    //Reset the counter
-    second_pass_indirect_culled_boxes[0] = 0;
+    //Reset the counter, the first slot is the counter
+    second_pass_indirect_culled_boxes[0] = 1;
 }
 
 //Naive implementation for culling
@@ -121,6 +121,7 @@ void box_culling(uint3 group : SV_GroupID, uint3 group_thread_id : SV_GroupThrea
                 box_points[6] = QuatMultiplication(rotate_quat, float3(1.f, 1.f, -1.f) * extent) + translation;
                 box_points[7] = QuatMultiplication(rotate_quat, float3(1.f, 1.f, 1.f) * extent) + translation;
 
+                int outside = 0;
                 // check box outside/inside of frustum
                 for (int ii = 0; ii < 6; ii++)
                 {
@@ -134,9 +135,13 @@ void box_culling(uint3 group : SV_GroupID, uint3 group_thread_id : SV_GroupThrea
                         (dot(frustum_planes[ii], float4(box_points[7], 1.0f)) < 0.0f))
                     {
                         //Outside
+                        outside = 1;
                         continue;
                     }
                 }
+                if (outside)
+                    continue;
+
                 float3 box_max = box_points[0];
                 float3 box_min = box_points[0];
                 for (int j = 1; j < 8; ++j)
@@ -146,7 +151,6 @@ void box_culling(uint3 group : SV_GroupID, uint3 group_thread_id : SV_GroupThrea
                 }
 
                 // check frustum outside/inside box
-                int outside;
                 {outside = 0; for (int k = 0; k < 8; k++) outside += ((frustum_points[k].x > box_max.x) ? 1 : 0); if (outside == 8) continue;};
                 {outside = 0; for (int k = 0; k < 8; k++) outside += ((frustum_points[k].x < box_min.x) ? 1 : 0); if (outside == 8) continue;};
                 {outside = 0; for (int k = 0; k < 8; k++) outside += ((frustum_points[k].y > box_max.y) ? 1 : 0); if (outside == 8) continue;};
@@ -275,8 +279,8 @@ void box_culling(uint3 group : SV_GroupID, uint3 group_thread_id : SV_GroupThrea
                         //Second pass
                         uint offset;
                         InterlockedAdd(second_pass_indirect_culled_boxes[0], 1, offset);
-
-                        if (offset < (indirect_box_buffer_count - 1))
+           
+                        if (offset < indirect_box_buffer_count)
                         {
                             second_pass_indirect_culled_boxes[offset] = indirect_box;
                         }
