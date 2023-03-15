@@ -63,6 +63,11 @@ void CullCityBoxesPass::Render(render::RenderContext& render_context) const
 	}
 }
 
+void CullSecondPassCityBoxesPass::Render(render::RenderContext& render_context) const
+{
+	
+}
+
 void DrawCityBoxesPass::Render(render::RenderContext& render_context) const
 {
 	//The indirect box buffer and parameters buffers should have the correct information, we just need to call indirect drawcall

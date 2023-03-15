@@ -69,7 +69,7 @@ void second_pass_box_culling(uint3 dispatch_thread_id : SV_DispatchThreadID)
 
         //Extract the instance offset and the box index
         uint instance_data_offset_byte = (indirect_box >> 8) * 16;
-        uint box_index = packed_box & 0xFF;
+        uint box_index = indirect_box & 0xFF;
 
         //Read the instance data
         float4 instance_data[3];
@@ -91,10 +91,6 @@ void second_pass_box_culling(uint3 dispatch_thread_id : SV_DispatchThreadID)
         float3 box_extent = float3(box_data[1].x, box_data[1].y, box_data[1].z);
         float3 box_translation = float3(box_data[0].x, box_data[0].y, box_data[0].z);
   
-        //Each position needs to be multiply by the local matrix
-        float3 box_position = position * box_extent + box_translation;
-        float3 world_position = QuatMultiplication(instance_rotate_quat, box_position) + instance_translation;
-
         {
             //Calculate 8 points in the box in the current frame
             float3 box_points[8];

@@ -201,7 +201,7 @@ void BoxCityResources::Load(display::Device* device, render::System* render_syst
 		desc.compute_shader.entry_point = "second_pass_box_culling";
 		desc.compute_shader.target = "cs_6_6";
 		desc.compute_shader.file_name = "second_pass_box_culling.hlsl";
-		desc.root_signature = m_box_culling_root_signature;
+		desc.root_signature = m_second_pass_box_culling_root_signature;
 
 		m_second_pass_box_culling_pipeline_state = display::CreateComputePipelineState(device, desc, "SecondPassBoxCulling");
 	}
@@ -224,7 +224,7 @@ void BoxCityResources::Load(display::Device* device, render::System* render_syst
 		desc.compute_shader.entry_point = "second_pass_clear_indirect_arguments";
 		desc.compute_shader.target = "cs_6_6";
 		desc.compute_shader.file_name = "second_pass_box_culling.hlsl";
-		desc.root_signature = m_box_culling_root_signature;
+		desc.root_signature = m_second_pass_box_culling_root_signature;
 
 		m_second_pass_box_culling_clear_pipeline_state = display::CreateComputePipelineState(device, desc, "SecondPassBoxCullingClear");
 	}

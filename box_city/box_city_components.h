@@ -127,8 +127,8 @@ struct CarControl
 
 struct CarTarget
 {
-	glm::vec3 target;
-	glm::vec3 last_target;
+	glm::vec3 target = glm::vec3(0.f, 0.f, 0.f);
+	glm::vec3 last_target = glm::vec3(0.f, 0.f, 0.f);;
 	bool target_valid = false;
 	CarTarget()
 	{

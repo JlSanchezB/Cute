@@ -11,12 +11,23 @@
 //Cull boxes
 class CullCityBoxesPass : public render::Pass
 {
-	uint8_t m_priority;
 	inline static BoxCityResources* m_display_resources;
 
 	friend class BoxCityGame;
 public:
 	DECLARE_RENDER_CLASS("CullCityBoxes");
+
+	void Render(render::RenderContext& render_context) const override;
+};
+
+//Cull second pass boxes
+class CullSecondPassCityBoxesPass : public render::Pass
+{
+	inline static BoxCityResources* m_display_resources;
+
+	friend class BoxCityGame;
+public:
+	DECLARE_RENDER_CLASS("CullSecondPassCityBoxes");
 
 	void Render(render::RenderContext& render_context) const override;
 };
@@ -30,22 +41,6 @@ class DrawCityBoxesPass : public render::Pass
 public:
 	DECLARE_RENDER_CLASS("DrawCityBoxes");
 
-	void Render(render::RenderContext& render_context) const override;
-};
-
-//Render pass definition for our custon box instance pass render
-class DrawCityBoxItemsPass : public render::Pass
-{
-	uint8_t m_priority;
-	inline static BoxCityResources* m_display_resources;
-
-	friend class BoxCityGame;
-
-public:
-	DECLARE_RENDER_CLASS("DrawCityBoxItems");
-
-	void Load(render::LoadContext& load_context) override;
-	void Destroy(display::Device* device) override;
 	void Render(render::RenderContext& render_context) const override;
 };
 
