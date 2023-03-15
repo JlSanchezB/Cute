@@ -77,5 +77,6 @@
     <None Include="box_rendering.hlsl" />
     <None Include="box_culling.hlsl" />
     <None Include="build_hz.hlsl" />
+    <None Include="second_pass_box_culling.hlsl" />
   </ItemGroup>
 </Project>

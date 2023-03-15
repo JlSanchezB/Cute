@@ -46,6 +46,7 @@ struct BoxCityResources
 	display::PipelineStateHandle m_second_pass_box_culling_pipeline_state;
 	display::DescriptorTableHandle m_second_pass_box_culling_description_table_handle;
 	display::PipelineStateHandle m_box_culling_clear_pipeline_state;
+	display::PipelineStateHandle m_second_pass_box_culling_clear_pipeline_state;
 
 	void Load(display::Device* device, render::System* render_system);
 	void Unload(display::Device* device);

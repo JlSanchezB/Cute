@@ -164,7 +164,7 @@ void BoxCityResources::Load(display::Device* device, render::System* render_syst
 		desc.root_parameters[0].type = display::RootSignatureParameterType::Constants;
 		desc.root_parameters[0].visibility = display::ShaderVisibility::All;
 		desc.root_parameters[0].root_param.shader_register = 0;
-		desc.root_parameters[0].root_param.num_constants = 2;
+		desc.root_parameters[0].root_param.num_constants = 1;
 
 		desc.root_parameters[1].type = display::RootSignatureParameterType::DescriptorTable;
 		desc.root_parameters[1].visibility = display::ShaderVisibility::All;
@@ -173,10 +173,10 @@ void BoxCityResources::Load(display::Device* device, render::System* render_syst
 		desc.root_parameters[1].table.range[0].size = 1;
 		desc.root_parameters[1].table.range[0].type = display::DescriptorTableParameterType::ConstantBuffer;
 		desc.root_parameters[1].table.range[1].base_shader_register = 0;
-		desc.root_parameters[1].table.range[1].size = 2;
+		desc.root_parameters[1].table.range[1].size = 4;
 		desc.root_parameters[1].table.range[1].type = display::DescriptorTableParameterType::ShaderResource;
 		desc.root_parameters[1].table.range[2].base_shader_register = 0;
-		desc.root_parameters[1].table.range[2].size = 1;
+		desc.root_parameters[1].table.range[2].size = 2;
 		desc.root_parameters[1].table.range[2].type = display::DescriptorTableParameterType::UnorderedAccessBuffer;
 		desc.num_static_samplers = 0;
 
@@ -197,10 +197,10 @@ void BoxCityResources::Load(display::Device* device, render::System* render_syst
 	//Second pass Box culling pipeline state
 	{
 		display::ComputePipelineStateDesc desc;
-		desc.compute_shader.name = "BoxCulling";
-		desc.compute_shader.entry_point = "box_culling";
+		desc.compute_shader.name = "SecondPassBoxCulling";
+		desc.compute_shader.entry_point = "second_pass_box_culling";
 		desc.compute_shader.target = "cs_6_6";
-		desc.compute_shader.file_name = "box_culling.hlsl";
+		desc.compute_shader.file_name = "second_pass_box_culling.hlsl";
 		desc.root_signature = m_box_culling_root_signature;
 
 		m_second_pass_box_culling_pipeline_state = display::CreateComputePipelineState(device, desc, "SecondPassBoxCulling");
@@ -216,6 +216,17 @@ void BoxCityResources::Load(display::Device* device, render::System* render_syst
 		desc.root_signature = m_box_culling_root_signature;
 
 		m_box_culling_clear_pipeline_state = display::CreateComputePipelineState(device, desc, "BoxCullingClear");
+	}
+	//Second pass Box culling clear pipeline state
+	{
+		display::ComputePipelineStateDesc desc;
+		desc.compute_shader.name = "SecondPassBoxCullingClear";
+		desc.compute_shader.entry_point = "second_pass_clear_indirect_arguments";
+		desc.compute_shader.target = "cs_6_6";
+		desc.compute_shader.file_name = "second_pass_box_culling.hlsl";
+		desc.root_signature = m_box_culling_root_signature;
+
+		m_second_pass_box_culling_clear_pipeline_state = display::CreateComputePipelineState(device, desc, "SecondPassBoxCullingClear");
 	}
 
 	{
@@ -282,4 +293,5 @@ void BoxCityResources::Unload(display::Device* device)
 	display::DestroyHandle(device, m_indirect_parameters_buffer);
 	display::DestroyHandle(device, m_second_pass_indirect_box_buffer);
 	display::DestroyHandle(device, m_second_pass_indirect_parameters_buffer);
+	display::DestroyHandle(device, m_second_pass_box_culling_clear_pipeline_state);
 }
