@@ -128,7 +128,7 @@ void second_pass_box_culling(uint3 dispatch_thread_id : SV_DispatchThreadID)
             int2 max_box_hiz = (max_box * float2(0.5f, -0.5f) + 0.5f) * 512.f;
 
             //Calculate mip index
-            int max_distance = max(max_box_hiz.x - min_box_hiz.x, max_box_hiz.y - min_box_hiz.y);
+            int max_distance = max(max_box_hiz.x - min_box_hiz.x, min_box_hiz.y - max_box_hiz.y);
             uint lod_index = 0;
 
             if (max_distance > 1)
