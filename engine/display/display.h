@@ -215,6 +215,9 @@ namespace display
 		//Execute compute
 		void ExecuteCompute(const ExecuteComputeDesc& execute_compute_desc);
 
+		//Indirect Execute Compute
+		void IndirectExecuteCompute(const IndirectExecuteComputeDesc& execute_compute_desc);
+
 		//Resource barriers
 		void AddResourceBarriers(const std::vector<ResourceBarrier>& resource_barriers);
 	};

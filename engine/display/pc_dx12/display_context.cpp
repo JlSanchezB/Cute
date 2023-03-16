@@ -361,6 +361,14 @@ namespace display
 
 		command_list->Dispatch(execute_compute_desc.group_count_x, execute_compute_desc.group_count_y, execute_compute_desc.group_count_z);
 	}
+	void Context::IndirectExecuteCompute(const IndirectExecuteComputeDesc& execute_compute_desc)
+	{
+		auto dx12_context = reinterpret_cast<DX12Context*>(this);
+		Device* device = dx12_context->device;
+		const auto& command_list = dx12_context->command_list;
+
+		command_list->ExecuteIndirect(device->m_indirect_execute_compute_command_signature.Get(), 1, device->Get(execute_compute_desc.parameters_buffer).resource.Get(), execute_compute_desc.parameters_offset, NULL, 0);
+	}
 	void Context::AddResourceBarriers(const std::vector<ResourceBarrier>& resource_barriers)
 	{
 		auto dx12_context = reinterpret_cast<DX12Context*>(this);

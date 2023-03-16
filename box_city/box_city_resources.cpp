@@ -267,7 +267,7 @@ void BoxCityResources::Load(display::Device* device, render::System* render_syst
 	{
 		display::DescriptorTableDesc description_table_desc;
 		description_table_desc.access = display::Access::Dynamic;
-		description_table_desc.num_descriptors = 4;
+		description_table_desc.num_descriptors = 7;
 		//Create the descriptor table
 		m_second_pass_box_culling_description_table_handle = display::CreateDescriptorTable(device, description_table_desc);
 	}

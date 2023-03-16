@@ -377,6 +377,17 @@ namespace display
 
 			ThrowIfFailed(device->m_native_device->CreateCommandSignature(&commandSignatureDesc, NULL, IID_PPV_ARGS(&device->m_indirect_draw_indexed_instanced_command_signature)));
 		}
+		{
+			D3D12_INDIRECT_ARGUMENT_DESC argumentDescs[1] = {};
+			argumentDescs[0].Type = D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH;
+
+			D3D12_COMMAND_SIGNATURE_DESC commandSignatureDesc = {};
+			commandSignatureDesc.pArgumentDescs = argumentDescs;
+			commandSignatureDesc.NumArgumentDescs = _countof(argumentDescs);
+			commandSignatureDesc.ByteStride = sizeof(D3D12_DISPATCH_ARGUMENTS);
+
+			ThrowIfFailed(device->m_native_device->CreateCommandSignature(&commandSignatureDesc, NULL, IID_PPV_ARGS(&device->m_indirect_execute_compute_command_signature)));
+		}
 
 		//Create shader compilation
 		HRESULT hr = DxcCreateInstance(CLSID_DxcLibrary, IID_PPV_ARGS(&device->m_shader_library));

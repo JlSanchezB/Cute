@@ -58,8 +58,8 @@ void clear_indirect_arguments()
     indirect_culled_boxes_parameters[4] = 0;
 
     second_pass_indirect_culled_boxes_parameters[0] = 0;
-    second_pass_indirect_culled_boxes_parameters[1] = 0;
-    second_pass_indirect_culled_boxes_parameters[2] = 0;
+    second_pass_indirect_culled_boxes_parameters[1] = 1;
+    second_pass_indirect_culled_boxes_parameters[2] = 1;
 
     //Reset the counter, the first slot is the counter
     second_pass_indirect_culled_boxes[0] = 1;

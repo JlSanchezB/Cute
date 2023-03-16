@@ -466,6 +466,12 @@ namespace display
 		static uint32_t CalculateGroupCount(uint32_t num_threads, uint32_t group_size) { return static_cast<uint32_t>(((num_threads - 1) / group_size) + 1); };
 	};
 
+	struct IndirectExecuteComputeDesc
+	{
+		WeakBufferHandle parameters_buffer; //3 values, group counts
+		size_t parameters_offset = 0;
+	};
+
 	struct SetShaderResourceAsVertexBufferDesc
 	{
 		uint32_t stride = 0;

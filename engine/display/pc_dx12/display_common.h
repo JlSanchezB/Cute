@@ -426,6 +426,7 @@ namespace display
 		//Indirect draw command signatures
 		ComPtr<ID3D12CommandSignature> m_indirect_draw_indexed_command_signature;
 		ComPtr<ID3D12CommandSignature> m_indirect_draw_indexed_instanced_command_signature;
+		ComPtr<ID3D12CommandSignature> m_indirect_execute_compute_command_signature;
 
 		//Pool for context
 		core::SimplePool<DX12Context, 256> m_context_pool;
