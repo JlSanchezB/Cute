@@ -48,7 +48,7 @@ float3 QuatMultiplication(float4 quat, float3 vector)
 [numthreads(1, 1, 1)]
 void second_pass_clear_indirect_arguments()
 {
-    indirect_culled_boxes_parameters[0] = 36;
+    indirect_culled_boxes_parameters[0] = 18;
     indirect_culled_boxes_parameters[1] = 0;
     indirect_culled_boxes_parameters[2] = 0;
     indirect_culled_boxes_parameters[3] = 0;
