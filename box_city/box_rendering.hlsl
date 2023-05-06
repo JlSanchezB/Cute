@@ -39,12 +39,24 @@ float3 quat_multiplication_transpose(float4 quat, float3 vector)
     return vector + (s * t) + cross(qv, t);
 }
 
-PSInput vs_box_main(uint instance_id : SV_InstanceID, uint vertex_id : SV_VertexID)
+PSInput vs_box_main(uint multi_instance_id : SV_InstanceID, uint vertex_id : SV_VertexID)
 {
     PSInput result;
 
+    uint instance_id = multi_instance_id * 16 + vertex_id / 8;
+
+    //Kill instances outside the number of instances using degenerated vertex
+    if (instance_id >= indirect_box_buffer[0])
+    {
+        result.view_position = float4(0.f, 0.f, 0.f, 1.f);
+        result.world_position = float4(0.f, 0.f, 0.f, 1.f);
+        result.colour = float4(0.f, 0.f, 0.f, 1.f);;
+
+        return result;
+    }
+
     //The offset is in the indirect buffer
-    uint indirect_box = indirect_box_buffer[instance_id];
+    uint indirect_box = indirect_box_buffer[instance_id + 1];
 
     //Extract the instance data
     uint instance_data_offset_byte = (indirect_box >> 8) * 16;

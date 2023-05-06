@@ -48,11 +48,13 @@ float3 QuatMultiplication(float4 quat, float3 vector)
 [numthreads(1, 1, 1)]
 void second_pass_clear_indirect_arguments()
 {
-    indirect_culled_boxes_parameters[0] = 18;
-    indirect_culled_boxes_parameters[1] = 0;
+    indirect_culled_boxes_parameters[0] = 18 * 16; //18 indexes per cube, 16 cubes per instance
+    indirect_culled_boxes_parameters[1] = 1;
     indirect_culled_boxes_parameters[2] = 0;
     indirect_culled_boxes_parameters[3] = 0;
     indirect_culled_boxes_parameters[4] = 0;
+
+    indirect_culled_boxes[0] = 1;
 }
 
 //Second pass box culling, each lane will be a box in the second pass, in groups of 32
@@ -162,7 +164,14 @@ void second_pass_box_culling(uint3 dispatch_thread_id : SV_DispatchThreadID)
             {
                 //It is visible, added to the indirect box for the second pass render
                 uint offset;
-                InterlockedAdd(indirect_culled_boxes_parameters[1], 1, offset);
+                InterlockedAdd(indirect_culled_boxes[0], 1, offset);
+
+                //Check if we need a new instance group
+                if (offset / 16 != (offset + 1) / 16)
+                {
+                    uint offset_instance;
+                    InterlockedAdd(indirect_culled_boxes_parameters[1], 1, offset_instance);
+                }
 
                 if (offset < indirect_box_buffer_count)
                 {

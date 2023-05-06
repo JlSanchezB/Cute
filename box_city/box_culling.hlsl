@@ -52,8 +52,8 @@ float3 QuatMultiplication(float4 quat, float3 vector)
 [numthreads(1, 1, 1)]
 void clear_indirect_arguments()
 {
-    indirect_culled_boxes_parameters[0] = 18;
-    indirect_culled_boxes_parameters[1] = 0;
+    indirect_culled_boxes_parameters[0] = 18 * 16; //18 indexes per cube, 16 cubes per instance
+    indirect_culled_boxes_parameters[1] = 1;
     indirect_culled_boxes_parameters[2] = 0;
     indirect_culled_boxes_parameters[3] = 0;
     indirect_culled_boxes_parameters[4] = 0;
@@ -64,6 +64,7 @@ void clear_indirect_arguments()
 
     //Reset the counter, the first slot is the counter
     second_pass_indirect_culled_boxes[0] = 1;
+    indirect_culled_boxes[0] = 1;
 }
 
 //Naive implementation for culling
@@ -267,8 +268,15 @@ void box_culling(uint3 group : SV_GroupID, uint3 group_thread_id : SV_GroupThrea
                     {
                         //First pass
                         uint offset;
-                        InterlockedAdd(indirect_culled_boxes_parameters[1], 1, offset);
-                        
+                        InterlockedAdd(indirect_culled_boxes[0], 1, offset);
+
+                        //Check if we need a new instance group, 16 cubes in each instance
+                        if (offset / 16 != (offset + 1) / 16)
+                        {
+                            uint offset_instance;
+                            InterlockedAdd(indirect_culled_boxes_parameters[1], 1, offset_instance);
+                        }
+
                         if (offset < indirect_box_buffer_count)
                         {
                             indirect_culled_boxes[offset] = indirect_box;

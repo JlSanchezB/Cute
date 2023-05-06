@@ -64,9 +64,23 @@ void BoxCityResources::Load(display::Device* device, render::System* render_syst
 
 	//Index buffer of the 3 faces projected to camera
 	{
-		uint16_t index_buffer_data[] = { 0, 2, 1, 2, 3, 1,
+		//This is for one box, we have 16 cube for each instance
+		//Each box is known using the index / 8
+		const uint32_t num_boxes_per_instance = 16;
+
+		uint16_t instance_index_buffer_data[] = { 0, 2, 1, 2, 3, 1,
 		5, 4, 1, 1, 4, 0,
 		0, 4, 6, 0, 6, 2};
+
+		uint16_t index_buffer_data[18 * num_boxes_per_instance];
+
+		for (uint32_t i = 0; i < num_boxes_per_instance; ++i)
+		{
+			for (uint32_t j = 0; j < 18; ++j)
+			{
+				index_buffer_data[i * 18 + j] = i * 8 + instance_index_buffer_data[j];
+			}
+		}
 
 		display::BufferDesc index_buffer_desc = display::BufferDesc::CreateIndexBuffer(display::Access::Static, sizeof(index_buffer_data), display::Format::R16_UINT, index_buffer_data);
 		m_box_index_buffer = display::CreateBuffer(device, index_buffer_desc, "box_index_buffer");
