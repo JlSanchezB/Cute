@@ -297,6 +297,7 @@ void BoxCityGame::OnRender(double total_time, float elapsed_time)
 	auto command_offset = render_frame.GetBeginFrameCommandBuffer().Open();
 	ViewConstantBuffer view_constant_buffer;
 	view_constant_buffer.projection_view_matrix = camera->GetViewProjectionMatrix();
+	view_constant_buffer.camera_position = glm::vec4(camera->GetInterpolatedPosition(), 0.f);
 	view_constant_buffer.time = glm::vec4(static_cast<float>(total_time), 0.f, 0.f, 0.f);
 	view_constant_buffer.sun_direction = glm::rotate(glm::radians(m_sun_direction_angles.y), glm::vec3(1.f, 0.f, 0.f)) * glm::rotate(glm::radians(m_sun_direction_angles.x), glm::vec3(0.f, 0.f, 1.f)) * glm::vec4(1.f, 0.f, 0.f, 0.f);
 	for (size_t i = 0; i < helpers::Frustum::Count; ++i) view_constant_buffer.frustum_planes[i] = camera->planes[i];

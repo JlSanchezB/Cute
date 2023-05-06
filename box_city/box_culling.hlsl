@@ -8,6 +8,7 @@ cbuffer Root : register(b0)
 cbuffer ViewData : register(b1)
 {
     float4x4 view_projection_matrix;
+    float4 camera_position;
     float4 time;
     float4 sun_direction;
     float4 frustum_planes[6];
@@ -51,7 +52,7 @@ float3 QuatMultiplication(float4 quat, float3 vector)
 [numthreads(1, 1, 1)]
 void clear_indirect_arguments()
 {
-    indirect_culled_boxes_parameters[0] = 36;
+    indirect_culled_boxes_parameters[0] = 18;
     indirect_culled_boxes_parameters[1] = 0;
     indirect_culled_boxes_parameters[2] = 0;
     indirect_culled_boxes_parameters[3] = 0;

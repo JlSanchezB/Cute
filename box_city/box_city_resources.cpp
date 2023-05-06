@@ -38,15 +38,7 @@ void BoxCityResources::Load(display::Device* device, render::System* render_syst
 		display::PipelineStateDesc desc;
 		desc.root_signature = m_box_render_root_signature;
 
-		desc.input_layout.num_elements = 2;
-		desc.input_layout.elements[0].input_slot = 0;
-		desc.input_layout.elements[0].semantic_name = "POSITION";
-		desc.input_layout.elements[0].semantic_index = 0;
-		desc.input_layout.elements[0].format = display::Format::R32G32B32_FLOAT;
-		desc.input_layout.elements[1].input_slot = 1;
-		desc.input_layout.elements[1].semantic_name = "NORMAL";
-		desc.input_layout.elements[1].semantic_index = 0;
-		desc.input_layout.elements[1].format = display::Format::R32G32B32_FLOAT;
+		desc.input_layout.num_elements = 0;
 
 		desc.vertex_shader.file_name = "box_rendering.hlsl";
 		desc.vertex_shader.name = "BoxRendering";
@@ -65,68 +57,16 @@ void BoxCityResources::Load(display::Device* device, render::System* render_syst
 		desc.depth_write = true;
 		desc.depth_stencil_format = display::Format::D32_FLOAT;
 		desc.depth_func = display::ComparationFunction::Greater;
+		desc.rasteritation_state.cull_mode = display::CullMode::None;
 
 		m_box_render_pipeline_state = display::CreatePipelineState(device, desc, "BoxRenderingPipelineState");
 	}
 
-	//Box Vertex buffer
+	//Index buffer of the 3 faces projected to camera
 	{
-		glm::vec3 vertex_position_data[4 * 6];
-		glm::vec3 vertex_normal_data[4 * 6];
-
-		//Make the top face
-		vertex_position_data[0] = glm::vec3(-1.f, 1.f, 1.f);
-		vertex_position_data[1] = glm::vec3(1.f, 1.f, 1.f);
-		vertex_position_data[2] = glm::vec3(-1.f, -1.f, 1.f);
-		vertex_position_data[3] = glm::vec3(1.f, -1.f, 1.f);
-		vertex_normal_data[0] = vertex_normal_data[1] = vertex_normal_data[2] = vertex_normal_data[3] = glm::vec3(0.f, 0.f, 1.f);
-
-		//Make the rest rotating
-		for (size_t i = 1; i < 6; ++i)
-		{
-			glm::mat3x3 rot;
-			switch (i)
-			{
-			case 1:
-				rot = glm::rotate(glm::half_pi<float>(), glm::vec3(1.f, 0.f, 0.f));
-				break;
-			case 2:
-				rot = glm::rotate(glm::half_pi<float>(), glm::vec3(0.f, 1.f, 0.f));
-				break;
-			case 3:
-				rot = glm::rotate(-glm::half_pi<float>(), glm::vec3(1.f, 0.f, 0.f));
-				break;
-			case 4:
-				rot = glm::rotate(-glm::half_pi<float>(), glm::vec3(0.f, 1.f, 0.f));
-				break;
-			case 5:
-				rot = glm::rotate(glm::pi<float>(), glm::vec3(1.f, 0.f, 0.f));
-				break;
-			}
-
-			//Apply rotation
-			vertex_position_data[i * 4 + 0] = rot * vertex_position_data[0];
-			vertex_position_data[i * 4 + 1] = rot * vertex_position_data[1];
-			vertex_position_data[i * 4 + 2] = rot * vertex_position_data[2];
-			vertex_position_data[i * 4 + 3] = rot * vertex_position_data[3];
-			vertex_normal_data[i * 4 + 0] = vertex_normal_data[i * 4 + 1] = vertex_normal_data[i * 4 + 2] = vertex_normal_data[i * 4 + 3] = rot * vertex_normal_data[0];
-		}
-
-		display::BufferDesc vertex_buffer_position_desc = display::BufferDesc::CreateVertexBuffer(display::Access::Static, sizeof(vertex_position_data), sizeof(glm::vec3), vertex_position_data);
-		m_box_vertex_position_buffer = display::CreateBuffer(device, vertex_buffer_position_desc, "box_position_vertex_buffer");
-
-		display::BufferDesc vertex_buffer_normal_desc = display::BufferDesc::CreateVertexBuffer(display::Access::Static, sizeof(vertex_position_data), sizeof(glm::vec3), vertex_normal_data);
-		m_box_vertex_normal_buffer = display::CreateBuffer(device, vertex_buffer_normal_desc, "box_normal_vertex_buffer");
-	}
-
-	//Quad Index buffer
-	{
-		uint16_t index_buffer_data[36] = { 0 + 4 * 0, 3 + 4 * 0, 1 + 4 * 0, 0 + 4 * 0, 2 + 4 * 0, 3 + 4 * 0,
-			0 + 4 * 1, 3 + 4 * 1, 1 + 4 * 1, 0 + 4 * 1, 2 + 4 * 1, 3 + 4 * 1,
-			0 + 4 * 2, 3 + 4 * 2, 1 + 4 * 2, 0 + 4 * 2, 2 + 4 * 2, 3 + 4 * 2,
-			0 + 4 * 3, 3 + 4 * 3, 1 + 4 * 3, 0 + 4 * 3, 2 + 4 * 3, 3 + 4 * 3,
-			0 + 4 * 4, 3 + 4 * 4, 1 + 4 * 4, 0 + 4 * 4, 2 + 4 * 4, 3 + 4 * 4,
-			0 + 4 * 5, 3 + 4 * 5, 1 + 4 * 5, 0 + 4 * 5, 2 + 4 * 5, 3 + 4 * 5 };
+		uint16_t index_buffer_data[] = { 0, 2, 1, 2, 3, 1,
+		5, 4, 1, 1, 4, 0,
+		0, 4, 6, 0, 6, 2};
 
 		display::BufferDesc index_buffer_desc = display::BufferDesc::CreateIndexBuffer(display::Access::Static, sizeof(index_buffer_data), display::Format::R16_UINT, index_buffer_data);
 		m_box_index_buffer = display::CreateBuffer(device, index_buffer_desc, "box_index_buffer");
@@ -279,8 +219,6 @@ void BoxCityResources::Unload(display::Device* device)
 	display::DestroyHandle(device, m_box_render_description_table_handle);
 	display::DestroyHandle(device, m_box_render_root_signature);
 	display::DestroyHandle(device, m_box_render_pipeline_state);
-	display::DestroyHandle(device, m_box_vertex_position_buffer);
-	display::DestroyHandle(device, m_box_vertex_normal_buffer);
 	display::DestroyHandle(device, m_box_index_buffer);
 	display::DestroyHandle(device, m_box_culling_description_table_handle);
 	display::DestroyHandle(device, m_second_pass_box_culling_description_table_handle);

@@ -16,6 +16,7 @@ namespace render
 struct ViewConstantBuffer
 {
 	glm::mat4x4 projection_view_matrix;
+	glm::vec4 camera_position;
 	glm::vec4 time;
 	glm::vec4 sun_direction;
 	glm::vec4 frustum_planes[6];
@@ -29,8 +30,6 @@ struct BoxCityResources
 	display::RootSignatureHandle m_box_render_root_signature;
 	display::PipelineStateHandle m_box_render_pipeline_state;
 
-	display::BufferHandle m_box_vertex_position_buffer;
-	display::BufferHandle m_box_vertex_normal_buffer;
 	display::BufferHandle m_box_index_buffer;
 
 	static const uint32_t kIndirectBoxBufferCount = 1024 * 1024;

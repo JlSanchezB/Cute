@@ -7,6 +7,7 @@ cbuffer Root : register(b0)
 cbuffer ViewData : register(b1)
 {
     float4x4 view_projection_matrix;
+    float4 camera_position;
     float4 time;
     float4 sun_direction;
     float4 frustum_planes[6];

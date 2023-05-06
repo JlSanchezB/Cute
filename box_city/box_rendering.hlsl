@@ -1,8 +1,8 @@
 struct PSInput
 {
-    float4 position : SV_POSITION;
-    float3 normal : TEXCOORD0;
-    float4 colour : TEXCOORD1;
+    float4 view_position : SV_POSITION;
+    float4 world_position : TEXCOORD0;
+    nointerpolation float4 colour : TEXCOORD1;
 };
 cbuffer Root : register(b0)
 {
@@ -11,6 +11,7 @@ cbuffer Root : register(b0)
 cbuffer ViewData : register(b1)
 {
     float4x4 view_projection_matrix;
+    float4 camera_position;
     float4 time;
     float4 sun_direction;
     float4 frustum_planes[6];
@@ -30,7 +31,15 @@ float3 quat_multiplication(float4 quat, float3 vector)
     return vector + (s * t) + cross(qv, t);
 }
 
-PSInput vs_box_main(float3 position : POSITION, float3 normal : NORMAL, uint instance_id : SV_InstanceID)
+float3 quat_multiplication_transpose(float4 quat, float3 vector)
+{
+    float3 qv = float3(quat.x, quat.y, quat.z);
+    float s = quat.w;
+    float3 t = 2.0f * cross(qv, vector);
+    return vector + (s * t) + cross(qv, t);
+}
+
+PSInput vs_box_main(uint instance_id : SV_InstanceID, uint vertex_id : SV_VertexID)
 {
     PSInput result;
 
@@ -66,14 +75,28 @@ PSInput vs_box_main(float3 position : POSITION, float3 normal : NORMAL, uint ins
     float3 box_translation = float3(box_data[0].x, box_data[0].y, box_data[0].z);
     float4 box_colour = float4(box_data[2].x, box_data[2].y, box_data[2].z, 1.f);
 
+    //Calculate the position from the camera
+    //https://twitter.com/SebAaltonen/status/1315982782439591938
+    
+    //Camera vector local to the cube
+    float3 camera_direction = camera_position.xyz - (quat_multiplication(instance_rotate_quat, box_translation) + instance_translation);
+    float3 local_camera_direction = quat_multiplication_transpose(instance_rotate_quat, camera_direction);
+
+    //Calculate position, 8 vertices per box
+    uint3 box_xyz = uint3(vertex_id & 0x1, (vertex_id & 0x4) >> 2, (vertex_id & 0x2) >> 1);
+
+    if (local_camera_direction.x > 0.f) box_xyz.x = 1 - box_xyz.x;
+    if (local_camera_direction.y > 0.f) box_xyz.y = 1 - box_xyz.y;
+    if (local_camera_direction.z > 0.f) box_xyz.z = 1 - box_xyz.z;
+
+    float3 position = float3(box_xyz) * 2.f - 1.f;
+
     //Each position needs to be multiply by the local matrix
     float3 box_position = position * box_extent + box_translation;
     float3 world_position = quat_multiplication(instance_rotate_quat, box_position) + instance_translation;
 
-    result.position = mul(view_projection_matrix, float4(world_position, 1.f));
-
-    float3 box_normal = normal;
-    result.normal = quat_multiplication(instance_rotate_quat, box_normal);
+    result.view_position = mul(view_projection_matrix, float4(world_position, 1.f));
+    result.world_position = float4(world_position, 1.f);
     result.colour = box_colour;
 
     return result;
@@ -81,5 +104,8 @@ PSInput vs_box_main(float3 position : POSITION, float3 normal : NORMAL, uint ins
 
 float4 ps_box_main(PSInput input) : SV_TARGET
 {
-    return float4(input.colour.xyz, 1.f) * (0.3f + 0.7f * saturate(dot(normalize(input.normal), sun_direction.xyz)));
+    //Build the normals from the world position
+    float3 normal = normalize(cross(ddx(input.world_position).xyz, ddy(input.world_position).xyz));
+
+    return float4(input.colour.xyz, 1.f) * (0.3f + 0.7f * saturate(dot(normal, sun_direction.xyz)));
 }
