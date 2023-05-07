@@ -46,7 +46,7 @@ PSInput vs_box_main(uint multi_instance_id : SV_InstanceID, uint vertex_id : SV_
     uint instance_id = multi_instance_id * 16 + vertex_id / 8;
 
     //Kill instances outside the number of instances using degenerated vertex
-    if (instance_id >= indirect_box_buffer[0])
+    if (instance_id >= (indirect_box_buffer[0] - 1))
     {
         result.view_position = float4(0.f, 0.f, 0.f, 1.f);
         result.world_view_position = float4(0.f, 0.f, 0.f, 1.f);

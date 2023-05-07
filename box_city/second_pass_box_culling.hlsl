@@ -62,7 +62,7 @@ void second_pass_clear_indirect_arguments()
 void second_pass_box_culling(uint3 dispatch_thread_id : SV_DispatchThreadID)
 {
     //Number of boxes
-    uint num_second_pass_boxes = second_pass_indirect_culled_boxes[0];
+    uint num_second_pass_boxes = second_pass_indirect_culled_boxes[0] - 1;
 
     if (dispatch_thread_id.x < num_second_pass_boxes)
     {
