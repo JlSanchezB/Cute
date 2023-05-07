@@ -1,7 +1,7 @@
 struct PSInput
 {
     float4 view_position : SV_POSITION;
-    float4 world_position : TEXCOORD0;
+    float4 world_view_position : TEXCOORD0;
     nointerpolation float4 colour : TEXCOORD1;
 };
 cbuffer Root : register(b0)
@@ -49,8 +49,8 @@ PSInput vs_box_main(uint multi_instance_id : SV_InstanceID, uint vertex_id : SV_
     if (instance_id >= indirect_box_buffer[0])
     {
         result.view_position = float4(0.f, 0.f, 0.f, 1.f);
-        result.world_position = float4(0.f, 0.f, 0.f, 1.f);
-        result.colour = float4(0.f, 0.f, 0.f, 1.f);;
+        result.world_view_position = float4(0.f, 0.f, 0.f, 1.f);
+        result.colour = float4(0.f, 0.f, 0.f, 1.f);
 
         return result;
     }
@@ -108,7 +108,7 @@ PSInput vs_box_main(uint multi_instance_id : SV_InstanceID, uint vertex_id : SV_
     float3 world_position = quat_multiplication(instance_rotate_quat, box_position) + instance_translation;
 
     result.view_position = mul(view_projection_matrix, float4(world_position, 1.f));
-    result.world_position = float4(world_position, 1.f);
+    result.world_view_position = float4(world_position - camera_position.xyz, 1.f);
     result.colour = box_colour;
 
     return result;
@@ -116,8 +116,8 @@ PSInput vs_box_main(uint multi_instance_id : SV_InstanceID, uint vertex_id : SV_
 
 float4 ps_box_main(PSInput input) : SV_TARGET
 {
-    //Build the normals from the world position
-    float3 normal = normalize(cross(ddx(input.world_position).xyz, ddy(input.world_position).xyz));
+    //Build the normals from the (world position - camera position)
+    float3 normal = normalize(cross(ddx(input.world_view_position).xyz, ddy(input.world_view_position).xyz));
 
     return float4(input.colour.xyz, 1.f) * (0.3f + 0.7f * saturate(dot(normal, sun_direction.xyz)));
 }
