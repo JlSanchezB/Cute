@@ -271,7 +271,7 @@ void box_culling(uint3 group : SV_GroupID, uint3 group_thread_id : SV_GroupThrea
                         InterlockedAdd(indirect_culled_boxes[0], 1, offset);
 
                         //Check if we need a new instance group, 16 cubes in each instance
-                        if (offset / 16 != (offset + 1) / 16)
+                        if ((offset - 1) / 16 != (offset) / 16)
                         {
                             uint offset_instance;
                             InterlockedAdd(indirect_culled_boxes_parameters[1], 1, offset_instance);
@@ -295,7 +295,7 @@ void box_culling(uint3 group : SV_GroupID, uint3 group_thread_id : SV_GroupThrea
                         }
 
                         //Check if we need a new group
-                        if (offset / 32 != (offset + 1) / 32)
+                        if ((offset - 1) / 32 != (offset) / 32)
                         {
                             //That means we need a new group
                             InterlockedAdd(second_pass_indirect_culled_boxes_parameters[0], 1, offset);

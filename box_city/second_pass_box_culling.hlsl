@@ -167,7 +167,7 @@ void second_pass_box_culling(uint3 dispatch_thread_id : SV_DispatchThreadID)
                 InterlockedAdd(indirect_culled_boxes[0], 1, offset);
 
                 //Check if we need a new instance group
-                if (offset / 16 != (offset + 1) / 16)
+                if ((offset - 1) / 16 != (offset) / 16)
                 {
                     uint offset_instance;
                     InterlockedAdd(indirect_culled_boxes_parameters[1], 1, offset_instance);
