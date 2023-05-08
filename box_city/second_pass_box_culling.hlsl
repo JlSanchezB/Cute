@@ -108,11 +108,11 @@ void second_pass_box_culling(uint3 dispatch_thread_id : SV_DispatchThreadID)
             box_points[7] = QuatMultiplication(instance_rotate_quat, float3(1.f, 1.f, 1.f) * box_extent + box_translation) + instance_translation;
 
             //Convert in screen texel space
-            float4 clip_box_points[8];
+            float3 clip_box_points[8];
             [unroll] for (uint point_index = 0; point_index < 8; ++point_index)
             {
-                clip_box_points[point_index] = mul(view_projection_matrix, float4(box_points[point_index], 1.f));
-                clip_box_points[point_index] = clip_box_points[point_index] / clip_box_points[point_index].w;
+                float4 view_box_point = mul(last_frame_view_projection_matrix, float4(box_points[point_index], 1.f));
+                clip_box_points[point_index] = view_box_point.xyz / view_box_point.w;
             }
 
             //Calculate the min/max and min_z
@@ -163,16 +163,16 @@ void second_pass_box_culling(uint3 dispatch_thread_id : SV_DispatchThreadID)
                 uint offset;
                 InterlockedAdd(indirect_culled_boxes[0], 1, offset);
 
+                if (offset < indirect_box_buffer_count)
+                {
+                    indirect_culled_boxes[offset] = indirect_box;
+                }
+
                 //Check if we need a new instance group
                 if ((offset - 1) / 16 != (offset) / 16)
                 {
                     uint offset_instance;
                     InterlockedAdd(indirect_culled_boxes_parameters[1], 1, offset_instance);
-                }
-
-                if (offset < indirect_box_buffer_count)
-                {
-                    indirect_culled_boxes[offset] = indirect_box;
                 }
             }
         }

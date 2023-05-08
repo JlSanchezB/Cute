@@ -48,6 +48,9 @@ void CullCityBoxesPass::Render(render::RenderContext& render_context) const
 
 		std::vector<display::ResourceBarrier> resource_barriers;
 		resource_barriers.emplace_back(m_display_resources->m_indirect_parameters_buffer);
+		resource_barriers.emplace_back(m_display_resources->m_indirect_box_buffer);
+		resource_barriers.emplace_back(m_display_resources->m_second_pass_indirect_parameters_buffer);
+		resource_barriers.emplace_back(m_display_resources->m_second_pass_indirect_box_buffer);
 		render_context.GetContext()->AddResourceBarriers(resource_barriers);
 	}
 	{
@@ -101,6 +104,7 @@ void CullSecondPassCityBoxesPass::Render(render::RenderContext& render_context) 
 
 		std::vector<display::ResourceBarrier> resource_barriers;
 		resource_barriers.emplace_back(m_display_resources->m_indirect_parameters_buffer);
+		resource_barriers.emplace_back(m_display_resources->m_indirect_box_buffer);
 		render_context.GetContext()->AddResourceBarriers(resource_barriers);
 	}
 	{

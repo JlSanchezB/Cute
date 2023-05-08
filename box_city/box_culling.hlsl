@@ -204,11 +204,11 @@ void box_culling(uint3 group : SV_GroupID, uint3 group_thread_id : SV_GroupThrea
                         box_points[7] = QuatMultiplication(last_frame_rotate_quat, float3(1.f, 1.f, 1.f) * box_extent + box_translation) + last_frame_translation;
 
                         //Convert in screen texel space
-                        float4 clip_box_points[8];
+                        float3 clip_box_points[8];
                         [unroll] for (uint point_index = 0; point_index < 8; ++point_index)
                         {
-                            clip_box_points[point_index] = mul(last_frame_view_projection_matrix, float4(box_points[point_index], 1.f));
-                            clip_box_points[point_index] = clip_box_points[point_index] / clip_box_points[point_index].w;
+                            float4 view_box_point = mul(last_frame_view_projection_matrix, float4(box_points[point_index], 1.f));
+                            clip_box_points[point_index] = view_box_point.xyz / view_box_point.w;
                         }
 
                         //Calculate the min/max and min_z
