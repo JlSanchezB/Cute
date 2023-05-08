@@ -17,9 +17,9 @@ void CullCityBoxesPass::Render(render::RenderContext& render_context) const
 	//Setup compute
 	render_context.GetContext()->SetRootSignature(display::Pipe::Compute, m_display_resources->m_box_culling_root_signature);
 
-	uint32_t constants[2] = { box_city_custom_data.instance_lists_offset, m_display_resources->kIndirectBoxBufferCount };
+	uint32_t constants[3] = { box_city_custom_data.instance_lists_offset, m_display_resources->kIndirectBoxBufferCount, m_display_resources->kSecondPassIndirectBoxBufferCount };
 
-	render_context.GetContext()->SetConstants(display::Pipe::Compute, 0, constants, 2);
+	render_context.GetContext()->SetConstants(display::Pipe::Compute, 0, constants, 3);
 
 	//Update the descriptor table
 	display::DescriptorTableDesc::Descritor descriptors[8];
@@ -71,7 +71,7 @@ void CullSecondPassCityBoxesPass::Render(render::RenderContext& render_context) 
 	//Setup compute
 	render_context.GetContext()->SetRootSignature(display::Pipe::Compute, m_display_resources->m_second_pass_box_culling_root_signature);
 
-	uint32_t constants[2] = { m_display_resources->kIndirectBoxBufferCount };
+	uint32_t constants[1] = { m_display_resources->kIndirectBoxBufferCount };
 
 	render_context.GetContext()->SetConstants(display::Pipe::Compute, 0, constants, 1);
 

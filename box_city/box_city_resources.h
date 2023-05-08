@@ -33,8 +33,8 @@ struct BoxCityResources
 
 	display::BufferHandle m_box_index_buffer;
 
-	static const uint32_t kIndirectBoxBufferCount = 1024 * 1024;
-	static const uint32_t kSecondPassIndirectBoxBufferCount = 1024 * 1024;
+	static const uint32_t kIndirectBoxBufferCount = 5 * 1024 * 1024;
+	static const uint32_t kSecondPassIndirectBoxBufferCount = 5 * 1024 * 1024;
 	display::BufferHandle m_indirect_box_buffer;
 	display::BufferHandle m_second_pass_indirect_box_buffer;
 	display::BufferHandle m_indirect_parameters_buffer;

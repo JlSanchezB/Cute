@@ -3,6 +3,7 @@ cbuffer Root : register(b0)
 {
     uint instance_lists_offset;
     uint indirect_box_buffer_count;
+    uint second_pass_indirect_box_buffer_count;
 }
 
 cbuffer ViewData : register(b1)
@@ -59,7 +60,7 @@ void clear_indirect_arguments()
     indirect_culled_boxes_parameters[3] = 0;
     indirect_culled_boxes_parameters[4] = 0;
 
-    second_pass_indirect_culled_boxes_parameters[0] = 0;
+    second_pass_indirect_culled_boxes_parameters[0] = 1;
     second_pass_indirect_culled_boxes_parameters[1] = 1;
     second_pass_indirect_culled_boxes_parameters[2] = 1;
 
@@ -286,7 +287,7 @@ void box_culling(uint3 group : SV_GroupID, uint3 group_thread_id : SV_GroupThrea
                         uint offset;
                         InterlockedAdd(second_pass_indirect_culled_boxes[0], 1, offset);
            
-                        if (offset < indirect_box_buffer_count)
+                        if (offset < second_pass_indirect_box_buffer_count)
                         {
                             second_pass_indirect_culled_boxes[offset] = indirect_box;
                         }

@@ -93,7 +93,7 @@ void BoxCityResources::Load(display::Device* device, render::System* render_syst
 		desc.root_parameters[0].type = display::RootSignatureParameterType::Constants;
 		desc.root_parameters[0].visibility = display::ShaderVisibility::All;
 		desc.root_parameters[0].root_param.shader_register = 0;
-		desc.root_parameters[0].root_param.num_constants = 2;
+		desc.root_parameters[0].root_param.num_constants = 3;
 
 		desc.root_parameters[1].type = display::RootSignatureParameterType::DescriptorTable;
 		desc.root_parameters[1].visibility = display::ShaderVisibility::All;
