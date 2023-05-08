@@ -16,6 +16,7 @@ namespace render
 struct ViewConstantBuffer
 {
 	glm::mat4x4 projection_view_matrix;
+	glm::mat4x4 last_frame_view_projection_matrix;
 	glm::vec4 camera_position;
 	glm::vec4 time;
 	glm::vec4 sun_direction;

@@ -8,6 +8,7 @@ cbuffer Root : register(b0)
 cbuffer ViewData : register(b1)
 {
     float4x4 view_projection_matrix;
+    float4x4 last_frame_view_projection_matrix;
     float4 camera_position;
     float4 time;
     float4 sun_direction;
@@ -205,7 +206,7 @@ void box_culling(uint3 group : SV_GroupID, uint3 group_thread_id : SV_GroupThrea
                         float4 clip_box_points[8];
                         [unroll] for (uint point_index = 0; point_index < 8; ++point_index)
                         {
-                            clip_box_points[point_index] = mul(view_projection_matrix, float4(box_points[point_index], 1.f));
+                            clip_box_points[point_index] = mul(last_frame_view_projection_matrix, float4(box_points[point_index], 1.f));
                             clip_box_points[point_index] = clip_box_points[point_index] / clip_box_points[point_index].w;
                         }
 
