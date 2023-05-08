@@ -132,12 +132,8 @@ void second_pass_box_culling(uint3 dispatch_thread_id : SV_DispatchThreadID)
 
             //Calculate mip index
             int max_distance = max(max_box_hiz.x - min_box_hiz.x, min_box_hiz.y - max_box_hiz.y);
-            uint lod_index = 0;
+            uint lod_index = uint(ceil(log2(max_distance)));
 
-            if (max_distance > 1)
-            {
-                lod_index = uint(ceil(log2(max_distance)));
-            }
             //Sample the HiZ to decide if can be render in the first pass or it needs to be pass to the second pass
             uint2 mip_info = GetMipOffset(lod_index);
 

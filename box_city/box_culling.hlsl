@@ -227,12 +227,8 @@ void box_culling(uint3 group : SV_GroupID, uint3 group_thread_id : SV_GroupThrea
                         
                         //Calculate mip index
                         int max_distance = max(max_box_hiz.x - min_box_hiz.x, min_box_hiz.y - max_box_hiz.y);
-                        uint lod_index = 0;
-
-                        if (max_distance > 1)
-                        {
-                            lod_index = uint(ceil(log2(max_distance)));
-                        }
+                        uint lod_index = uint(ceil(log2(max_distance)));
+                        
                         //Sample the HiZ to decide if can be render in the first pass or it needs to be pass to the second pass
                         uint2 mip_info = GetMipOffset(lod_index);
 
