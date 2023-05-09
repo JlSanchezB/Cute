@@ -68,9 +68,13 @@ void BoxCityResources::Load(display::Device* device, render::System* render_syst
 		//Each box is known using the index / 8
 		const uint32_t num_boxes_per_instance = 16;
 
-		uint16_t instance_index_buffer_data[] = { 0, 2, 1, 2, 3, 1,
-		5, 4, 1, 1, 4, 0,
-		0, 4, 6, 0, 6, 2};
+		//Each face has an unique invoke vertex, so we can use to define the normal of the face as it is not going to be interpolated and
+		//it is going to be unique per face
+		uint16_t instance_index_buffer_data[] = {
+		3, 0, 2, 3, 1, 0, //Invoke vertex 3
+		5, 4, 0, 5, 1, 0, //Invoke vertex 5
+		6, 0, 4, 6, 2, 0  //Invoke vertex 6
+		}; 
 
 		uint16_t index_buffer_data[18 * num_boxes_per_instance];
 

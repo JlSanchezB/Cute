@@ -1,7 +1,7 @@
 struct PSInput
 {
     float4 view_position : SV_POSITION;
-    float4 world_view_position : TEXCOORD0;
+    nointerpolation float3 world_normal : TEXCOORD0;
     nointerpolation float4 colour : TEXCOORD1;
 };
 cbuffer Root : register(b0)
@@ -50,7 +50,7 @@ PSInput vs_box_main(uint multi_instance_id : SV_InstanceID, uint vertex_id : SV_
     if (instance_id >= (indirect_box_buffer[0] - 1))
     {
         result.view_position = float4(0.f, 0.f, 0.f, 1.f);
-        result.world_view_position = float4(0.f, 0.f, 0.f, 1.f);
+        result.world_normal = float3(0.f, 0.f, 0.f);
         result.colour = float4(0.f, 0.f, 0.f, 1.f);
 
         return result;
@@ -97,7 +97,7 @@ PSInput vs_box_main(uint multi_instance_id : SV_InstanceID, uint vertex_id : SV_
 
     //Calculate position, 8 vertices per box
     uint3 box_xyz = uint3(vertex_id & 0x1, (vertex_id & 0x4) >> 2, (vertex_id & 0x2) >> 1);
-
+    
     if (local_camera_direction.x > 0.f) box_xyz.x = 1 - box_xyz.x;
     if (local_camera_direction.y > 0.f) box_xyz.y = 1 - box_xyz.y;
     if (local_camera_direction.z > 0.f) box_xyz.z = 1 - box_xyz.z;
@@ -109,7 +109,19 @@ PSInput vs_box_main(uint multi_instance_id : SV_InstanceID, uint vertex_id : SV_
     float3 world_position = quat_multiplication(instance_rotate_quat, box_position) + instance_translation;
 
     result.view_position = mul(view_projection_matrix, float4(world_position, 1.f));
-    result.world_view_position = float4(world_position - camera_position.xyz, 1.f);
+
+    //vertex index to know the invoke vertex index
+    //We know that all the face is going to use the normal of the invoke vertex and invoke vertex is not shared between the faces
+    uint vertex_index = vertex_id % 8;
+    if (vertex_index == 5) //Z
+        result.world_normal = quat_multiplication(instance_rotate_quat, float3(0.f, 0.f, position.z));
+    else if (vertex_index == 3) //Y
+        result.world_normal = quat_multiplication(instance_rotate_quat, float3(0.f, position.y, 0.f));
+    else if (vertex_index == 6) //X
+        result.world_normal = quat_multiplication(instance_rotate_quat, float3(position.x, 0.f, 0.f));
+    else
+        result.world_normal = float3(0.f, 0.f, 0.f);
+
     result.colour = box_colour;
 
     return result;
@@ -117,8 +129,5 @@ PSInput vs_box_main(uint multi_instance_id : SV_InstanceID, uint vertex_id : SV_
 
 float4 ps_box_main(PSInput input) : SV_TARGET
 {
-    //Build the normals from the (world position - camera position)
-    float3 normal = normalize(cross(ddx(input.world_view_position).xyz, ddy(input.world_view_position).xyz));
-
-    return float4(input.colour.xyz, 1.f) * (0.3f + 0.7f * saturate(dot(normal, sun_direction.xyz)));
+    return float4(input.colour.xyz, 1.f) * (0.3f + 0.7f * saturate(dot(input.world_normal, sun_direction.xyz)));
 }
