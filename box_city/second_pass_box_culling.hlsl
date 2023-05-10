@@ -111,7 +111,7 @@ void second_pass_box_culling(uint3 dispatch_thread_id : SV_DispatchThreadID)
             float3 clip_box_points[8];
             [unroll] for (uint point_index = 0; point_index < 8; ++point_index)
             {
-                float4 view_box_point = mul(last_frame_view_projection_matrix, float4(box_points[point_index], 1.f));
+                float4 view_box_point = mul(view_projection_matrix, float4(box_points[point_index], 1.f));
                 clip_box_points[point_index] = view_box_point.xyz / view_box_point.w;
             }
 
@@ -133,7 +133,9 @@ void second_pass_box_culling(uint3 dispatch_thread_id : SV_DispatchThreadID)
 
             //Calculate mip index
             int max_distance = max(max_box_hiz.x - min_box_hiz.x, min_box_hiz.y - max_box_hiz.y);
-            uint lod_index = uint(ceil(log2(max_distance)));
+            uint lod_index = 0;
+            if (max_distance > 0)
+                lod_index = uint(ceil(log2(max_distance)));
 
             //Sample the HiZ to decide if can be render in the first pass or it needs to be pass to the second pass
             uint2 mip_info = GetMipOffset(lod_index);
@@ -166,13 +168,13 @@ void second_pass_box_culling(uint3 dispatch_thread_id : SV_DispatchThreadID)
                 if (offset < indirect_box_buffer_count)
                 {
                     indirect_culled_boxes[offset] = indirect_box;
-                }
 
-                //Check if we need a new instance group
-                if ((offset - 1) / 16 != (offset) / 16)
-                {
-                    uint offset_instance;
-                    InterlockedAdd(indirect_culled_boxes_parameters[1], 1, offset_instance);
+                    //Check if we need a new instance group
+                    if ((offset - 1) / 16 != (offset) / 16)
+                    {
+                        uint offset;
+                        InterlockedAdd(indirect_culled_boxes_parameters[1], 1, offset);
+                    }
                 }
             }
         }
