@@ -3,7 +3,7 @@
 //Indirect parameters for draw call
 globallycoherent RWTexture2D<float> hz_texture : register(u0);
 Texture2D<float> scene_depth : register(t0);
-globallycoherent RWStructuredBuffer<uint> atomic_buffer : register(u1);
+RWStructuredBuffer<uint> atomic_buffer : register(u1);
 
 #define REDUCTION_METHOD
 
@@ -96,11 +96,20 @@ void build_hz(uint3 group : SV_GroupID, uint3 group_thread_id : SV_GroupThreadID
 	{
 		const uint atomic_step = 0xFFFFFFFF / 4 + 1; //Adding this step, each 4 will go to zero
 		//Reduce the groups as needed
-		if (group_thread_id.x == 0 && group_thread_id.y == 0 && mip_num_groups != 0) //We only reduce when we have 2x2 groups or more
+		if (group_thread_id.x == 0 && group_thread_id.y == 0 && mip_index <= 6) //We only reduce when we have 2x2 groups or more
 		{
 			//Each group will increment the atomic to know how many groups have passed
-			InterlockedAdd(atomic_buffer[group_reduced.x + group_reduced.y * mip_num_groups], atomic_step, group_dispatch_index);
+
+			//Calculate offset in the atomic buffer
+			uint atomic_buffer_offset = 0;
+			if (mip_index > 1)
+			{
+				atomic_buffer_offset = 2048 - 2048 / exp2(mip_index - 1);
+			}
+
+			InterlockedAdd(atomic_buffer[atomic_buffer_offset + group_reduced.x + group_reduced.y * mip_num_groups], atomic_step, group_dispatch_index);
 		}
+
 		GroupMemoryBarrierWithGroupSync();
 
 		if (group_dispatch_index != atomic_step * 3) return; //Only the last one survive, that when the prev value was atomic_step * 3

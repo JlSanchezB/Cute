@@ -55,7 +55,7 @@
     <Dependencies>
       <Texture2D name="HiZ" pre_condition_state="FirstPass" post_update_state="SecondPass" access="UnorderedAccess" format="R32_FLOAT" width="768" height="512"/>
       <DepthBuffer name="SceneDepth" pre_condition_state="FirstPassReadyToCapture" post_update_state="SecondPass" format="D32_FLOAT" default_depth="0.f" access="AllShaderResource"/>
-      <Buffer name="HiZ_atomic" pre_condition_state="Alloc" post_update_state="Free" access="UnorderedAccess" size ="4096" clear="true"/>
+      <Buffer name="HiZ_atomic" pre_condition_state="Alloc" post_update_state="Free" access="UnorderedAccess" size ="8192" clear="true"/>
     </Dependencies>
     <Commands>
       <SetRootSignature pipe="Compute">BuildHiZRootSignature</SetRootSignature>
@@ -101,7 +101,7 @@
     <Dependencies>
       <Texture2D name="HiZ" pre_condition_state="SecondPassReadyToUpdate" post_update_state="Free" access="UnorderedAccess" format="R32_FLOAT" width="768" height="512"/>
       <DepthBuffer name="SceneDepth" pre_condition_state="SecondPassReadyToCapture" post_update_state="Free" format="D32_FLOAT" default_depth="0.f" access="AllShaderResource"/>
-      <Buffer name="HiZ_atomic" pre_condition_state="Alloc" post_update_state="Free" access="UnorderedAccess" size ="4096" clear="true"/>
+      <Buffer name="HiZ_atomic" pre_condition_state="Alloc" post_update_state="Free" access="UnorderedAccess" size ="8192" clear="true"/>
     </Dependencies>
     <Commands>
       <SetRootSignature pipe="Compute">BuildHiZRootSignature</SetRootSignature>
