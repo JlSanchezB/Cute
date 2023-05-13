@@ -373,7 +373,7 @@ namespace display
 						assert(device->m_buffer_pool[resource].ShaderAccess);
 						//Set it as shader resource or constant buffer
 						device->m_native_device->CopyDescriptorsSimple(1, device->m_descriptor_table_pool.GetDescriptor(current_frame_descriptor_table_handle, i),
-						device->m_buffer_pool.GetDescriptor(resource, Buffer::kShaderResourceOrConstantBufferDescriptorIndex), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+						device->m_buffer_pool.GetDescriptor(GetRingResource(device, resource, device->m_frame_index), Buffer::kShaderResourceOrConstantBufferDescriptorIndex), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 					},
 					[&](AsUAVBuffer resource)
 					{
@@ -386,7 +386,7 @@ namespace display
 					{
 						//Set it as shader resource or constant buffer
 						device->m_native_device->CopyDescriptorsSimple(1, device->m_descriptor_table_pool.GetDescriptor(current_frame_descriptor_table_handle, i),
-						device->m_texture_2d_pool.GetDescriptor(resource, Texture2D::kShaderResourceDescriptorIndex), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+						device->m_texture_2d_pool.GetDescriptor(GetRingResource(device, resource, device->m_frame_index), Texture2D::kShaderResourceDescriptorIndex), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 					},
 					[&](AsUAVTexture2D resource)
 					{
