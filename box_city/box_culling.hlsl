@@ -42,7 +42,7 @@ uint2 GetMipOffset(uint mip_index)
     return uint2(512, 512 - 1024 / exp2(mip_index));
 }
 
-float3 QuatMultiplication(float4 quat, float3 vector)
+float3 quat_multiplication(float4 quat, float3 vector)
 {
     float3 qv = float3(quat.x, quat.y, quat.z);
     float s = -quat.w;
@@ -116,14 +116,14 @@ void box_culling(uint3 group : SV_GroupID, uint3 group_thread_id : SV_GroupThrea
             //Frustum collision
             {
                 float3 box_points[8];
-                box_points[0] = QuatMultiplication(rotate_quat, float3(-1.f, -1.f, -1.f) * extent) + translation;
-                box_points[1] = QuatMultiplication(rotate_quat, float3(-1.f, -1.f, 1.f) * extent) + translation;
-                box_points[2] = QuatMultiplication(rotate_quat, float3(-1.f, 1.f, -1.f) * extent) + translation;
-                box_points[3] = QuatMultiplication(rotate_quat, float3(-1.f, 1.f, 1.f) * extent) + translation;
-                box_points[4] = QuatMultiplication(rotate_quat, float3(1.f, -1.f, -1.f) * extent) + translation;
-                box_points[5] = QuatMultiplication(rotate_quat, float3(1.f, -1.f, 1.f) * extent) + translation;
-                box_points[6] = QuatMultiplication(rotate_quat, float3(1.f, 1.f, -1.f) * extent) + translation;
-                box_points[7] = QuatMultiplication(rotate_quat, float3(1.f, 1.f, 1.f) * extent) + translation;
+                box_points[0] = quat_multiplication(rotate_quat, float3(-1.f, -1.f, -1.f) * extent) + translation;
+                box_points[1] = quat_multiplication(rotate_quat, float3(-1.f, -1.f, 1.f) * extent) + translation;
+                box_points[2] = quat_multiplication(rotate_quat, float3(-1.f, 1.f, -1.f) * extent) + translation;
+                box_points[3] = quat_multiplication(rotate_quat, float3(-1.f, 1.f, 1.f) * extent) + translation;
+                box_points[4] = quat_multiplication(rotate_quat, float3(1.f, -1.f, -1.f) * extent) + translation;
+                box_points[5] = quat_multiplication(rotate_quat, float3(1.f, -1.f, 1.f) * extent) + translation;
+                box_points[6] = quat_multiplication(rotate_quat, float3(1.f, 1.f, -1.f) * extent) + translation;
+                box_points[7] = quat_multiplication(rotate_quat, float3(1.f, 1.f, 1.f) * extent) + translation;
 
                 int outside = 0;
                 // check box outside/inside of frustum
@@ -194,14 +194,14 @@ void box_culling(uint3 group : SV_GroupID, uint3 group_thread_id : SV_GroupThrea
                     {
                         //Calculate 8 points in the box, last frame
                         float3 box_points[8];
-                        box_points[0] = QuatMultiplication(last_frame_rotate_quat, float3(-1.f, -1.f, -1.f) * box_extent + box_translation) + last_frame_translation;
-                        box_points[1] = QuatMultiplication(last_frame_rotate_quat, float3(-1.f, -1.f, 1.f) * box_extent + box_translation) + last_frame_translation;
-                        box_points[2] = QuatMultiplication(last_frame_rotate_quat, float3(-1.f, 1.f, -1.f) * box_extent + box_translation) + last_frame_translation;
-                        box_points[3] = QuatMultiplication(last_frame_rotate_quat, float3(-1.f, 1.f, 1.f) * box_extent + box_translation) + last_frame_translation;
-                        box_points[4] = QuatMultiplication(last_frame_rotate_quat, float3(1.f, -1.f, -1.f) * box_extent + box_translation) + last_frame_translation;
-                        box_points[5] = QuatMultiplication(last_frame_rotate_quat, float3(1.f, -1.f, 1.f) * box_extent + box_translation) + last_frame_translation;
-                        box_points[6] = QuatMultiplication(last_frame_rotate_quat, float3(1.f, 1.f, -1.f) * box_extent + box_translation) + last_frame_translation;
-                        box_points[7] = QuatMultiplication(last_frame_rotate_quat, float3(1.f, 1.f, 1.f) * box_extent + box_translation) + last_frame_translation;
+                        box_points[0] = quat_multiplication(last_frame_rotate_quat, float3(-1.f, -1.f, -1.f) * box_extent + box_translation) + last_frame_translation;
+                        box_points[1] = quat_multiplication(last_frame_rotate_quat, float3(-1.f, -1.f, 1.f) * box_extent + box_translation) + last_frame_translation;
+                        box_points[2] = quat_multiplication(last_frame_rotate_quat, float3(-1.f, 1.f, -1.f) * box_extent + box_translation) + last_frame_translation;
+                        box_points[3] = quat_multiplication(last_frame_rotate_quat, float3(-1.f, 1.f, 1.f) * box_extent + box_translation) + last_frame_translation;
+                        box_points[4] = quat_multiplication(last_frame_rotate_quat, float3(1.f, -1.f, -1.f) * box_extent + box_translation) + last_frame_translation;
+                        box_points[5] = quat_multiplication(last_frame_rotate_quat, float3(1.f, -1.f, 1.f) * box_extent + box_translation) + last_frame_translation;
+                        box_points[6] = quat_multiplication(last_frame_rotate_quat, float3(1.f, 1.f, -1.f) * box_extent + box_translation) + last_frame_translation;
+                        box_points[7] = quat_multiplication(last_frame_rotate_quat, float3(1.f, 1.f, 1.f) * box_extent + box_translation) + last_frame_translation;
 
                         //Convert in screen texel space
                         float3 clip_box_points[8];
