@@ -68,6 +68,7 @@
     <ClInclude Include="box_city_resources.h">
       <Filter>Source Files</Filter>
     </ClInclude>
+    <ClInclude Include="box_culling_common.h" />
   </ItemGroup>
   <ItemGroup>
     <Xml Include="box_city_render_passes.xml" />

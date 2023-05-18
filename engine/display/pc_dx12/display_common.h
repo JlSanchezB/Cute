@@ -21,6 +21,7 @@
 #include <bitset>
 #include <filesystem>
 #include <dxcapi.h>
+#include <unordered_set>
 
 using namespace DirectX;
 
@@ -229,13 +230,14 @@ namespace display
 		std::string name;
 		std::vector < std::pair<std::string, std::string>> defines;
 		std::filesystem::file_time_type timestamp;
+		std::vector<std::pair<std::string, std::filesystem::file_time_type>> include_timestaps;
 
 		PipelineReloadShaderData()
 		{
 		}
 
 		//Capture the compule shader desc for the reloading
-		void Capture(const CompileShaderDesc& shader_descriptor)
+		void Capture(const CompileShaderDesc& shader_descriptor, const std::unordered_set<std::string>& include_set)
 		{
 			if (shader_descriptor.file_name == nullptr)
 			{
@@ -255,7 +257,21 @@ namespace display
 				defines[i] = std::make_pair(shader_descriptor.defines[i].first, shader_descriptor.defines[i].second);
 			}
 
+			for (auto& include : include_set)
+			{
+				include_timestaps.emplace_back(include, std::filesystem::file_time_type());
+			}
+
 			UpdateTimeStamp();
+		}
+
+		void UpdateIncludeSet(const std::unordered_set<std::string>& include_set)
+		{
+			include_timestaps.clear();
+			for (auto& include : include_set)
+			{
+				include_timestaps.emplace_back(include, std::filesystem::file_time_type());
+			}
 		}
 
 		//Converts the captured data to a compile shader desc
@@ -279,12 +295,24 @@ namespace display
 		bool NeedsUpdate() const
 		{
 			if (file_name == "") return false; //It was a blob shader
-			return timestamp < std::filesystem::last_write_time(file_name.c_str());
+			if (timestamp < std::filesystem::last_write_time(file_name.c_str())) return true;
+			for (auto& include : include_timestaps)
+			{
+				if (include.second < std::filesystem::last_write_time(include.first.c_str())) return true;
+			}
+
+			return false;
 		}
 
 		void UpdateTimeStamp()
 		{
 			timestamp = std::filesystem::last_write_time(file_name.c_str());
+
+			for (auto& include : include_timestaps)
+			{
+				include.second = std::filesystem::last_write_time(include.first.c_str());
+			}
+
 		}
 	};
 	struct PipelineReloadData
@@ -300,7 +328,7 @@ namespace display
 		PipelineReloadShaderData PixelShaderCompileReloadData;
 		PipelineReloadShaderData ComputeShaderCompileReloadData;
 
-		PipelineReloadData(const char* _name, WeakPipelineStateHandle _handle, const PipelineStateDesc& pipeline_state_desc, const D3D12_GRAPHICS_PIPELINE_STATE_DESC _pipeline_desc, std::vector<D3D12_INPUT_ELEMENT_DESC> _input_elements)
+		PipelineReloadData(const char* _name, WeakPipelineStateHandle _handle, const PipelineStateDesc& pipeline_state_desc, const D3D12_GRAPHICS_PIPELINE_STATE_DESC _pipeline_desc, std::vector<D3D12_INPUT_ELEMENT_DESC> _input_elements, const std::unordered_set<std::string>& vertex_shader_include_set, const std::unordered_set<std::string>& pixel_shader_include_set)
 		{
 			handle = _handle;
 			name = _name;
@@ -308,17 +336,17 @@ namespace display
 			input_elements = _input_elements;
 			for (size_t i = 0; i < input_elements.size(); i++) semantic_names.push_back(input_elements[i].SemanticName);
 			root_signature_handle = pipeline_state_desc.root_signature;
-			VertexShaderCompileReloadData.Capture(pipeline_state_desc.vertex_shader);
-			PixelShaderCompileReloadData.Capture(pipeline_state_desc.pixel_shader);
+			VertexShaderCompileReloadData.Capture(pipeline_state_desc.vertex_shader, vertex_shader_include_set);
+			PixelShaderCompileReloadData.Capture(pipeline_state_desc.pixel_shader, pixel_shader_include_set);
 		}
 
-		PipelineReloadData(const char* _name, WeakPipelineStateHandle _handle, const ComputePipelineStateDesc& pipeline_state_desc, const D3D12_COMPUTE_PIPELINE_STATE_DESC _pipeline_desc)
+		PipelineReloadData(const char* _name, WeakPipelineStateHandle _handle, const ComputePipelineStateDesc& pipeline_state_desc, const D3D12_COMPUTE_PIPELINE_STATE_DESC _pipeline_desc, const std::unordered_set<std::string>& include_set)
 		{
 			handle = _handle;
 			name = _name;
 			pipeline_desc = _pipeline_desc;
 			root_signature_handle = pipeline_state_desc.root_signature;
-			ComputeShaderCompileReloadData.Capture(pipeline_state_desc.compute_shader);
+			ComputeShaderCompileReloadData.Capture(pipeline_state_desc.compute_shader, include_set);
 		}
 	};
 
@@ -420,8 +448,9 @@ namespace display
 		size_t uploaded_memory_frame = 0;
 
 		//Shader compiler library
-		ComPtr<IDxcLibrary> m_shader_library;
+		ComPtr<IDxcUtils> m_shader_utils;
 		ComPtr<IDxcCompiler3> m_shader_compiler;
+		ComPtr<IDxcIncludeHandler> m_shader_default_include_handler;
 
 		//Indirect draw command signatures
 		ComPtr<ID3D12CommandSignature> m_indirect_draw_indexed_command_signature;

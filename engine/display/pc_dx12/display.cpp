@@ -4,6 +4,7 @@
 #include <locale.h>
 #include <core/profile.h>
 #include <fstream>
+#include <unordered_set>
 #include <helpers/imgui_helper.h>
 
 extern "C" { __declspec(dllexport) extern const UINT D3D12SDKVersion = 608; }
@@ -390,16 +391,22 @@ namespace display
 		}
 
 		//Create shader compilation
-		HRESULT hr = DxcCreateInstance(CLSID_DxcLibrary, IID_PPV_ARGS(&device->m_shader_library));
+		HRESULT hr = DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(&device->m_shader_utils));
 		if (FAILED(hr))
 		{
-			core::LogError("DX12 error creating the DX library");
+			core::LogError("DX12 error creating the DX utils");
 		}
 
 		hr = DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&device->m_shader_compiler));
 		if (FAILED(hr))
 		{
 			core::LogError("DX12 error creating the shader compiler");
+		}
+
+		hr = device->m_shader_utils->CreateDefaultIncludeHandler(device->m_shader_default_include_handler.GetAddressOf());
+		if (FAILED(hr))
+		{
+			core::LogError("DX12 error creating the default include handler");
 		}
 	
 		return device;
@@ -800,7 +807,51 @@ namespace display
 	{
 		return std::wstring(input, input + strlen(input));
 	}
-	static bool CompileShader(Device* device, const CompileShaderDesc& compile_shader_desc, ComPtr<IDxcBlob>& shader_blob)
+	static std::string ToChar(std::wstring input)
+	{
+		std::string str;
+		std::transform(input.begin(), input.end(), std::back_inserter(str), [](wchar_t c) {
+			return (char)c;
+			});
+
+		return str;
+	}
+
+	class CustomIncludeHandler : public IDxcIncludeHandler
+	{
+		Device* m_device;
+		std::unordered_set<std::string>* m_included_files;
+	public:
+		HRESULT STDMETHODCALLTYPE LoadSource(_In_ LPCWSTR pFilename, _COM_Outptr_result_maybenull_ IDxcBlob** ppIncludeSource) override
+		{
+			ComPtr<IDxcBlobEncoding> pEncoding;
+			HRESULT hr = m_device->m_shader_utils->LoadFile(pFilename, nullptr, pEncoding.GetAddressOf());
+			if (SUCCEEDED(hr))
+			{
+				m_included_files->insert(ToChar(pFilename));
+				*ppIncludeSource = pEncoding.Detach();
+			}
+			else
+			{
+				*ppIncludeSource = nullptr;
+			}
+			return hr;
+		}
+
+		HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, _COM_Outptr_ void __RPC_FAR* __RPC_FAR* ppvObject) override
+		{
+			return m_device->m_shader_default_include_handler->QueryInterface(riid, ppvObject);
+		}
+
+		ULONG STDMETHODCALLTYPE AddRef(void) override { return 0; }
+		ULONG STDMETHODCALLTYPE Release(void) override { return 0; }
+
+		CustomIncludeHandler(Device* device, std::unordered_set<std::string>* included_files) : m_device(device), m_included_files(included_files)
+		{
+		}
+	};
+
+	static bool CompileShader(Device* device, const CompileShaderDesc& compile_shader_desc, ComPtr<IDxcBlob>& shader_blob, std::unordered_set<std::string>& include_set)
 	{
 		ComPtr<ID3DBlob> blob;
 
@@ -870,8 +921,11 @@ namespace display
 			arguments.push_back(define.c_str());
 		}
 
+		//Create custom include handler
+		CustomIncludeHandler custom_include_handler(device, &include_set);
+
 		ComPtr<IDxcResult> shader_results;
-		hr = device->m_shader_compiler->Compile(&source_buffer, arguments.data(), static_cast<uint32_t>(arguments.size()), nullptr, IID_PPV_ARGS(shader_results.GetAddressOf()));
+		hr = device->m_shader_compiler->Compile(&source_buffer, arguments.data(), static_cast<uint32_t>(arguments.size()), &custom_include_handler, IID_PPV_ARGS(shader_results.GetAddressOf()));
 
 		if (SUCCEEDED(hr))
 		{
@@ -935,8 +989,10 @@ namespace display
 
 		DX12_pipeline_state_desc.pRootSignature = device->Get(pipeline_state_desc.root_signature).resource.Get();
 
+		std::unordered_set<std::string> vertex_shader_include_set;
+
 		ComPtr<IDxcBlob> vertex_shader_blob;
-		if (!CompileShader(device, pipeline_state_desc.vertex_shader, vertex_shader_blob))
+		if (!CompileShader(device, pipeline_state_desc.vertex_shader, vertex_shader_blob, vertex_shader_include_set))
 		{
 			device->m_pipeline_state_pool.Free(handle);
 			SetLastErrorMessage(device, "Error compiling vertex shader in graphics pipeline state <%s>", name);
@@ -946,8 +1002,10 @@ namespace display
 		DX12_pipeline_state_desc.VS.pShaderBytecode = vertex_shader_blob->GetBufferPointer();
 		DX12_pipeline_state_desc.VS.BytecodeLength = vertex_shader_blob->GetBufferSize();
 
+		std::unordered_set<std::string> pixel_shader_include_set;
+
 		ComPtr<IDxcBlob> pixel_shader_blob;
-		if (!CompileShader(device, pipeline_state_desc.pixel_shader, pixel_shader_blob))
+		if (!CompileShader(device, pipeline_state_desc.pixel_shader, pixel_shader_blob, pixel_shader_include_set))
 		{
 			device->m_pipeline_state_pool.Free(handle);
 			SetLastErrorMessage(device, "Error compiling pixel shader in graphics pipeline state <%s>", name);
@@ -1028,7 +1086,7 @@ namespace display
 		SetObjectName(pipeline_state.Get(), name);
 		
 		//Create the reload data
-		device->m_pipeline_reload_data.emplace_back(name, handle, pipeline_state_desc, DX12_pipeline_state_desc, input_elements);
+		device->m_pipeline_reload_data.emplace_back(name, handle, pipeline_state_desc, DX12_pipeline_state_desc, input_elements, vertex_shader_include_set, pixel_shader_include_set);
 
 		return handle;
 	}
@@ -1049,8 +1107,10 @@ namespace display
 
 		DX12_pipeline_state_desc.pRootSignature = device->Get(compute_pipeline_state_desc.root_signature).resource.Get();
 
+		std::unordered_set<std::string> include_set;
+
 		ComPtr<IDxcBlob> shader_blob;
-		if (!CompileShader(device, compute_pipeline_state_desc.compute_shader, shader_blob))
+		if (!CompileShader(device, compute_pipeline_state_desc.compute_shader, shader_blob, include_set))
 		{
 			device->m_pipeline_state_pool.Free(handle);
 			SetLastErrorMessage(device, "Error compiling compute shader in compute pipeline state <%s>", name);
@@ -1071,7 +1131,7 @@ namespace display
 		SetObjectName(pipeline_state.Get(), name);
 		
 		//Create the reload data
-		device->m_pipeline_reload_data.emplace_back(name, handle, compute_pipeline_state_desc, DX12_pipeline_state_desc);
+		device->m_pipeline_reload_data.emplace_back(name, handle, compute_pipeline_state_desc, DX12_pipeline_state_desc, include_set);
 
 		return handle;
 	}
@@ -1101,8 +1161,10 @@ namespace display
 					{
 						[&](D3D12_GRAPHICS_PIPELINE_STATE_DESC& graphics_pipeline_desc)
 						{
+							std::unordered_set<std::string> vertex_shader_include_set;
+
 							ComPtr<IDxcBlob> vertex_shader_blob;
-							if (!CompileShader(device, reload_pipeline.VertexShaderCompileReloadData.GetCompileShaderDescriptor(), vertex_shader_blob))
+							if (!CompileShader(device, reload_pipeline.VertexShaderCompileReloadData.GetCompileShaderDescriptor(), vertex_shader_blob, vertex_shader_include_set))
 							{
 								core::LogWarning("Error reloading graphics pipeline state <%s>, keeping last working one", reload_pipeline.name.c_str());
 								return;
@@ -1110,8 +1172,10 @@ namespace display
 							graphics_pipeline_desc.VS.pShaderBytecode = vertex_shader_blob->GetBufferPointer();
 							graphics_pipeline_desc.VS.BytecodeLength = vertex_shader_blob->GetBufferSize();
 
+							std::unordered_set<std::string> pixel_shader_include_set;
+
 							ComPtr<IDxcBlob> pixel_shader_blob;
-							if (!CompileShader(device, reload_pipeline.PixelShaderCompileReloadData.GetCompileShaderDescriptor(), pixel_shader_blob))
+							if (!CompileShader(device, reload_pipeline.PixelShaderCompileReloadData.GetCompileShaderDescriptor(), pixel_shader_blob, pixel_shader_include_set))
 							{
 								core::LogWarning("Error reloading graphics pipeline state <%s>, keeping last working one", reload_pipeline.name.c_str());
 								return;
@@ -1141,6 +1205,9 @@ namespace display
 
 								SetObjectName(device->Get(reload_pipeline.handle).Get(), reload_pipeline.name.c_str());
 
+								reload_pipeline.VertexShaderCompileReloadData.UpdateIncludeSet(vertex_shader_include_set);
+								reload_pipeline.PixelShaderCompileReloadData.UpdateIncludeSet(pixel_shader_include_set);
+
 								reload_pipeline.VertexShaderCompileReloadData.UpdateTimeStamp();
 								reload_pipeline.PixelShaderCompileReloadData.UpdateTimeStamp();
 
@@ -1149,8 +1216,10 @@ namespace display
 						},
 						[&](D3D12_COMPUTE_PIPELINE_STATE_DESC& compute_pipeline_desc)
 						{
+							std::unordered_set<std::string> include_set;
+
 							ComPtr<IDxcBlob> shader_blob;
-							if (!CompileShader(device, reload_pipeline.ComputeShaderCompileReloadData.GetCompileShaderDescriptor(), shader_blob))
+							if (!CompileShader(device, reload_pipeline.ComputeShaderCompileReloadData.GetCompileShaderDescriptor(), shader_blob, include_set))
 							{
 								core::LogWarning("Error reloading compute pipeline state <%s>, keeping last working one", reload_pipeline.name.c_str());
 								return;
@@ -1174,6 +1243,7 @@ namespace display
 
 								SetObjectName(device->Get(reload_pipeline.handle).Get(), reload_pipeline.name.c_str());
 
+								reload_pipeline.ComputeShaderCompileReloadData.UpdateIncludeSet(include_set);
 								reload_pipeline.ComputeShaderCompileReloadData.UpdateTimeStamp();
 
 								core::LogInfo("Reloading compute pipeline state <%s>", reload_pipeline.name.c_str());
