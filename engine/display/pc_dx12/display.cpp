@@ -240,6 +240,7 @@ namespace display
 		device->m_vsync = params.vsync;
 		device->m_width = params.width;
 		device->m_height = params.height;
+		device->m_debug_shaders = params.debug_shaders;
 
 		swapChainDesc.Flags = params.tearing ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0;
 
@@ -899,15 +900,15 @@ namespace display
 
 		arguments.push_back(L"-T");
 		arguments.push_back(target.c_str());
-
-		//arguments.push_back(L"-Qstrip_debug");
-		//arguments.push_back(L"-Qstrip_reflect");
-		//arguments.push_back(L"-HV 2021");
-		arguments.push_back(L"-Fd");
-		arguments.push_back(L".\\shader_pdbs\\");
+		
 		arguments.push_back(DXC_ARG_WARNINGS_ARE_ERRORS); //-WX
-		arguments.push_back(DXC_ARG_DEBUG); //-Zi
-		arguments.push_back(DXC_ARG_DEBUG_NAME_FOR_SOURCE);
+
+		if (device->m_debug_shaders)
+		{
+			arguments.push_back(L"-Qembed_debug");
+			arguments.push_back(DXC_ARG_DEBUG); //-Zi
+			arguments.push_back(DXC_ARG_DEBUG_NAME_FOR_SOURCE);
+		}
 
 		std::vector<std::wstring> defines_array;
 		for (auto& define_it : compile_shader_desc.defines)

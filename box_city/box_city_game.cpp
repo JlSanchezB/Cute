@@ -22,7 +22,7 @@ void BoxCityGame::OnInit()
 #else
 	device_init_params.debug = true;
 #endif
-
+	device_init_params.debug_shaders = true;
 	device_init_params.width = kInitWidth;
 	device_init_params.height = kInitHeight;
 	device_init_params.tearing = true;

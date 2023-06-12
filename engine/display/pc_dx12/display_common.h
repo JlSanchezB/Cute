@@ -443,6 +443,7 @@ namespace display
 		bool m_vsync; //vsync
 		size_t m_width;
 		size_t m_height;
+		bool m_debug_shaders;
 
 		//Statis
 		size_t uploaded_memory_frame = 0;

@@ -20,10 +20,13 @@ namespace display
 		uint8_t num_frames;
 		uint32_t width;
 		uint32_t height;
-		bool debug = false;
 		bool tearing = false;
 		bool vsync = false;
 		uint32_t adapter_index = -1;
+
+		//Debug
+		bool debug = false;
+		bool debug_shaders = false;
 	};
 
 	inline uint32_t CalculateGroupCount(uint32_t num_lanes, uint32_t lanes_for_group)
