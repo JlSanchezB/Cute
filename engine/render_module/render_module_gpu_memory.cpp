@@ -63,18 +63,18 @@ namespace render
 		{
 			//Compute pipeline, compile shader for testing
 			const char* shader_code =
-				"RWByteAddressBuffer destination_buffer : u0; \
-				ByteAddressBuffer source_buffer : t0; \
-				uint4 parameters : b0; \
-				\
-				[numthreads(64, 1, 1)]\
-				void copy_data(uint3 thread : SV_DispatchThreadID)\
-				{\
-					if (thread.x < parameters.y)\
-					{ \
-						uint2 copy_command = source_buffer.Load2(parameters.x + thread.x * 2 * 4);\
-						destination_buffer.Store4(copy_command.y, source_buffer.Load4(copy_command.x));\
-					}\
+				"RWByteAddressBuffer destination_buffer : register(u0); \n\
+				ByteAddressBuffer source_buffer : register(t0); \n\
+				uint4 parameters : register(b0); \n\
+				\n\
+				[numthreads(64, 1, 1)] \n\
+				void copy_data(uint3 thread : SV_DispatchThreadID) \n\
+				{ \n\
+					if (thread.x < parameters.y) \n\
+					{ \n\
+						uint2 copy_command = source_buffer.Load2(parameters.x + thread.x * 2 * 4);\n\
+						destination_buffer.Store4(copy_command.y, source_buffer.Load4(copy_command.x));\n\
+					}\n\
 				};";
 
 			//Create pipeline state

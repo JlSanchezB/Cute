@@ -23,12 +23,12 @@ uint2 get_hiz_mip_offset(uint mip_index)
     return uint2(512, 512 - 1024 / exp2(mip_index));
 }
 
-float3 quat_multiplication(float4 quat, float3 vector)
+float3 quat_multiplication(float4 quat, float3 _vector)
 {
     float3 qv = float3(quat.x, quat.y, quat.z);
     float s = -quat.w;
-    float3 t = 2.0f * cross(qv, vector);
-    return vector + (s * t) + cross(qv, t);
+    float3 t = 2.0f * cross(qv, _vector);
+    return _vector + (s * t) + cross(qv, t);
 }
 
 //Visible using the frustum planes
@@ -110,11 +110,11 @@ bool hiz_is_visible(float4 instance_rotate_quad, float3 instance_position, float
     float2 max_box = clip_box_points[0].xy;
     float max_box_z = clip_box_points[0].z;
 
-    [unroll] for (point_index = 1; point_index < 8; ++point_index)
+    [unroll] for (uint point_index2 = 1; point_index2 < 8; ++point_index2)
     {
-        min_box = min(min_box, clip_box_points[point_index].xy);
-        max_box = max(max_box, clip_box_points[point_index].xy);
-        max_box_z = max(max_box_z, clip_box_points[point_index].z);
+        min_box = min(min_box, clip_box_points[point_index2].xy);
+        max_box = max(max_box, clip_box_points[point_index2].xy);
+        max_box_z = max(max_box_z, clip_box_points[point_index2].z);
     }
 
     //Calculate hiZ space 
