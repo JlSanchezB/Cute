@@ -302,6 +302,7 @@
     <ClInclude Include="display\display_desc.h" />
     <ClInclude Include="display\display_enum.h" />
     <ClInclude Include="display\display_handle.h" />
+    <ClInclude Include="display\pc_dx12\D3D12MemAlloc.h" />
     <ClInclude Include="display\pc_dx12\d3dx12.h" />
     <ClInclude Include="display\pc_dx12\dds_loader.h" />
     <ClInclude Include="display\pc_dx12\descriptor_heap.h" />
@@ -595,6 +596,7 @@
     <ClCompile Include="core\pc\virtual_alloc.cpp" />
     <ClCompile Include="core\string_hash.cpp" />
     <ClCompile Include="core\virtual_buffer.cpp" />
+    <ClCompile Include="display\pc_dx12\D3D12MemAlloc.cpp" />
     <ClCompile Include="display\pc_dx12\dds_loader.cpp" />
     <ClCompile Include="display\pc_dx12\descriptor_heap.cpp" />
     <ClCompile Include="display\pc_dx12\display.cpp" />

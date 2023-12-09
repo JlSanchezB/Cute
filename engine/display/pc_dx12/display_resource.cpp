@@ -21,19 +21,23 @@ namespace
 	};
 
 	//Create a commited resource
-	bool CreateResource(display::Device* device, const SourceResourceData& source_data, bool static_buffer, const D3D12_RESOURCE_DESC& buffer_desc, ComPtr<ID3D12Resource>& resource, display::ResourceMemoryAccess& resource_memory_access, D3D12_RESOURCE_STATES resource_state, D3D12_CLEAR_VALUE* clear_values = nullptr)
+	bool CreateResource(display::Device* device, const SourceResourceData& source_data, bool static_buffer, const D3D12_RESOURCE_DESC& buffer_desc, ComPtr<ID3D12Resource>& resource, ComPtr<D3D12MA::Allocation>& allocation, display::ResourceMemoryAccess& resource_memory_access, D3D12_RESOURCE_STATES resource_state, D3D12_CLEAR_VALUE* clear_values = nullptr)
 	{
+		D3D12MA::ALLOCATION_DESC allocationDesc = {};
+		
 		//Upload resource
 		ComPtr<ID3D12Resource> upload_resource;
+		ComPtr<D3D12MA::Allocation> upload_allocation;
 
 		if (static_buffer)
 		{
-			if (FAILED(device->m_native_device->CreateCommittedResource(
-				&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
-				D3D12_HEAP_FLAG_NONE,
+			allocationDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
+			if (FAILED(device->m_allocator->CreateResource(
+				&allocationDesc,
 				&buffer_desc,
 				resource_state,
 				clear_values,
+				&allocation,
 				IID_PPV_ARGS(&resource))))
 			{
 				SetLastErrorMessage(device, "Error creating a resource in the default heap");
@@ -42,13 +46,13 @@ namespace
 
 			if (source_data.data)
 			{
-
-				if (FAILED(device->m_native_device->CreateCommittedResource(
-					&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
-					D3D12_HEAP_FLAG_NONE,
+				allocationDesc.HeapType = D3D12_HEAP_TYPE_UPLOAD;
+				if (FAILED(device->m_allocator->CreateResource(
+					&allocationDesc,
 					&CD3DX12_RESOURCE_DESC::Buffer(source_data.size),
 					D3D12_RESOURCE_STATE_GENERIC_READ,
 					nullptr,
+					&upload_allocation,
 					IID_PPV_ARGS(&upload_resource))))
 				{
 					SetLastErrorMessage(device, "Error creating the copy resource helper in the upload heap");
@@ -59,12 +63,13 @@ namespace
 		}
 		else
 		{
-			if (FAILED(device->m_native_device->CreateCommittedResource(
-				&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
-				D3D12_HEAP_FLAG_NONE,
+			allocationDesc.HeapType = D3D12_HEAP_TYPE_UPLOAD;
+			if (FAILED(device->m_allocator->CreateResource(
+				&allocationDesc,
 				&buffer_desc,
 				D3D12_RESOURCE_STATE_GENERIC_READ,
 				nullptr,
+				&allocation,
 				IID_PPV_ARGS(&resource))))
 			{
 				SetLastErrorMessage(device, "Error creating a resource in the upload heap");
@@ -107,7 +112,7 @@ namespace
 			ExecuteCommandList(device, device->m_resource_command_list);
 
 			//The upload resource is not needed, add to the deferred resource buffer
-			AddDeferredDeleteResource(device, upload_resource);
+			AddDeferredDeleteResource(device, upload_resource, upload_allocation);
 		}
 		else
 		{
@@ -144,7 +149,7 @@ namespace
 		while (count)
 		{
 			//Create a dynamic resource
-			if (!CreateResource(device, source_data, false, buffer_desc, resource->resource, *resource, resource_state, clear_values))
+			if (!CreateResource(device, source_data, false, buffer_desc, resource->resource, resource->allocation, *resource, resource_state, clear_values))
 			{
 				DeleteRingResource(device, resource_handle, pool);
 				return resource_handle;
@@ -203,7 +208,7 @@ namespace display
 	}
 
 	//Add a resource to be deleted, only to be called if you are sure that you don't need the resource
-	void AddDeferredDeleteResource(display::Device* device, ComPtr<ID3D12Object> resource)
+	void AddDeferredDeleteResource(display::Device* device, ComPtr<ID3D12Object>& resource, ComPtr<D3D12MA::Allocation>& allocation)
 	{
 		//Look if there is space
 		if (device->m_resource_deferred_delete_ring_buffer.full())
@@ -228,11 +233,17 @@ namespace display
 		//At this moment we have space in the ring
 
 		//Add the resource to the ring buffer
-		device->m_resource_deferred_delete_ring_buffer.emplace(resource, device->m_resource_deferred_delete_index);
+		device->m_resource_deferred_delete_ring_buffer.emplace(resource, allocation, device->m_resource_deferred_delete_index);
 		//Signal the GPU, so the GPU will update the fence when it reach here
 		device->m_command_queue->Signal(device->m_resource_deferred_delete_fence.Get(), device->m_resource_deferred_delete_index);
 		//Increase the fence value
 		device->m_resource_deferred_delete_index++;
+	}
+
+	void AddDeferredDeleteResource(display::Device* device, ComPtr<ID3D12Object>& resource)
+	{
+		ComPtr<D3D12MA::Allocation> null_allocation;
+		AddDeferredDeleteResource(device, resource, null_allocation);
 	}
 
 	DescriptorTableHandle CreateDescriptorTable(Device * device, const DescriptorTableDesc & descriptor_table_desc)
@@ -557,7 +568,7 @@ namespace display
 
 			SourceResourceData data(buffer_desc.init_data, buffer_desc.size, 0, 0);
 
-			if (!CreateResource(device, data, buffer_desc.access == Access::Static, d12_resource_desc, resource.resource, resource, init_resource_state))
+			if (!CreateResource(device, data, buffer_desc.access == Access::Static, d12_resource_desc, resource.resource, resource.allocation, resource, init_resource_state))
 			{
 				device->m_buffer_pool.Free(handle);
 				return BufferHandle();
@@ -703,7 +714,7 @@ namespace display
 
 			SourceResourceData data(texture_2d_desc.init_data, texture_2d_desc.size, texture_2d_desc.pitch, texture_2d_desc.slice_pitch);
 
-			if (!CreateResource(device, data, texture_2d_desc.access == Access::Static, d12_resource_desc, resource.resource, resource, init_resource_state, clear_values_ptr))
+			if (!CreateResource(device, data, texture_2d_desc.access == Access::Static, d12_resource_desc, resource.resource, resource.allocation, resource, init_resource_state, clear_values_ptr))
 			{
 				device->m_texture_2d_pool.Free(handle);
 				return Texture2DHandle();

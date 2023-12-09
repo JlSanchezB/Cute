@@ -10,6 +10,7 @@
 #include "display_convert.h"
 #include <core/ring_buffer.h>
 #include <core/simple_pool.h>
+#include "D3D12MemAlloc.h"
 
 #include <windows.h>
 #include <d3d12.h>
@@ -356,6 +357,7 @@ namespace display
 		static constexpr size_t kShaderUnorderedAccessDescriptorIndex = 1;
 
 		ComPtr<ID3D12Resource> resource;
+		ComPtr<D3D12MA::Allocation> allocation;
 		D3D12_RESOURCE_STATES current_state;
 
 		BufferType type;
@@ -380,6 +382,7 @@ namespace display
 		static constexpr size_t kDepthBufferDescriptorIndex = 3;
 
 		ComPtr<ID3D12Resource> resource;
+		ComPtr<D3D12MA::Allocation> allocation;
 		D3D12_RESOURCE_STATES current_state;
 
 		bool UAV = false; //Can be set as UAV
@@ -410,6 +413,9 @@ namespace display
 		//Adapter desc
 		DXGI_ADAPTER_DESC1 m_adapter_desc;
 		char m_adapter_description[128];
+
+		//Allocator
+		D3D12MA::Allocator* m_allocator;
 
 		//Device resources
 
@@ -482,6 +488,8 @@ namespace display
 		{
 			//Resource to delete
 			ComPtr<ID3D12Object> resource;
+			//Allocation
+			ComPtr<D3D12MA::Allocation> allocation;
 			//Value signal to the fence
 			UINT64 fence_value;
 
@@ -489,7 +497,7 @@ namespace display
 			{
 			}
 
-			DeferredResourceDelete(ComPtr<ID3D12Object>& _resource, UINT64 _fence_value) : resource(_resource), fence_value(_fence_value)
+			DeferredResourceDelete(ComPtr<ID3D12Object>& _resource, ComPtr<D3D12MA::Allocation>& _allocation, UINT64 _fence_value) : resource(_resource), allocation(_allocation), fence_value(_fence_value)
 			{
 			}
 		};
@@ -598,16 +606,27 @@ namespace display
 	//Delete resources that are not needed by the GPU
 	size_t DeletePendingResources(display::Device* device);
 
-	void AddDeferredDeleteResource(display::Device* device, ComPtr<ID3D12Object> resource);
+	void AddDeferredDeleteResource(display::Device* device, ComPtr<ID3D12Object>& resource, ComPtr<D3D12MA::Allocation>& allocation);
 
 	//Add a resource to be deleted, only to be called if you are sure that you don't need the resource
+	template <typename RESOURCE>
+	void AddDeferredDeleteResource(display::Device* device, RESOURCE&& resource, ComPtr<D3D12MA::Allocation>& allocation)
+	{
+		ComPtr<ID3D12Object> object;
+		ThrowIfFailed(resource.As(&object));
+
+		AddDeferredDeleteResource(device, object, allocation);
+	}
+
 	template <typename RESOURCE>
 	void AddDeferredDeleteResource(display::Device* device, RESOURCE&& resource)
 	{
 		ComPtr<ID3D12Object> object;
 		ThrowIfFailed(resource.As(&object));
 
-		AddDeferredDeleteResource(device, object);
+		ComPtr<D3D12MA::Allocation> null_allocation;
+
+		AddDeferredDeleteResource(device, object, null_allocation);
 	}
 
 	//Return the handle used in the current frame of a ring resource

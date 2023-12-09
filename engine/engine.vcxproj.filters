@@ -956,6 +956,9 @@
     <ClInclude Include="core\slot_pool.h">
       <Filter>core</Filter>
     </ClInclude>
+    <ClInclude Include="display\pc_dx12\D3D12MemAlloc.h">
+      <Filter>display</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="display\pc_dx12\display.cpp">
@@ -1047,6 +1050,9 @@
     </ClCompile>
     <ClCompile Include="helpers\collision.cpp">
       <Filter>helpers</Filter>
+    </ClCompile>
+    <ClCompile Include="display\pc_dx12\D3D12MemAlloc.cpp">
+      <Filter>display</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

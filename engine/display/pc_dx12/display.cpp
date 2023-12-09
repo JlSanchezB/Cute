@@ -148,6 +148,34 @@ namespace display
 					});
 				ImGui::TreePop();
 			}
+			ImGui::Separator();
+			D3D12MA::TotalStatistics stadistics;
+			device->m_allocator->CalculateStatistics(&stadistics);
+			D3D12MA::Budget local_budget;
+			device->m_allocator->GetBudget(&local_budget, nullptr);
+			char buffer2[1024];
+			helpers::FormatMemory(buffer, 1024, local_budget.UsageBytes);
+			helpers::FormatMemory(buffer2, 1024, local_budget.BudgetBytes);
+			ImGui::Text("Allocator stats: Usage(%s), Budget(%s)",
+				buffer, buffer2);
+			for (size_t i = 0; i < 3; ++i)
+			{
+				switch (i)
+				{
+				case 0: ImGui::Text("	Default Heap"); break;
+				case 1: ImGui::Text("	Upload Heap"); break;
+				case 2: ImGui::Text("	ReadBack Heap"); break;
+				};
+				D3D12MA::DetailedStatistics& detail_stats = stadistics.HeapType[i];
+				D3D12MA::Statistics& stats = stadistics.HeapType[i].Stats;
+
+				helpers::FormatMemory(buffer, 1024, stats.AllocationBytes);
+				helpers::FormatMemory(buffer2, 1024, stats.BlockBytes);
+				ImGui::Text("		Num Allocations(%u), Allocated(%s), Num Heaps(%u), Heap Allocated(%s)",
+					stats.AllocationCount, buffer, stats.BlockCount, buffer2);
+				ImGui::Text("		Unused Range Count(%u), Allocation Size Min(%llu), Allocation Size Max(%llu), Unused Range Size Min(%llu), Unused Range Size Max(%llu)",
+					detail_stats.UnusedRangeCount, detail_stats.AllocationSizeMin, detail_stats.AllocationSizeMax, detail_stats.UnusedRangeSizeMin, detail_stats.UnusedRangeSizeMax);
+			}
 
 			ImGui::End();	
 		}
@@ -410,6 +438,17 @@ namespace display
 			core::LogError("DX12 error creating the default include handler");
 		}
 	
+		///Create memory allocator
+		D3D12MA::ALLOCATOR_DESC allocator_desc = {};
+		allocator_desc.pDevice = device->m_native_device.Get();
+		allocator_desc.pAdapter = hardwareAdapter.Get();
+
+		hr = D3D12MA::CreateAllocator(&allocator_desc, &device->m_allocator);
+		if (FAILED(hr))
+		{
+			core::LogError("DX12 error creating memory allocator");
+		}
+
 		return device;
 	}
 
@@ -444,6 +483,9 @@ namespace display
 
 		//Empty reload pipeline state buffers
 		device->m_pipeline_reload_data.clear();
+
+		//Release the allocator
+		device->m_allocator->Release();
 
 		delete device;
 	}
