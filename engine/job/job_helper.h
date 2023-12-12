@@ -10,6 +10,9 @@
 
 namespace job
 {
+	//Thread data can be only created after the job system is created
+	void ThreadDataCreated();
+
 	//Get current worker index
 	size_t GetWorkerIndex();
 
@@ -25,7 +28,7 @@ namespace job
 	public:
 		ThreadData()
 		{
-			assert(GetNumWorkers() > 0); //It can only work if the job system is inited
+			ThreadDataCreated();
 
 			m_thread_data = std::make_unique<AlignedData<DATA>[]>(GetNumWorkers());
 		}

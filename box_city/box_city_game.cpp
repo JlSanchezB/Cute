@@ -15,6 +15,14 @@ void BoxCityGame::OnInit()
 	//Setup the tick to 60fps logic tick and render
 	SetUpdateType(platform::UpdateType::LogicRender, 60.f);
 
+	//Create job system
+	job::SystemDesc job_system_desc;
+	m_job_system = job::CreateSystem(job_system_desc);
+	RegisterImguiDebugSystem("Job System"_sh32, [&](bool* activated)
+		{
+			job::RenderImguiDebug(m_job_system, activated);
+		});
+
 	display::DeviceInitParams device_init_params;
 
 #ifdef _DEBUG
@@ -38,13 +46,6 @@ void BoxCityGame::OnInit()
 
 	SetDevice(m_device);
 
-	//Create job system
-	job::SystemDesc job_system_desc;
-	m_job_system = job::CreateSystem(job_system_desc);
-	RegisterImguiDebugSystem("Job System"_sh32, [&](bool* activated)
-		{
-			job::RenderImguiDebug(m_job_system, activated);
-		});
 
 
 	//Create Job allocator now that the job system is enabled

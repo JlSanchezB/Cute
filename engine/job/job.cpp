@@ -4,12 +4,14 @@
 #include <cassert>
 #include "job_queue.h"
 #include <cstdlib>
+#include <core/log.h>
 #include <core/profile.h>
 #include <core/sync.h>
 #include <ext/imgui/imgui.h>
 
 namespace
 {
+	bool g_thread_data_created = false;
 	//Number of workers
 	size_t g_num_workers = 1;
 
@@ -19,6 +21,11 @@ namespace
 
 namespace job
 {
+	void ThreadDataCreated()
+	{
+		g_thread_data_created = true;
+	}
+
 	//Get current worker index helper
 	size_t GetWorkerIndex()
 	{
@@ -177,6 +184,12 @@ namespace job
 
 	System * CreateSystem(const SystemDesc & system_desc)
 	{
+		if (g_thread_data_created)
+		{
+			core::LogError("ThreadData was created before the job system creation, that must never happen");
+			return nullptr;
+		}
+
 		System* system = new System();
 
 		//Init system
