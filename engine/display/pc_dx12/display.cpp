@@ -122,6 +122,8 @@ namespace display
 			char buffer[1024];
 			helpers::FormatMemory(buffer, 1024, device->uploaded_memory_frame);
 			ImGui::Text("Uploaded memory each frame (%s)", buffer);
+			helpers::FormatMemory(buffer, 1024, device->m_upload_buffer_max_size);
+			ImGui::Text("Number of pooled upload buffers (%d), size for each (%s)", device->m_upload_buffer_pool.size(), buffer);
 			ImGui::Separator();
 			ImGui::Text("Command list handles (%zu/%zu)", device->m_command_list_pool.Size(), device->m_command_list_pool.MaxSize());
 			ImGui::Text("Root signature handles (%zu/%zu)", device->m_root_signature_pool.Size(), device->m_root_signature_pool.MaxSize());
@@ -449,6 +451,8 @@ namespace display
 			core::LogError("DX12 error creating memory allocator");
 		}
 
+		device->m_upload_buffer_max_size = params.upload_buffer_max_size;
+
 		return device;
 	}
 
@@ -460,6 +464,9 @@ namespace display
 
 		//Destroy deferred delete resources
 		DeletePendingResources(device);
+
+		//Destroy upload buffer pool
+		DestroyUploadBufferPool(device);
 
 		CloseHandle(device->m_fence_event);
 		CloseHandle(device->m_resource_deferred_delete_event);
@@ -639,6 +646,9 @@ namespace display
 
 		//Delete deferred resources
 		DeletePendingResources(device);
+
+		//Reset all the active upload buffers
+		UploadBufferReset(device);
 
 		//Reset stats
 		device->uploaded_memory_frame = 0;

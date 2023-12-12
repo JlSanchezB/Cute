@@ -11,6 +11,7 @@
 #include <core/ring_buffer.h>
 #include <core/simple_pool.h>
 #include "D3D12MemAlloc.h"
+#include <job\job_helper.h>
 
 #include <windows.h>
 #include <d3d12.h>
@@ -514,6 +515,34 @@ namespace display
 		//Current CPU fence value
 		UINT64 m_resource_deferred_delete_index = 1;
 
+		size_t m_upload_buffer_max_size;
+		//Small Upload buffer
+		struct PooledUploadBuffer
+		{
+			//Allocation, the buffer is inside
+			ComPtr<D3D12MA::Allocation> allocation;
+			//Used frame, it will be free when the GPU is over this, if it is the frame index
+			uint64_t frame;
+			//Memory access
+			ResourceMemoryAccess memory_access;
+		};
+		std::vector<PooledUploadBuffer> m_upload_buffer_pool;
+		core::Mutex m_update_buffer_pool_mutex;
+
+		//Current active Upload buffers
+		struct ActiveUploadBuffer
+		{
+			//Allocation, the buffer is inside
+			ComPtr<D3D12MA::Allocation> allocation;
+			//Current offset
+			size_t current_offset = 0;
+			//Memory access
+			ResourceMemoryAccess memory_access;
+			//Index in the pool 
+			size_t pool_index = -1;
+		};
+		job::ThreadData<ActiveUploadBuffer> m_active_upload_buffers;
+
 		//Last error
 		static constexpr size_t kLastErrorBufferSize = 1024;
 		char m_last_error_message[kLastErrorBufferSize] = "";
@@ -628,6 +657,22 @@ namespace display
 
 		AddDeferredDeleteResource(device, object, null_allocation);
 	}
+
+	//Allocate memory in the upload heap, returns the resource and the offset inside the resource and the mapped memory
+	//That memory can only be written and it will be valid just for the current frame
+	struct AllocationUploadBuffer
+	{
+		size_t offset;
+		ComPtr<ID3D12Resource> resource;
+		void* memory;
+	};
+	AllocationUploadBuffer AllocateUploadBuffer(display::Device* device, size_t size);
+
+	//Upload pool buffers begin frame
+	void UploadBufferReset(display::Device* device);
+
+	//Destroy upload buffer pool
+	void DestroyUploadBufferPool(display::Device* device);
 
 	//Return the handle used in the current frame of a ring resource
 	template<typename WEAKHANDLE>

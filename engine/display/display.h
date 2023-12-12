@@ -23,6 +23,7 @@ namespace display
 		bool tearing = false;
 		bool vsync = false;
 		uint32_t adapter_index = -1;
+		size_t upload_buffer_max_size = 256 * 1024;
 
 		//Debug
 		bool debug = false;
@@ -223,6 +224,9 @@ namespace display
 
 		//Resource barriers
 		void AddResourceBarriers(const std::vector<ResourceBarrier>& resource_barriers);
+
+		//Update a Buffer with data, the data needs to be copied (never read) into the returned pointed
+		void* UpdateBufferResource(display::BufferHandle dest_resource, size_t dest_offset, size_t size);
 	};
 
 	template<typename HANDLE>

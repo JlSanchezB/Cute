@@ -20,7 +20,95 @@ namespace
 		}
 	};
 
-	//Create a commited resource
+	//Update a resource
+	bool UpdateResource(display::Device* device, const SourceResourceData& source_data, const D3D12_RESOURCE_DESC& buffer_desc, ComPtr<ID3D12Resource>& resource, D3D12_RESOURCE_STATES resource_state)
+	{
+		if (buffer_desc.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER)
+		{
+			//Use the buffer upload path
+			display::AllocationUploadBuffer upload_buffer_alloc = display::AllocateUploadBuffer(device, source_data.size);
+			
+			//Copy to the upload buffer
+			memcpy(upload_buffer_alloc.memory, source_data.data, source_data.size);
+
+			//Send to the GPU a copy
+
+			//Command list
+			auto& command_list = device->Get(device->m_resource_command_list).resource;
+
+			//Open command list
+			display::Context* context = OpenCommandList(device, device->m_resource_command_list);
+			auto dx12_context = reinterpret_cast<display::DX12Context*>(context);
+
+			dx12_context->command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(resource.Get(), resource_state, D3D12_RESOURCE_STATE_COPY_DEST));
+
+			dx12_context->command_list->CopyBufferRegion(resource.Get(), 0, upload_buffer_alloc.resource.Get(), upload_buffer_alloc.offset, source_data.size);
+
+			//Left the resource as it was originally
+			dx12_context->command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(resource.Get(), D3D12_RESOURCE_STATE_COPY_DEST, resource_state));
+
+			//Close command list
+			CloseCommandList(device, context);
+
+			//Execute the command list
+			ExecuteCommandList(device, device->m_resource_command_list);
+		}
+		else
+		{
+			D3D12MA::ALLOCATION_DESC allocationDesc = {};
+
+			//Upload resource
+			ComPtr<ID3D12Resource> upload_resource;
+			ComPtr<D3D12MA::Allocation> upload_allocation;
+
+			//Create upload resource
+			allocationDesc.HeapType = D3D12_HEAP_TYPE_UPLOAD;
+			if (FAILED(device->m_allocator->CreateResource(
+				&allocationDesc,
+				&CD3DX12_RESOURCE_DESC::Buffer(source_data.size),
+				D3D12_RESOURCE_STATE_GENERIC_READ,
+				nullptr,
+				&upload_allocation,
+				IID_PPV_ARGS(&upload_resource))))
+			{
+				SetLastErrorMessage(device, "Error creating the copy resource helper in the upload heap");
+				return false;
+			}
+			SetObjectName(upload_resource.Get(), "CopyResource");
+
+			// Copy data to the intermediate upload heap and then schedule a copy 
+			// from the upload heap to the default heap
+			D3D12_SUBRESOURCE_DATA copy_data = {};
+			copy_data.pData = source_data.data;
+			copy_data.RowPitch = source_data.row_pitch;
+			copy_data.SlicePitch = source_data.slice_pitch;
+
+			//Command list
+			auto& command_list = device->Get(device->m_resource_command_list).resource;
+
+			//Open command list
+			display::Context* context = OpenCommandList(device, device->m_resource_command_list);
+			auto dx12_context = reinterpret_cast<display::DX12Context*>(context);
+
+			UpdateSubresources<1>(command_list.Get(), resource.Get(), upload_resource.Get(), 0, 0, 1, &copy_data);
+
+			//Left the resource as it was originally
+			dx12_context->command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(resource.Get(), D3D12_RESOURCE_STATE_COPY_DEST, resource_state));
+
+			//Close command list
+			CloseCommandList(device, context);
+
+			//Execute the command list
+			ExecuteCommandList(device, device->m_resource_command_list);
+
+			//The upload resource is not needed, add to the deferred resource buffer
+			AddDeferredDeleteResource(device, upload_resource, upload_allocation);
+		}
+
+		return true;
+	}
+
+	//Create a resource
 	bool CreateResource(display::Device* device, const SourceResourceData& source_data, bool static_buffer, const D3D12_RESOURCE_DESC& buffer_desc, ComPtr<ID3D12Resource>& resource, ComPtr<D3D12MA::Allocation>& allocation, display::ResourceMemoryAccess& resource_memory_access, D3D12_RESOURCE_STATES resource_state, D3D12_CLEAR_VALUE* clear_values = nullptr)
 	{
 		D3D12MA::ALLOCATION_DESC allocationDesc = {};
@@ -42,23 +130,6 @@ namespace
 			{
 				SetLastErrorMessage(device, "Error creating a resource in the default heap");
 				return false;
-			}
-
-			if (source_data.data)
-			{
-				allocationDesc.HeapType = D3D12_HEAP_TYPE_UPLOAD;
-				if (FAILED(device->m_allocator->CreateResource(
-					&allocationDesc,
-					&CD3DX12_RESOURCE_DESC::Buffer(source_data.size),
-					D3D12_RESOURCE_STATE_GENERIC_READ,
-					nullptr,
-					&upload_allocation,
-					IID_PPV_ARGS(&upload_resource))))
-				{
-					SetLastErrorMessage(device, "Error creating the copy resource helper in the upload heap");
-					return false;
-				}
-				SetObjectName(upload_resource.Get(), "CopyResource");
 			}
 		}
 		else
@@ -88,35 +159,12 @@ namespace
 
 		if (static_buffer && source_data.data)
 		{
-			// Copy data to the intermediate upload heap and then schedule a copy 
-			// from the upload heap to the vertex buffer.
-			D3D12_SUBRESOURCE_DATA copy_data = {};
-			copy_data.pData = source_data.data;
-			copy_data.RowPitch = source_data.row_pitch;
-			copy_data.SlicePitch = source_data.slice_pitch;
-
-			//Command list
-			auto& command_list = device->Get(device->m_resource_command_list).resource;
-
-			//Open command list
-			display::Context* context = OpenCommandList(device, device->m_resource_command_list);
-			auto dx12_context = reinterpret_cast<display::DX12Context*>(context);
-
-			UpdateSubresources<1>(command_list.Get(), resource.Get(), upload_resource.Get(), 0, 0, 1, &copy_data);
-			dx12_context->command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(resource.Get(), D3D12_RESOURCE_STATE_COPY_DEST, resource_state));
-
-			//Close command list
-			CloseCommandList(device, context);
-
-			//Execute the command list
-			ExecuteCommandList(device, device->m_resource_command_list);
-
-			//The upload resource is not needed, add to the deferred resource buffer
-			AddDeferredDeleteResource(device, upload_resource, upload_allocation);
+			//Create the update resource to update the resource with the default data
+			UpdateResource(device, source_data, buffer_desc, resource, resource_state);
 		}
 		else
 		{
-			if (source_data.data) //We copy it directly as it is in the upload heap
+			if (source_data.data && buffer_desc.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER) //We copy it directly as it is in the upload heap
 			{
 				//We only support here simple buffers
 				//Copy to the upload heap
@@ -244,6 +292,133 @@ namespace display
 	{
 		ComPtr<D3D12MA::Allocation> null_allocation;
 		AddDeferredDeleteResource(device, resource, null_allocation);
+	}
+
+	AllocationUploadBuffer AllocateUploadBuffer(display::Device* device, size_t size)
+	{
+		AllocationUploadBuffer ret;
+
+		//Align the size to 16
+		size = (size + 16) & ~16;
+
+		if (size < device->m_upload_buffer_max_size)
+		{
+			//Get the active allocation for this thread
+			auto& active_allocation = device->m_active_upload_buffers.Get();
+			//Can use the active and the pooled buffers
+			if (!active_allocation.allocation || active_allocation.current_offset + size >= device->m_upload_buffer_max_size)
+			{
+				core::MutexGuard pool_access(device->m_update_buffer_pool_mutex);
+
+				//We need to free the current active allocation
+				if (active_allocation.allocation)
+				{
+					//Check if the active is in the current frame
+					assert(device->m_upload_buffer_pool[active_allocation.pool_index].frame == device->m_frame_index);
+					
+					//It just need to get reset
+					active_allocation = Device::ActiveUploadBuffer();
+				}
+				uint64_t last_completed_gpu_frame = display::GetLastCompletedGPUFrame(device);
+				
+				//Visit the pool for a free slot
+				for (size_t i = 0; i < device->m_upload_buffer_pool.size(); ++i)
+				{
+					auto& upload_buffer_slot = device->m_upload_buffer_pool[i];
+					if (upload_buffer_slot.frame <= last_completed_gpu_frame)
+					{
+						active_allocation.allocation = upload_buffer_slot.allocation.Get();
+						active_allocation.current_offset = 0;
+						active_allocation.pool_index = i;
+						active_allocation.memory_access = upload_buffer_slot.memory_access;
+						break;
+					}
+				}
+				if (active_allocation.allocation == nullptr)
+				{
+					//We need to allocate a new pool resource
+					D3D12_RESOURCE_DESC d12_resource_desc = {};
+					D3D12_RESOURCE_STATES init_resource_state;
+
+					d12_resource_desc = CD3DX12_RESOURCE_DESC::Buffer(device->m_upload_buffer_max_size);
+					init_resource_state = D3D12_RESOURCE_STATE_COMMON;
+
+					ComPtr<D3D12MA::Allocation> upload_allocation;
+					ComPtr<ID3D12Resource> upload_resource;
+					SourceResourceData no_source_data(nullptr, 0);
+					ResourceMemoryAccess resource_memory_access;
+
+					//Create upload resource
+					CreateResource(device, no_source_data, false, d12_resource_desc, upload_resource, upload_allocation, resource_memory_access, init_resource_state);
+
+					SetObjectName(upload_resource.Get(), "PooledUploadResource");
+
+					//Add buffer into the pool
+					device->m_upload_buffer_pool.emplace_back(Device::PooledUploadBuffer{ upload_allocation.Get() , device->m_frame_index , resource_memory_access});
+
+					//Setup active allocation with the last element of the pool
+					auto& upload_buffer_slot = device->m_upload_buffer_pool.back();
+					active_allocation.allocation = upload_buffer_slot.allocation.Get();
+					active_allocation.current_offset = 0;
+					active_allocation.pool_index = device->m_upload_buffer_pool.size() - 1;
+					active_allocation.memory_access = upload_buffer_slot.memory_access;
+				}
+			}
+
+			//Just use the current active allocation of this thread
+			ret.resource = active_allocation.allocation->GetResource();
+			ret.offset = active_allocation.current_offset;
+			ret.memory = reinterpret_cast<uint8_t*>(active_allocation.memory_access.memory_data) + active_allocation.current_offset;
+			
+			//Reserve
+			assert(active_allocation.current_offset + size <= device->m_upload_buffer_max_size);
+			active_allocation.current_offset += size;
+		}
+		else
+		{
+			//Needs to create completly new resource for it and add it to deferred destroy
+			D3D12_RESOURCE_DESC d12_resource_desc = {};
+			D3D12_RESOURCE_STATES init_resource_state;
+
+			d12_resource_desc = CD3DX12_RESOURCE_DESC::Buffer(size);
+			init_resource_state = D3D12_RESOURCE_STATE_COMMON;
+
+			ComPtr<D3D12MA::Allocation> upload_allocation;
+			ComPtr<ID3D12Resource> upload_resource;
+			SourceResourceData no_source_data(nullptr, 0);
+			ResourceMemoryAccess resource_memory_access;
+
+			//Create upload resource
+			CreateResource(device, no_source_data, false, d12_resource_desc, upload_resource, upload_allocation, resource_memory_access, init_resource_state);
+
+			SetObjectName(upload_resource.Get(), "CopyResource");
+
+			//Return the buffer
+			ret.resource = upload_allocation->GetResource();
+			ret.offset = 0;
+			ret.memory = resource_memory_access.memory_data;
+
+			//Add for deletion when the frame is over
+			AddDeferredDeleteResource(device, upload_resource, upload_allocation);
+		}
+		return ret;
+	}
+
+	void UploadBufferReset(display::Device* device)
+	{
+		//Close all active buffers
+		device->m_active_upload_buffers.Visit([](Device::ActiveUploadBuffer& active_upload_buffer)
+			{
+				active_upload_buffer = Device::ActiveUploadBuffer();
+			});
+	}
+
+	void DestroyUploadBufferPool(display::Device* device)
+	{
+		//Clear all active upload buffers
+		UploadBufferReset(device);
+
+		device->m_upload_buffer_pool.clear();
 	}
 
 	DescriptorTableHandle CreateDescriptorTable(Device * device, const DescriptorTableDesc & descriptor_table_desc)
