@@ -1148,9 +1148,9 @@ namespace render
 					{
 						if (pool_resource.needs_to_allocate)
 						{
-							uint16_t width;
-							uint16_t height;
-							uint32_t size;
+							uint16_t width = 0;
+							uint16_t height = 0;
+							uint32_t size = 0;
 							if (pool_resource.type == PoolResourceType::DepthBuffer || pool_resource.type == PoolResourceType::RenderTarget || pool_resource.type == PoolResourceType::Texture2D)
 							{
 								if (pool_resource.width == 0 || pool_resource.height == 0)
