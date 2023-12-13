@@ -434,4 +434,29 @@ namespace display
 
 		command_list->ResourceBarrier(static_cast<UINT>(num_barriers), dx12_resource_barriers.get());
 	}
+
+	void* Context::UpdateBufferResource(display::BufferHandle dest_resource, size_t dest_offset, size_t size)
+	{
+		auto dx12_context = reinterpret_cast<DX12Context*>(this);
+		Device* device = dx12_context->device;
+		const auto& command_list = dx12_context->command_list;
+
+		//Allocate upload buffer memory
+		auto upload_allocation = display::AllocateUploadBuffer(GetDevice(), size);
+
+		auto& resource = GetDevice()->Get(dest_resource);
+		assert(resource.access == display::Access::Static);
+		
+		//TODO: We can merge all the uploads in a context and do the, together in the beginning
+
+		dx12_context->command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(resource.resource.Get(), resource.current_state, D3D12_RESOURCE_STATE_COPY_DEST));
+
+		dx12_context->command_list->CopyBufferRegion(resource.resource.Get(), dest_offset, upload_allocation.resource.Get(), upload_allocation.offset, size);
+
+		//Left the resource as it was originally
+		dx12_context->command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(resource.resource.Get(), D3D12_RESOURCE_STATE_COPY_DEST, resource.current_state));
+
+		//Return the memory into the upload buffer
+		return upload_allocation.memory;
+	}
 }
