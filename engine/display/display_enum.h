@@ -121,7 +121,7 @@ namespace display
 		Static, //GPU resource and recommended for everything, it can be updated during init or using UpdateBufferResource in the context
 		Dynamic, //Upload from the CPU to the GPU one per frame, the resource is buffered so it needs to upload everyframe and it doesn't need any sync
 		Upload, //It is a resource that lives in the upload heap, user needs to sync CPU and GPU
-//		ReadBack //Buffered resource used to send data from the GPU to the CPU
+		ReadBack //Buffered resource used to send data from the GPU to the CPU
 	};
 
 	enum class BufferType : uint8_t

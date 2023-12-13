@@ -109,7 +109,7 @@ namespace
 	}
 
 	//Create a resource
-	bool CreateResource(display::Device* device, const SourceResourceData& source_data, bool static_buffer, const D3D12_RESOURCE_DESC& buffer_desc, ComPtr<ID3D12Resource>& resource, ComPtr<D3D12MA::Allocation>& allocation, display::ResourceMemoryAccess& resource_memory_access, D3D12_RESOURCE_STATES resource_state, D3D12_CLEAR_VALUE* clear_values = nullptr)
+	bool CreateResource(display::Device* device, const SourceResourceData& source_data, const D3D12_HEAP_TYPE heap_type, const D3D12_RESOURCE_DESC& buffer_desc, ComPtr<ID3D12Resource>& resource, ComPtr<D3D12MA::Allocation>& allocation, display::ResourceMemoryAccess& resource_memory_access, D3D12_RESOURCE_STATES resource_state, D3D12_CLEAR_VALUE* clear_values = nullptr)
 	{
 		D3D12MA::ALLOCATION_DESC allocationDesc = {};
 		
@@ -117,36 +117,21 @@ namespace
 		ComPtr<ID3D12Resource> upload_resource;
 		ComPtr<D3D12MA::Allocation> upload_allocation;
 
-		if (static_buffer)
+		allocationDesc.HeapType = heap_type;
+		if (FAILED(device->m_allocator->CreateResource(
+			&allocationDesc,
+			&buffer_desc,
+			resource_state,
+			clear_values,
+			&allocation,
+			IID_PPV_ARGS(&resource))))
 		{
-			allocationDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
-			if (FAILED(device->m_allocator->CreateResource(
-				&allocationDesc,
-				&buffer_desc,
-				resource_state,
-				clear_values,
-				&allocation,
-				IID_PPV_ARGS(&resource))))
-			{
-				SetLastErrorMessage(device, "Error creating a resource in the default heap");
-				return false;
-			}
+			SetLastErrorMessage(device, "Error creating a resource in the default heap");
+			return false;
 		}
-		else
+		
+		if (heap_type == D3D12_HEAP_TYPE_UPLOAD || heap_type == D3D12_HEAP_TYPE_READBACK)
 		{
-			allocationDesc.HeapType = D3D12_HEAP_TYPE_UPLOAD;
-			if (FAILED(device->m_allocator->CreateResource(
-				&allocationDesc,
-				&buffer_desc,
-				D3D12_RESOURCE_STATE_GENERIC_READ,
-				nullptr,
-				&allocation,
-				IID_PPV_ARGS(&resource))))
-			{
-				SetLastErrorMessage(device, "Error creating a resource in the upload heap");
-				return false;
-			}
-
 			//capture memory pointer and size
 			CD3DX12_RANGE readRange(0, 0);		// We do not intend to read from this resource on the CPU.
 			if (FAILED(resource->Map(0, &readRange, reinterpret_cast<void**>(&resource_memory_access.memory_data))))
@@ -157,14 +142,14 @@ namespace
 			resource_memory_access.memory_size = source_data.size;
 		}
 
-		if (static_buffer && source_data.data)
+		if (source_data.data)
 		{
-			//Create the update resource to update the resource with the default data
-			UpdateResource(device, source_data, buffer_desc, resource, resource_state);
-		}
-		else
-		{
-			if (source_data.data && buffer_desc.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER) //We copy it directly as it is in the upload heap
+			if (heap_type == D3D12_HEAP_TYPE_DEFAULT)
+			{
+				//Create the update resource to update the resource with the default data
+				UpdateResource(device, source_data, buffer_desc, resource, resource_state);
+			}
+			else if (heap_type == D3D12_HEAP_TYPE_UPLOAD && buffer_desc.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER)
 			{
 				//We only support here simple buffers
 				//Copy to the upload heap
@@ -179,16 +164,19 @@ namespace
 				resource->Unmap(0, nullptr);
 			}
 		}
+
 		return true;
 	}
 
 	//Helper function to create a ring resources
 	template <typename FUNCTION, typename POOL>
-	auto CreateRingResources(display::Device* device, const SourceResourceData& source_data, const D3D12_RESOURCE_DESC& buffer_desc, POOL& pool, D3D12_RESOURCE_STATES resource_state, FUNCTION&& view_create, D3D12_CLEAR_VALUE* clear_values = nullptr)
+	auto CreateRingResources(display::Device* device, const SourceResourceData& source_data, const display::Access access, const D3D12_HEAP_TYPE heap_type, const D3D12_RESOURCE_DESC& buffer_desc, POOL& pool, D3D12_RESOURCE_STATES resource_state, FUNCTION&& view_create, D3D12_CLEAR_VALUE* clear_values = nullptr)
 	{
 		//Allocs first resource from the pool
 		auto resource_handle = pool.Alloc();
 		auto* resource = &device->Get(resource_handle);
+
+		resource->access = access;
 
 		//Create a ring of num frames of resources, starting with the first one
 		size_t count = device->m_frame_resources.size();
@@ -197,7 +185,7 @@ namespace
 		while (count)
 		{
 			//Create a dynamic resource
-			if (!CreateResource(device, source_data, false, buffer_desc, resource->resource, resource->allocation, *resource, resource_state, clear_values))
+			if (!CreateResource(device, source_data, heap_type, buffer_desc, resource->resource, resource->allocation, *resource, resource_state, clear_values))
 			{
 				DeleteRingResource(device, resource_handle, pool);
 				return resource_handle;
@@ -212,6 +200,8 @@ namespace
 				device->Get(resource_handle_ptr).next_handle = pool.Alloc();
 				resource_handle_ptr = device->Get(resource_handle_ptr).next_handle;
 				resource = &device->Get(resource_handle_ptr);
+
+				resource->access = access;
 			}
 			count--;
 		}
@@ -349,7 +339,7 @@ namespace display
 					ResourceMemoryAccess resource_memory_access;
 
 					//Create upload resource
-					CreateResource(device, no_source_data, false, d12_resource_desc, upload_resource, upload_allocation, resource_memory_access, init_resource_state);
+					CreateResource(device, no_source_data, D3D12_HEAP_TYPE_UPLOAD, d12_resource_desc, upload_resource, upload_allocation, resource_memory_access, init_resource_state);
 
 					SetObjectName(upload_resource.Get(), "PooledUploadResource");
 
@@ -389,7 +379,7 @@ namespace display
 			ResourceMemoryAccess resource_memory_access;
 
 			//Create upload resource
-			CreateResource(device, no_source_data, false, d12_resource_desc, upload_resource, upload_allocation, resource_memory_access, init_resource_state);
+			CreateResource(device, no_source_data, D3D12_HEAP_TYPE_UPLOAD, d12_resource_desc, upload_resource, upload_allocation, resource_memory_access, init_resource_state);
 
 			SetObjectName(upload_resource.Get(), "CopyResource");
 
@@ -437,7 +427,7 @@ namespace display
 					{
 						[&](WeakBufferHandle resource)
 						{
-							assert(device->m_buffer_pool[resource].ShaderAccess);
+							assert(device->m_buffer_pool[resource].shader_access);
 							//Set it as shader resource or constant buffer
 							device->m_native_device->CopyDescriptorsSimple(1, device->m_descriptor_table_pool.GetDescriptor(handle, i),
 							device->m_buffer_pool.GetDescriptor(resource, Buffer::kShaderResourceOrConstantBufferDescriptorIndex), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
@@ -490,7 +480,7 @@ namespace display
 						{
 							[&](WeakBufferHandle resource)
 							{
-								assert(device->m_buffer_pool[resource].ShaderAccess);
+								assert(device->m_buffer_pool[resource].shader_access);
 								//Set it as shader resource or constant buffer
 								device->m_native_device->CopyDescriptorsSimple(1, device->m_descriptor_table_pool.GetDescriptor(handle_it, i),
 								device->m_buffer_pool.GetDescriptor(GetRingResource(device, resource, frame_index), Buffer::kShaderResourceOrConstantBufferDescriptorIndex), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
@@ -556,7 +546,7 @@ namespace display
 				{
 					[&](WeakBufferHandle resource)
 					{
-						assert(device->m_buffer_pool[resource].ShaderAccess);
+						assert(device->m_buffer_pool[resource].shader_access);
 						//Set it as shader resource or constant buffer
 						device->m_native_device->CopyDescriptorsSimple(1, device->m_descriptor_table_pool.GetDescriptor(current_frame_descriptor_table_handle, i),
 						device->m_buffer_pool.GetDescriptor(GetRingResource(device, resource, device->m_frame_index), Buffer::kShaderResourceOrConstantBufferDescriptorIndex), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
@@ -658,7 +648,7 @@ namespace display
 
 			if (needs_shader_resource_view)
 			{
-				resource.ShaderAccess = true;
+				resource.shader_access = true;
 				device->m_native_device->CreateShaderResourceView(resource.resource.Get(), &dx12_shader_resource_desc, device->m_buffer_pool.GetDescriptor(handle, Buffer::kShaderResourceOrConstantBufferDescriptorIndex));
 			}
 
@@ -726,7 +716,7 @@ namespace display
 				dx12_constant_buffer_desc.SizeInBytes = static_cast<UINT>(size);
 				device->m_native_device->CreateConstantBufferView(&dx12_constant_buffer_desc, device->m_buffer_pool.GetDescriptor(handle, Buffer::kShaderResourceOrConstantBufferDescriptorIndex));
 
-				resource.ShaderAccess = true;
+				resource.shader_access = true;
 			}
 
 			resource.type = buffer_desc.type;
@@ -741,9 +731,11 @@ namespace display
 			BufferHandle handle = device->m_buffer_pool.Alloc();
 			auto& resource = device->Get(handle);
 
+			resource.access = buffer_desc.access;
+
 			SourceResourceData data(buffer_desc.init_data, buffer_desc.size, 0, 0);
 
-			if (!CreateResource(device, data, buffer_desc.access == Access::Static, d12_resource_desc, resource.resource, resource.allocation, resource, init_resource_state))
+			if (!CreateResource(device, data, (buffer_desc.access == Access::Static) ? D3D12_HEAP_TYPE_DEFAULT : D3D12_HEAP_TYPE_UPLOAD, d12_resource_desc, resource.resource, resource.allocation, resource, init_resource_state))
 			{
 				device->m_buffer_pool.Free(handle);
 				return BufferHandle();
@@ -753,11 +745,12 @@ namespace display
 
 			return handle;
 		}
-		else if (buffer_desc.access == Access::Dynamic)
+		else if (buffer_desc.access == Access::Dynamic || buffer_desc.access == Access::ReadBack)
 		{
 			SourceResourceData data(buffer_desc.init_data, buffer_desc.size);
 
-			BufferHandle handle = CreateRingResources(device, data, d12_resource_desc, device->m_buffer_pool, init_resource_state,
+			BufferHandle handle = CreateRingResources(device, data, buffer_desc.access, (buffer_desc.access == Access::Dynamic) ? D3D12_HEAP_TYPE_UPLOAD : D3D12_HEAP_TYPE_READBACK,
+				d12_resource_desc, device->m_buffer_pool, init_resource_state,
 				[&](display::Device* device, const WeakBufferHandle& handle, display::Buffer& resource)
 				{
 					CreateViewsForResource(device, handle, resource);
@@ -889,7 +882,7 @@ namespace display
 
 			SourceResourceData data(texture_2d_desc.init_data, texture_2d_desc.size, texture_2d_desc.pitch, texture_2d_desc.slice_pitch);
 
-			if (!CreateResource(device, data, texture_2d_desc.access == Access::Static, d12_resource_desc, resource.resource, resource.allocation, resource, init_resource_state, clear_values_ptr))
+			if (!CreateResource(device, data, (texture_2d_desc.access == Access::Static) ? D3D12_HEAP_TYPE_DEFAULT : D3D12_HEAP_TYPE_UPLOAD, d12_resource_desc, resource.resource, resource.allocation, resource, init_resource_state, clear_values_ptr))
 			{
 				device->m_texture_2d_pool.Free(handle);
 				return Texture2DHandle();
@@ -903,7 +896,7 @@ namespace display
 		{
 			SourceResourceData data(texture_2d_desc.init_data, texture_2d_desc.size);
 
-			Texture2DHandle handle = CreateRingResources(device, data, d12_resource_desc, device->m_texture_2d_pool, init_resource_state,
+			Texture2DHandle handle = CreateRingResources(device, data, texture_2d_desc.access, D3D12_HEAP_TYPE_UPLOAD, d12_resource_desc, device->m_texture_2d_pool, init_resource_state,
 				[&](display::Device* device, const WeakTexture2DHandle& handle, display::Texture2D& resource)
 				{
 					CreateViewsForResource(device, handle, resource);

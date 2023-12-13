@@ -192,6 +192,7 @@ namespace display
 	{
 		void* memory_data = nullptr;
 		size_t memory_size = 0;
+		display::Access access;
 	};
 
 	//Ring resource support, used for dynamic type of resources
@@ -364,7 +365,7 @@ namespace display
 		BufferType type;
 
 		bool UAV = false; //Can be set as UAV
-		bool ShaderAccess = false; //Can be set as shader resource or constant buffer
+		bool shader_access = false; //Can be set as shader resource or constant buffer
 		const char* name;
 
 		//Union of data for all the resource types

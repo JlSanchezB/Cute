@@ -165,7 +165,7 @@ namespace display
 		const auto& command_list = dx12_context->command_list;
 	
 		auto& resource = device->Get(GetRingResource(device, constant_buffer_handle, device->m_frame_index));
-		assert(resource.ShaderAccess);
+		assert(resource.shader_access);
 		D3D12_GPU_VIRTUAL_ADDRESS gpu_virtual_address = resource.resource->GetGPUVirtualAddress();
 		
 		if (pipe == Pipe::Graphics)
@@ -211,7 +211,7 @@ namespace display
 		Device* device = dx12_context->device;
 		const auto& command_list = dx12_context->command_list;
 		auto& shader_resource = device->Get(GetRingResource(device, shader_resource_handle, device->m_frame_index));
-		assert(shader_resource.ShaderAccess);
+		assert(shader_resource.shader_access);
 		D3D12_GPU_VIRTUAL_ADDRESS gpu_virtual_address = shader_resource.resource->GetGPUVirtualAddress();
 		
 		if (pipe == Pipe::Graphics)

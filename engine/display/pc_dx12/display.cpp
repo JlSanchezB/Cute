@@ -136,7 +136,7 @@ namespace display
 				device->m_buffer_pool.VisitSlow([&](WeakBufferHandle handle)
 					{
 						const auto& buffer = device->Get(handle);
-						ImGui::Text("Buffer (%s), ShaderResource(%d), UAV(%d), Updatable(%d)", buffer.name, (buffer.ShaderAccess) ? 1 : 0, (buffer.UAV) ? 1 : 0, (buffer.memory_data) ? 1 : 0);
+						ImGui::Text("Buffer (%s), ShaderResource(%d), UAV(%d), Updatable(%d)", buffer.name, (buffer.shader_access) ? 1 : 0, (buffer.UAV) ? 1 : 0, (buffer.memory_data) ? 1 : 0);
 					});
 				ImGui::TreePop();
 			}
