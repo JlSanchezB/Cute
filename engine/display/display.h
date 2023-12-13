@@ -113,9 +113,13 @@ namespace display
 	using UpdatableResourceHandle = std::variant<WeakBufferHandle>;
 	void UpdateResourceBuffer(Device* device, const UpdatableResourceHandle& handle, const void* data, size_t size);
 
-	//Get Resource memory
+	//Get Resource memory (only Access::Dynamic or Access::Upload)
 	using DirectAccessResourceHandle = std::variant<WeakBufferHandle>;
 	void* GetResourceMemoryBuffer(Device* device, const DirectAccessResourceHandle& handle);
+
+	//Get last ReadBack memory written (only Access:ReadBack)
+	using ReadBackResourceHandle = std::variant<WeakBufferHandle>;
+	void* GetLastWrittenResourceMemoryBuffer(Device* device, const ReadBackResourceHandle& handle);
 
 	//Pipe used
 	enum class Pipe : uint8_t

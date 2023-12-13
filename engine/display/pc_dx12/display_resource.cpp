@@ -925,6 +925,7 @@ namespace display
 				[&](auto handle)
 				{
 					auto& buffer = device->Get(GetRingResource(device, handle, device->m_frame_index));
+					assert(buffer.access == Access::Dynamic);
 					memory_data = buffer.memory_data;
 					memory_size = buffer.memory_size;
 				}
@@ -953,6 +954,7 @@ namespace display
 				{
 					auto& buffer = device->Get(GetRingResource(device, handle, device->m_frame_index));
 					assert(buffer.memory_data);
+					assert(buffer.access == Access::Dynamic || buffer.access == Access::Upload);
 					memory_data = buffer.memory_data;
 					memory_size = buffer.memory_size;
 				}
@@ -960,6 +962,30 @@ namespace display
 			handle);
 
 		//Only dynamic created resources can access the memory
+		assert(memory_data);
+
+		return memory_data;
+	}
+
+	void* GetLastWrittenResourceMemoryBuffer(Device* device, const ReadBackResourceHandle& handle)
+	{
+		void* memory_data = nullptr;
+		size_t memory_size = 0;
+
+		std::visit(
+			overloaded
+			{
+				[&](auto handle)
+				{
+					auto& buffer = device->Get(GetRingResource(device, handle, GetLastCompletedGPUFrame(device)));
+					assert(buffer.memory_data);
+					assert(buffer.access == Access::ReadBack);
+					memory_data = buffer.memory_data;
+					memory_size = buffer.memory_size;
+				}
+			},
+			handle);
+
 		assert(memory_data);
 
 		return memory_data;
