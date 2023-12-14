@@ -45,6 +45,12 @@ namespace core
 			{
 			}
 
+			Accesor<DATA> operator=(DATA& data)
+			{
+				m_data = data;
+				return *this;
+			}
+
 		private:
 			DATA* m_data;
 		};
@@ -179,6 +185,17 @@ namespace core
 			}
 		}
 
+		//Size
+		size_t size() const
+		{
+			size_t ret = 0;
+			for (auto& bucket : m_buckets)
+			{
+				ret += bucket.m_key.size();
+			}
+			return ret;
+		}
+
 	private:
 		struct Bucket
 		{
@@ -204,7 +221,7 @@ namespace core
 		}
 		else
 		{
-			bucket_index = key & (NUM_BUCKETS - 1);
+			bucket_index = std::hash<KEY>{}(key) & (NUM_BUCKETS - 1);
 		}
 
 		auto& bucket = m_buckets[bucket_index];
