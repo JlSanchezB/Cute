@@ -230,6 +230,7 @@ namespace display
 		void AddResourceBarriers(const std::vector<ResourceBarrier>& resource_barriers);
 
 		//Update a Buffer with data, the data needs to be copied (never read) into the returned pointed (only works with Access::Static)
+		//The resource has to be in CopyDest
 		void* UpdateBufferResource(display::BufferHandle dest_resource, size_t dest_offset, size_t size);
 	};
 

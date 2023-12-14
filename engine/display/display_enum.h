@@ -153,7 +153,8 @@ namespace display
 		Depth,
 		DepthRead,
 		Present,
-		IndirectArgument
+		IndirectArgument,
+		CopyDest
 	};
 
 	enum class ClearType : uint8_t

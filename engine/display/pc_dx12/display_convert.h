@@ -241,6 +241,7 @@ namespace display
 		case TranstitionState::DepthRead: return D3D12_RESOURCE_STATE_DEPTH_READ | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
 		case TranstitionState::Present: return D3D12_RESOURCE_STATE_PRESENT;
 		case TranstitionState::IndirectArgument: return D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT;
+		case TranstitionState::CopyDest: return D3D12_RESOURCE_STATE_COPY_DEST;
 		}
 	}
 }
