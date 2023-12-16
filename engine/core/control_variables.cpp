@@ -27,7 +27,8 @@ namespace
 		ControlVariableValue(uint32_t value) : value_uint32_t(value) {};
 		ControlVariableValue(bool value) : value_bool(value) {};
 		ControlVariableValue(float value) : value_float(value) {};
-
+		ControlVariableValue() { value_uint32_t = 0; };
+		~ControlVariableValue() {};
 	};
 
 	struct ControlVariable

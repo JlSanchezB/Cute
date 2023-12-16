@@ -6,12 +6,12 @@
 
 #include <vector>
 #include <array>
-
+#include <cassert>
 
 namespace core
 {
-	//Lineal probe map implemetation
-	template <typename KEY, typename DATA, size_t NUM_BUCKETS = 1>
+	//Flat linear map implementation
+	template <typename KEY, typename DATA>
 	class FastMap
 	{
 	public:
@@ -23,16 +23,19 @@ namespace core
 		public:
 			DATA* operator->()
 			{
+				assert(m_data);
 				return m_data;
 			}
 
 			DATA& operator*()&
 			{
+				assert(m_data);
 				return *m_data;
 			}
 
 			DATA&& operator*()&&
 			{
+				assert(m_data);
 				return *m_data;
 			}
 
@@ -47,6 +50,7 @@ namespace core
 
 			Accesor<DATA> operator=(DATA& data)
 			{
+				assert(m_data);
 				m_data = data;
 				return *this;
 			}
@@ -56,59 +60,51 @@ namespace core
 		};
 
 
-		template<typename KEY, typename DATA, size_t NUM_BUCKETS>
+		template<typename KEY, typename DATA>
 		class Iterator
 		{
 		public:
-			Iterator(FastMap* fast_map, size_t bucket, size_t index) :
-				m_fast_map(fast_map), m_bucket(bucket), m_index(index)
+			Iterator(FastMap* fast_map, size_t index) :
+				m_fast_map(fast_map), m_index(index)
 			{
 			}
 
 			std::pair<KEY&, DATA&> operator*()
 			{
-				return std::pair<KEY&, DATA&>(m_fast_map->m_buckets[m_bucket].m_key[m_index], m_fast_map->m_buckets[m_bucket].m_data[m_index]);
+				return std::pair<KEY&, DATA&>(m_fast_map->m_key[m_index], m_fast_map->m_data[m_index]);
 			}
 
 			bool operator!= (const Iterator & other) const
 			{
-				return m_fast_map != other.m_fast_map || m_bucket != other.m_bucket || m_index != other.m_index;
+				return m_fast_map != other.m_fast_map || m_index != other.m_index;
 			}
 
 			const Iterator& operator++ ()
 			{
-				if (m_index + 1 == m_fast_map->m_buckets[m_bucket].m_data.size())
+				assert(m_index != kInvalid);
+
+				m_index++;
+				//Just go to capacity looking for a reserved space
+				while (m_index < m_fast_map->m_capacity * m_fast_map->m_bucket_size && !m_fast_map->m_reserved[m_index])
 				{
-					//No more elemets in this bucket
-					//Check next ones
-					m_bucket++;
+					m_index++;
+				}
 
-					while (m_bucket < m_fast_map->m_buckets.size())
-					{
-						if (m_fast_map->m_buckets[m_bucket].m_data.size() > 0)
-						{
-							//Found
-							m_index = 0;
-							return *this;
-						}
-						m_bucket++;
-					}
-
-					//End of the map
-					m_index = kInvalid;
-					m_bucket = kInvalid;
+				if (m_index < m_fast_map->m_capacity * m_fast_map->m_bucket_size)
+				{
+					//Good
 					return *this;
 				}
 				else
 				{
-					m_index++;
+					//End
+					m_index = kInvalid;
 					return *this;
 				}
 			}
 
 		private:
 			FastMap* m_fast_map;
-			size_t m_bucket;
 			size_t m_index;
 		};
 
@@ -130,142 +126,200 @@ namespace core
 			return Find(key);
 		}
 
-		Iterator<KEY,DATA,NUM_BUCKETS> begin()
+		Iterator<KEY,DATA> begin()
 		{
-			//Look for the first item
-			for (size_t bucket = 0; bucket < m_buckets.size(); ++bucket)
+			//Look for the first item reserved
+			size_t index = 0;
+			while (index < m_capacity * m_bucket_size && !m_reserved[index])
 			{
-				if (m_buckets[bucket].m_data.size() > 0)
-				{
-					return Iterator<KEY, DATA, NUM_BUCKETS>(this, bucket, 0);
-				}
+				index++;
 			}
-
-			return Iterator<KEY, DATA, NUM_BUCKETS>(this, kInvalid, kInvalid);
+			if (index < m_capacity * m_bucket_size)
+			{
+				//Good
+				return Iterator<KEY, DATA>(this, index);
+			}
+			else
+			{
+				//End
+				return Iterator<KEY, DATA>(this, kInvalid);
+			}
 		}
 
-		Iterator<KEY, DATA, NUM_BUCKETS> end()
+		Iterator<KEY, DATA> end()
 		{
-			return Iterator<KEY, DATA, NUM_BUCKETS>(this, kInvalid, kInvalid);
+			return Iterator<KEY, DATA>(this, kInvalid);
 		}
 
 		//Visit
 		template<typename VISITOR>
 		void Visit(VISITOR&& visitor)
 		{
-			for (auto& bucket : m_buckets)
+			for (auto& it : *this)
 			{
-				for (auto& data : bucket.m_data)
-				{
-					visitor(data);
-				}
+				visitor(it.second);
 			}
 		}
 
 		template<typename VISITOR>
 		void VisitNamed(VISITOR&& visitor)
 		{
-			for (auto& bucket : m_buckets)
+			for (auto& it : *this)
 			{
-				size_t count = bucket.m_data.size();
-				for (size_t i = 0; i < count; ++i)
-				{
-					visitor(bucket.m_key[i], bucket.m_data[i]);
-				}
+				visitor(it.first, it.second);
 			}
 		}
 
 		//Clear
 		void clear()
 		{
-			for (auto& bucket : m_buckets)
-			{
-				bucket.m_key.clear();
-				bucket.m_data.clear();
-			}
+			*this = {};
 		}
 
-		//Size
+		//Size (not really fast)
 		size_t size() const
 		{
-			size_t ret = 0;
-			for (auto& bucket : m_buckets)
-			{
-				ret += bucket.m_key.size();
-			}
-			return ret;
+			return m_size;
+		}
+
+		FastMap(size_t start_capacity = 8, size_t bucket_size = 3)
+		{
+			//Init with correct values
+			m_bucket_size = bucket_size;
+			m_capacity = 0;
+			m_size = 0;
+
+			//Init to the start capacity
+			Grow(start_capacity);
 		}
 
 	private:
-		struct Bucket
-		{
-			//Lineal search inside a vector of keys
-			std::vector<KEY> m_key;
-			//Vector of data
-			std::vector<DATA> m_data;
-		};
+		
+		//Array of bits to indicate if the slot is reserved
+		std::vector<bool> m_reserved;
+		//Array of keys
+		std::vector<KEY> m_key;
+		//Array of data
+		std::vector<DATA> m_data;
 
-		std::array<Bucket, NUM_BUCKETS> m_buckets;
+		//Capacity (needs to be power of 2)
+		size_t m_capacity;
 
-		std::pair<size_t,size_t> GetIndex(const KEY& key) const;
+		//Size
+		size_t m_size;
+
+		//Bucket size
+		size_t m_bucket_size;
+
+		//Return two indices
+		//First one is the index of the key and kInvald if doesn't find it
+		//Second one is the slot that the key can be added if it was not found
+		std::pair<size_t, size_t> GetIndex(const KEY& key);
+
 		constexpr static size_t kInvalid = static_cast<size_t>(-1);
+
+		//Grow by new capacity
+		void Grow(size_t new_capacity)
+		{
+			//Move current data into a swap buffers
+			std::vector<bool> source_reserved = std::move(m_reserved);
+			std::vector<KEY> source_key = std::move(m_key);
+			std::vector<DATA> source_data = std::move(m_data);
+			size_t source_capacity = m_capacity;
+			size_t old_size = m_size;
+
+			//Define the new capacity
+			m_reserved.resize(new_capacity * m_bucket_size);
+			m_key.resize(new_capacity * m_bucket_size);
+			m_data.resize(new_capacity * m_bucket_size);
+			m_capacity = new_capacity;
+			m_size = 0;
+
+			//Add old key/data into the new map
+			for (size_t i = 0; i < source_capacity * m_bucket_size; ++i)
+			{
+				if (source_reserved[i])
+				{
+					//Insert
+					Insert(std::move(source_key[i]), std::move(source_data[i]));
+				}
+			}
+
+			//Done
+			assert(old_size == m_size);
+		}
 	};
 
-	template<typename KEY, typename DATA, size_t NUM_BUCKETS>
-	inline std::pair<size_t, size_t> FastMap<KEY, DATA, NUM_BUCKETS>::GetIndex(const KEY& key) const
+	template<typename KEY, typename DATA>
+	inline std::pair<size_t, size_t> FastMap<KEY, DATA>::GetIndex(const KEY& key)
 	{
-		size_t bucket_index;
-		if constexpr (NUM_BUCKETS == 1)
+		size_t search_slot = 0;
+		
+		//The begin search slot is calculated from the hash value
+		search_slot = (std::hash<KEY>{}(key) & (m_capacity - 1)) * m_bucket_size;
+		size_t count = 0;
+		while (m_reserved[search_slot])
 		{
-			bucket_index = 0;
-		}
-		else
-		{
-			bucket_index = std::hash<KEY>{}(key) & (NUM_BUCKETS - 1);
-		}
-
-		auto& bucket = m_buckets[bucket_index];
-		const size_t count = bucket.m_key.size();
-		for (size_t i = 0; i < count; ++i)
-		{
-			if (bucket.m_key[i] == key)
+			if (m_key[search_slot] == key)
 			{
-				return std::make_pair(bucket_index, i);
+				//Found
+				return std::make_pair(search_slot, kInvalid);
 			}
+			count++;
+			assert(count < m_capacity * m_bucket_size);
+
+			search_slot++;
+			search_slot = search_slot % (m_capacity * m_bucket_size); //The flat map is really a ring buffer
 		}
 
-		return std::make_pair(bucket_index, kInvalid);
+		//Not found
+		return std::make_pair(kInvalid, search_slot);
 	}
 
-	template<typename KEY, typename DATA, size_t NUM_BUCKETS>
+	template<typename KEY, typename DATA>
 	template<typename SOURCE_DATA>
-	inline FastMap<KEY, DATA, NUM_BUCKETS>::Accesor<DATA> FastMap<KEY, DATA, NUM_BUCKETS>::Insert(const KEY& key, SOURCE_DATA&& data)
+	inline FastMap<KEY, DATA>::Accesor<DATA> FastMap<KEY, DATA>::Insert(const KEY& key, SOURCE_DATA&& data)
 	{
 		auto index = GetIndex(key);
 
-		if (index.second == kInvalid)
+		if (index.first == kInvalid)
 		{
-			Bucket& bucket = m_buckets[index.first];
-			bucket.m_key.push_back(key);
-			bucket.m_data.emplace_back(std::forward<DATA>(data));
-			return Accesor<DATA>(&bucket.m_data.back());
+			//Add
+
+			//Check if we need to grow
+			if (m_size + 1 >= m_capacity)
+			{
+				//Needs to grow
+				Grow(m_capacity * 2);
+
+				//Get other index in the new map
+				index = GetIndex(key);
+			}
+			m_size++;
+			m_reserved[index.second] = true;
+			m_key[index.second] = key;
+			m_data[index.second] = std::forward<DATA>(data);
+
+			return Accesor<DATA>(&m_data.back());
 		}
 		else
 		{
-			Bucket& bucket = m_buckets[index.first];
-			bucket.m_data[index.first] = std::forward<DATA>(data);
-			return Accesor<DATA>(&bucket.m_data[index.second]);
+			//It was already added, just update
+			m_key[index.first] = key;
+			m_data[index.first] = std::forward<DATA>(data);
+
+			return Accesor<DATA>(&m_data[index.second]);
 		}
 	}
 
-	template<typename KEY, typename DATA, size_t NUM_BUCKETS>
-	inline FastMap<KEY, DATA, NUM_BUCKETS>::Accesor<const DATA> FastMap<KEY, DATA, NUM_BUCKETS>::Find(const KEY& key) const
+	template<typename KEY, typename DATA>
+	inline FastMap<KEY, DATA>::Accesor<const DATA> FastMap<KEY, DATA>::Find(const KEY& key) const
 	{
 		auto index = GetIndex(key);
 
-		if (index.second != kInvalid)
+		if (index.first != kInvalid)
 		{
-			return Accesor<const DATA>(&m_buckets[index.first].m_data[index.second]);
+			return Accesor<const DATA>(&m_data[index.first]);
 		}
 		else
 		{
@@ -274,14 +328,14 @@ namespace core
 		}
 	}
 
-	template<typename KEY, typename DATA, size_t NUM_BUCKETS>
-	inline FastMap<KEY, DATA, NUM_BUCKETS>::Accesor<DATA> FastMap<KEY, DATA, NUM_BUCKETS>::Find(const KEY& key)
+	template<typename KEY, typename DATA>
+	inline FastMap<KEY, DATA>::Accesor<DATA> FastMap<KEY, DATA>::Find(const KEY& key)
 	{
 		auto index = GetIndex(key);
 
-		if (index.second != kInvalid)
+		if (index.first != kInvalid)
 		{
-			return Accesor<DATA>(&m_buckets[index.first].m_data[index.second]);
+			return Accesor<DATA>(&m_data[index.first]);
 		}
 		else
 		{

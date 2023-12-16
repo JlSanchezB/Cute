@@ -175,7 +175,10 @@ namespace
 		{
 			bool visible;
 			std::function<void(bool*)> function;
-
+			ImguiDebugSystem()
+			{
+				visible = false;
+			}
 			ImguiDebugSystem(std::function<void(bool*)>& _function):
 				function(_function), visible(false)
 			{
@@ -184,6 +187,9 @@ namespace
 			{
 				visible = a.visible;
 				function = a.function;
+			}
+			~ImguiDebugSystem()
+			{
 			}
 			ImguiDebugSystem& operator=(ImguiDebugSystem&& a)
 			{

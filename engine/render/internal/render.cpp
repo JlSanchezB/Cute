@@ -712,6 +712,10 @@ namespace render
 		System::ResourceMap resources_map_old = std::move(system->m_resources_map);
 		System::PassMap passes_map_old = std::move(system->m_passes_map);
 
+		//We need to reset the moved data
+		system->m_resources_map = {};
+		system->m_passes_map = {};
+
 		//Destroy pool resources, they will get recreated
 		//Destroy pool resources
 		for (auto& pool_resource : system->m_pool_resources)
