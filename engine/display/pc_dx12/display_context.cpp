@@ -89,13 +89,31 @@ namespace display
 		{
 			command_list->SetGraphicsRootSignature(root_signature.resource.Get());
 			dx12_context->current_graphics_root_signature = root_signature_handle;
+
+			if (device->m_development_shaders)
+			{
+				auto& resource = device->Get(WeakBufferHandle(device->m_development_shaders_buffer));
+				assert(resource.UAV);
+				D3D12_GPU_VIRTUAL_ADDRESS gpu_virtual_address = resource.resource->GetGPUVirtualAddress();
+
+				//Set the development UAV into the shader (the last root parameter)
+				command_list->SetGraphicsRootUnorderedAccessView(root_signature.desc.num_root_parameters, gpu_virtual_address);
+			}
 		}
 		else
 		{
 			command_list->SetComputeRootSignature(root_signature.resource.Get());
 			dx12_context->current_compute_root_signature = root_signature_handle;
+			if (device->m_development_shaders)
+			{
+				auto& resource = device->Get(WeakBufferHandle(device->m_development_shaders_buffer));
+				assert(resource.UAV);
+				D3D12_GPU_VIRTUAL_ADDRESS gpu_virtual_address = resource.resource->GetGPUVirtualAddress();
+
+				//Set the development UAV into the shader (the last root parameter)
+				command_list->SetComputeRootUnorderedAccessView(root_signature.desc.num_root_parameters, gpu_virtual_address);
+			}
 		}
-		
 		
 	}
 	void Context::SetPipelineState(const WeakPipelineStateHandle & pipeline_state_handle)

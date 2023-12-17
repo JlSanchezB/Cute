@@ -11,7 +11,8 @@
 #include <core/ring_buffer.h>
 #include <core/simple_pool.h>
 #include "D3D12MemAlloc.h"
-#include <job\job_helper.h>
+#include <job/job_helper.h>
+#include <core/fast_map.h>
 
 #include <windows.h>
 #include <d3d12.h>
@@ -24,6 +25,7 @@
 #include <filesystem>
 #include <dxcapi.h>
 #include <unordered_set>
+
 
 using namespace DirectX;
 
@@ -431,6 +433,7 @@ namespace display
 			UINT64 fence_value;
 		};
 		std::vector< FrameResources> m_frame_resources;
+		bool m_before_first_frame = true;
 
 		//Back buffer (ring resource buffer)
 		Texture2DHandle m_back_buffer_render_target;
@@ -452,8 +455,9 @@ namespace display
 		size_t m_width;
 		size_t m_height;
 		bool m_debug_shaders;
+		bool m_development_shaders;
 
-		//Statis
+		//Stadistics
 		size_t uploaded_memory_frame = 0;
 
 		//Shader compiler library
@@ -480,6 +484,22 @@ namespace display
 
 		//Reload data for pipeline states
 		std::vector<PipelineReloadData> m_pipeline_reload_data;
+
+		//Development shaders
+		BufferHandle m_development_shaders_buffer;
+		size_t m_development_shaders_buffer_capacity = 0;
+		BufferHandle m_development_shaders_readback_buffer;
+
+		//Map of the indexes of all the GPU control variables
+		struct ControlVariable
+		{
+			size_t index;
+			bool default_value;
+		};
+		core::FastMap<std::string, ControlVariable> m_control_variables;
+
+		//Map of the indexes for all GPU stats
+		core::FastMap<std::string, size_t> m_stats;
 
 		//Accesor to the resources (we need a specialitation for each type)
 		template<typename HANDLE>

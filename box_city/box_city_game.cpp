@@ -25,12 +25,18 @@ void BoxCityGame::OnInit()
 
 	display::DeviceInitParams device_init_params;
 
-#ifdef _DEBUG
-	device_init_params.debug = true;
+#if defined(CUTE_RELEASE) || defined(CUTE_TEST)
+	device_init_params.debug = false;
 #else
 	device_init_params.debug = true;
 #endif
+#if defined(CUTE_RELEASE)
+	device_init_params.debug_shaders = false;
+	device_init_params.development_shaders = true;
+#else
 	device_init_params.debug_shaders = true;
+	device_init_params.development_shaders = true;
+#endif
 	device_init_params.width = kInitWidth;
 	device_init_params.height = kInitHeight;
 	device_init_params.tearing = true;

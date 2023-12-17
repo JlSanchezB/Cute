@@ -25,9 +25,12 @@ namespace display
 		uint32_t adapter_index = -1;
 		size_t upload_buffer_max_size = 256 * 1024;
 
-		//Debug
+		//Debug Layer
 		bool debug = false;
+		//Debug symbols in shaders
 		bool debug_shaders = false;
+		//Development shaders
+		bool development_shaders = false;
 	};
 
 	inline uint32_t CalculateGroupCount(uint32_t num_lanes, uint32_t lanes_for_group)

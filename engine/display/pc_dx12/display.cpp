@@ -6,6 +6,7 @@
 #include <fstream>
 #include <unordered_set>
 #include <helpers/imgui_helper.h>
+#include <regex>
 
 extern "C" { __declspec(dllexport) extern const UINT D3D12SDKVersion = 608; }
 extern "C" { __declspec(dllexport) extern const char* D3D12SDKPath = u8".\\D3D12\\"; }
@@ -182,6 +183,34 @@ namespace display
 			ImGui::End();	
 		}
 	}
+
+	void UploadDevelopmentShaderBuffer(display::Device* device)
+	{
+		//Check if the size is sufficient
+
+		size_t needed_size = 2 + device->m_control_variables.size() + device->m_stats.size();
+
+		if (device->m_development_shaders_buffer_capacity == 0 || needed_size >= device->m_development_shaders_buffer_capacity)
+		{
+			//Delete old buffers
+			if (device->m_development_shaders_buffer.IsValid())
+				display::DestroyBuffer(device, device->m_development_shaders_buffer);
+			if (device->m_development_shaders_readback_buffer.IsValid())
+				display::DestroyBuffer(device, device->m_development_shaders_readback_buffer);
+
+			device->m_development_shaders_buffer_capacity = std::max(64ull, needed_size * 2);
+			
+			//Create development shaders buffer supporting UAV
+			display::BufferDesc buffer_desc = display::BufferDesc::CreateStructuredBuffer(display::Access::Static, static_cast<uint32_t>(device->m_development_shaders_buffer_capacity), 4, true);
+			device->m_development_shaders_buffer = display::CreateBuffer(device, buffer_desc, "Development Shaders Buffer");
+
+			//Create development shaders read back buffer, so the data can go from the GPU to the CPU as needed
+			buffer_desc = display::BufferDesc::CreateStructuredBuffer(display::Access::ReadBack, static_cast<uint32_t>(device->m_development_shaders_buffer_capacity), 4);
+			device->m_development_shaders_readback_buffer = display::CreateBuffer(device, buffer_desc, "Development Shaders ReadBack Buffer");
+		}
+
+		//Reset the header, control variables and stats of the buffer
+	}
 }
 
 //Access to platform::GetHwnd()
@@ -271,6 +300,7 @@ namespace display
 		device->m_width = params.width;
 		device->m_height = params.height;
 		device->m_debug_shaders = params.debug_shaders;
+		device->m_development_shaders = params.development_shaders;
 
 		swapChainDesc.Flags = params.tearing ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0;
 
@@ -462,6 +492,12 @@ namespace display
 		// cleaned up by the destructor.
 		WaitForGpu(device);
 
+		//Destroy development shaders if built
+		if (device->m_development_shaders_buffer.IsValid())
+			display::DestroyBuffer(device, device->m_development_shaders_buffer);
+		if (device->m_development_shaders_readback_buffer.IsValid())
+			display::DestroyBuffer(device, device->m_development_shaders_readback_buffer);
+
 		//Destroy deferred delete resources
 		DeletePendingResources(device);
 
@@ -629,10 +665,18 @@ namespace display
 	//Begin/End Frame
 	void BeginFrame(Device* device)
 	{
-		// Command list allocators can only be reset when the associated 
-		// command lists have finished execution on the GPU; apps should use 
-		// fences to determine GPU execution progress.
-		ThrowIfFailed(GetCommandAllocator(device)->Reset());
+		//During the first frame, we should not wait in the begin frame, as resource upload can happen before
+		if (!device->m_before_first_frame)
+		{
+			// Command list allocators can only be reset when the associated 
+			// command lists have finished execution on the GPU; apps should use 
+			// fences to determine GPU execution progress.
+			ThrowIfFailed(GetCommandAllocator(device)->Reset());
+		}
+		else
+		{
+			device->m_before_first_frame = false;
+		}
 
 		//Delete deferred handles
 		device->m_command_list_pool.NextFrame();
@@ -649,6 +693,9 @@ namespace display
 
 		//Reset all the active upload buffers
 		UploadBufferReset(device);
+
+		//Upload development shaders buffer
+		UploadDevelopmentShaderBuffer(device);
 
 		//Reset stats
 		device->uploaded_memory_frame = 0;
@@ -803,13 +850,19 @@ namespace display
 			}	
 		}
 
+		if (device->m_development_shaders)
+		{
+			//Create slot for the shader development UAV
+			root_parameters[root_signature_desc.num_root_parameters].InitAsUnorderedAccessView(0, 1000, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);
+		}
+
 		D3D12_ROOT_SIGNATURE_FLAGS flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
 			D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS |
             D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS |
             D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS;
 
 		CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDesc;
-		rootSignatureDesc.Init_1_1(static_cast<UINT>(root_signature_desc.num_root_parameters), root_parameters, static_cast<UINT>(root_signature_desc.num_static_samplers), static_samplers, flags);
+		rootSignatureDesc.Init_1_1(static_cast<UINT>(root_signature_desc.num_root_parameters + ((device->m_development_shaders) ? 1 : 0)), root_parameters, static_cast<UINT>(root_signature_desc.num_static_samplers), static_samplers, flags);
 
 		ComPtr<ID3DBlob> signature;
 		ComPtr<ID3DBlob> error;
@@ -942,6 +995,109 @@ namespace display
 			return false;
 		}
 
+		std::string shader_prefix;
+
+		if (device->m_development_shaders)
+		{
+			//Define the shader development buffer
+			//0 -> number of control variables
+			//1 -> number of stats
+			// control variables
+			// stats
+			shader_prefix += "RWStructuredBuffer<uint> ShaderDevelopmentBuffer : register(u0, space1000);\n";
+
+			//CONTROL VARIABLES
+			{
+				//Undefine then, are going to be define as offsets in a buffer
+				shader_prefix += "#define CONTROL_VARIABLE(a,b)\n";
+
+				//Look for control variables "CONTROL_VARIABLE(" in the shader code
+				std::string shader_code = reinterpret_cast<const char*>(source_buffer.Ptr);
+
+				std::regex pattern("CONTROL_VARIABLE\\((\\w+), (\\w+)\\)");
+				std::smatch match;
+
+				while (std::regex_search(shader_code, match, pattern))
+				{
+					//Collect control variable name
+					std::string control_variable = match[1].str();
+					bool default_value = (match[2].str() == "true");
+					auto control_variable_item = device->m_control_variables.Find(control_variable);
+					size_t index;
+					if (control_variable_item)
+					{
+						//Check if the default variable is ok
+						if (default_value != control_variable_item->default_value)
+						{
+							core::LogWarning("The control variable <%s> is define with different default values in different shaders. The behaviour is undefined.", control_variable.c_str());
+						}
+						index = control_variable_item->index;
+					}
+					else
+					{
+						//We need to add a new element to the map
+						index = device->m_control_variables.size();
+						device->m_control_variables.Insert(control_variable, Device::ControlVariable{ index, default_value });
+					}
+
+					shader_prefix += std::string("const bool ") + control_variable + " = ShaderDevelopmentBuffer[ 2 + " + std::to_string(index) + "] != 0;\n";
+
+					//Continue to the rest of the shader
+					shader_code = match.suffix();
+				}
+			}
+
+			//STATS
+			{
+				//Look for control variables "STAT(" in the shader code
+				std::string shader_code = reinterpret_cast<const char*>(source_buffer.Ptr);
+
+				std::regex pattern("STAT\\((\\w+)\\)");
+				std::smatch match;
+
+				while (std::regex_search(shader_code, match, pattern))
+				{
+					//Collect control variable name
+					std::string stat = match[1].str();
+					auto stat_index = device->m_stats.Find(stat);
+					size_t index;
+					if (stat_index)
+					{
+						index = *stat_index;
+					}
+					else
+					{
+						//We need to add a new element to the map
+						index = device->m_stats.size();
+						device->m_stats.Insert(stat, index);
+					}
+
+					shader_prefix += std::string("const uint ") + stat + "_index = " + std::to_string(index) + ";\n";
+
+					//Continue to the rest of the shader
+					shader_code = match.suffix();
+				}
+
+				//Define stats operators
+				shader_prefix += "#define STAT_INC(name) uint retvalue_##__LINE__; InterlockedAdd(asuint(ShaderDevelopmentBuffer[2 + ShaderDevelopmentBuffer[0] + name##_index]), 1, retvalue_##__LINE__);\n";
+				shader_prefix += "#define STAT_INC_VALUE(name, value) uint retvalue_##__LINE__; InterlockedAdd(asuint(ShaderDevelopmentBuffer[2 + ShaderDevelopmentBuffer[0] + name##_index]), value, retvalue_##__LINE__);\n";
+			}
+		}
+		else
+		{
+			//CONTROL VARIABLES
+			shader_prefix += "#define CONTROL_VARIABLE(name, default_value) const name = defaul_value;\n";
+			//STATS
+			shader_prefix += "#define STAT(name)\n";
+			shader_prefix += "#define STAT_INC(name)\n";
+			shader_prefix += "#define STAT_INC_VALUE(name, value)\n";
+		}
+
+		//Add the shader prefix before the code
+		shader_prefix.append(reinterpret_cast<const char*>(source_buffer.Ptr), source_buffer.Size);
+
+		source_buffer.Ptr = shader_prefix.data();
+		source_buffer.Size = shader_prefix.size();
 
 		std::vector<LPCWSTR> arguments;
 		std::wstring entry_point = FromChar(compile_shader_desc.entry_point);
