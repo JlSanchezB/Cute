@@ -33,9 +33,6 @@ namespace
 
 			//Send to the GPU a copy
 
-			//Command list
-			auto& command_list = device->Get(device->m_resource_command_list).resource;
-
 			//Open command list
 			display::Context* context = OpenCommandList(device, device->m_resource_command_list);
 			auto dx12_context = reinterpret_cast<display::DX12Context*>(context);

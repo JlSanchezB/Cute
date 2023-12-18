@@ -453,7 +453,7 @@ namespace display
 		command_list->ResourceBarrier(static_cast<UINT>(num_barriers), dx12_resource_barriers.get());
 	}
 
-	void* Context::UpdateBufferResource(display::BufferHandle dest_resource, size_t dest_offset, size_t size)
+	void* Context::UpdateBufferResource(const display::WeakBufferHandle& dest_resource, size_t dest_offset, size_t size)
 	{
 		auto dx12_context = reinterpret_cast<DX12Context*>(this);
 		Device* device = dx12_context->device;

@@ -494,7 +494,7 @@ namespace display
 		struct ControlVariable
 		{
 			size_t index;
-			bool default_value;
+			std::variant<float, uint32_t, bool> default_value;
 		};
 		core::FastMap<std::string, ControlVariable> m_control_variables;
 

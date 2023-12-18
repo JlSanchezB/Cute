@@ -186,30 +186,77 @@ namespace display
 
 	void UploadDevelopmentShaderBuffer(display::Device* device)
 	{
-		//Check if the size is sufficient
-
-		size_t needed_size = 2 + device->m_control_variables.size() + device->m_stats.size();
-
-		if (device->m_development_shaders_buffer_capacity == 0 || needed_size >= device->m_development_shaders_buffer_capacity)
+		if (device->m_development_shaders)
 		{
-			//Delete old buffers
-			if (device->m_development_shaders_buffer.IsValid())
-				display::DestroyBuffer(device, device->m_development_shaders_buffer);
-			if (device->m_development_shaders_readback_buffer.IsValid())
-				display::DestroyBuffer(device, device->m_development_shaders_readback_buffer);
+			//Check if the size is sufficient
 
-			device->m_development_shaders_buffer_capacity = std::max(64ull, needed_size * 2);
-			
-			//Create development shaders buffer supporting UAV
-			display::BufferDesc buffer_desc = display::BufferDesc::CreateStructuredBuffer(display::Access::Static, static_cast<uint32_t>(device->m_development_shaders_buffer_capacity), 4, true);
-			device->m_development_shaders_buffer = display::CreateBuffer(device, buffer_desc, "Development Shaders Buffer");
+			size_t needed_size = 2 + device->m_control_variables.size() + device->m_stats.size();
 
-			//Create development shaders read back buffer, so the data can go from the GPU to the CPU as needed
-			buffer_desc = display::BufferDesc::CreateStructuredBuffer(display::Access::ReadBack, static_cast<uint32_t>(device->m_development_shaders_buffer_capacity), 4);
-			device->m_development_shaders_readback_buffer = display::CreateBuffer(device, buffer_desc, "Development Shaders ReadBack Buffer");
+			if (device->m_development_shaders_buffer_capacity == 0 || needed_size >= device->m_development_shaders_buffer_capacity)
+			{
+				//Delete old buffers
+				if (device->m_development_shaders_buffer.IsValid())
+					display::DestroyBuffer(device, device->m_development_shaders_buffer);
+				if (device->m_development_shaders_readback_buffer.IsValid())
+					display::DestroyBuffer(device, device->m_development_shaders_readback_buffer);
+
+				device->m_development_shaders_buffer_capacity = std::max(64ull, needed_size * 2);
+
+				//Create development shaders buffer supporting UAV
+				display::BufferDesc buffer_desc = display::BufferDesc::CreateStructuredBuffer(display::Access::Static, static_cast<uint32_t>(device->m_development_shaders_buffer_capacity), 4, true);
+				device->m_development_shaders_buffer = display::CreateBuffer(device, buffer_desc, "Development Shaders Buffer");
+
+				//Create development shaders read back buffer, so the data can go from the GPU to the CPU as needed
+				buffer_desc = display::BufferDesc::CreateStructuredBuffer(display::Access::ReadBack, static_cast<uint32_t>(device->m_development_shaders_buffer_capacity), 4);
+				device->m_development_shaders_readback_buffer = display::CreateBuffer(device, buffer_desc, "Development Shaders ReadBack Buffer");
+			}
+
+			//Reset the header, control variables and stats of the buffer
+
+			//Open command list
+			display::Context* context = OpenCommandList(device, device->m_resource_command_list);
+
+			context->AddResourceBarriers({ display::ResourceBarrier(device->m_development_shaders_buffer, display::TranstitionState::UnorderedAccess, display::TranstitionState::CopyDest) });
+
+			uint32_t* upload_buffer_data = reinterpret_cast<uint32_t*>(context->UpdateBufferResource(device->m_development_shaders_buffer, 0, needed_size * sizeof(uint32_t)));
+
+			//Upload data
+			upload_buffer_data[0] = static_cast<uint32_t>(device->m_control_variables.size());
+			upload_buffer_data[1] = static_cast<uint32_t>(device->m_stats.size());
+
+			for (auto& it : device->m_control_variables)
+			{
+				//Get values from the CPU control variables
+				switch (it.second.default_value.index())
+				{
+				case 0:
+					upload_buffer_data[2 + it.second.index] = *reinterpret_cast<uint32_t*>(&std::get<float>(it.second.default_value));
+					break;
+				case 1:
+					upload_buffer_data[2 + it.second.index] = std::get<uint32_t>(it.second.default_value);
+					break;
+				case 2:
+					upload_buffer_data[2 + it.second.index] = std::get<bool>(it.second.default_value) ? 1 : 0;
+					break;
+				}	
+			}
+
+			const size_t num_stats = device->m_stats.size();
+			const size_t begin_stats = 2 + device->m_control_variables.size();
+			for (size_t i = begin_stats; i < begin_stats + num_stats; ++i)
+			{
+				upload_buffer_data[i] = 0; //All stats reset to zero
+			}
+
+
+			context->AddResourceBarriers({ display::ResourceBarrier(device->m_development_shaders_buffer, display::TranstitionState::CopyDest, display::TranstitionState::UnorderedAccess) });
+
+			//Close command list
+			CloseCommandList(device, context);
+
+			//Execute the command list
+			ExecuteCommandList(device, device->m_resource_command_list);
 		}
-
-		//Reset the header, control variables and stats of the buffer
 	}
 }
 
@@ -1009,19 +1056,41 @@ namespace display
 			//CONTROL VARIABLES
 			{
 				//Undefine then, are going to be define as offsets in a buffer
-				shader_prefix += "#define CONTROL_VARIABLE(a,b)\n";
+				shader_prefix += "#define CONTROL_VARIABLE(type, name, default_value)\n";
 
 				//Look for control variables "CONTROL_VARIABLE(" in the shader code
 				std::string shader_code = reinterpret_cast<const char*>(source_buffer.Ptr);
 
-				std::regex pattern("CONTROL_VARIABLE\\((\\w+), (\\w+)\\)");
+				std::regex pattern("CONTROL_VARIABLE\\((\\w+), (\\w+), (\\w+)\\)");
 				std::smatch match;
 
 				while (std::regex_search(shader_code, match, pattern))
 				{
-					//Collect control variable name
-					std::string control_variable = match[1].str();
-					bool default_value = (match[2].str() == "true");
+					//Collect control variable name and type
+
+					const std::string& type_variable_string = match[1].str();
+					const std::string& control_variable = match[2].str();
+					const std::string& default_value_string = match[3].str();
+
+					std::variant<float, uint32_t, bool> default_value;
+					if (type_variable_string == "float")
+					{
+						default_value = std::stof(default_value_string);
+					}
+					else if (type_variable_string == "uint")
+					{
+						default_value = (uint32_t)std::stoul(default_value_string);
+					}
+					else if (type_variable_string == "bool")
+					{
+						default_value = (default_value_string == "true");
+					}
+					else
+					{
+						default_value = false;
+						core::LogWarning("The control variable <%s> type <%s> is not a supported one (float, uint, bool). Reset to bool.", control_variable.c_str(), type_variable_string.c_str());
+					}
+					
 					auto control_variable_item = device->m_control_variables.Find(control_variable);
 					size_t index;
 					if (control_variable_item)
@@ -1040,8 +1109,19 @@ namespace display
 						device->m_control_variables.Insert(control_variable, Device::ControlVariable{ index, default_value });
 					}
 
-					shader_prefix += std::string("const bool ") + control_variable + " = ShaderDevelopmentBuffer[ 2 + " + std::to_string(index) + "] != 0;\n";
-
+					switch (default_value.index())
+					{
+					case 0:
+						shader_prefix += std::string("const float ") + control_variable + " = asfloat(ShaderDevelopmentBuffer[ 2 + " + std::to_string(index) + "]);\n";
+						break;
+					case 1:
+						shader_prefix += std::string("const uint ") + control_variable + " = ShaderDevelopmentBuffer[ 2 + " + std::to_string(index) + "];\n";
+						break;
+					case 2:
+						shader_prefix += std::string("const bool ") + control_variable + " = ShaderDevelopmentBuffer[ 2 + " + std::to_string(index) + "] != 0;\n";
+						break;
+					}
+					
 					//Continue to the rest of the shader
 					shader_code = match.suffix();
 				}
@@ -1086,7 +1166,7 @@ namespace display
 		else
 		{
 			//CONTROL VARIABLES
-			shader_prefix += "#define CONTROL_VARIABLE(name, default_value) const name = defaul_value;\n";
+			shader_prefix += "#define CONTROL_VARIABLE(type, name, default_value) const type name = defaul_value;\n";
 			//STATS
 			shader_prefix += "#define STAT(name)\n";
 			shader_prefix += "#define STAT_INC(name)\n";
