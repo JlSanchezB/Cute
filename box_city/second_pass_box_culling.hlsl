@@ -1,9 +1,10 @@
 
+CONTROL_VARIABLE(bool, SkipSecondaryPassCulling, false)
+
 cbuffer Root : register(b0)
 {
     uint indirect_box_buffer_count;
 }
-
 
 //Buffer with the offsets of all the culled boxes, the first element is the number of boxes in the second pass
 StructuredBuffer<uint> second_pass_indirect_culled_boxes : register(t3);
@@ -35,6 +36,11 @@ void second_pass_box_culling(uint3 dispatch_thread_id : SV_DispatchThreadID)
 {
     //Number of boxes
     uint num_second_pass_boxes = second_pass_indirect_culled_boxes[0] - 1;
+
+    if (SkipSecondaryPassCulling)
+    {
+        return;
+    }
 
     if (dispatch_thread_id.x < num_second_pass_boxes)
     {

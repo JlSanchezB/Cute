@@ -6,6 +6,7 @@
 #include "fast_map.h"
 #include "log.h"
 #include <ext/imgui/imgui.h>
+#include "virtual_buffer.h"
 
 namespace
 {
@@ -52,6 +53,9 @@ namespace
 	std::vector<std::pair<SupportedControlVariable, ControlVariableValue>> g_pending_updates_main;
 	std::vector<std::pair<SupportedControlVariable, ControlVariableValue>> g_pending_updates_render;
 
+	//Control variable local memory
+	core::VirtualBuffer g_control_variables_local_memory(256 * sizeof(uint32_t));
+	size_t g_control_variables_local_count = 0;
 
 	void RegisterVariable(const SupportedControlVariable& variable, const ControlVariableValue& range_min, const ControlVariableValue& range_max, core::ControlVariableGroupName group_name, core::ControlVariableName variable_name, const core::ConsoleVariableType& type)
 	{
@@ -70,13 +74,7 @@ namespace
 			group_it = g_control_variables->Insert(group_name, ControlVariableGroup{});
 		}
 
-		auto& control_variable_it = group_it->control_variables.Find(variable_name);
-		if (control_variable_it)
-		{
-			core::LogError("Control variable <%s> is already defined in the group <%s>", variable_name.GetValue(), group_name.GetValue());
-			return;
-		}
-		//Add
+		//Add or modify
 		group_it->control_variables.Insert(variable_name, ControlVariable{ variable, type, range_min, range_max });
 	}
 
@@ -132,6 +130,7 @@ namespace core
 {
 	int32_t RegisterControlVariable(const int32_t& default_value, int32_t* variable_ptr, const int32_t& range_min, const int32_t& range_max, const ControlVariableGroupName& group_name, const ControlVariableName& variable_name, const ConsoleVariableType& type)
 	{
+		assert(variable_ptr);
 		RegisterVariable(variable_ptr, range_min, range_max, group_name, variable_name, type);
 
 		return default_value;
@@ -139,6 +138,7 @@ namespace core
 
 	uint32_t RegisterControlVariable(const uint32_t& default_value, uint32_t* variable_ptr, const uint32_t& range_min, const uint32_t& range_max, const ControlVariableGroupName& group_name, const ControlVariableName& variable_name, const ConsoleVariableType& type)
 	{
+		assert(variable_ptr);
 		RegisterVariable(variable_ptr, range_min, range_max, group_name, variable_name, type);
 
 		return default_value;
@@ -146,6 +146,7 @@ namespace core
 
 	bool RegisterControlVariable(const bool& default_value, bool* variable_ptr, const ControlVariableGroupName& group_name, const ControlVariableName& variable_name, const ConsoleVariableType& type)
 	{
+		assert(variable_ptr);
 		RegisterVariable(variable_ptr, false, true, group_name, variable_name, type);
 
 		return default_value;
@@ -153,9 +154,62 @@ namespace core
 
 	float RegisterControlVariable(const float& default_value, float* variable_ptr, const float& range_min, const float& range_max, const ControlVariableGroupName& group_name, const ControlVariableName& variable_name, const ConsoleVariableType& type)
 	{
+		assert(variable_ptr);
 		RegisterVariable(variable_ptr, range_min, range_max, group_name, variable_name, type);
 
 		return default_value;
+	}
+
+	int32_t* RegisterControlVariable(const int32_t& default_value, const int32_t& range_min, const int32_t& range_max, const ControlVariableGroupName& group_name, const ControlVariableName& variable_name, const ConsoleVariableType& type)
+	{
+		int32_t* variable_ptr = nullptr;
+
+		g_control_variables_local_memory.SetCommitedSize((g_control_variables_local_count + 1) * sizeof(uint32_t));
+		variable_ptr = reinterpret_cast<int32_t*>(g_control_variables_local_memory.GetPtr()) + g_control_variables_local_count;
+		g_control_variables_local_count++;
+
+		RegisterControlVariable(default_value, variable_ptr, range_min, range_max, group_name, variable_name, type);
+
+		return variable_ptr;
+	}
+
+	uint32_t* RegisterControlVariable(const uint32_t& default_value, const uint32_t& range_min, const uint32_t& range_max, const ControlVariableGroupName& group_name, const ControlVariableName& variable_name, const ConsoleVariableType& type)
+	{
+		uint32_t* variable_ptr = nullptr;
+
+		g_control_variables_local_memory.SetCommitedSize((g_control_variables_local_count + 1) * sizeof(uint32_t));
+		variable_ptr = reinterpret_cast<uint32_t*>(g_control_variables_local_memory.GetPtr()) + g_control_variables_local_count;
+		g_control_variables_local_count++;
+
+		RegisterControlVariable(default_value, variable_ptr, range_min, range_max, group_name, variable_name, type);
+
+		return variable_ptr;
+	}
+
+	bool* RegisterControlVariable(const bool& default_value, const ControlVariableGroupName& group_name, const ControlVariableName& variable_name, const ConsoleVariableType& type)
+	{
+		bool* variable_ptr = nullptr;
+
+		g_control_variables_local_memory.SetCommitedSize((g_control_variables_local_count + 1) * sizeof(uint32_t));
+		variable_ptr = reinterpret_cast<bool*>(reinterpret_cast<int32_t*>(g_control_variables_local_memory.GetPtr()) + g_control_variables_local_count);
+		g_control_variables_local_count++;
+
+		RegisterControlVariable(default_value, variable_ptr, group_name, variable_name, type);
+
+		return variable_ptr;
+	}
+
+	float* RegisterControlVariable(const float& default_value, const float& range_min, const float& range_max, const ControlVariableGroupName& group_name, const ControlVariableName& variable_name, const ConsoleVariableType& type)
+	{
+		float* variable_ptr = nullptr;
+
+		g_control_variables_local_memory.SetCommitedSize((g_control_variables_local_count + 1) * sizeof(uint32_t));
+		variable_ptr = reinterpret_cast<float*>(g_control_variables_local_memory.GetPtr()) + g_control_variables_local_count;
+		g_control_variables_local_count++;
+
+		RegisterControlVariable(default_value, variable_ptr, range_min, range_max, group_name, variable_name, type);
+
+		return variable_ptr;
 	}
 
 	void UpdateControlVariablesMain()

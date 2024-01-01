@@ -300,7 +300,7 @@ namespace core
 			m_key[index.second] = key;
 			m_data[index.second] = std::forward<DATA>(data);
 
-			return Accesor<DATA>(&m_data.back());
+			return Accesor<DATA>(&m_data[index.second]);
 		}
 		else
 		{
@@ -308,7 +308,7 @@ namespace core
 			m_key[index.first] = key;
 			m_data[index.first] = std::forward<DATA>(data);
 
-			return Accesor<DATA>(&m_data[index.second]);
+			return Accesor<DATA>(&m_data[index.first]);
 		}
 	}
 

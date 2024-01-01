@@ -24,6 +24,11 @@ namespace core
 	bool RegisterControlVariable(const bool& default_value, bool* variable_ptr, const ControlVariableGroupName& group_name, const ControlVariableName& variable_name, const ConsoleVariableType& type);
 	float RegisterControlVariable(const float& default_value, float* variable_ptr, const float& range_min, const float& range_max, const ControlVariableGroupName& group_name, const ControlVariableName& variable_name, const ConsoleVariableType& type);
 
+	int32_t* RegisterControlVariable(const int32_t& default_value, const int32_t& range_min, const int32_t& range_max, const ControlVariableGroupName& group_name, const ControlVariableName& variable_name, const ConsoleVariableType& type);
+	uint32_t* RegisterControlVariable(const uint32_t& default_value, const uint32_t& range_min, const uint32_t& range_max, const ControlVariableGroupName& group_name, const ControlVariableName& variable_name, const ConsoleVariableType& type);
+	bool* RegisterControlVariable(const bool& default_value, const ControlVariableGroupName& group_name, const ControlVariableName& variable_name, const ConsoleVariableType& type);
+	float* RegisterControlVariable(const float& default_value, const float& range_min, const float& range_max, const ControlVariableGroupName& group_name, const ControlVariableName& variable_name, const ConsoleVariableType& type);
+
 	//Update pending variables for the main tick
 	void UpdateControlVariablesMain();
 	//Update pending variables for the render

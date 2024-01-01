@@ -495,6 +495,7 @@ namespace display
 		{
 			size_t index;
 			std::variant<float, uint32_t, bool> default_value;
+			std::variant<float*, uint32_t*, bool*> control_variable_ptr;
 		};
 		core::FastMap<std::string, ControlVariable> m_control_variables;
 

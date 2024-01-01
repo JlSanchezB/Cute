@@ -7,6 +7,7 @@
 #include <unordered_set>
 #include <helpers/imgui_helper.h>
 #include <regex>
+#include <core/control_variables.h>
 
 extern "C" { __declspec(dllexport) extern const UINT D3D12SDKVersion = 608; }
 extern "C" { __declspec(dllexport) extern const char* D3D12SDKPath = u8".\\D3D12\\"; }
@@ -230,13 +231,13 @@ namespace display
 				switch (it.second.default_value.index())
 				{
 				case 0:
-					upload_buffer_data[2 + it.second.index] = *reinterpret_cast<uint32_t*>(&std::get<float>(it.second.default_value));
+					upload_buffer_data[2 + it.second.index] = *reinterpret_cast<uint32_t*>(std::get<float*>(it.second.control_variable_ptr));
 					break;
 				case 1:
-					upload_buffer_data[2 + it.second.index] = std::get<uint32_t>(it.second.default_value);
+					upload_buffer_data[2 + it.second.index] = *(std::get<uint32_t*>(it.second.control_variable_ptr));
 					break;
 				case 2:
-					upload_buffer_data[2 + it.second.index] = std::get<bool>(it.second.default_value) ? 1 : 0;
+					upload_buffer_data[2 + it.second.index] = *std::get<bool*>(it.second.control_variable_ptr) ? 1 : 0;
 					break;
 				}	
 			}
@@ -865,6 +866,7 @@ namespace display
 		}
 
 		CD3DX12_ROOT_PARAMETER1 root_parameters[kMaxNumRootParameters];
+		CD3DX12_DESCRIPTOR_RANGE1 range[kMaxNumRootParameters][RootSignatureTable::kNumMaxRanges];
 		for (size_t i = 0; i < root_signature_desc.num_root_parameters; ++i)
 		{
 			auto& source_property = root_signature_desc.root_parameters[i];
@@ -884,14 +886,13 @@ namespace display
 				break;
 			case RootSignatureParameterType::DescriptorTable:
 				{
-					CD3DX12_DESCRIPTOR_RANGE1 range[RootSignatureTable::kNumMaxRanges];
 					for (size_t range_index = 0; range_index < source_property.table.num_ranges; ++range_index)
 					{
 						auto& range_desc = source_property.table.range[range_index];
-						range[range_index].Init(Convert(range_desc.type), static_cast<UINT>(range_desc.size), static_cast<UINT>(range_desc.base_shader_register));
+						range[i][range_index].Init(Convert(range_desc.type), static_cast<UINT>(range_desc.size), static_cast<UINT>(range_desc.base_shader_register));
 					}
 				
-					root_parameters[i].InitAsDescriptorTable(static_cast<UINT>(source_property.table.num_ranges), &range[0], Convert(source_property.visibility));
+					root_parameters[i].InitAsDescriptorTable(static_cast<UINT>(source_property.table.num_ranges), &range[i][0], Convert(source_property.visibility));
 				}
 				break;
 			}	
@@ -900,7 +901,7 @@ namespace display
 		if (device->m_development_shaders)
 		{
 			//Create slot for the shader development UAV
-			root_parameters[root_signature_desc.num_root_parameters].InitAsUnorderedAccessView(0, 1000, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);
+			root_parameters[root_signature_desc.num_root_parameters].InitAsUnorderedAccessView(1000, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);
 		}
 
 		D3D12_ROOT_SIGNATURE_FLAGS flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
@@ -909,7 +910,12 @@ namespace display
             D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS;
 
 		CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDesc;
-		rootSignatureDesc.Init_1_1(static_cast<UINT>(root_signature_desc.num_root_parameters + ((device->m_development_shaders) ? 1 : 0)), root_parameters, static_cast<UINT>(root_signature_desc.num_static_samplers), static_samplers, flags);
+		UINT num_root_parameters = static_cast<UINT>(root_signature_desc.num_root_parameters);
+		if (device->m_development_shaders)
+		{
+			num_root_parameters++;
+		}
+		rootSignatureDesc.Init_1_1(num_root_parameters, root_parameters, static_cast<UINT>(root_signature_desc.num_static_samplers), static_samplers, flags);
 
 		ComPtr<ID3DBlob> signature;
 		ComPtr<ID3DBlob> error;
@@ -1051,7 +1057,7 @@ namespace display
 			//1 -> number of stats
 			// control variables
 			// stats
-			shader_prefix += "RWStructuredBuffer<uint> ShaderDevelopmentBuffer : register(u0, space1000);\n";
+			shader_prefix += "RWStructuredBuffer<uint> ShaderDevelopmentBuffer : register(u1000);\n";
 
 			//CONTROL VARIABLES
 			{
@@ -1106,19 +1112,31 @@ namespace display
 					{
 						//We need to add a new element to the map
 						index = device->m_control_variables.size();
-						device->m_control_variables.Insert(control_variable, Device::ControlVariable{ index, default_value });
+
+						switch (default_value.index())
+						{
+						case 0:
+							device->m_control_variables.Insert(control_variable, Device::ControlVariable{ index, default_value, core::RegisterControlVariable(std::get<float>(default_value), "GPU"_sh32, core::ControlVariableName(control_variable.c_str()), core::ConsoleVariableType::Render)});
+							break;
+						case 1:
+							device->m_control_variables.Insert(control_variable, Device::ControlVariable{ index, default_value, core::RegisterControlVariable(std::get<uint32_t>(default_value), "GPU"_sh32, core::ControlVariableName(control_variable.c_str()), core::ConsoleVariableType::Render) });
+							break;
+						case 2:
+							device->m_control_variables.Insert(control_variable, Device::ControlVariable{ index, default_value, core::RegisterControlVariable(std::get<bool>(default_value), "GPU"_sh32, core::ControlVariableName(control_variable.c_str()), core::ConsoleVariableType::Render) });
+							break;
+						}		
 					}
 
 					switch (default_value.index())
 					{
 					case 0:
-						shader_prefix += std::string("const float ") + control_variable + " = asfloat(ShaderDevelopmentBuffer[ 2 + " + std::to_string(index) + "]);\n";
+						shader_prefix += std::string("#define ") + control_variable + " asfloat(ShaderDevelopmentBuffer[ 2 + " + std::to_string(index) + "])\n";
 						break;
 					case 1:
-						shader_prefix += std::string("const uint ") + control_variable + " = ShaderDevelopmentBuffer[ 2 + " + std::to_string(index) + "];\n";
+						shader_prefix += std::string("#define ") + control_variable + " ShaderDevelopmentBuffer[ 2 + " + std::to_string(index) + "]\n";
 						break;
 					case 2:
-						shader_prefix += std::string("const bool ") + control_variable + " = ShaderDevelopmentBuffer[ 2 + " + std::to_string(index) + "] != 0;\n";
+						shader_prefix += std::string("#define ") + control_variable + " (ShaderDevelopmentBuffer[ 2 + " + std::to_string(index) + "] != 0)\n";
 						break;
 					}
 					
