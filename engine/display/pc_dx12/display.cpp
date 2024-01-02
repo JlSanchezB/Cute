@@ -1154,6 +1154,9 @@ namespace display
 				std::regex pattern("STAT\\((\\w+)\\)");
 				std::smatch match;
 
+				//Undefine then, are going to be define as offsets in a buffer
+				shader_prefix += "#define STAT(name)\n";
+
 				while (std::regex_search(shader_code, match, pattern))
 				{
 					//Collect control variable name
@@ -1171,15 +1174,15 @@ namespace display
 						device->m_stats.Insert(stat, index);
 					}
 
-					shader_prefix += std::string("const uint ") + stat + "_index = " + std::to_string(index) + ";\n";
+					shader_prefix += std::string("#define ") + stat + "_index " + std::to_string(index) + "\n";
 
 					//Continue to the rest of the shader
 					shader_code = match.suffix();
 				}
 
 				//Define stats operators
-				shader_prefix += "#define STAT_INC(name) uint retvalue_##__LINE__; InterlockedAdd(asuint(ShaderDevelopmentBuffer[2 + ShaderDevelopmentBuffer[0] + name##_index]), 1, retvalue_##__LINE__);\n";
-				shader_prefix += "#define STAT_INC_VALUE(name, value) uint retvalue_##__LINE__; InterlockedAdd(asuint(ShaderDevelopmentBuffer[2 + ShaderDevelopmentBuffer[0] + name##_index]), value, retvalue_##__LINE__);\n";
+				shader_prefix += "#define STAT_INC(name) {uint retvalue; InterlockedAdd(ShaderDevelopmentBuffer[2 + ShaderDevelopmentBuffer[0] + name##_index], 1, retvalue);}\n";
+				shader_prefix += "#define STAT_INC_VALUE(name, value) {uint retvalue; InterlockedAdd(ShaderDevelopmentBuffer[2 + ShaderDevelopmentBuffer[0] + name##_index], value, retvalue);}\n";
 			}
 		}
 		else
