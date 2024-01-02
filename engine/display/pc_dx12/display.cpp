@@ -1062,12 +1062,12 @@ namespace display
 			//CONTROL VARIABLES
 			{
 				//Undefine then, are going to be define as offsets in a buffer
-				shader_prefix += "#define CONTROL_VARIABLE(type, name, default_value)\n";
+				shader_prefix += "#define CONTROL_VARIABLE(type, group, name, default_value)\n";
 
 				//Look for control variables "CONTROL_VARIABLE(" in the shader code
 				std::string shader_code = reinterpret_cast<const char*>(source_buffer.Ptr);
 
-				std::regex pattern("CONTROL_VARIABLE\\((\\w+), (\\w+), (\\w+)\\)");
+				std::regex pattern("CONTROL_VARIABLE\\((\\w+), (\\w+), (\\w+), (\\w+)\\)");
 				std::smatch match;
 
 				while (std::regex_search(shader_code, match, pattern))
@@ -1075,8 +1075,9 @@ namespace display
 					//Collect control variable name and type
 
 					const std::string& type_variable_string = match[1].str();
-					const std::string& control_variable = match[2].str();
-					const std::string& default_value_string = match[3].str();
+					const std::string& group = match[2].str();
+					const std::string& control_variable = match[3].str();
+					const std::string& default_value_string = match[4].str();
 
 					std::variant<float, uint32_t, bool> default_value;
 					if (type_variable_string == "float")
@@ -1116,13 +1117,13 @@ namespace display
 						switch (default_value.index())
 						{
 						case 0:
-							device->m_control_variables.Insert(control_variable, Device::ControlVariable{ index, default_value, core::RegisterControlVariable(std::get<float>(default_value), "GPU"_sh32, core::ControlVariableName(control_variable.c_str()), core::ConsoleVariableType::Render)});
+							device->m_control_variables.Insert(control_variable, Device::ControlVariable{ index, default_value, core::RegisterControlVariable(std::get<float>(default_value), core::ControlVariableGroupName(group.c_str()), core::ControlVariableName(control_variable.c_str()), core::ConsoleVariableType::Render)});
 							break;
 						case 1:
-							device->m_control_variables.Insert(control_variable, Device::ControlVariable{ index, default_value, core::RegisterControlVariable(std::get<uint32_t>(default_value), "GPU"_sh32, core::ControlVariableName(control_variable.c_str()), core::ConsoleVariableType::Render) });
+							device->m_control_variables.Insert(control_variable, Device::ControlVariable{ index, default_value, core::RegisterControlVariable(std::get<uint32_t>(default_value), core::ControlVariableGroupName(group.c_str()), core::ControlVariableName(control_variable.c_str()), core::ConsoleVariableType::Render) });
 							break;
 						case 2:
-							device->m_control_variables.Insert(control_variable, Device::ControlVariable{ index, default_value, core::RegisterControlVariable(std::get<bool>(default_value), "GPU"_sh32, core::ControlVariableName(control_variable.c_str()), core::ConsoleVariableType::Render) });
+							device->m_control_variables.Insert(control_variable, Device::ControlVariable{ index, default_value, core::RegisterControlVariable(std::get<bool>(default_value), core::ControlVariableGroupName(group.c_str()), core::ControlVariableName(control_variable.c_str()), core::ConsoleVariableType::Render) });
 							break;
 						}		
 					}

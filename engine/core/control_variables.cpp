@@ -168,7 +168,7 @@ namespace core
 		variable_ptr = reinterpret_cast<int32_t*>(g_control_variables_local_memory.GetPtr()) + g_control_variables_local_count;
 		g_control_variables_local_count++;
 
-		RegisterControlVariable(default_value, variable_ptr, range_min, range_max, group_name, variable_name, type);
+		*variable_ptr = RegisterControlVariable(default_value, variable_ptr, range_min, range_max, group_name, variable_name, type);
 
 		return variable_ptr;
 	}
@@ -181,7 +181,7 @@ namespace core
 		variable_ptr = reinterpret_cast<uint32_t*>(g_control_variables_local_memory.GetPtr()) + g_control_variables_local_count;
 		g_control_variables_local_count++;
 
-		RegisterControlVariable(default_value, variable_ptr, range_min, range_max, group_name, variable_name, type);
+		*variable_ptr = RegisterControlVariable(default_value, variable_ptr, range_min, range_max, group_name, variable_name, type);
 
 		return variable_ptr;
 	}
@@ -194,7 +194,7 @@ namespace core
 		variable_ptr = reinterpret_cast<bool*>(reinterpret_cast<int32_t*>(g_control_variables_local_memory.GetPtr()) + g_control_variables_local_count);
 		g_control_variables_local_count++;
 
-		RegisterControlVariable(default_value, variable_ptr, group_name, variable_name, type);
+		*variable_ptr = RegisterControlVariable(default_value, variable_ptr, group_name, variable_name, type);
 
 		return variable_ptr;
 	}
@@ -207,7 +207,7 @@ namespace core
 		variable_ptr = reinterpret_cast<float*>(g_control_variables_local_memory.GetPtr()) + g_control_variables_local_count;
 		g_control_variables_local_count++;
 
-		RegisterControlVariable(default_value, variable_ptr, range_min, range_max, group_name, variable_name, type);
+		*variable_ptr = RegisterControlVariable(default_value, variable_ptr, range_min, range_max, group_name, variable_name, type);
 
 		return variable_ptr;
 	}

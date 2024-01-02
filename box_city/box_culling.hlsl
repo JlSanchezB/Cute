@@ -1,3 +1,5 @@
+CONTROL_VARIABLE(bool, BoxCulling, MainPassFrustumCulling, true)
+CONTROL_VARIABLE(bool, BoxCulling, SkipMainPassCulling, false)
 
 cbuffer Root : register(b0)
 {
@@ -84,7 +86,7 @@ void box_culling(uint3 group : SV_GroupID, uint3 group_thread_id : SV_GroupThrea
             uint box_list_offset_byte = asuint(instance_data[0].w);
 
             //Frustum collision, check if the instance is visible
-            if (!is_visible(rotate_quat, translation, extent, float3(0.f, 0.f, 0.f)))
+            if (!is_visible(rotate_quat, translation, extent, float3(0.f, 0.f, 0.f)) && MainPassFrustumCulling)
             {
                 continue;
             }
@@ -117,7 +119,7 @@ void box_culling(uint3 group : SV_GroupID, uint3 group_thread_id : SV_GroupThrea
                     float3 box_extent = float3(box_data[1].x, box_data[1].y, box_data[1].z);
                     float3 box_translation = float3(box_data[0].x, box_data[0].y, box_data[0].z);
             
-                    if (!hiz_is_visible(last_frame_rotate_quat, last_frame_translation, box_extent, box_translation))
+                    if (!hiz_is_visible(last_frame_rotate_quat, last_frame_translation, box_extent, box_translation) || SkipMainPassCulling)
                     {
                         //Occluded, it needs to go to the second pass
                         first_pass = false;

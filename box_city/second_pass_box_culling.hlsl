@@ -1,5 +1,6 @@
 
-CONTROL_VARIABLE(bool, SkipSecondaryPassCulling, false)
+CONTROL_VARIABLE(bool, BoxCulling, SkipSecondaryPassCulling, false)
+CONTROL_VARIABLE(bool, BoxCulling, SecondaryPassCulling, true)
 
 cbuffer Root : register(b0)
 {
@@ -72,7 +73,7 @@ void second_pass_box_culling(uint3 dispatch_thread_id : SV_DispatchThreadID)
         float3 box_extent = float3(box_data[1].x, box_data[1].y, box_data[1].z);
         float3 box_translation = float3(box_data[0].x, box_data[0].y, box_data[0].z);
        
-        if (!hiz_is_visible(instance_rotate_quat, instance_translation, box_extent, box_translation))
+        if (!hiz_is_visible(instance_rotate_quat, instance_translation, box_extent, box_translation) && SecondaryPassCulling)
         {
             //Occluded, nothing to do
             return;
