@@ -30,6 +30,21 @@ namespace core
 	{
 	public:
 		CounterMarker(const CounterGroupName& group, const CounterName& name, const CounterType& type, bool reset_each_frame);
+		CounterMarker(CounterMarker&& a)
+		{
+			index = a.index;
+			reset = a.reset;
+			render_counter = render_counter;
+		}
+		CounterMarker& operator=(CounterMarker&& a)
+		{
+			index = a.index;
+			reset = a.reset;
+			render_counter = render_counter;
+
+			return *this;
+		}
+
 		void Set(const uint32_t& value);
 		void Add(const uint32_t& value);
 	private:

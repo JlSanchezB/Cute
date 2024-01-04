@@ -191,7 +191,7 @@ namespace display
 		{
 			//Check if the size is sufficient
 
-			size_t needed_size = 2 + device->m_control_variables.size() + device->m_stats.size();
+			size_t needed_size = 2 + device->m_control_variables.size() + device->m_counters.size();
 
 			if (device->m_development_shaders_buffer_capacity == 0 || needed_size >= device->m_development_shaders_buffer_capacity)
 			{
@@ -223,7 +223,7 @@ namespace display
 
 			//Upload data
 			upload_buffer_data[0] = static_cast<uint32_t>(device->m_control_variables.size());
-			upload_buffer_data[1] = static_cast<uint32_t>(device->m_stats.size());
+			upload_buffer_data[1] = static_cast<uint32_t>(device->m_counters.size());
 
 			for (auto& it : device->m_control_variables)
 			{
@@ -242,7 +242,7 @@ namespace display
 				}	
 			}
 
-			const size_t num_stats = device->m_stats.size();
+			const size_t num_stats = device->m_counters.size();
 			const size_t begin_stats = 2 + device->m_control_variables.size();
 			for (size_t i = begin_stats; i < begin_stats + num_stats; ++i)
 			{
@@ -1146,43 +1146,45 @@ namespace display
 				}
 			}
 
-			//STATS
+			//COUNTERS
 			{
-				//Look for control variables "STAT(" in the shader code
+				//Look for control variables "COUNTER(" in the shader code
 				std::string shader_code = reinterpret_cast<const char*>(source_buffer.Ptr);
 
-				std::regex pattern("STAT\\((\\w+)\\)");
+				std::regex pattern("COUNTER\\((\\w+), (\\w+)\\)");
 				std::smatch match;
 
 				//Undefine then, are going to be define as offsets in a buffer
-				shader_prefix += "#define STAT(name)\n";
+				shader_prefix += "#define COUNTER(group, variable)\n";
 
 				while (std::regex_search(shader_code, match, pattern))
 				{
-					//Collect control variable name
-					std::string stat = match[1].str();
-					auto stat_index = device->m_stats.Find(stat);
+					//Collect control variable
+					const std::string& group = match[1].str();
+					const std::string& variable = match[2].str();
+
+					auto stat_index = device->m_counters.Find(variable);
 					size_t index;
 					if (stat_index)
 					{
-						index = *stat_index;
+						index = stat_index->index;
 					}
 					else
 					{
 						//We need to add a new element to the map
-						index = device->m_stats.size();
-						device->m_stats.Insert(stat, index);
+						index = device->m_counters.size();
+						device->m_counters.Insert(variable, Device::Counter{ index, core::CounterGroupName(group.c_str()), core::CounterName(variable.c_str()), core::CounterType::Render, true});
 					}
 
-					shader_prefix += std::string("#define ") + stat + "_index " + std::to_string(index) + "\n";
+					shader_prefix += std::string("#define ") + variable + "_index " + std::to_string(index) + "\n";
 
 					//Continue to the rest of the shader
 					shader_code = match.suffix();
 				}
 
 				//Define stats operators
-				shader_prefix += "#define STAT_INC(name) {uint retvalue; InterlockedAdd(ShaderDevelopmentBuffer[2 + ShaderDevelopmentBuffer[0] + name##_index], 1, retvalue);}\n";
-				shader_prefix += "#define STAT_INC_VALUE(name, value) {uint retvalue; InterlockedAdd(ShaderDevelopmentBuffer[2 + ShaderDevelopmentBuffer[0] + name##_index], value, retvalue);}\n";
+				shader_prefix += "#define COUNTER_INC(variable) {uint retvalue; InterlockedAdd(ShaderDevelopmentBuffer[2 + ShaderDevelopmentBuffer[0] + variable##_index], 1, retvalue);}\n";
+				shader_prefix += "#define COUNTER_INC_VALUE(variable, value) {uint retvalue; InterlockedAdd(ShaderDevelopmentBuffer[2 + ShaderDevelopmentBuffer[0] + variable##_index], value, retvalue);}\n";
 			}
 		}
 		else
@@ -1190,9 +1192,9 @@ namespace display
 			//CONTROL VARIABLES
 			shader_prefix += "#define CONTROL_VARIABLE(type, name, default_value) const type name = defaul_value;\n";
 			//STATS
-			shader_prefix += "#define STAT(name)\n";
-			shader_prefix += "#define STAT_INC(name)\n";
-			shader_prefix += "#define STAT_INC_VALUE(name, value)\n";
+			shader_prefix += "#define COUNTER(variable, group, name)\n";
+			shader_prefix += "#define COUNTER_INC(variable)\n";
+			shader_prefix += "#define COUNTER_INC_VALUE(variable, value)\n";
 		}
 
 		//Add the shader prefix before the code

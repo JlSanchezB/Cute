@@ -1,21 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
-
 <AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
-	
-	<Type Name="core::StringHashT&lt;*,unsigned int&gt;">
+  <Type Name ="core::FastMap&lt;*,*&gt;">
+    <Expand>
+      <Item Name="Size">m_size</Item>
+      <CustomListItems>
+        <Variable Name="i" InitialValue="0" />
+        <Loop>
+          <If Condition="m_reserved[i]">
+            <Item Name ="Key">m_key[i]</Item>
+            <Item Name ="Data">m_data[i]</Item>
+          </If>
+          <Exec>i = (i + 1)</Exec>
+        </Loop>
+      </CustomListItems>
+    </Expand>
+  </Type>
+  <Type Name="core::StringHashT&lt;*,unsigned int&gt;">
     <Expand>
       <CustomListItems>
         <Variable Name="i" InitialValue="0" />
         <Variable Name="j" InitialValue="0" />
-        <Variable Name="NamespaceMap" InitialValue="&amp;g_namespaces_string_hash_table->m_buckets[0].m_data[0].string_hash_map_32" />
-        <Variable Name="Bucket" InitialValue="&amp;g_namespaces_string_hash_table->m_buckets[0].m_data[0].string_hash_map_32.m_buckets[0]" />
+        <Variable Name="NamespaceMap" InitialValue="&amp;g_namespaces_string_hash_table->m_data[0].string_hash_map_32" />
         <Loop>
-          <If Condition="g_namespaces_string_hash_table->m_buckets[0].m_key[i] == $T1">
-            <Exec>NamespaceMap = &amp;g_namespaces_string_hash_table->m_buckets[0].m_data[i].string_hash_map_32</Exec>
-            <Exec>Bucket = &amp;NamespaceMap->m_buckets[m_hash &amp; (256 - 1)]</Exec>
+          <If Condition="g_namespaces_string_hash_table->m_key[i] == $T1">
+            <Exec>NamespaceMap = &amp;g_namespaces_string_hash_table->m_data[i].string_hash_map_32</Exec>
             <Loop>
-              <If Condition="Bucket->m_key[j] == m_hash">
-                <Item Name="String">Bucket->m_data[j], na</Item>
+              <If Condition="NamespaceMap->m_key[j] == m_hash">
+                <Item Name="String">NamespaceMap->m_data[j],na</Item>
                 <Break />
               </If>
               <Exec>j = (j + 1)</Exec>
@@ -27,21 +38,19 @@
       </CustomListItems>
     </Expand>
 	</Type>
-  
+
   <Type Name="core::StringHashT&lt;*,unsigned short&gt;">
     <Expand>
       <CustomListItems>
         <Variable Name="i" InitialValue="0" />
         <Variable Name="j" InitialValue="0" />
-        <Variable Name="NamespaceMap" InitialValue="&amp;g_namespaces_string_hash_table->m_buckets[0].m_data[0].string_hash_map_16" />
-        <Variable Name="Bucket" InitialValue="&amp;g_namespaces_string_hash_table->m_buckets[0].m_data[0].string_hash_map_16.m_buckets[0]" />
+        <Variable Name="NamespaceMap" InitialValue="&amp;g_namespaces_string_hash_table->m_data[0].string_hash_map_16" />
         <Loop>
-          <If Condition="g_namespaces_string_hash_table->m_buckets[0].m_key[i] == $T1">
-            <Exec>NamespaceMap = &amp;g_namespaces_string_hash_table->m_buckets[0].m_data[i].string_hash_map_16</Exec>
-            <Exec>Bucket = &amp;NamespaceMap->m_buckets[m_hash &amp; (256 - 1)]</Exec>
+          <If Condition="g_namespaces_string_hash_table->m_key[i] == $T1">
+            <Exec>NamespaceMap = &amp;g_namespaces_string_hash_table->m_data[i].string_hash_map_16</Exec>
             <Loop>
-              <If Condition="Bucket->m_key[j] == m_hash">
-                <Item Name="String">Bucket->m_data[j]</Item>
+              <If Condition="NamespaceMap->m_key[j] == m_hash">
+                <Item Name="String">NamespaceMap->m_data[j],na</Item>
                 <Break />
               </If>
               <Exec>j = (j + 1)</Exec>
@@ -59,15 +68,13 @@
       <CustomListItems>
         <Variable Name="i" InitialValue="0" />
         <Variable Name="j" InitialValue="0" />
-        <Variable Name="NamespaceMap" InitialValue="&amp;g_namespaces_string_hash_table->m_buckets[0].m_data[0].string_hash_map_64" />
-        <Variable Name="Bucket" InitialValue="&amp;g_namespaces_string_hash_table->m_buckets[0].m_data[0].string_hash_map_64.m_buckets[0]" />
+        <Variable Name="NamespaceMap" InitialValue="&amp;g_namespaces_string_hash_table->m_data[0].string_hash_map_64" />
         <Loop>
-          <If Condition="g_namespaces_string_hash_table->m_buckets[0].m_key[i] == $T1">
-            <Exec>NamespaceMap = &amp;g_namespaces_string_hash_table->m_buckets[0].m_data[i].string_hash_map_64</Exec>
-            <Exec>Bucket = &amp;NamespaceMap->m_buckets[m_hash &amp; (256 - 1)]</Exec>
+          <If Condition="g_namespaces_string_hash_table->m_key[i] == $T1">
+            <Exec>NamespaceMap = &amp;g_namespaces_string_hash_table->m_data[i].string_hash_map_64</Exec>
             <Loop>
-              <If Condition="Bucket->m_key[j] == m_hash">
-                <Item Name="String">Bucket->m_data[j]</Item>
+              <If Condition="NamespaceMap->m_key[j] == m_hash">
+                <Item Name="String">NamespaceMap->m_data[j],na</Item>
                 <Break />
               </If>
               <Exec>j = (j + 1)</Exec>

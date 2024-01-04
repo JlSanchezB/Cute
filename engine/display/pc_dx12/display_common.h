@@ -13,6 +13,7 @@
 #include "D3D12MemAlloc.h"
 #include <job/job_helper.h>
 #include <core/fast_map.h>
+#include <core/counters.h>
 
 #include <windows.h>
 #include <d3d12.h>
@@ -499,8 +500,19 @@ namespace display
 		};
 		core::FastMap<std::string, ControlVariable> m_control_variables;
 
-		//Map of the indexes for all GPU stats
-		core::FastMap<std::string, size_t> m_stats;
+		struct Counter
+		{
+			size_t index;
+			core::CounterMarker counter;
+
+			Counter(size_t _index, const core::CounterGroupName& _group, const core::CounterName& _name, const core::CounterType& _type, bool _reset_each_frame) :
+				index(_index),
+				counter(_group, _name, _type, _reset_each_frame)
+			{
+			}
+		};
+		//Map of the indexes for all GPU counters
+		core::FastMap<std::string, Counter> m_counters;
 
 		//Accesor to the resources (we need a specialitation for each type)
 		template<typename HANDLE>

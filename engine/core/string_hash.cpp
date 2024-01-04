@@ -118,7 +118,7 @@ namespace core
 		if (!namespace_string_hash_map)
 		{
 			//Create namespace
-			namespace_string_hash_map = g_namespaces_string_hash_table->Insert(namespace_hash, NamespaceStringHashMap());
+			namespace_string_hash_map = g_namespaces_string_hash_table->Insert(namespace_hash);
 		}
 
 		auto string_hash_find = namespace_string_hash_map->GetStringHashMap<TYPE>().Find(string_hash);

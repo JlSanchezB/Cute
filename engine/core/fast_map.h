@@ -71,7 +71,7 @@ namespace core
 
 			std::pair<KEY&, DATA&> operator*()
 			{
-				return std::pair<KEY&, DATA&>(m_fast_map->m_key[m_index], m_fast_map->m_data[m_index]);
+				return std::pair<KEY&, DATA&>(m_fast_map->m_key[m_index], *reinterpret_cast<DATA*>(&m_fast_map->m_data[m_index]));
 			}
 
 			bool operator!= (const Iterator & other) const
@@ -109,8 +109,8 @@ namespace core
 		};
 
 		//Insert data
-		template<typename SOURCE_DATA>
-		Accesor<DATA> Insert(const KEY& key, SOURCE_DATA&& data);
+		template< class... ARGS>
+		Accesor<DATA> Insert(const KEY& key, ARGS&&... args);
 
 		//Access data
 		Accesor<DATA> Find(const KEY& key);
@@ -170,13 +170,24 @@ namespace core
 			}
 		}
 
-		//Clear
+		//Clear (keeping the capacity)
 		void clear()
 		{
-			*this = {};
+			//Call destructors of all the allocated data and free all the slots
+			for (size_t i = 0; i < m_reserved.size(); ++i)
+			{
+				if (m_reserved[i])
+				{
+					//Call destructor
+					GetData(i).~DATA();
+					m_key[i] = KEY();
+					m_reserved[i] = false;
+				}
+			}
+			m_size = 0;
 		}
 
-		//Size (not really fast)
+		//Size
 		size_t size() const
 		{
 			return m_size;
@@ -192,6 +203,40 @@ namespace core
 			//Init to the start capacity
 			Grow(start_capacity);
 		}
+		FastMap(FastMap&& a)
+		{
+			m_reserved = std::move(a.m_reserved);
+			m_key = std::move(a.m_key);
+			m_data = a.m_data;
+			a.m_data = nullptr;
+			m_bucket_size = a.m_bucket_size;
+			m_capacity = a.m_capacity;
+			m_size = a.m_size;
+			m_allocator = std::move(a.m_allocator);
+		}
+		FastMap& operator=(FastMap&& a)
+		{
+			m_reserved = std::move(a.m_reserved);
+			m_key = std::move(a.m_key);
+			m_data = a.m_data;
+			a.m_data = nullptr;
+			m_bucket_size = a.m_bucket_size;
+			m_capacity = a.m_capacity;
+			m_size = a.m_size;
+			m_allocator = std::move(a.m_allocator);
+
+			return *this;
+		}
+		~FastMap()
+		{
+			clear();
+
+			if (m_data)
+			{
+				//Deallocate
+				m_allocator.deallocate(m_data, m_capacity * m_bucket_size);
+			}
+		}
 
 	private:
 		
@@ -199,8 +244,10 @@ namespace core
 		std::vector<bool> m_reserved;
 		//Array of keys
 		std::vector<KEY> m_key;
-		//Array of data
-		std::vector<DATA> m_data;
+		//Data storage
+		DATA* m_data;
+
+		std::allocator<DATA> m_allocator;
 
 		//Capacity (needs to be power of 2)
 		size_t m_capacity;
@@ -221,32 +268,55 @@ namespace core
 		//Grow by new capacity
 		void Grow(size_t new_capacity)
 		{
-			//Move current data into a swap buffers
-			std::vector<bool> source_reserved = std::move(m_reserved);
-			std::vector<KEY> source_key = std::move(m_key);
-			std::vector<DATA> source_data = std::move(m_data);
+			size_t source_size = m_size;
+			std::vector<bool> source_reserved;
+			std::vector<KEY> source_key;
+			DATA* source_data =  nullptr;
 			size_t source_capacity = m_capacity;
-			size_t old_size = m_size;
 
-			//Define the new capacity
+			if (source_size > 0)
+			{
+				//Move current data into a swap buffers
+				source_reserved = std::move(m_reserved);
+				source_key = std::move(m_key);
+				source_data = m_data;
+				//Define the new capacity
+				m_reserved = {};
+				m_key = {};
+				m_data = nullptr;
+			}
+
 			m_reserved.resize(new_capacity * m_bucket_size);
 			m_key.resize(new_capacity * m_bucket_size);
-			m_data.resize(new_capacity * m_bucket_size);
+			m_data = m_allocator.allocate(new_capacity * m_bucket_size);
 			m_capacity = new_capacity;
 			m_size = 0;
 
-			//Add old key/data into the new map
-			for (size_t i = 0; i < source_capacity * m_bucket_size; ++i)
+			if (source_size > 0)
 			{
-				if (source_reserved[i])
+				assert(source_data);
+				//Add old key/data into the new map
+				for (size_t i = 0; i < source_capacity * m_bucket_size; ++i)
 				{
-					//Insert
-					Insert(std::move(source_key[i]), std::move(source_data[i]));
+					if (source_reserved[i])
+					{
+						//Insert
+						Insert(std::move(source_key[i]), std::move(source_data[i]));
+					}
 				}
+
+				//Deallocate source data
+				m_allocator.deallocate(source_data, source_capacity * m_bucket_size);
 			}
 
 			//Done
-			assert(old_size == m_size);
+			assert(source_size == m_size);
+		}
+
+		DATA& GetData(size_t index)
+		{
+			assert(index < m_capacity * m_bucket_size);
+			return m_data[index];
 		}
 	};
 
@@ -277,8 +347,8 @@ namespace core
 	}
 
 	template<typename KEY, typename DATA>
-	template<typename SOURCE_DATA>
-	inline FastMap<KEY, DATA>::Accesor<DATA> FastMap<KEY, DATA>::Insert(const KEY& key, SOURCE_DATA&& data)
+	template< class... ARGS >
+	inline FastMap<KEY, DATA>::Accesor<DATA> FastMap<KEY, DATA>::Insert(const KEY& key, ARGS&&... args)
 	{
 		auto index = GetIndex(key);
 
@@ -298,19 +368,21 @@ namespace core
 			m_size++;
 			m_reserved[index.second] = true;
 			m_key[index.second] = key;
-			m_data[index.second] = std::forward<DATA>(data);
+			//Placement new the data (move)
+			new (&GetData(index.second)) DATA(std::forward<ARGS>(args)...);
 
-			return Accesor<DATA>(&m_data[index.second]);
+			return Accesor<DATA>(&GetData(index.second));
 		}
 		else
 		{
 			//It was already added, just update
 			m_key[index.first] = key;
-			m_data[index.first] = std::forward<DATA>(data);
+			GetData(index.first) = DATA(std::forward<ARGS>(args)...);
 
-			return Accesor<DATA>(&m_data[index.first]);
+			return Accesor<DATA>(&GetData(index.first));
 		}
 	}
+
 
 	template<typename KEY, typename DATA>
 	inline FastMap<KEY, DATA>::Accesor<const DATA> FastMap<KEY, DATA>::Find(const KEY& key) const
@@ -319,7 +391,7 @@ namespace core
 
 		if (index.first != kInvalid)
 		{
-			return Accesor<const DATA>(&m_data[index.first]);
+			return Accesor<const DATA>(&GetData(index.first));
 		}
 		else
 		{
@@ -335,7 +407,7 @@ namespace core
 
 		if (index.first != kInvalid)
 		{
-			return Accesor<DATA>(&m_data[index.first]);
+			return Accesor<DATA>(&GetData(index.first));
 		}
 		else
 		{

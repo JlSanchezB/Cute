@@ -71,7 +71,7 @@ namespace
 		if (!group_it)
 		{
 			//Create the group
-			group_it = g_control_variables->Insert(group_name, ControlVariableGroup{});
+			group_it = g_control_variables->Insert(group_name);
 		}
 
 		//Add or modify

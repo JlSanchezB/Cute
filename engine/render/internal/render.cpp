@@ -762,7 +762,7 @@ namespace render
 				if (item->source == ResourceSource::Game)
 				{
 					//Transfer resource to new resource map
-					system->m_resources_map.Insert(name, item);
+					system->m_resources_map.Insert(name, std::move(item));
 				}
 			});
 

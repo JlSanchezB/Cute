@@ -1,9 +1,9 @@
 CONTROL_VARIABLE(bool, BoxCulling, MainPassFrustumCulling, true)
 CONTROL_VARIABLE(bool, BoxCulling, SkipMainPassCulling, false)
-STAT(TotalInstances)
-STAT(TotalCubes)
-STAT(FrustumVisibleCubes)
-STAT(FirstPassVisibleCubes)
+COUNTER(BoxCulling, TotalInstances)
+COUNTER(BoxCulling, TotalCubes)
+COUNTER(BoxCulling, FrustumVisibleCubes)
+COUNTER(BoxCulling, FirstPassVisibleCubes)
 
 cbuffer Root : register(b0)
 {
@@ -61,7 +61,7 @@ void box_culling(uint3 group : SV_GroupID, uint3 group_thread_id : SV_GroupThrea
     //Number of passes needed to process all the instances
     uint num_passes = 1 + (num_instances - 1) / 32;
 
-    STAT_INC(TotalInstances);
+    COUNTER_INC(TotalInstances);
 
     //For each pass
     for (uint i = 0; i < num_passes; ++i)
@@ -72,7 +72,7 @@ void box_culling(uint3 group : SV_GroupID, uint3 group_thread_id : SV_GroupThrea
 
         if (instance_index < num_instances)
         {
-            STAT_INC(TotalCubes);
+            COUNTER_INC(TotalCubes);
             //Calculate the offset with the instance data
             uint instance_offset = static_gpu_memory.Load(instance_list_offset + instance_index * 4);
 
@@ -98,7 +98,7 @@ void box_culling(uint3 group : SV_GroupID, uint3 group_thread_id : SV_GroupThrea
                 continue;
             }
 
-            STAT_INC(FrustumVisibleCubes);
+            COUNTER_INC(FrustumVisibleCubes);
 
             //TODO, implement small instance culling
             
@@ -158,7 +158,7 @@ void box_culling(uint3 group : SV_GroupID, uint3 group_thread_id : SV_GroupThrea
                             indirect_culled_boxes[offset] = indirect_box;
                         }
 
-                        STAT_INC(FirstPassVisibleCubes);
+                        COUNTER_INC(FirstPassVisibleCubes);
 
                     }
                     else

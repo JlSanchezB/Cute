@@ -87,7 +87,7 @@ namespace core
 		if (!group_it)
 		{
 			//Create the group
-			group_it = group_map.Insert(group, Group{});
+			group_it = group_map.Insert(group);
 		}
 
 		auto& counter_it = group_it->counters.Find(name);
