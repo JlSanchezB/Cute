@@ -225,8 +225,9 @@ namespace display
 		ComPtr<ID3D12RootSignature> resource;
 		RootSignatureDesc desc;
 	};
-	struct PipelineState : ComPtr<ID3D12PipelineState>
+	struct PipelineState
 	{
+		ComPtr<ID3D12PipelineState> resource;
 	};
 	struct PipelineReloadShaderData
 	{

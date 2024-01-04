@@ -276,13 +276,15 @@ namespace core
 		DATA& operator[](const Accessor& handle)
 		{
 			assert(handle.IsValid());
-			return *reinterpret_cast<DATA*>(&m_data[handle.m_index].data);
+			assert(handle.m_index < m_capacity);
+			return m_data[handle.m_index];
 		}
 
 		const DATA& operator[](const Accessor& handle) const
 		{
 			assert(handle.IsValid());
-			return *reinterpret_cast<const DATA*>(&m_data[handle.m_index].data);
+			assert(handle.m_index < m_capacity);
+			return m_data[handle.m_index];
 		}
 
 		size_t Size() const
@@ -301,7 +303,8 @@ namespace core
 	private:
 		typename HANDLE::type_param& GetNextFreeSlot(const typename HANDLE::type_param& index)
 		{
-			return m_data[index].next_free_slot;
+			assert(index < m_capacity);
+			return *reinterpret_cast<HANDLE::type_param*>(&m_data[index]);
 		}
 
 		void GrowDataStorage(size_t new_size, bool init = false);
@@ -310,20 +313,20 @@ namespace core
 		size_t m_max_size = 0;
 
 		//Current size
-		size_t m_size = 0;;
+		size_t m_size = 0;
 
-		//Data storage of our DATA and free list
-		using DataStorage = union
-		{
-				typename std::aligned_storage<sizeof(DATA), alignof(DATA)>::type data;
-				typename HANDLE::type_param next_free_slot;
-			};
+		//Current capacity
+		size_t m_capacity = 0;
 
 		//List of free slots
 		typename HANDLE::type_param m_first_free_allocated;
 
-		//Vector of the data associated to this pool
-		std::vector<DataStorage> m_data;
+		//Allocated data
+		DATA* m_data = nullptr;
+
+		//Allocator
+		std::allocator<DATA> m_data_allocator;
+
 	protected:
 		typename HANDLE::type_param GetInternalIndex(const Accessor& handle) const
 		{
@@ -334,11 +337,11 @@ namespace core
 	template<typename HANDLE>
 	inline HandlePool<HANDLE>::~HandlePool()
 	{
-		if (m_data.size() && Size() > 0)
+		if (m_data && Size() > 0)
 		{
 			//Report leaks
 			std::vector<uint8_t> allocated;
-			allocated.resize(m_data.size());
+			allocated.resize(m_size);
 
 			for (auto& it : allocated) it = true;
 
@@ -357,7 +360,7 @@ namespace core
 				if (allocated[i])
 				{
 					//Destroy DATA
-					(reinterpret_cast<DATA*>(&m_data[i]))->~DATA();
+					m_data[i].~DATA();
 
 					num_allocated_handles++;
 				}
@@ -378,6 +381,7 @@ namespace core
 		m_max_size = max_size;
 		m_first_free_allocated = HANDLE::kInvalid;
 		m_size = 0;
+		m_capacity = 0;
 
 		GrowDataStorage(init_size, true);		
 	}
@@ -392,7 +396,7 @@ namespace core
 		if (m_first_free_allocated == HANDLE::kInvalid)
 		{
 			//Needs to allocate more
-			size_t old_size = m_data.size();
+			size_t old_size = m_capacity;
 			size_t new_size = std::min(m_max_size, old_size * 2);
 
 			if (old_size < new_size)
@@ -438,7 +442,7 @@ namespace core
 			next_free_slot = GetNextFreeSlot(next_free_slot);
 		}
 
-		for (typename HANDLE::type_param i = 0; i < m_data.size(); ++i)
+		for (typename HANDLE::type_param i = 0; i < m_capacity; ++i)
 		{
 			if (free_slots.find(i) == free_slots.end())
 			{
@@ -454,7 +458,8 @@ namespace core
 		if (handle.IsValid())
 		{
 			//Destroy DATA
-			(reinterpret_cast<DATA*>(&m_data[handle.m_index]))->~DATA();
+			assert(handle.m_index < m_capacity);
+			m_data[handle.m_index].~DATA();
 
 			//Add it in the free list
 			if (m_first_free_allocated == HANDLE::kInvalid)
@@ -488,26 +493,28 @@ namespace core
 		//assert(m_first_free_allocated == 1);
 
 		//Old size
-		size_t old_size = m_data.size();
+		size_t old_size = m_capacity;
 
 		if (init)
 		{
 			//Reserve the data
-			m_data.resize(new_size);
+			m_data = m_data_allocator.allocate(new_size);
 		}
 		else
 		{
 			//We need to move all the objects from the old data to the new
-			//The vector is just an storage container
-			std::vector<DataStorage> new_data;
-			new_data.resize(new_size);
+			//ALL the slots are used, that means that nothing is used as the linked list
+			
+			DATA* new_data = m_data_allocator.allocate(new_size);
 
 			for (size_t i = 0; i < old_size; ++i)
 			{
-				new(&new_data[i]) DATA(std::move(*reinterpret_cast<DATA*>(&m_data[i])));
+				new(&new_data[i]) DATA(std::move(m_data[i]));
 			}
+			//Delete old 
+			m_data_allocator.deallocate(m_data, old_size);
 			//Move the array
-			m_data = std::move(new_data);
+			m_data = new_data;
 		}
 
 		//Fill all the free slots
@@ -527,7 +534,7 @@ namespace core
 		}
 
 		m_first_free_allocated = static_cast<typename HANDLE::type_param>(old_size);
-
+		m_capacity = new_size;
 #ifdef WEAKHANDLE_TRACKING
 		{
 			core::MutexGuard guard(m_spin_lock_mutex);

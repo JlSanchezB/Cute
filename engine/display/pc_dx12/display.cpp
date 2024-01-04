@@ -1389,14 +1389,14 @@ namespace display
 		DX12_pipeline_state_desc.SampleDesc.Count = static_cast<UINT>(pipeline_state_desc.sample_count);
 
 		//Create pipeline state
-		if (FAILED(device->m_native_device->CreateGraphicsPipelineState(&DX12_pipeline_state_desc, IID_PPV_ARGS(&pipeline_state))))
+		if (FAILED(device->m_native_device->CreateGraphicsPipelineState(&DX12_pipeline_state_desc, IID_PPV_ARGS(&pipeline_state.resource))))
 		{
 			device->m_pipeline_state_pool.Free(handle);
 			SetLastErrorMessage(device, "Error creating graphics pipeline state <%s>", name);
 			return PipelineStateHandle();
 		}
 
-		SetObjectName(pipeline_state.Get(), name);
+		SetObjectName(pipeline_state.resource.Get(), name);
 		
 		//Create the reload data
 		device->m_pipeline_reload_data.emplace_back(name, handle, pipeline_state_desc, DX12_pipeline_state_desc, input_elements, vertex_shader_include_set, pixel_shader_include_set);
@@ -1434,14 +1434,14 @@ namespace display
 		DX12_pipeline_state_desc.CS.BytecodeLength = shader_blob->GetBufferSize();
 
 		//Create pipeline state
-		if (FAILED(device->m_native_device->CreateComputePipelineState(&DX12_pipeline_state_desc, IID_PPV_ARGS(&pipeline_state))))
+		if (FAILED(device->m_native_device->CreateComputePipelineState(&DX12_pipeline_state_desc, IID_PPV_ARGS(&pipeline_state.resource))))
 		{
 			device->m_pipeline_state_pool.Free(handle);
 			SetLastErrorMessage(device, "Error creating compute pipeline state <%s>", name);
 			return PipelineStateHandle();
 		}
 
-		SetObjectName(pipeline_state.Get(), name);
+		SetObjectName(pipeline_state.resource.Get(), name);
 		
 		//Create the reload data
 		device->m_pipeline_reload_data.emplace_back(name, handle, compute_pipeline_state_desc, DX12_pipeline_state_desc, include_set);
@@ -1511,12 +1511,12 @@ namespace display
 							else
 							{
 								//Add to the old reloaded pipeline
-								AddDeferredDeleteResource(device, device->Get(reload_pipeline.handle));
+								AddDeferredDeleteResource(device, device->Get(reload_pipeline.handle).resource);
 
 								//Update
-								device->Get(reload_pipeline.handle).Swap(new_pipeline_state);
+								device->Get(reload_pipeline.handle).resource.Swap(new_pipeline_state);
 
-								SetObjectName(device->Get(reload_pipeline.handle).Get(), reload_pipeline.name.c_str());
+								SetObjectName(device->Get(reload_pipeline.handle).resource.Get(), reload_pipeline.name.c_str());
 
 								reload_pipeline.VertexShaderCompileReloadData.UpdateIncludeSet(vertex_shader_include_set);
 								reload_pipeline.PixelShaderCompileReloadData.UpdateIncludeSet(pixel_shader_include_set);
@@ -1549,12 +1549,12 @@ namespace display
 							else
 							{
 								//Add to the old reloaded pipeline
-								AddDeferredDeleteResource(device, device->Get(reload_pipeline.handle));
+								AddDeferredDeleteResource(device, device->Get(reload_pipeline.handle).resource);
 
 								//Update
-								device->Get(reload_pipeline.handle).Swap(new_pipeline_state);
+								device->Get(reload_pipeline.handle).resource.Swap(new_pipeline_state);
 
-								SetObjectName(device->Get(reload_pipeline.handle).Get(), reload_pipeline.name.c_str());
+								SetObjectName(device->Get(reload_pipeline.handle).resource.Get(), reload_pipeline.name.c_str());
 
 								reload_pipeline.ComputeShaderCompileReloadData.UpdateIncludeSet(include_set);
 								reload_pipeline.ComputeShaderCompileReloadData.UpdateTimeStamp();
