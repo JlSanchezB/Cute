@@ -488,9 +488,15 @@ namespace display
 		std::vector<PipelineReloadData> m_pipeline_reload_data;
 
 		//Development shaders
-		BufferHandle m_development_shaders_buffer;
-		size_t m_development_shaders_buffer_capacity = 0;
-		BufferHandle m_development_shaders_readback_buffer;
+		BufferHandle m_development_shaders_control_variables_buffer;
+		size_t m_development_shaders_control_variables_size = 0;
+		
+		BufferHandle m_development_shaders_counters_buffer;
+		size_t m_development_shaders_counters_size = 0;
+
+		BufferHandle m_development_shaders_counters_readback_buffer;
+
+		DescriptorTableHandle m_development_shaders_descriptor_table;
 
 		//Map of the indexes of all the GPU control variables
 		struct ControlVariable

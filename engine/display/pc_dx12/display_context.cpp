@@ -92,12 +92,8 @@ namespace display
 
 			if (device->m_development_shaders)
 			{
-				auto& resource = device->Get(WeakBufferHandle(device->m_development_shaders_buffer));
-				assert(resource.UAV);
-				D3D12_GPU_VIRTUAL_ADDRESS gpu_virtual_address = resource.resource->GetGPUVirtualAddress();
-
-				//Set the development UAV into the shader (the last root parameter)
-				command_list->SetGraphicsRootUnorderedAccessView(root_signature.desc.num_root_parameters, gpu_virtual_address);
+				//Set the development descriptor table in the last root signature parameter
+				command_list->SetGraphicsRootDescriptorTable(root_signature.desc.num_root_parameters, device->m_descriptor_table_pool.GetGPUDescriptor(device->m_development_shaders_descriptor_table));
 			}
 		}
 		else
@@ -106,12 +102,8 @@ namespace display
 			dx12_context->current_compute_root_signature = root_signature_handle;
 			if (device->m_development_shaders)
 			{
-				auto& resource = device->Get(WeakBufferHandle(device->m_development_shaders_buffer));
-				assert(resource.UAV);
-				D3D12_GPU_VIRTUAL_ADDRESS gpu_virtual_address = resource.resource->GetGPUVirtualAddress();
-
-				//Set the development UAV into the shader (the last root parameter)
-				command_list->SetComputeRootUnorderedAccessView(root_signature.desc.num_root_parameters, gpu_virtual_address);
+				//Set the development descriptor table in the last root signature parameter
+				command_list->SetComputeRootDescriptorTable(root_signature.desc.num_root_parameters, device->m_descriptor_table_pool.GetGPUDescriptor(device->m_development_shaders_descriptor_table));
 			}
 		}
 		
@@ -460,9 +452,9 @@ namespace display
 		const auto& command_list = dx12_context->command_list;
 
 		//Allocate upload buffer memory
-		auto upload_allocation = display::AllocateUploadBuffer(GetDevice(), size);
+		auto upload_allocation = display::AllocateUploadBuffer(device, size);
 
-		auto& resource = GetDevice()->Get(dest_resource);
+		auto& resource = device->Get(dest_resource);
 		assert(resource.access == display::Access::Static);
 		
 		//The resource has to be in CopyDest
@@ -470,5 +462,16 @@ namespace display
 
 		//Return the memory into the upload buffer
 		return upload_allocation.memory;
+	}
+	void Context::CopyBuffer(const display::WeakBufferHandle& dest, size_t dest_offset, const display::WeakBufferHandle& source, size_t source_offset, size_t size)
+	{
+		auto dx12_context = reinterpret_cast<DX12Context*>(this);
+		Device* device = dx12_context->device;
+		const auto& command_list = dx12_context->command_list;
+
+		auto& dest_resource = device->Get(dest);
+		auto& source_resource = device->Get(source);
+
+		dx12_context->command_list->CopyBufferRegion(dest_resource.resource.Get(), dest_offset, source_resource.resource.Get(), source_offset, size);
 	}
 }

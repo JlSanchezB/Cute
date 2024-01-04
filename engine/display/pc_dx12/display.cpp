@@ -189,68 +189,115 @@ namespace display
 	{
 		if (device->m_development_shaders)
 		{
+			bool descriptor_needs_update = false;
+
 			//Check if the size is sufficient
-
-			size_t needed_size = 2 + device->m_control_variables.size() + device->m_counters.size();
-
-			if (device->m_development_shaders_buffer_capacity == 0 || needed_size >= device->m_development_shaders_buffer_capacity)
+			if (device->m_development_shaders_control_variables_size == 0 || device->m_control_variables.size() >= device->m_development_shaders_control_variables_size)
 			{
 				//Delete old buffers
-				if (device->m_development_shaders_buffer.IsValid())
-					display::DestroyBuffer(device, device->m_development_shaders_buffer);
-				if (device->m_development_shaders_readback_buffer.IsValid())
-					display::DestroyBuffer(device, device->m_development_shaders_readback_buffer);
+				if (device->m_development_shaders_control_variables_buffer.IsValid())
+					display::DestroyBuffer(device, device->m_development_shaders_control_variables_buffer);
 
-				device->m_development_shaders_buffer_capacity = std::max(64ull, needed_size * 2);
+				device->m_development_shaders_control_variables_size = std::max(64ull, device->m_control_variables.size() * 2);
+
+				//Create the control variables buffer
+				display::BufferDesc buffer_desc = display::BufferDesc::CreateStructuredBuffer(display::Access::Static, static_cast<uint32_t>(device->m_development_shaders_control_variables_size), 4, false);
+				device->m_development_shaders_control_variables_buffer = display::CreateBuffer(device, buffer_desc, "Development Shaders Control Variables Buffer");
+
+				descriptor_needs_update = true;
+			}
+
+			if (device->m_development_shaders_counters_size == 0 || device->m_counters.size() >= device->m_development_shaders_counters_size)
+			{
+				//Delete old buffers
+				if (device->m_development_shaders_counters_buffer.IsValid())
+					display::DestroyBuffer(device, device->m_development_shaders_counters_buffer);
+				if (device->m_development_shaders_counters_readback_buffer.IsValid())
+					display::DestroyBuffer(device, device->m_development_shaders_counters_readback_buffer);
+
+				device->m_development_shaders_counters_size = std::max(64ull, device->m_counters.size() * 2);
 
 				//Create development shaders buffer supporting UAV
-				display::BufferDesc buffer_desc = display::BufferDesc::CreateStructuredBuffer(display::Access::Static, static_cast<uint32_t>(device->m_development_shaders_buffer_capacity), 4, true);
-				device->m_development_shaders_buffer = display::CreateBuffer(device, buffer_desc, "Development Shaders Buffer");
+				display::BufferDesc buffer_desc = display::BufferDesc::CreateStructuredBuffer(display::Access::Static, static_cast<uint32_t>(device->m_development_shaders_counters_size), 4, true);
+				device->m_development_shaders_counters_buffer = display::CreateBuffer(device, buffer_desc, "Development Shaders Counters Buffer");
 
 				//Create development shaders read back buffer, so the data can go from the GPU to the CPU as needed
-				buffer_desc = display::BufferDesc::CreateStructuredBuffer(display::Access::ReadBack, static_cast<uint32_t>(device->m_development_shaders_buffer_capacity), 4);
-				device->m_development_shaders_readback_buffer = display::CreateBuffer(device, buffer_desc, "Development Shaders ReadBack Buffer");
+				buffer_desc = display::BufferDesc::CreateStructuredBuffer(display::Access::ReadBack, static_cast<uint32_t>(device->m_development_shaders_counters_size), 4);
+				device->m_development_shaders_counters_readback_buffer = display::CreateBuffer(device, buffer_desc, "Development Shaders Counters ReadBack Buffer");
+
+				descriptor_needs_update = true;
 			}
 
 			//Reset the header, control variables and stats of the buffer
 
 			//Open command list
 			display::Context* context = OpenCommandList(device, device->m_resource_command_list);
-
-			context->AddResourceBarriers({ display::ResourceBarrier(device->m_development_shaders_buffer, display::TranstitionState::UnorderedAccess, display::TranstitionState::CopyDest) });
-
-			uint32_t* upload_buffer_data = reinterpret_cast<uint32_t*>(context->UpdateBufferResource(device->m_development_shaders_buffer, 0, needed_size * sizeof(uint32_t)));
-
-			//Upload data
-			upload_buffer_data[0] = static_cast<uint32_t>(device->m_control_variables.size());
-			upload_buffer_data[1] = static_cast<uint32_t>(device->m_counters.size());
-
-			for (auto& it : device->m_control_variables)
+			
+			//Upload the control variables
 			{
-				//Get values from the CPU control variables
-				switch (it.second.default_value.index())
+				context->AddResourceBarriers({ display::ResourceBarrier(device->m_development_shaders_control_variables_buffer, display::TranstitionState::AllShaderResource, display::TranstitionState::CopyDest) });
+
+				uint32_t* upload_buffer_data = reinterpret_cast<uint32_t*>(context->UpdateBufferResource(device->m_development_shaders_control_variables_buffer, 0, device->m_control_variables.size() * sizeof(uint32_t)));
+
+				//Upload data
+				for (auto& it : device->m_control_variables)
 				{
-				case 0:
-					upload_buffer_data[2 + it.second.index] = *reinterpret_cast<uint32_t*>(std::get<float*>(it.second.control_variable_ptr));
-					break;
-				case 1:
-					upload_buffer_data[2 + it.second.index] = *(std::get<uint32_t*>(it.second.control_variable_ptr));
-					break;
-				case 2:
-					upload_buffer_data[2 + it.second.index] = *std::get<bool*>(it.second.control_variable_ptr) ? 1 : 0;
-					break;
-				}	
+					//Get values from the CPU control variables
+					switch (it.second.default_value.index())
+					{
+					case 0:
+						upload_buffer_data[it.second.index] = *reinterpret_cast<uint32_t*>(std::get<float*>(it.second.control_variable_ptr));
+						break;
+					case 1:
+						upload_buffer_data[it.second.index] = *(std::get<uint32_t*>(it.second.control_variable_ptr));
+						break;
+					case 2:
+						upload_buffer_data[it.second.index] = *std::get<bool*>(it.second.control_variable_ptr) ? 1 : 0;
+						break;
+					}
+				}
+				context->AddResourceBarriers({ display::ResourceBarrier(device->m_development_shaders_control_variables_buffer, display::TranstitionState::CopyDest, display::TranstitionState::AllShaderResource) });
 			}
-
-			const size_t num_stats = device->m_counters.size();
-			const size_t begin_stats = 2 + device->m_control_variables.size();
-			for (size_t i = begin_stats; i < begin_stats + num_stats; ++i)
+			//Reset counters
 			{
-				upload_buffer_data[i] = 0; //All stats reset to zero
+				context->AddResourceBarriers({ display::ResourceBarrier(device->m_development_shaders_counters_buffer, display::TranstitionState::UnorderedAccess, display::TranstitionState::CopyDest) });
+
+				uint32_t* upload_buffer_data = reinterpret_cast<uint32_t*>(context->UpdateBufferResource(device->m_development_shaders_counters_buffer, 0, device->m_counters.size() * sizeof(uint32_t)));
+
+				for (size_t i = 0; i < device->m_counters.size(); ++i)
+				{
+					upload_buffer_data[i] = 0; //All stats reset to zero
+				}
+
+				context->AddResourceBarriers({ display::ResourceBarrier(device->m_development_shaders_counters_buffer, display::TranstitionState::CopyDest, display::TranstitionState::UnorderedAccess) });
 			}
 
+			//Copy counters to the read back buffer
+			{
+				
+			}
 
-			context->AddResourceBarriers({ display::ResourceBarrier(device->m_development_shaders_buffer, display::TranstitionState::CopyDest, display::TranstitionState::UnorderedAccess) });
+			//If buffers have been recreated, build the descriptor
+			if (descriptor_needs_update)
+			{
+				if (!device->m_development_shaders_descriptor_table.IsValid())
+				{
+					//Create the descriptor
+					display::DescriptorTableDesc descriptors;
+					descriptors.AddDescriptor(device->m_development_shaders_control_variables_buffer);
+					descriptors.AddDescriptor(AsUAVBuffer(device->m_development_shaders_counters_buffer));
+		
+					device->m_development_shaders_descriptor_table = CreateDescriptorTable(device, descriptors);
+				}
+				else
+				{
+					//Update
+					display::DescriptorTableDesc descriptors;
+					descriptors.AddDescriptor(device->m_development_shaders_control_variables_buffer);
+					descriptors.AddDescriptor(AsUAVBuffer(device->m_development_shaders_counters_buffer));
+					UpdateDescriptorTable(device, device->m_development_shaders_descriptor_table, descriptors.descriptors.data(), descriptors.num_descriptors);
+				}		
+			}
 
 			//Close command list
 			CloseCommandList(device, context);
@@ -541,10 +588,14 @@ namespace display
 		WaitForGpu(device);
 
 		//Destroy development shaders if built
-		if (device->m_development_shaders_buffer.IsValid())
-			display::DestroyBuffer(device, device->m_development_shaders_buffer);
-		if (device->m_development_shaders_readback_buffer.IsValid())
-			display::DestroyBuffer(device, device->m_development_shaders_readback_buffer);
+		if (device->m_development_shaders_control_variables_buffer.IsValid())
+			display::DestroyBuffer(device, device->m_development_shaders_control_variables_buffer);
+		if (device->m_development_shaders_counters_buffer.IsValid())
+			display::DestroyBuffer(device, device->m_development_shaders_counters_buffer);
+		if (device->m_development_shaders_counters_readback_buffer.IsValid())
+			display::DestroyBuffer(device, device->m_development_shaders_counters_readback_buffer);
+		if (device->m_development_shaders_descriptor_table.IsValid())
+			display::DestroyDescriptorTable(device, device->m_development_shaders_descriptor_table);
 
 		//Destroy deferred delete resources
 		DeletePendingResources(device);
@@ -900,8 +951,11 @@ namespace display
 
 		if (device->m_development_shaders)
 		{
-			//Create slot for the shader development UAV
-			root_parameters[root_signature_desc.num_root_parameters].InitAsUnorderedAccessView(1000, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);
+			range[root_signature_desc.num_root_parameters][0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1000);
+			range[root_signature_desc.num_root_parameters][1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 1000);
+
+			//Create slot for the descriptor table that represent the shader development
+			root_parameters[root_signature_desc.num_root_parameters].InitAsDescriptorTable(2, &range[root_signature_desc.num_root_parameters][0], D3D12_SHADER_VISIBILITY_ALL);
 		}
 
 		D3D12_ROOT_SIGNATURE_FLAGS flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
@@ -1057,7 +1111,8 @@ namespace display
 			//1 -> number of stats
 			// control variables
 			// stats
-			shader_prefix += "RWStructuredBuffer<uint> ShaderDevelopmentBuffer : register(u1000);\n";
+			shader_prefix += "StructuredBuffer<uint> ControlVariablesBuffer : register(t1000);\n";
+			shader_prefix += "RWStructuredBuffer<uint> CountersBuffer : register(u1000);\n";
 
 			//CONTROL VARIABLES
 			{
@@ -1131,13 +1186,13 @@ namespace display
 					switch (default_value.index())
 					{
 					case 0:
-						shader_prefix += std::string("#define ") + control_variable + " asfloat(ShaderDevelopmentBuffer[ 2 + " + std::to_string(index) + "])\n";
+						shader_prefix += std::string("#define ") + control_variable + " asfloat(ControlVariablesBuffer[" + std::to_string(index) + "])\n";
 						break;
 					case 1:
-						shader_prefix += std::string("#define ") + control_variable + " ShaderDevelopmentBuffer[ 2 + " + std::to_string(index) + "]\n";
+						shader_prefix += std::string("#define ") + control_variable + " ControlVariablesBuffer[" + std::to_string(index) + "]\n";
 						break;
 					case 2:
-						shader_prefix += std::string("#define ") + control_variable + " (ShaderDevelopmentBuffer[ 2 + " + std::to_string(index) + "] != 0)\n";
+						shader_prefix += std::string("#define ") + control_variable + " (ControlVariablesBuffer[" + std::to_string(index) + "] != 0)\n";
 						break;
 					}
 					
@@ -1183,8 +1238,8 @@ namespace display
 				}
 
 				//Define stats operators
-				shader_prefix += "#define COUNTER_INC(variable) {uint retvalue; InterlockedAdd(ShaderDevelopmentBuffer[2 + ShaderDevelopmentBuffer[0] + variable##_index], 1, retvalue);}\n";
-				shader_prefix += "#define COUNTER_INC_VALUE(variable, value) {uint retvalue; InterlockedAdd(ShaderDevelopmentBuffer[2 + ShaderDevelopmentBuffer[0] + variable##_index], value, retvalue);}\n";
+				shader_prefix += "#define COUNTER_INC(variable) {uint retvalue; InterlockedAdd(CountersBuffer[variable##_index], 1, retvalue);}\n";
+				shader_prefix += "#define COUNTER_INC_VALUE(variable, value) {uint retvalue; InterlockedAdd(CountersBuffer[variable##_index], value, retvalue);}\n";
 			}
 		}
 		else

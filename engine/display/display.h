@@ -235,6 +235,10 @@ namespace display
 		//Update a Buffer with data, the data needs to be copied (never read) into the returned pointed (only works with Access::Static)
 		//The resource has to be in CopyDest
 		void* UpdateBufferResource(const display::WeakBufferHandle&, size_t dest_offset, size_t size);
+
+		//Copy from one buffer to another buffer
+		//The destination resource has to be CopyDest
+		void CopyBuffer(const display::WeakBufferHandle& dest, size_t dest_offset, const display::WeakBufferHandle& source, size_t source_offset, size_t size);
 	};
 
 	template<typename HANDLE>
