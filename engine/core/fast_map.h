@@ -193,15 +193,12 @@ namespace core
 			return m_size;
 		}
 
-		FastMap(size_t start_capacity = 8, size_t bucket_size = 3)
+		FastMap(size_t start_capacity = 0, size_t bucket_size = 3)
 		{
 			//Init with correct values
 			m_bucket_size = bucket_size;
 			m_capacity = 0;
 			m_size = 0;
-
-			//Init to the start capacity
-			Grow(start_capacity);
 		}
 		FastMap(FastMap&& a)
 		{
@@ -323,6 +320,11 @@ namespace core
 	template<typename KEY, typename DATA>
 	inline std::pair<size_t, size_t> FastMap<KEY, DATA>::GetIndex(const KEY& key)
 	{
+		if (m_capacity == 0)
+		{
+			return std::make_pair(kInvalid, kInvalid);
+		}
+
 		size_t search_slot = 0;
 		
 		//The begin search slot is calculated from the hash value
@@ -360,7 +362,7 @@ namespace core
 			if (m_size + 1 >= m_capacity)
 			{
 				//Needs to grow
-				Grow(m_capacity * 2);
+				Grow((m_capacity == 0) ? 4 : m_capacity * 2);
 
 				//Get other index in the new map
 				index = GetIndex(key);
