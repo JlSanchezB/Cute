@@ -11,6 +11,9 @@
             <Item Name ="Data">m_data[i]</Item>
           </If>
           <Exec>i = (i + 1)</Exec>
+          <If Condition="i &gt;= m_capacity*m_bucket_size">
+            <Break/>
+          </If>
         </Loop>
       </CustomListItems>
     </Expand>
