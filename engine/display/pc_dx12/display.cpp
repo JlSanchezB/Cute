@@ -272,11 +272,6 @@ namespace display
 				context->AddResourceBarriers({ display::ResourceBarrier(device->m_development_shaders_counters_buffer, display::TranstitionState::CopyDest, display::TranstitionState::UnorderedAccess) });
 			}
 
-			//Copy counters to the read back buffer
-			{
-				
-			}
-
 			//If buffers have been recreated, build the descriptor
 			if (descriptor_needs_update)
 			{
@@ -304,6 +299,39 @@ namespace display
 
 			//Execute the command list
 			ExecuteCommandList(device, device->m_resource_command_list);
+		}
+	}
+
+	void ReadBackDevelopmentShaderBuffer(display::Device* device)
+	{
+		if (device->m_development_shaders && device->m_development_shaders_counters_buffer.IsValid() && device->m_counters.size() > 0)
+		{
+	
+			//Copy counters to the read back buffer
+			{
+				//Open command list
+				display::Context* context = OpenCommandList(device, device->m_resource_command_list);
+
+				context->AddResourceBarriers({ display::ResourceBarrier(device->m_development_shaders_counters_buffer, display::TranstitionState::UnorderedAccess, display::TranstitionState::CopySource) });
+
+				context->CopyBuffer(device->m_development_shaders_counters_readback_buffer, 0, device->m_development_shaders_counters_buffer, 0, device->m_counters.size() * 4);
+
+				context->AddResourceBarriers({ display::ResourceBarrier(device->m_development_shaders_counters_buffer, display::TranstitionState::CopySource, display::TranstitionState::UnorderedAccess) });
+				
+				//Close command list
+				CloseCommandList(device, context);
+
+				//Execute the command list
+				ExecuteCommandList(device, device->m_resource_command_list);
+			}
+
+			//Update counters
+			const uint32_t* counters_buffer = reinterpret_cast<const uint32_t*>(GetLastWrittenResourceMemoryBuffer(device, device->m_development_shaders_counters_readback_buffer));
+
+			for (auto& counter : device->m_counters)
+			{
+				counter.second.counter.Set(counters_buffer[counter.second.index]);
+			}
 		}
 	}
 }
@@ -802,7 +830,8 @@ namespace display
 
 	void EndFrame(Device* device)
 	{
-
+		//Readback development shaders
+		ReadBackDevelopmentShaderBuffer(device);
 	}
 
 	uint64_t GetLastCompletedGPUFrame(Device* device)

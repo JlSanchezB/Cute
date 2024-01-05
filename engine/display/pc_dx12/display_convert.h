@@ -242,6 +242,7 @@ namespace display
 		case TranstitionState::Present: return D3D12_RESOURCE_STATE_PRESENT;
 		case TranstitionState::IndirectArgument: return D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT;
 		case TranstitionState::CopyDest: return D3D12_RESOURCE_STATE_COPY_DEST;
+		case TranstitionState::CopySource: return D3D12_RESOURCE_STATE_COPY_SOURCE;
 		}
 	}
 }

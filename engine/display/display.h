@@ -122,7 +122,7 @@ namespace display
 
 	//Get last ReadBack memory written (only Access:ReadBack)
 	using ReadBackResourceHandle = std::variant<WeakBufferHandle>;
-	void* GetLastWrittenResourceMemoryBuffer(Device* device, const ReadBackResourceHandle& handle);
+	const void* GetLastWrittenResourceMemoryBuffer(Device* device, const ReadBackResourceHandle& handle);
 
 	//Pipe used
 	enum class Pipe : uint8_t

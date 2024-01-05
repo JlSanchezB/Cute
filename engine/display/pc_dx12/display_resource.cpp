@@ -964,7 +964,7 @@ namespace display
 		return memory_data;
 	}
 
-	void* GetLastWrittenResourceMemoryBuffer(Device* device, const ReadBackResourceHandle& handle)
+	const void* GetLastWrittenResourceMemoryBuffer(Device* device, const ReadBackResourceHandle& handle)
 	{
 		void* memory_data = nullptr;
 		size_t memory_size = 0;
@@ -974,7 +974,7 @@ namespace display
 			{
 				[&](auto handle)
 				{
-					auto& buffer = device->Get(GetRingResource(device, handle, GetLastCompletedGPUFrame(device)));
+					auto& buffer = device->Get(GetRingResource(device, handle, GetLastCompletedGPUFrame(device) % device->m_frame_resources.size()));
 					assert(buffer.memory_data);
 					assert(buffer.access == Access::ReadBack);
 					memory_data = buffer.memory_data;

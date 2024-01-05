@@ -1,6 +1,8 @@
 
 CONTROL_VARIABLE(bool, BoxCulling, SkipSecondaryPassCulling, false)
 CONTROL_VARIABLE(bool, BoxCulling, SecondaryPassCulling, true)
+COUNTER(BoxCulling, SecondPassVisibleCubes)
+COUNTER(BoxCulling, SecondPassTotalCubes)
 
 cbuffer Root : register(b0)
 {
@@ -45,6 +47,7 @@ void second_pass_box_culling(uint3 dispatch_thread_id : SV_DispatchThreadID)
 
     if (dispatch_thread_id.x < num_second_pass_boxes)
     {
+        COUNTER_INC(SecondPassTotalCubes);
         //Read the box and do the culling with the HiZ
 
         uint indirect_box = second_pass_indirect_culled_boxes[dispatch_thread_id.x + 1];
@@ -95,6 +98,8 @@ void second_pass_box_culling(uint3 dispatch_thread_id : SV_DispatchThreadID)
                     InterlockedAdd(indirect_culled_boxes_parameters[1], 1, offset);
                 }
             }
+
+            COUNTER_INC(SecondPassVisibleCubes);
         }
     }
 };

@@ -469,8 +469,8 @@ namespace display
 		Device* device = dx12_context->device;
 		const auto& command_list = dx12_context->command_list;
 
-		auto& dest_resource = device->Get(dest);
-		auto& source_resource = device->Get(source);
+		auto& dest_resource = device->Get(GetRingResource(device, dest, device->m_frame_index));
+		auto& source_resource = device->Get(GetRingResource(device, source, device->m_frame_index));
 
 		dx12_context->command_list->CopyBufferRegion(dest_resource.resource.Get(), dest_offset, source_resource.resource.Get(), source_offset, size);
 	}
