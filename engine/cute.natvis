@@ -17,8 +17,7 @@
         <Variable Name="i" InitialValue="0" />
         <Loop>
           <If Condition="m_reserved[i]">
-            <Item Name ="Key">m_key[i]</Item>
-            <Item Name ="Data">m_data[i]</Item>
+            <Item Name ="{m_key[i]}">m_data[i]</Item>
           </If>
           <Exec>i = (i + 1)</Exec>
           <If Condition="i &gt;= m_capacity*m_bucket_size">
