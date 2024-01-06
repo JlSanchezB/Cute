@@ -2,9 +2,8 @@
 #include <core/counters.h>
 
 PROFILE_DEFINE_MARKER(g_profile_marker_UpdatePosition, "Main", 0xFFFFAAAA, "BoxUpdate");
-PROFILE_DEFINE_MARKER(g_profile_marker_UpdateAttachments, "Main", 0xFFFFAAAA, "BoxAttachment");
-PROFILE_DEFINE_MARKER(g_profile_marker_Culling, "Main", 0xFFFFAAAA, "BoxCulling");
-PROFILE_DEFINE_MARKER(g_profile_marker_Car_Culling, "Main", 0xFFFFAAAA, "CarCulling");
+PROFILE_DEFINE_MARKER(g_profile_marker_Culling, "Main", 0xFFFFAAAA, "BoxInterpolating");
+PROFILE_DEFINE_MARKER(g_profile_marker_Car_Interpolating, "Main", 0xFFFFAAAA, "CarInterpolating");
 
 COUNTER(c_InstancesLists_Summitted, "Box City", "InstancesLists summitted to GPU", true);
 COUNTER(c_Car_Interpolated, "Box City", "Car interpolated for render", true);
@@ -402,7 +401,7 @@ void BoxCityGame::OnRender(double total_time, float elapsed_time)
 
 				COUNTER_INC(c_Car_Interpolated);
 			}
-		}, m_traffic_system.GetCameraBitSet(*camera), & g_profile_marker_Car_Culling);
+		}, m_traffic_system.GetCameraBitSet(*camera), & g_profile_marker_Car_Interpolating);
 
 	job::Wait(m_job_system, culling_fence);
 
