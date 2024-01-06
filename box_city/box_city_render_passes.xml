@@ -58,7 +58,7 @@
       <Resource name="IndirectParametersBuffer" pre_condition_state="FirstPass" post_update_state="SecondPass" access="IndirectArgument"/>
       <Resource name="StaticGPUMemoryBuffer" pre_condition_state="Ready" access="AllShaderResource"/>
       <DepthBuffer name="SceneDepth" pre_condition_state="Alloc" post_update_state="FirstPassReadyToCapture" access="Depth" format="D32_FLOAT" default_depth="0.f"/>
-      <RenderTarget name="LightScene" pre_condition_state="Alloc" post_update_state="FirstPassRendered" access="RenderTarget" format="R32G32B32A32_FLOAT"/>
+      <RenderTarget name="LightScene" pre_condition_state="Alloc" post_update_state="FirstPassRendered" access="RenderTarget" format="R16G16B16A16_FLOAT"/>
     </Dependencies>
     <Commands>
       <SetRenderTarget>
@@ -106,7 +106,7 @@
       <Resource name="IndirectParametersBuffer" pre_condition_state="SecondPassReady" access="IndirectArgument"/>
       <Resource name="StaticGPUMemoryBuffer" pre_condition_state="Ready" access="AllShaderResource"/>
       <DepthBuffer name="SceneDepth" pre_condition_state="SecondPass" post_update_state="SecondPassReadyToCapture" access="Depth" format="D32_FLOAT" default_depth="0.f"/>
-      <RenderTarget name="LightScene" pre_condition_state="FirstPassRendered" post_update_state="LightFinished" access="RenderTarget" format="R32G32B32A32_FLOAT"/>
+      <RenderTarget name="LightScene" pre_condition_state="FirstPassRendered" post_update_state="LightFinished" access="RenderTarget" format="R16G16B16A16_FLOAT"/>
     </Dependencies>
     <Commands>
       <SetRenderTarget>
@@ -135,7 +135,7 @@
   </Pass>
   <Pass name="ToneMapper" group="PostProcess">
     <Dependencies>
-      <RenderTarget name="LightScene" pre_condition_state="LightFinished" post_update_state="Free" access="AllShaderResource" format="R32G32B32A32_FLOAT"/>
+      <RenderTarget name="LightScene" pre_condition_state="LightFinished" post_update_state="Free" access="AllShaderResource" format="R16G16B16A16_FLOAT"/>
       <Resource name="BackBuffer" access="RenderTarget"/>
     </Dependencies>
     <Commands>

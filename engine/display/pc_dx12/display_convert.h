@@ -27,6 +27,7 @@ namespace display
 		case Format::R16_UINT: return DXGI_FORMAT_R16_UINT;
 		case Format::D32_FLOAT: return DXGI_FORMAT_D32_FLOAT;
 		case Format::R32_FLOAT: return DXGI_FORMAT_R32_FLOAT;
+		case Format::R16G16B16A16_FLOAT: return DXGI_FORMAT_R16G16B16A16_FLOAT;
 		}
 	}
 

@@ -44,7 +44,8 @@ namespace display
 		R32_UINT,
 		R16_UINT,
 		D32_FLOAT,
-		R32_FLOAT
+		R32_FLOAT,
+		R16G16B16A16_FLOAT,
 	};
 
 	enum class FillMode : uint8_t

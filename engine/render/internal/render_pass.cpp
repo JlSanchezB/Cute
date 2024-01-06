@@ -55,7 +55,8 @@ namespace
 			{"R32_UINT", display::Format::R32_UINT},
 			{"R16_UINT", display::Format::R16_UINT},
 			{"D32_FLOAT", display::Format::D32_FLOAT},
-			{"R32_FLOAT", display::Format::R32_FLOAT}
+			{"R32_FLOAT", display::Format::R32_FLOAT},
+			{"R16G16B16A16_FLOAT", display::Format::R16G16B16A16_FLOAT}
 		};
 	};
 
