@@ -313,6 +313,8 @@ namespace BoxCityTileSystem
 		assert(building_box.extents.y > 0.f);
 		assert(building_box.extents.z > 0.f);
 
+		uint8_t border_colour_palette = random() % 5;
+
 		//Create the boxes that makes this building
 		std::vector<std::pair<glm::vec2, glm::vec2>> panels_generated;
 		for (size_t face = 0; face < 4; ++face)
@@ -328,11 +330,26 @@ namespace BoxCityTileSystem
 			glm::mat3x3 face_rotation = glm::mat3x3(glm::rotate(glm::half_pi<float>(), glm::vec3(1.f, 0.f, 0.f))) * glm::mat3x3(glm::rotate(glm::half_pi<float>() * face, glm::vec3(0.f, 0.f, 1.f)));
 			glm::vec3 face_position = glm::vec3(0.f, 0.f, wall_width) * face_rotation;
 
+			//Create the borders
+			BoxData border_box;
+			border_box.colour_palette = border_colour_palette;
+			border_box.position = face_position + glm::vec3(wall_width, 0.f, 0.f) * face_rotation;
+			border_box.extents = glm::abs(glm::vec3(panel_depth, wall_heigh, panel_depth) * face_rotation);
+			building_instance.m_boxes.push_back(border_box);
+
+			border_box.position = face_position + glm::vec3(0.f, wall_heigh, 0.f) * face_rotation;
+			border_box.extents = glm::abs(glm::vec3(wall_width, panel_depth, panel_depth) * face_rotation);
+			building_instance.m_boxes.push_back(border_box);
+
+			border_box.position = face_position + glm::vec3(0.f, -wall_heigh, 0.f) * face_rotation;
+			border_box.extents = glm::abs(glm::vec3(wall_width, panel_depth, panel_depth) * face_rotation);
+			building_instance.m_boxes.push_back(border_box);
+
 			for (size_t i = 0; i < zone_descriptor.num_panel_generated; ++i)
 			{
 				glm::vec2 panel_size(panel_size_range(random), panel_size_range(random));
-				std::uniform_real_distribution<float> panel_position_x_range(-wall_width + panel_size.x, wall_width - panel_size.x);
-				std::uniform_real_distribution<float> panel_position_y_range(-wall_heigh + panel_size.y, wall_heigh - panel_size.y);
+				std::uniform_real_distribution<float> panel_position_x_range(-wall_width * 0.97f + panel_size.x, wall_width * 0.97f - panel_size.x);
+				std::uniform_real_distribution<float> panel_position_y_range(-wall_heigh * 0.97f + panel_size.y, wall_heigh * 0.97f - panel_size.y);
 				glm::vec2 panel_position(panel_position_x_range(random), panel_position_y_range(random));
 
 				//Check if it collides
@@ -428,7 +445,7 @@ namespace BoxCityTileSystem
 			const auto& box_data = box_data_array[i];
 
 			uint8_t* dest_data = buffer.data() + 16 + i * sizeof(GPUBox);
-			reinterpret_cast<GPUBox*>(dest_data)->Fill(box_data.position, box_data.extents, (box_data.colour_palette == 0xFF) ? glm::vec3(1.f, 1.f, 1.f) : 2.f * colour_palette[box_data.colour_palette], 0);
+			reinterpret_cast<GPUBox*>(dest_data)->Fill(box_data.position, box_data.extents, (box_data.colour_palette == 0xFF) ? glm::vec3(0.3f, 0.3f, 0.3f) : 2.f * colour_palette[box_data.colour_palette], 0);
 		}
 
 		//COUNTER_INC(c_Box_Count);
