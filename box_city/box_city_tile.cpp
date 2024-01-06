@@ -445,7 +445,7 @@ namespace BoxCityTileSystem
 			const auto& box_data = box_data_array[i];
 
 			uint8_t* dest_data = buffer.data() + 16 + i * sizeof(GPUBox);
-			reinterpret_cast<GPUBox*>(dest_data)->Fill(box_data.position, box_data.extents, (box_data.colour_palette == 0xFF) ? glm::vec3(0.3f, 0.3f, 0.3f) : 2.f * colour_palette[box_data.colour_palette], 0);
+			reinterpret_cast<GPUBox*>(dest_data)->Fill(box_data.position, box_data.extents, (box_data.colour_palette == 0xFF) ? glm::vec3(0.1f, 0.1f, 0.1f) : 5.f * colour_palette[box_data.colour_palette], 0);
 		}
 
 		//COUNTER_INC(c_Box_Count);

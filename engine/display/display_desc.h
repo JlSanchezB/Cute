@@ -296,8 +296,9 @@ namespace display
 		uint16_t mips = 1;
 		size_t size = 0;
 		const void* init_data = nullptr;
-		float default_clear = 1.f;
-		uint8_t default_stencil = 0;
+		float default_colour_clear[4] = {0.f, 0.f, 0.f, 0.f}; //Colour
+		float default_clear = 1.f; //Depth
+		uint8_t default_stencil = 0; //Stencil
 
 		bool is_UAV = false;
 		bool is_render_target = false;
@@ -316,6 +317,10 @@ namespace display
 			desc.mips = mips;
 			desc.init_data = init_data;
 			desc.is_UAV = is_UAV;
+			desc.default_colour_clear[0] = 0.f;
+			desc.default_colour_clear[1] = 0.f;
+			desc.default_colour_clear[2] = 0.f;
+			desc.default_colour_clear[3] = 0.f;
 			return desc;
 		}
 

@@ -10,6 +10,25 @@
     <RootSignature>BuildHiZRootSignature</RootSignature>
     <ComputeShader entry_point="build_hz" target="cs_6_6">build_hz.hlsl</ComputeShader>
   </Resource>
+  <Resource type="RootSignature" name="ToneMapperRootSignature">
+    <RootParam index="0" type="DescriptorTable">
+      <Range base_shader_register="0" size="1" type="ShaderResource"/>
+    </RootParam>
+    <StaticSample shader_register="0" visibility="Pixel" filter="Linear"/>
+  </Resource>
+  <Resource type="GraphicsPipelineState" name="ToneMapperPipelineState">
+    <RootSignature>ToneMapperRootSignature</RootSignature>
+    <InputLayouts>
+      <Input semantic_name="POSITION" semantic_index="0" format="R32G32B32A32_FLOAT" input_slot="0"/>
+      <Input semantic_name="TEXCOORD" semantic_index="0" format="R32G32_FLOAT" input_slot="0" aligned_offset="16"/>
+    </InputLayouts>
+    <PixelShader entry_point="ps_main" target="ps_6_6">tonemapper.hlsl</PixelShader>
+    <VertexShader entry_point="vs_main" target="vs_6_6">tonemapper.hlsl</VertexShader>
+    <Rasterization/>
+    <RenderTargets>
+      <RenderTarget format="R8G8B8A8_UNORM"/>
+    </RenderTargets>
+  </Resource>
 </Global>
 <Passes>
   <Pass name="SyncStaticGPUMemory" group="Auto">
@@ -39,14 +58,14 @@
       <Resource name="IndirectParametersBuffer" pre_condition_state="FirstPass" post_update_state="SecondPass" access="IndirectArgument"/>
       <Resource name="StaticGPUMemoryBuffer" pre_condition_state="Ready" access="AllShaderResource"/>
       <DepthBuffer name="SceneDepth" pre_condition_state="Alloc" post_update_state="FirstPassReadyToCapture" access="Depth" format="D32_FLOAT" default_depth="0.f"/>
-      <Resource name="BackBuffer" access="RenderTarget"/>
+      <RenderTarget name="LightScene" pre_condition_state="Alloc" post_update_state="FirstPassRendered" access="RenderTarget" format="R32G32B32A32_FLOAT"/>
     </Dependencies>
     <Commands>
       <SetRenderTarget>
-		    <RenderTarget>BackBuffer</RenderTarget>
+		    <RenderTarget>LightScene</RenderTarget>
         <DepthBuffer>SceneDepth</DepthBuffer>
 	    </SetRenderTarget>
-	    <ClearRenderTarget colour="0,0,0,0">BackBuffer</ClearRenderTarget>
+	    <ClearRenderTarget colour="0,0,0,0">LightScene</ClearRenderTarget>
       <ClearDepthStencil>SceneDepth</ClearDepthStencil>
       <DrawCityBoxes/>
     </Commands>
@@ -87,11 +106,11 @@
       <Resource name="IndirectParametersBuffer" pre_condition_state="SecondPassReady" access="IndirectArgument"/>
       <Resource name="StaticGPUMemoryBuffer" pre_condition_state="Ready" access="AllShaderResource"/>
       <DepthBuffer name="SceneDepth" pre_condition_state="SecondPass" post_update_state="SecondPassReadyToCapture" access="Depth" format="D32_FLOAT" default_depth="0.f"/>
-      <Resource name="BackBuffer" access="RenderTarget"/>
+      <RenderTarget name="LightScene" pre_condition_state="FirstPassRendered" post_update_state="LightFinished" access="RenderTarget" format="R32G32B32A32_FLOAT"/>
     </Dependencies>
     <Commands>
       <SetRenderTarget>
-        <RenderTarget>BackBuffer</RenderTarget>
+        <RenderTarget>LightScene</RenderTarget>
         <DepthBuffer>SceneDepth</DepthBuffer>
       </SetRenderTarget>
       <DrawCityBoxes/>
@@ -112,6 +131,23 @@
       </SetDescriptorTable>
       <SetComputePipelineState>BuildHiZ</SetComputePipelineState>
       <DispatchCompute group_count_x="64" group_count_y="64"/>
+    </Commands>
+  </Pass>
+  <Pass name="ToneMapper" group="PostProcess">
+    <Dependencies>
+      <RenderTarget name="LightScene" pre_condition_state="LightFinished" post_update_state="Free" access="AllShaderResource" format="R32G32B32A32_FLOAT"/>
+      <Resource name="BackBuffer" access="RenderTarget"/>
+    </Dependencies>
+    <Commands>
+      <SetRenderTarget>
+        <RenderTarget>BackBuffer</RenderTarget>
+      </SetRenderTarget>
+      <SetRootSignature>ToneMapperRootSignature</SetRootSignature>
+      <SetPipelineState>ToneMapperPipelineState</SetPipelineState>
+      <SetDescriptorTable pipe="Graphics" root_param="0">
+        <Descriptor>LightScene</Descriptor>
+      </SetDescriptorTable>
+      <DrawFullScreenQuad/>
     </Commands>
   </Pass>
 </Passes>

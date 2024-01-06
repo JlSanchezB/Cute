@@ -51,8 +51,6 @@ void BoxCityGame::OnInit()
 
 	SetDevice(m_device);
 
-
-
 	//Create Job allocator now that the job system is enabled
 	m_update_job_allocator = std::make_unique<job::JobAllocator<1024 * 1024>>();
 	m_render_job_allocator = std::make_unique<job::JobAllocator<1024 * 1024>>();
@@ -347,6 +345,7 @@ void BoxCityGame::OnRender(double total_time, float elapsed_time)
 
 	//Add render passes
 	render_frame.AddGroupRenderPass("Solids"_sh32, 0, pass_info, "Main_Render"_sh32, 0);
+	render_frame.AddGroupRenderPass("PostProcess"_sh32, 0, pass_info, "Main_Render"_sh32, 0);
 
 	job::Fence culling_fence;
 	uint64_t render_frame_index = render::GetGameFrameIndex(m_render_system);

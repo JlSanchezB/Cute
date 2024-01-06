@@ -791,6 +791,14 @@ namespace display
 		{
 			init_resource_state = D3D12_RESOURCE_STATE_RENDER_TARGET;
 			d12_resource_desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
+
+			clear_values.Color[0] = texture_2d_desc.default_colour_clear[0];
+			clear_values.Color[1] = texture_2d_desc.default_colour_clear[1];
+			clear_values.Color[2] = texture_2d_desc.default_colour_clear[2];
+			clear_values.Color[3] = texture_2d_desc.default_colour_clear[3];
+			clear_values.Format = Convert(texture_2d_desc.format);
+
+			clear_values_ptr = &clear_values;
 		} 
 		else if (texture_2d_desc.is_depth_buffer)
 		{

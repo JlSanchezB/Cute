@@ -51,7 +51,7 @@ void BoxCityResources::Load(display::Device* device, render::System* render_syst
 		desc.pixel_shader.target = "ps_6_6";
 
 		desc.num_render_targets = 1;
-		desc.render_target_format[0] = display::Format::R8G8B8A8_UNORM;
+		desc.render_target_format[0] = display::Format::R32G32B32A32_FLOAT;
 
 		desc.depth_enable = true;
 		desc.depth_write = true;
