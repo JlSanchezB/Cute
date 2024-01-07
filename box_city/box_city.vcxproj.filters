@@ -80,5 +80,6 @@
     <None Include="build_hz.hlsl" />
     <None Include="second_pass_box_culling.hlsl" />
     <None Include="tonemapper.hlsl" />
+    <None Include="constants.hlsl" />
   </ItemGroup>
 </Project>

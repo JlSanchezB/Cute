@@ -1,3 +1,5 @@
+#include "constants.hlsl"
+
 struct PSInput
 {
     float4 view_position : SV_POSITION;
@@ -8,17 +10,6 @@ cbuffer Root : register(b0)
 {
     uint instance_data_offset;
 }
-cbuffer ViewData : register(b1)
-{
-    float4x4 view_projection_matrix;
-    float4x4 last_frame_view_projection_matrix;
-    float4 camera_position;
-    float4 time;
-    float4 sun_direction;
-    float4 frustum_planes[6];
-    float4 frustum_points[8];
-};
-
 
 ByteAddressBuffer static_gpu_memory: register(t0);
 ByteAddressBuffer dynamic_gpu_memory: register(t1);

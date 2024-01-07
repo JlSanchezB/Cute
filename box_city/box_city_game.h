@@ -86,6 +86,11 @@ public:
 	//Sun direction
 	glm::vec2 m_sun_direction_angles = glm::vec2(45.f, 45.f);
 
+	//Exposure
+	float m_exposure = 3.f;
+
+	//Bloom Factors
+	float m_bloom_factors[8] = { 0.1f, 0.1f, 0.1f, 0.1f, 0.1f, 0.1f, 0.1f, 0.1f };
 
 	BoxCityGame()
 	{

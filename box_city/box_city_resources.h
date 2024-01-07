@@ -22,6 +22,9 @@ struct ViewConstantBuffer
 	glm::vec4 sun_direction;
 	glm::vec4 frustum_planes[6];
 	glm::vec4 frustum_points[8];
+	glm::vec4 exposure;
+	glm::vec4 bloom_0123;
+	glm::vec4 bloom_4567;
 };
 
 struct BoxCityResources
