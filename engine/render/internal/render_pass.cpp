@@ -205,8 +205,8 @@ namespace render
 							}
 							float width_factor = 1.f;
 							dependencies_xml_element->QueryFloatAttribute("width_factor", &width_factor);
-							float heigth_factor = 1.f;
-							dependencies_xml_element->QueryFloatAttribute("heigth_factor", &heigth_factor);
+							float height_factor = 1.f;
+							dependencies_xml_element->QueryFloatAttribute("height_factor", &height_factor);
 
 							uint32_t tile_size_width = 1;
 							dependencies_xml_element->QueryUnsignedAttribute("tile_size_width", &tile_size_width);
@@ -239,7 +239,7 @@ namespace render
 							dependencies_xml_element->QueryUnsignedAttribute("default_stencil", &default_stencil);
 
 							//Add resource dependency, so the pass will request the resource to the pool
-							m_resource_pool_dependencies.emplace_back(resource_name, type, pre_condition == "Alloc"_sh32, post_condition == "Free"_sh32, width, height, size, width_factor, heigth_factor, static_cast<uint16_t>(tile_size_width), static_cast<uint16_t>(tile_size_height),format, default_depth, static_cast<uint8_t>(default_stencil), clear, not_alias);
+							m_resource_pool_dependencies.emplace_back(resource_name, type, pre_condition == "Alloc"_sh32, post_condition == "Free"_sh32, width, height, size, width_factor, height_factor, static_cast<uint16_t>(tile_size_width), static_cast<uint16_t>(tile_size_height),format, default_depth, static_cast<uint8_t>(default_stencil), clear, not_alias);
 
 
 							//Needs to access the resource, it will be empty at the moment, as it is going to get assigned during the pass
@@ -359,12 +359,15 @@ namespace render
 
 		render_context.GetContext()->SetRenderTargets(m_num_render_targets, render_targets.data(), (depth_buffer) ? display::AsDepthBuffer(depth_buffer->GetHandle()) : display::AsDepthBuffer());
 		
-		//Set Viewport and Scissors
+		//Set Viewport and Scissors (just using the texture size, we need to add an interface for it)
+		uint32_t width, height;
+		display::GetTexture2DDimensions(render_context.GetDevice(), render_targets[0], width, height);
+		
 		//Set viewport
-		render_context.GetContext()->SetViewport(render_context.GetPassInfo().viewport);
+		render_context.GetContext()->SetViewport(display::Viewport(static_cast<float>(width), static_cast<float>(height)));
 
 		//Set Scissor Rect
-		render_context.GetContext()->SetScissorRect(render_context.GetPassInfo().scissor_rect);
+		render_context.GetContext()->SetScissorRect(display::Rect(0, 0, width, height));
 	}
 	void ClearRenderTargetPass::Load(LoadContext & load_context)
 	{

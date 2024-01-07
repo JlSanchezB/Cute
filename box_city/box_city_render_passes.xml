@@ -13,7 +13,7 @@
   <Resource type="RootSignature" name="ToneMapperRootSignature">
     <RootParam index="0" type="DescriptorTable">
       <Range base_shader_register="1" size="1" type="ConstantBuffer" visibility="Pixel"/>
-      <Range base_shader_register="0" size="1" type="ShaderResource" visibility="Pixel"/>
+      <Range base_shader_register="0" size="2" type="ShaderResource" visibility="Pixel"/>
     </RootParam>
     <StaticSample shader_register="0" visibility="Pixel" filter="Linear"/>
   </Resource>
@@ -28,6 +28,65 @@
     <Rasterization/>
     <RenderTargets>
       <RenderTarget format="R8G8B8A8_UNORM"/>
+    </RenderTargets>
+  </Resource>
+  <Resource type="RootSignature" name="BloomRootSignature">
+    <RootParam index="0" type="DescriptorTable">
+      <Range base_shader_register="1" size="1" type="ConstantBuffer" visibility="Pixel"/>
+      <Range base_shader_register="0" size="1" type="ShaderResource" visibility="Pixel"/>
+    </RootParam>
+    <StaticSample shader_register="0" visibility="Pixel" filter="Linear"/>
+  </Resource>
+  <Resource type="GraphicsPipelineState" name="BloomDownSamplerPipelineState">
+    <RootSignature>BloomRootSignature</RootSignature>
+    <InputLayouts>
+      <Input semantic_name="POSITION" semantic_index="0" format="R32G32B32A32_FLOAT" input_slot="0"/>
+      <Input semantic_name="TEXCOORD" semantic_index="0" format="R32G32_FLOAT" input_slot="0" aligned_offset="16"/>
+    </InputLayouts>
+    <PixelShader entry_point="downsampler_ps_main" target="ps_6_6">bloom.hlsl</PixelShader>
+    <VertexShader entry_point="vs_main" target="vs_6_6">bloom.hlsl</VertexShader>
+    <Rasterization/>
+    <RenderTargets>
+      <RenderTarget format="R16G16B16A16_FLOAT"/>
+    </RenderTargets>
+  </Resource>
+  <Resource type="GraphicsPipelineState" name="BloomThresholdPipelineState">
+    <RootSignature>BloomRootSignature</RootSignature>
+    <InputLayouts>
+      <Input semantic_name="POSITION" semantic_index="0" format="R32G32B32A32_FLOAT" input_slot="0"/>
+      <Input semantic_name="TEXCOORD" semantic_index="0" format="R32G32_FLOAT" input_slot="0" aligned_offset="16"/>
+    </InputLayouts>
+    <PixelShader entry_point="bloom_threshold_ps_main" target="ps_6_6">bloom.hlsl</PixelShader>
+    <VertexShader entry_point="vs_main" target="vs_6_6">bloom.hlsl</VertexShader>
+    <Rasterization/>
+    <RenderTargets>
+      <RenderTarget format="R16G16B16A16_FLOAT"/>
+    </RenderTargets>
+  </Resource>
+  <Resource type="GraphicsPipelineState" name="KawaseBlurDownSamplePipelineState">
+    <RootSignature>BloomRootSignature</RootSignature>
+    <InputLayouts>
+      <Input semantic_name="POSITION" semantic_index="0" format="R32G32B32A32_FLOAT" input_slot="0"/>
+      <Input semantic_name="TEXCOORD" semantic_index="0" format="R32G32_FLOAT" input_slot="0" aligned_offset="16"/>
+    </InputLayouts>
+    <PixelShader entry_point="kawase_blur_downsample_ps_main" target="ps_6_6">bloom.hlsl</PixelShader>
+    <VertexShader entry_point="vs_main" target="vs_6_6">bloom.hlsl</VertexShader>
+    <Rasterization/>
+    <RenderTargets>
+      <RenderTarget format="R16G16B16A16_FLOAT"/>
+    </RenderTargets>
+  </Resource>
+  <Resource type="GraphicsPipelineState" name="KawaseBlurUpSamplePipelineState">
+    <RootSignature>BloomRootSignature</RootSignature>
+    <InputLayouts>
+      <Input semantic_name="POSITION" semantic_index="0" format="R32G32B32A32_FLOAT" input_slot="0"/>
+      <Input semantic_name="TEXCOORD" semantic_index="0" format="R32G32_FLOAT" input_slot="0" aligned_offset="16"/>
+    </InputLayouts>
+    <PixelShader entry_point="kawase_blur_upsample_ps_main" target="ps_6_6">bloom.hlsl</PixelShader>
+    <VertexShader entry_point="vs_main" target="vs_6_6">bloom.hlsl</VertexShader>
+    <Rasterization/>
+    <RenderTargets>
+      <RenderTarget format="R16G16B16A16_FLOAT"/>
     </RenderTargets>
   </Resource>
 </Global>
@@ -134,9 +193,100 @@
       <DispatchCompute group_count_x="64" group_count_y="64"/>
     </Commands>
   </Pass>
+  <Pass name="Bloom_DownSample_2" group="PostProcess">
+    <Dependencies>
+      <RenderTarget name="LightScene_DownSample_2" pre_condition_state="Alloc" post_update_state="Done" access="RenderTarget" format="R16G16B16A16_FLOAT" width_factor="0.5" height_factor="0.5"/>
+      <RenderTarget name="LightScene" pre_condition_state="LightFinished" access="AllShaderResource" format="R16G16B16A16_FLOAT"/>
+    </Dependencies>
+    <Commands>
+      <SetRenderTarget>
+        <RenderTarget>LightScene_DownSample_2</RenderTarget>
+      </SetRenderTarget>
+      <SetRootSignature>BloomRootSignature</SetRootSignature>
+      <SetPipelineState>BloomDownSamplerPipelineState</SetPipelineState>
+      <SetDescriptorTable pipe="Graphics" root_param="0">
+        <Descriptor>ViewData</Descriptor>
+        <Descriptor>LightScene</Descriptor>
+      </SetDescriptorTable>
+      <DrawFullScreenQuad/>
+    </Commands>
+  </Pass>
+  <Pass name="Bloom_DownSample_4" group="PostProcess">
+    <Dependencies>
+      <RenderTarget name="LightScene_DownSample_4" pre_condition_state="Alloc" post_update_state="Done" access="RenderTarget" format="R16G16B16A16_FLOAT" width_factor="0.25" height_factor="0.25"/>
+      <RenderTarget name="LightScene_DownSample_2" pre_condition_state="Done" post_update_state="Free" access="AllShaderResource" format="R16G16B16A16_FLOAT" width_factor="0.5" height_factor="0.5"/>
+    </Dependencies>
+    <Commands>
+      <SetRenderTarget>
+        <RenderTarget>LightScene_DownSample_4</RenderTarget>
+      </SetRenderTarget>
+      <SetRootSignature>BloomRootSignature</SetRootSignature>
+      <SetPipelineState>BloomDownSamplerPipelineState</SetPipelineState>
+      <SetDescriptorTable pipe="Graphics" root_param="0">
+        <Descriptor>ViewData</Descriptor>
+        <Descriptor>LightScene_DownSample_2</Descriptor>
+      </SetDescriptorTable>
+      <DrawFullScreenQuad/>
+    </Commands>
+  </Pass>
+  <Pass name="Bloom_Threshold" group="PostProcess">
+    <Dependencies>
+      <RenderTarget name="BloomThreshold" pre_condition_state="Alloc" post_update_state="Done" access="RenderTarget" format="R16G16B16A16_FLOAT" width_factor="0.25" height_factor="0.25"/>
+      <RenderTarget name="LightScene_DownSample_4" pre_condition_state="Done" post_update_state="Free" access="AllShaderResource" format="R16G16B16A16_FLOAT" width_factor="0.25" height_factor="0.25"/>
+    </Dependencies>
+    <Commands>
+      <SetRenderTarget>
+        <RenderTarget>BloomThreshold</RenderTarget>
+      </SetRenderTarget>
+      <SetRootSignature>BloomRootSignature</SetRootSignature>
+      <SetPipelineState>BloomThresholdPipelineState</SetPipelineState>
+      <SetDescriptorTable pipe="Graphics" root_param="0">
+        <Descriptor>ViewData</Descriptor>
+        <Descriptor>LightScene_DownSample_4</Descriptor>
+      </SetDescriptorTable>
+      <DrawFullScreenQuad/>
+    </Commands>
+  </Pass>
+  <Pass name="Blur_Down_0" group="PostProcess">
+    <Dependencies>
+      <RenderTarget name="BlurDownsample" pre_condition_state="Alloc" post_update_state="Down0" access="RenderTarget" format="R16G16B16A16_FLOAT" width_factor="0.125" height_factor="0.125"/>
+      <RenderTarget name="BloomThreshold" pre_condition_state="Done" post_update_state="Free" access="AllShaderResource" format="R16G16B16A16_FLOAT" width_factor="0.25" height_factor="0.25"/>
+    </Dependencies>
+    <Commands>
+      <SetRenderTarget>
+        <RenderTarget>BlurDownsample</RenderTarget>
+      </SetRenderTarget>
+      <SetRootSignature>BloomRootSignature</SetRootSignature>
+      <SetPipelineState>KawaseBlurDownSamplePipelineState</SetPipelineState>
+      <SetDescriptorTable pipe="Graphics" root_param="0">
+        <Descriptor>ViewData</Descriptor>
+        <Descriptor>BloomThreshold</Descriptor>
+      </SetDescriptorTable>
+      <DrawFullScreenQuad/>
+    </Commands>
+  </Pass>
+  <Pass name="Blur_Up_0" group="PostProcess">
+    <Dependencies>
+      <RenderTarget name="BloomBlurResult" pre_condition_state="Alloc" post_update_state="Blur0Done" access="RenderTarget" format="R16G16B16A16_FLOAT" width_factor="0.25" height_factor="0.25"/>
+      <RenderTarget name="BlurDownsample" pre_condition_state="Down0" post_update_state="Free" access="AllShaderResource" format="R16G16B16A16_FLOAT" width_factor="0.125" height_factor="0.125"/>
+    </Dependencies>
+    <Commands>
+      <SetRenderTarget>
+        <RenderTarget>BloomBlurResult</RenderTarget>
+      </SetRenderTarget>
+      <SetRootSignature>BloomRootSignature</SetRootSignature>
+      <SetPipelineState>KawaseBlurUpSamplePipelineState</SetPipelineState>
+      <SetDescriptorTable pipe="Graphics" root_param="0">
+        <Descriptor>ViewData</Descriptor>
+        <Descriptor>BlurDownsample</Descriptor>
+      </SetDescriptorTable>
+      <DrawFullScreenQuad/>
+    </Commands>
+  </Pass>
   <Pass name="ToneMapper" group="PostProcess">
     <Dependencies>
       <RenderTarget name="LightScene" pre_condition_state="LightFinished" post_update_state="Free" access="AllShaderResource" format="R16G16B16A16_FLOAT"/>
+      <RenderTarget name="BloomBlurResult" pre_condition_state="Blur0Done" post_update_state="Free" access="AllShaderResource" format="R16G16B16A16_FLOAT"/>
       <Resource name="BackBuffer" access="RenderTarget"/>
     </Dependencies>
     <Commands>
@@ -148,6 +298,7 @@
       <SetDescriptorTable pipe="Graphics" root_param="0">
         <Descriptor>ViewData</Descriptor>
         <Descriptor>LightScene</Descriptor>
+        <Descriptor>BloomBlurResult</Descriptor>
       </SetDescriptorTable>
       <DrawFullScreenQuad/>
     </Commands>

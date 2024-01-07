@@ -111,6 +111,7 @@ namespace display
 	//Create texture2D
 	Texture2DHandle CreateTexture2D(Device* device, const Texture2DDesc & texture_2d_desc, const char* name);
 	void DestroyTexture2D(Device* device, Texture2DHandle& handle);
+	void GetTexture2DDimensions(Device* device, WeakTexture2DHandle& handle, uint32_t& width, uint32_t& height);
 
 	//Update resource buffer (only Access::Dynamic)
 	using UpdatableResourceHandle = std::variant<WeakBufferHandle>;

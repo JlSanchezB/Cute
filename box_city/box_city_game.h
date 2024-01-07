@@ -89,8 +89,11 @@ public:
 	//Exposure
 	float m_exposure = 3.f;
 
-	//Bloom Factors
-	float m_bloom_factors[8] = { 0.1f, 0.1f, 0.1f, 0.1f, 0.1f, 0.1f, 0.1f, 0.1f };
+	//Bloom Threshold
+	float m_bloom_threshold = 3.f;
+
+	//Bloom intensity
+	float m_bloom_intensity = 0.7f;
 
 	BoxCityGame()
 	{

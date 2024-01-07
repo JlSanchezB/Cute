@@ -919,6 +919,16 @@ namespace display
 		DeleteRingResource(device, handle, device->m_texture_2d_pool);
 	}
 
+	void GetTexture2DDimensions(Device* device, WeakTexture2DHandle& handle, uint32_t& width, uint32_t& height)
+	{
+		auto& resource = device->Get(handle);
+
+		D3D12_RESOURCE_DESC desc = resource.resource->GetDesc();
+
+		width = static_cast<uint32_t>(desc.Width);
+		height = static_cast<uint32_t>(desc.Height);
+	}
+
 	void UpdateResourceBuffer(Device * device, const UpdatableResourceHandle& handle, const void * data, size_t size)
 	{
 		void* memory_data = nullptr;

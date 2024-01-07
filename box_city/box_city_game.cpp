@@ -311,10 +311,8 @@ void BoxCityGame::OnRender(double total_time, float elapsed_time)
 	view_constant_buffer.sun_direction = glm::rotate(glm::radians(m_sun_direction_angles.y), glm::vec3(1.f, 0.f, 0.f)) * glm::rotate(glm::radians(m_sun_direction_angles.x), glm::vec3(0.f, 0.f, 1.f)) * glm::vec4(1.f, 0.f, 0.f, 0.f);
 	for (size_t i = 0; i < helpers::Frustum::Count; ++i) view_constant_buffer.frustum_planes[i] = camera->planes[i];
 	for (size_t i = 0; i < 8; ++i) view_constant_buffer.frustum_points[i] = glm::vec4(camera->points[i], 1.f);
-	view_constant_buffer.exposure = glm::vec4(m_exposure, 0.f, 0.f, 0.f);
-	view_constant_buffer.bloom_0123 = glm::vec4(m_bloom_factors[0], m_bloom_factors[1], m_bloom_factors[2], m_bloom_factors[3]);
-	view_constant_buffer.bloom_4567 = glm::vec4(m_bloom_factors[4], m_bloom_factors[5], m_bloom_factors[6], m_bloom_factors[7]);
-
+	view_constant_buffer.exposure_bloomthreshold_bloomintensity = glm::vec4(m_exposure, m_bloom_threshold, m_bloom_intensity, 0.f);
+	
 	render_frame.GetBeginFrameCommandBuffer().UploadResourceBuffer(m_display_resources.m_view_constant_buffer, &view_constant_buffer, sizeof(view_constant_buffer));
 	render_frame.GetBeginFrameCommandBuffer().Close();
 
@@ -430,14 +428,9 @@ void BoxCityGame::OnAddImguiMenu()
 	{
 		ImGui::SliderFloat2("Sun Direction", reinterpret_cast<float*>(&m_sun_direction_angles), 0.f, 360.f);
 		ImGui::SliderFloat("Exposure", &m_exposure, 0.f, 10.f);
-		ImGui::SliderFloat("Bloom0", &m_bloom_factors[0], 0.f, 1.f);
-		ImGui::SliderFloat("Bloom1", &m_bloom_factors[1], 0.f, 1.f);
-		ImGui::SliderFloat("Bloom2", &m_bloom_factors[2], 0.f, 1.f);
-		ImGui::SliderFloat("Bloom3", &m_bloom_factors[3], 0.f, 1.f);
-		ImGui::SliderFloat("Bloom4", &m_bloom_factors[4], 0.f, 1.f);
-		ImGui::SliderFloat("Bloom5", &m_bloom_factors[5], 0.f, 1.f);
-		ImGui::SliderFloat("Bloom6", &m_bloom_factors[6], 0.f, 1.f);
-		ImGui::SliderFloat("Bloom7", &m_bloom_factors[7], 0.f, 1.f);
+		ImGui::SliderFloat("Bloom Threshold", &m_bloom_threshold, 0.f, 10.f);
+		ImGui::SliderFloat("Bloom Intensity", &m_bloom_intensity, 0.f, 1.f);
+
 		ImGui::EndMenu();
 	}
 }

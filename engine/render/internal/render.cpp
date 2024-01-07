@@ -12,6 +12,8 @@
 #include <utility>
 #include <numeric>
 
+#pragma optimize("", off)
+
 template<class... Ts> struct overloaded : Ts... { using Ts::operator()...; };
 template<class... Ts> overloaded(Ts...)->overloaded<Ts...>;
 
@@ -259,6 +261,7 @@ namespace render
 				//It can be use
 				pool_resource.can_be_reuse = false;
 				pool_resource.last_render_frame_used = m_render_frame_index;
+				pool_resource.name = resource_name;
 				//TODO, change debug name
 
 				//Give ownership to the resource info
@@ -353,9 +356,11 @@ namespace render
 				assert(pool_resource.resource.get() == nullptr);
 				
 				//Return to the pool
-				pool_resource.resource = std::move(resource);
+				pool_resource.resource.swap(resource);
 				pool_resource.m_access = access; //Update state
 				pool_resource.can_be_reuse = true;
+
+				assert(resource.get() == nullptr);
 				return;
 			}
 		}
@@ -1148,7 +1153,7 @@ namespace render
 					PROFILE_SCOPE("Render", kRenderProfileColour, "CapturePass");
 
 					//Request new pool resources
-					for (auto& pool_resource : render_context->GetContextRootPass()->GetResourcePoolDependencies())
+					for (const ResourcePoolDependency& pool_resource : render_context->GetContextRootPass()->GetResourcePoolDependencies())
 					{
 						if (pool_resource.needs_to_allocate)
 						{
@@ -1164,8 +1169,14 @@ namespace render
 									height = render_context->m_pass_info.height * pool_resource.height_factor / 256;
 
 									//Adjust to the tile size
-									width = (((width - 1) / pool_resource.tile_size_width) + 1) * pool_resource.tile_size_width;
-									height = (((height - 1) / pool_resource.tile_size_height) + 1) * pool_resource.tile_size_height;
+									if (width > 0)
+										width = (((width - 1) / pool_resource.tile_size_width) + 1) * pool_resource.tile_size_width;
+									else
+										width = pool_resource.tile_size_width;
+									if (height > 0)
+										height = (((height - 1) / pool_resource.tile_size_height) + 1) * pool_resource.tile_size_height;
+									else
+										height = pool_resource.tile_size_height;
 								}
 								else
 								{
@@ -1237,8 +1248,9 @@ namespace render
 					{
 						if (pool_resource.will_be_free)
 						{
+							auto resource = m_resources_map.Find(pool_resource.name)->get();
 							//Return to the pool
-							DeallocPoolResource(pool_resource.name, m_resources_map.Find(pool_resource.name)->get()->resource, m_resources_map.Find(pool_resource.name)->get()->access);
+							DeallocPoolResource(pool_resource.name, resource->resource, resource->access);
 						}
 					}
 					//Add to execute
