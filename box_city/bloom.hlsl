@@ -76,12 +76,12 @@ float4 downsampler_ps_main(PSInput input) : SV_TARGET
 float4 bloom_threshold_ps_main(PSInput input) : SV_TARGET
 {
 
-    float3 colour = source.Sample(source_sampler, input.tex).rgb * exposure_bloomthreshold_bloomintensity.x;
+    float3 colour = source.Sample(source_sampler, input.tex).rgb * exposure;
 
     //Calculate luminance
     float luminance = dot(colour, colour);
 
-    if (luminance < exposure_bloomthreshold_bloomintensity.y)
+    if (luminance < bloom_threshold)
     {
         return float4(0.f, 0.f, 0.f, 1.f);
     }

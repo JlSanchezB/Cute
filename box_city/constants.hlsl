@@ -7,5 +7,8 @@ cbuffer ViewData : register(b1)
     float4 sun_direction;
     float4 frustum_planes[6];
     float4 frustum_points[8];
-    float4 exposure_bloomthreshold_bloomintensity;
+    float exposure;
+    float bloom_threshold;
+    float bloom_intensity;
+    float gap;
 };

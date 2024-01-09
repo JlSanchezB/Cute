@@ -23,13 +23,15 @@ PSInput vs_main(float4 position : POSITION, float2 tex : TEXCOORD0)
 
 float4 ps_main(PSInput input) : SV_TARGET
 {
-    float3 colour = light_scene.Sample(light_scene_sampler, input.tex).rgb * exposure_bloomthreshold_bloomintensity.x;
+    float3 colour = light_scene.Sample(light_scene_sampler, input.tex).rgb * exposure;
     
-    //Tonemapper
-    colour = colour / (1.f + colour);
-
     //Add Bloom
-    float3 bloom = light_scene_4.Sample(light_scene_sampler, input.tex).rgb;
+    float3 bloom = light_scene_4.Sample(light_scene_sampler, input.tex).rgb * bloom_intensity;
 
-    return float4(colour + bloom * exposure_bloomthreshold_bloomintensity.z, 1.f);
+    float3 result = colour +  bloom;
+
+    //Tonemapper
+    result = result / (1.f + result);
+
+    return float4(result, 1.f);
 }
