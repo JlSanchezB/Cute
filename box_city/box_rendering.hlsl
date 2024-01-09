@@ -77,7 +77,7 @@ PSInput vs_box_main(uint multi_instance_id : SV_InstanceID, uint vertex_id : SV_
 
     float3 box_extent = float3(box_data[1].x, box_data[1].y, box_data[1].z);
     float3 box_translation = float3(box_data[0].x, box_data[0].y, box_data[0].z);
-    float4 box_colour = float4(box_data[2].x, box_data[2].y, box_data[2].z, 1.f);
+    float4 box_colour = float4(box_data[2].x, box_data[2].y, box_data[2].z, ((asuint(box_data[2].w) & 1) != 0) ? 1.f : 0.f); //Alpha 1.0 means emissive
 
     //Calculate the position from the camera
     //https://twitter.com/SebAaltonen/status/1315982782439591938
@@ -120,5 +120,15 @@ PSInput vs_box_main(uint multi_instance_id : SV_InstanceID, uint vertex_id : SV_
 
 float4 ps_box_main(PSInput input) : SV_TARGET
 {
-    return float4(input.colour.xyz, 1.f) * (0.3f + 0.7f * saturate(dot(input.world_normal, sun_direction.xyz)));
+    if (input.colour.w == 1.f)
+    {
+        //Emissive
+        return float4(input.colour.xyz, 1.f);
+    }
+    else
+    {
+        //Basic NdL
+        float NL = (0.8f + 0.2f * saturate(dot(normalize(input.world_normal.xyz), sun_direction.xyz)));
+        return float4(input.colour.xyz * NL, 1.f);
+    }
 }

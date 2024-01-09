@@ -87,13 +87,13 @@ public:
 	glm::vec2 m_sun_direction_angles = glm::vec2(45.f, 45.f);
 
 	//Exposure
-	float m_exposure = 3.f;
+	float m_exposure = 0.75f;
 
 	//Bloom Threshold
-	float m_bloom_threshold = 3.f;
+	float m_bloom_threshold = 0.f;
 
 	//Bloom intensity
-	float m_bloom_intensity = 0.7f;
+	float m_bloom_intensity = 1.f;
 
 	BoxCityGame()
 	{

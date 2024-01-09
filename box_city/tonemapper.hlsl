@@ -31,7 +31,7 @@ float4 ps_main(PSInput input) : SV_TARGET
     float3 result = colour +  bloom;
 
     //Tonemapper
-    result = result / (1.f + result);
+    result = pow(result, 2.2f);
 
     return float4(result, 1.f);
 }

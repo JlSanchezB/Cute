@@ -42,11 +42,13 @@ namespace BoxCityTrafficSystem
 		m_gpu_memory = m_GPU_memory_render_module->AllocStaticGPUMemory(m_device, kNumCars * kLocalTileCount * kLocalTileCount * sizeof(GPUBoxInstance), nullptr, render::GetGameFrameIndex(m_render_system));
 
 		std::vector<uint8_t> car_buffer;
-		auto fill_box = [&](uint32_t index, const glm::vec3& position, const glm::vec3& extent, const glm::vec3& colour)
+		auto fill_box = [&](uint32_t index, const glm::vec3& position, const glm::vec3& extent, const glm::vec3& colour, const bool emissive)
 		{
 			GPUBox* gpu_box = reinterpret_cast<GPUBox*>(&car_buffer[16 + index * sizeof(GPUBox)]);
-			gpu_box->Fill(position, extent, colour, 0);
+			gpu_box->Fill(position, extent, colour, (emissive) ? GPUBox::kFlags_Emissive : 0);
 		};
+
+		float emissive_factor = 3.f;
 
 		//Create the car box list, car 0
 		{
@@ -58,24 +60,24 @@ namespace BoxCityTrafficSystem
 			buffer_size[2] = 0;
 			buffer_size[3] = 0;
 
-			fill_box(0, glm::vec3(0.f, 0.f, 0.f), glm::vec3(0.95f, 0.95f, 0.3f), glm::vec3(3.f, 3.f, 3.f));
+			fill_box(0, glm::vec3(0.f, 0.f, 0.f), glm::vec3(0.95f, 0.95f, 0.3f), glm::vec3(1.f, 1.f, 1.f), false);
 
 			//Top
-			fill_box(1, glm::vec3(0.f, -0.1f, 0.5f), glm::vec3(0.8f, 0.45f, 0.2f), 2.f * glm::vec3(0.5f, 1.0f, 1.f));
+			fill_box(1, glm::vec3(0.f, -0.1f, 0.5f), glm::vec3(0.8f, 0.45f, 0.2f), glm::vec3(0.5f, 1.0f, 1.f), false);
 
 			//Bottom engines
-			fill_box(2, glm::vec3(0.7f, 0.7f, -0.35f), glm::vec3(0.2f, 0.2f, 0.1f), glm::vec3(3.f, 1.f, 1.f));
-			fill_box(3, glm::vec3(0.7f, -0.7f, -0.35f), glm::vec3(0.2f, 0.2f, 0.1f), glm::vec3(3.f, 1.f, 1.f));
-			fill_box(4, glm::vec3(-0.7f, 0.7f, -0.35f), glm::vec3(0.2f, 0.2f, 0.1f), glm::vec3(3.f, 1.f, 1.f));
-			fill_box(5, glm::vec3(-0.7f, -0.7f, -0.35f), glm::vec3(0.2f, 0.2f, 0.1f), glm::vec3(3.f, 1.f, 1.f));
+			fill_box(2, glm::vec3(0.7f, 0.7f, -0.35f), glm::vec3(0.2f, 0.2f, 0.1f) , glm::vec3(3.f, 1.f, 1.f) * emissive_factor, true);
+			fill_box(3, glm::vec3(0.7f, -0.7f, -0.35f), glm::vec3(0.2f, 0.2f, 0.1f), glm::vec3(3.f, 1.f, 1.f) * emissive_factor, true);
+			fill_box(4, glm::vec3(-0.7f, 0.7f, -0.35f), glm::vec3(0.2f, 0.2f, 0.1f), glm::vec3(3.f, 1.f, 1.f) * emissive_factor, true);
+			fill_box(5, glm::vec3(-0.7f, -0.7f, -0.35f), glm::vec3(0.2f, 0.2f, 0.1f), glm::vec3(3.f, 1.f, 1.f) * emissive_factor, true);
 
 			//Front lights
-			fill_box(6, glm::vec3(0.6f, 0.975f, 0.f), glm::vec3(0.2f, 0.025f, 0.2f), glm::vec3(3.f, 3.f, 0.f));
-			fill_box(7, glm::vec3(-0.6f, 0.975f, 0.f), glm::vec3(0.2f, 0.025f, 0.2f), glm::vec3(3.f, 3.f, 0.f));
+			fill_box(6, glm::vec3(0.6f, 0.975f, 0.f), glm::vec3(0.2f, 0.025f, 0.2f), glm::vec3(3.f, 3.f, 0.f) * emissive_factor, true);
+			fill_box(7, glm::vec3(-0.6f, 0.975f, 0.f), glm::vec3(0.2f, 0.025f, 0.2f), glm::vec3(3.f, 3.f, 0.f) * emissive_factor, true);
 
 			//Rear lights
-			fill_box(8, glm::vec3(0.6f, -0.975f, 0.f), glm::vec3(0.2f, 0.025f, 0.2f), glm::vec3(3.f, 0.f, 0.f));
-			fill_box(9, glm::vec3(-0.6f, -0.975f, 0.f), glm::vec3(0.2f, 0.025f, 0.2f), glm::vec3(3.f, 0.f, 0.f));
+			fill_box(8, glm::vec3(0.6f, -0.975f, 0.f), glm::vec3(0.2f, 0.025f, 0.2f), glm::vec3(3.f, 0.f, 0.f) * emissive_factor, true);
+			fill_box(9, glm::vec3(-0.6f, -0.975f, 0.f), glm::vec3(0.2f, 0.025f, 0.2f), glm::vec3(3.f, 0.f, 0.f) * emissive_factor, true);
 
 			//Allocate GPU car box list
 			m_gpu_car_box_list[0] = m_GPU_memory_render_module->AllocStaticGPUMemory(m_device, car_buffer.size(), car_buffer.data(), render::GetGameFrameIndex(m_render_system));
@@ -90,24 +92,24 @@ namespace BoxCityTrafficSystem
 			buffer_size[2] = 0;
 			buffer_size[3] = 0;
 
-			fill_box(0, glm::vec3(0.f, 0.f, 0.f), glm::vec3(0.95f, 0.95f * length_factor, 0.3f), glm::vec3(3.f, 3.f, 3.f));
+			fill_box(0, glm::vec3(0.f, 0.f, 0.f), glm::vec3(0.95f, 0.95f * length_factor, 0.3f), glm::vec3(1.f, 1.f, 1.f), false);
 
 			//Top
-			fill_box(1, glm::vec3(0.f, 0.0f, 0.55f), glm::vec3(0.95f, 0.95f * length_factor, 0.3f), 2.f * glm::vec3(0.5f, 1.0f, 1.f));
+			fill_box(1, glm::vec3(0.f, 0.0f, 0.55f), glm::vec3(0.95f, 0.95f * length_factor, 0.3f), glm::vec3(0.5f, 1.0f, 1.f), false);
 
 			//Bottom engines
-			fill_box(2, glm::vec3(0.7f, 0.7f * length_factor, -0.35f), glm::vec3(0.2f, 0.2f, 0.1f), glm::vec3(3.f, 1.f, 1.f));
-			fill_box(3, glm::vec3(0.7f, -0.7f * length_factor, -0.35f), glm::vec3(0.2f, 0.2f, 0.1f), glm::vec3(3.f, 1.f, 1.f));
-			fill_box(4, glm::vec3(-0.7f, 0.7f * length_factor, -0.35f), glm::vec3(0.2f, 0.2f, 0.1f), glm::vec3(3.f, 1.f, 1.f));
-			fill_box(5, glm::vec3(-0.7f, -0.7f * length_factor, -0.35f), glm::vec3(0.2f, 0.2f, 0.1f), glm::vec3(3.f, 1.f, 1.f));
+			fill_box(2, glm::vec3(0.7f, 0.7f * length_factor, -0.35f), glm::vec3(0.2f, 0.2f, 0.1f), glm::vec3(3.f, 1.f, 1.f) * emissive_factor, true);
+			fill_box(3, glm::vec3(0.7f, -0.7f * length_factor, -0.35f), glm::vec3(0.2f, 0.2f, 0.1f), glm::vec3(3.f, 1.f, 1.f) * emissive_factor, true);
+			fill_box(4, glm::vec3(-0.7f, 0.7f * length_factor, -0.35f), glm::vec3(0.2f, 0.2f, 0.1f), glm::vec3(3.f, 1.f, 1.f) * emissive_factor, true);
+			fill_box(5, glm::vec3(-0.7f, -0.7f * length_factor, -0.35f), glm::vec3(0.2f, 0.2f, 0.1f), glm::vec3(3.f, 1.f, 1.f) * emissive_factor, true);
 
 			//Front lights
-			fill_box(6, glm::vec3(0.6f, 0.975f * length_factor, 0.f), glm::vec3(0.2f, 0.025f, 0.2f), glm::vec3(3.f, 3.f, 0.f));
-			fill_box(7, glm::vec3(-0.6f, 0.975f * length_factor, 0.f), glm::vec3(0.2f, 0.025f, 0.2f), glm::vec3(3.f, 3.f, 0.f));
+			fill_box(6, glm::vec3(0.6f, 0.975f * length_factor, 0.f), glm::vec3(0.2f, 0.025f, 0.2f), glm::vec3(3.f, 3.f, 0.f) * emissive_factor, true);
+			fill_box(7, glm::vec3(-0.6f, 0.975f * length_factor, 0.f), glm::vec3(0.2f, 0.025f, 0.2f), glm::vec3(3.f, 3.f, 0.f) * emissive_factor, true);
 
 			//Rear lights
-			fill_box(8, glm::vec3(0.6f, -0.975f * length_factor, 0.f), glm::vec3(0.2f, 0.025f, 0.2f), glm::vec3(3.f, 0.f, 0.f));
-			fill_box(9, glm::vec3(-0.6f, -0.975f * length_factor, 0.f), glm::vec3(0.2f, 0.025f, 0.2f), glm::vec3(3.f, 0.f, 0.f));
+			fill_box(8, glm::vec3(0.6f, -0.975f * length_factor, 0.f), glm::vec3(0.2f, 0.025f, 0.2f), glm::vec3(3.f, 0.f, 0.f) * emissive_factor, true);
+			fill_box(9, glm::vec3(-0.6f, -0.975f * length_factor, 0.f), glm::vec3(0.2f, 0.025f, 0.2f), glm::vec3(3.f, 0.f, 0.f) * emissive_factor, true);
 
 			//Allocate GPU car box list
 			m_gpu_car_box_list[1] = m_GPU_memory_render_module->AllocStaticGPUMemory(m_device, car_buffer.size(), car_buffer.data(), render::GetGameFrameIndex(m_render_system));

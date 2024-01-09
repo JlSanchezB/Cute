@@ -263,6 +263,8 @@ struct GPUBox
 	glm::vec3 colour; //3
 	uint32_t flags; //1
 
+	static constexpr uint32_t kFlags_Emissive = 1 << 0; //The colour is just emissive
+
 	void Fill(const glm::vec3& _position, const glm::vec3 _extent, const glm::vec3& _colour, const uint32_t& _flags)
 	{
 		position = _position;
