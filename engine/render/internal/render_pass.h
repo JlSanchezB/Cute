@@ -303,6 +303,19 @@ namespace render
 		void Render(RenderContext& render_context) const override;
 	};
 
+	class DispatchComputeFilterPass : public Pass
+	{
+		uint32_t m_tile_size_x = 8;
+		uint32_t m_tile_size_y = 8;
+
+		ResourceReference<TextureResource> m_texture;
+	public:
+		DECLARE_RENDER_CLASS("DispatchComputeFilter");
+
+		void Load(LoadContext& load_context) override;
+		void Render(RenderContext& render_context) const override;
+	};
+
 	class DrawRenderItemsPass : public Pass
 	{
 		uint8_t m_priority;

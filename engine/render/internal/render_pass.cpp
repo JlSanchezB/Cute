@@ -703,6 +703,31 @@ namespace render
 		render_context.GetContext()->ExecuteCompute(desc);
 	}
 
+	void DispatchComputeFilterPass::Load(LoadContext& load_context)
+	{
+		QueryAttribute(load_context, load_context.current_xml_element, "tile_size_x", m_tile_size_x, AttributeType::Optional);
+		QueryAttribute(load_context, load_context.current_xml_element, "tile_size_y", m_tile_size_y, AttributeType::Optional);
+		
+		m_texture.UpdateName(load_context.GetResourceReference(load_context));
+	}
+	void DispatchComputeFilterPass::Render(RenderContext& render_context) const
+	{
+		//Get the size of the filter texture
+		TextureResource* texture = m_texture.Get(render_context);
+		if (texture)
+		{
+			uint32_t width, height;
+			display::GetTexture2DDimensions(render_context.GetDevice(), texture->GetHandle(), width, height);
+
+			display::ExecuteComputeDesc desc;
+			desc.group_count_x = ((width - 1) / m_tile_size_x) + 1;
+			desc.group_count_y = ((height - 1) / m_tile_size_x) + 1;
+			desc.group_count_z = 1;
+
+			render_context.GetContext()->ExecuteCompute(desc);
+		}
+	}
+
 	void DrawRenderItemsPass::Load(LoadContext & load_context)
 	{
 		const char* value;
