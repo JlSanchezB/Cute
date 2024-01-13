@@ -18,11 +18,15 @@ struct ViewConstantBuffer
 	glm::mat4x4 projection_view_matrix;
 	glm::mat4x4 last_frame_view_projection_matrix;
 	glm::vec4 camera_position;
-	glm::vec4 time;
+	float time;
+	glm::vec3 time_gap;
 	glm::vec4 sun_direction;
 	glm::vec4 frustum_planes[6];
 	glm::vec4 frustum_points[8];
-	glm::vec4 exposure_bloomradius_bloomintensity;
+	float exposure;
+	float bloom_radius;
+	float bloom_intensity;
+	float gap;
 };
 
 struct BoxCityResources
