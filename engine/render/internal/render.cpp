@@ -240,7 +240,7 @@ namespace render
 		}
 	}
 
-	std::pair<std::unique_ptr<Resource>, display::TranstitionState> System::AllocPoolResource(ResourceName resource_name, PoolResourceType type, bool not_alias, uint16_t width, uint16_t height, uint32_t size, const display::Format& format, const float default_depth, const uint8_t default_stencil, const bool clear)
+	std::pair<std::unique_ptr<Resource>, display::TranstitionState> System::AllocPoolResource(ResourceName resource_name, PoolResourceType type, bool not_alias, uint16_t width, uint16_t height, uint32_t size, const display::Format& format, const float default_depth, const uint8_t default_stencil, const bool clear, const bool is_uav )
 	{
 		//Look in the pool for one free with the same parameters
 		for (auto& pool_resource : m_pool_resources)
@@ -255,7 +255,8 @@ namespace render
 				&& pool_resource.size == size
 				&& pool_resource.default_depth == default_depth
 				&& pool_resource.default_stencil == default_stencil
-				&& pool_resource.clear == clear)
+				&& pool_resource.clear == clear
+				&& pool_resource.is_uav == is_uav)
 			{
 				assert(pool_resource.resource.get());
 				//It can be use
@@ -277,7 +278,7 @@ namespace render
 		{
 		case PoolResourceType::RenderTarget:
 		{
-			display::Texture2DDesc desc = display::Texture2DDesc::CreateRenderTarget(format, width, height);
+			display::Texture2DDesc desc = display::Texture2DDesc::CreateRenderTarget(format, width, height, is_uav);
 			display::Texture2DHandle handle = display::CreateTexture2D(m_device, desc, resource_name.GetValue());
 
 			resource = CreateResourceFromHandle<RenderTargetResource>(handle, width, height);
@@ -295,7 +296,7 @@ namespace render
 		break;
 		case PoolResourceType::Texture2D:
 		{
-			display::Texture2DDesc desc = display::Texture2DDesc::CreateTexture2D(display::Access::Static, format, width, height, 0, 0, 1, nullptr, true);
+			display::Texture2DDesc desc = display::Texture2DDesc::CreateTexture2D(display::Access::Static, format, width, height, 0, 0, 1, nullptr, is_uav);
 			display::Texture2DHandle handle = display::CreateTexture2D(m_device, desc, resource_name.GetValue());
 
 			resource = CreateResourceFromHandle<TextureResource>(handle);
@@ -332,14 +333,14 @@ namespace render
 			if (pool_resource.name == ResourceName())
 			{
 				//Use this slot to add the new resource
-				pool_resource = PoolResource{ {}, resource_name, type, width, height, size, format, default_depth, default_stencil, clear, false, not_alias, m_render_frame_index, access};
+				pool_resource = PoolResource{ {}, resource_name, type, width, height, size, format, default_depth, default_stencil, clear, false, not_alias, m_render_frame_index, access, is_uav};
 
 				return std::make_pair<>(std::move(resource), access);
 			}
 		}
 
 		//Add into the pool
-		m_pool_resources.emplace_back(PoolResource{ {}, resource_name, type, width, height, size, format, default_depth, default_stencil, clear, false, not_alias, m_render_frame_index, access });
+		m_pool_resources.emplace_back(PoolResource{ {}, resource_name, type, width, height, size, format, default_depth, default_stencil, clear, false, not_alias, m_render_frame_index, access, is_uav});
 
 		return std::make_pair<>(std::move(resource), access);
 	}
@@ -1191,7 +1192,7 @@ namespace render
 							}
 
 							//Pass the control to the resource in the resource map
-							auto allocated_pool_resource = AllocPoolResource(pool_resource.name, pool_resource.type, pool_resource.not_alias, width, height, size, pool_resource.format, pool_resource.default_depth, pool_resource.default_stencil, pool_resource.clear);
+							auto allocated_pool_resource = AllocPoolResource(pool_resource.name, pool_resource.type, pool_resource.not_alias, width, height, size, pool_resource.format, pool_resource.default_depth, pool_resource.default_stencil, pool_resource.clear, pool_resource.is_uav);
 							auto resource_info = m_resources_map.Find(pool_resource.name)->get();
 							resource_info->resource = std::move(allocated_pool_resource.first);
 							resource_info->access = allocated_pool_resource.second;

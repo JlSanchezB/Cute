@@ -54,9 +54,10 @@ namespace render
 		uint8_t default_stencil;
 		bool clear;
 		bool not_alias;
+		bool is_uav;
 
-		ResourcePoolDependency(ResourceName _name, PoolResourceType& _type,  bool _needs_to_allocate, bool _will_be_free, uint32_t _width, uint32_t _height, uint32_t _size, float _width_factor, float _height_factor, uint16_t _tile_size_width, uint16_t _tile_size_height, const display::Format& _format, const float _default_depth, const uint8_t _default_stencil, const bool _clear, const bool _not_alias) :
-			name(_name), type(_type), needs_to_allocate(_needs_to_allocate), will_be_free(_will_be_free), width(_width), height(_height), size(_size), tile_size_width(_tile_size_width), tile_size_height(_tile_size_height), format(_format), default_depth(_default_depth), default_stencil(_default_stencil), clear(_clear), not_alias(_not_alias)
+		ResourcePoolDependency(ResourceName _name, PoolResourceType& _type,  bool _needs_to_allocate, bool _will_be_free, uint32_t _width, uint32_t _height, uint32_t _size, float _width_factor, float _height_factor, uint16_t _tile_size_width, uint16_t _tile_size_height, const display::Format& _format, const float _default_depth, const uint8_t _default_stencil, const bool _clear, const bool _not_alias, const bool _is_uav) :
+			name(_name), type(_type), needs_to_allocate(_needs_to_allocate), will_be_free(_will_be_free), width(_width), height(_height), size(_size), tile_size_width(_tile_size_width), tile_size_height(_tile_size_height), format(_format), default_depth(_default_depth), default_stencil(_default_stencil), clear(_clear), not_alias(_not_alias), is_uav(_is_uav)
 		{
 			width_factor = static_cast<uint16_t>(_width_factor * 256.f);
 			height_factor = static_cast<uint16_t>(_height_factor * 256.f);

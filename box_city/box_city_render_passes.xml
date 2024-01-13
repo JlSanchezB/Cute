@@ -30,64 +30,33 @@
       <RenderTarget format="R8G8B8A8_UNORM"/>
     </RenderTargets>
   </Resource>
-  <Resource type="RootSignature" name="BloomRootSignature">
+  <Resource type="RootSignature" name="BloomFilterRootSignature">
     <RootParam index="0" type="DescriptorTable">
-      <Range base_shader_register="1" size="1" type="ConstantBuffer" visibility="Pixel"/>
-      <Range base_shader_register="0" size="1" type="ShaderResource" visibility="Pixel"/>
+      <Range base_shader_register="0" size="1" type="UnorderedAccessBuffer" visibility="All"/>
+      <Range base_shader_register="1" size="1" type="ConstantBuffer" visibility="All"/>
+      <Range base_shader_register="0" size="1" type="ShaderResource" visibility="All"/>
     </RootParam>
-    <StaticSample shader_register="0" visibility="Pixel" filter="Linear"/>
+    <StaticSample shader_register="0" visibility="All" filter="Linear"/>
   </Resource>
-  <Resource type="GraphicsPipelineState" name="BloomDownSamplerPipelineState">
-    <RootSignature>BloomRootSignature</RootSignature>
-    <InputLayouts>
-      <Input semantic_name="POSITION" semantic_index="0" format="R32G32B32A32_FLOAT" input_slot="0"/>
-      <Input semantic_name="TEXCOORD" semantic_index="0" format="R32G32_FLOAT" input_slot="0" aligned_offset="16"/>
-    </InputLayouts>
-    <PixelShader entry_point="downsampler_ps_main" target="ps_6_6">bloom.hlsl</PixelShader>
-    <VertexShader entry_point="vs_main" target="vs_6_6">bloom.hlsl</VertexShader>
-    <Rasterization/>
-    <RenderTargets>
-      <RenderTarget format="R16G16B16A16_FLOAT"/>
-    </RenderTargets>
+  <Resource type="RootSignature" name="BloomFilterAccumRootSignature">
+    <RootParam index="0" type="DescriptorTable">
+      <Range base_shader_register="0" size="1" type="UnorderedAccessBuffer" visibility="All"/>
+      <Range base_shader_register="1" size="1" type="ConstantBuffer" visibility="All"/>
+      <Range base_shader_register="0" size="2" type="ShaderResource" visibility="All"/>
+    </RootParam>
+    <StaticSample shader_register="0" visibility="All" filter="Linear"/>
   </Resource>
-  <Resource type="GraphicsPipelineState" name="BloomThresholdPipelineState">
-    <RootSignature>BloomRootSignature</RootSignature>
-    <InputLayouts>
-      <Input semantic_name="POSITION" semantic_index="0" format="R32G32B32A32_FLOAT" input_slot="0"/>
-      <Input semantic_name="TEXCOORD" semantic_index="0" format="R32G32_FLOAT" input_slot="0" aligned_offset="16"/>
-    </InputLayouts>
-    <PixelShader entry_point="bloom_threshold_ps_main" target="ps_6_6">bloom.hlsl</PixelShader>
-    <VertexShader entry_point="vs_main" target="vs_6_6">bloom.hlsl</VertexShader>
-    <Rasterization/>
-    <RenderTargets>
-      <RenderTarget format="R16G16B16A16_FLOAT"/>
-    </RenderTargets>
+  <Resource type="ComputePipelineState" name="BloomFilterDownSampleFirst">
+    <RootSignature>BloomFilterRootSignature</RootSignature>
+    <ComputeShader entry_point="down_sample" target="cs_6_6">bloom.hlsl</ComputeShader>
   </Resource>
-  <Resource type="GraphicsPipelineState" name="KawaseBlurDownSamplePipelineState">
-    <RootSignature>BloomRootSignature</RootSignature>
-    <InputLayouts>
-      <Input semantic_name="POSITION" semantic_index="0" format="R32G32B32A32_FLOAT" input_slot="0"/>
-      <Input semantic_name="TEXCOORD" semantic_index="0" format="R32G32_FLOAT" input_slot="0" aligned_offset="16"/>
-    </InputLayouts>
-    <PixelShader entry_point="kawase_blur_downsample_ps_main" target="ps_6_6">bloom.hlsl</PixelShader>
-    <VertexShader entry_point="vs_main" target="vs_6_6">bloom.hlsl</VertexShader>
-    <Rasterization/>
-    <RenderTargets>
-      <RenderTarget format="R16G16B16A16_FLOAT"/>
-    </RenderTargets>
+  <Resource type="ComputePipelineState" name="BloomFilterDownSample">
+    <RootSignature>BloomFilterRootSignature</RootSignature>
+    <ComputeShader entry_point="down_sample" target="cs_6_6">bloom.hlsl</ComputeShader>
   </Resource>
-  <Resource type="GraphicsPipelineState" name="KawaseBlurUpSamplePipelineState">
-    <RootSignature>BloomRootSignature</RootSignature>
-    <InputLayouts>
-      <Input semantic_name="POSITION" semantic_index="0" format="R32G32B32A32_FLOAT" input_slot="0"/>
-      <Input semantic_name="TEXCOORD" semantic_index="0" format="R32G32_FLOAT" input_slot="0" aligned_offset="16"/>
-    </InputLayouts>
-    <PixelShader entry_point="kawase_blur_upsample_ps_main" target="ps_6_6">bloom.hlsl</PixelShader>
-    <VertexShader entry_point="vs_main" target="vs_6_6">bloom.hlsl</VertexShader>
-    <Rasterization/>
-    <RenderTargets>
-      <RenderTarget format="R16G16B16A16_FLOAT"/>
-    </RenderTargets>
+  <Resource type="ComputePipelineState" name="BloomFilterUpSample">
+    <RootSignature>BloomFilterAccumRootSignature</RootSignature>
+    <ComputeShader entry_point="up_sample" target="cs_6_6">bloom.hlsl</ComputeShader>
   </Resource>
 </Global>
 <Passes>
@@ -106,7 +75,7 @@
       <Resource name="SecondPassIndirectBoxBuffer" pre_condition_state="Init" post_update_state="SecondPass" access="UnorderedAccess"/>
       <Resource name="SecondPassIndirectParametersBuffer" pre_condition_state="Init" post_update_state="SecondPass" access="UnorderedAccess"/>
       <Resource name="StaticGPUMemoryBuffer" pre_condition_state="Ready" access="AllShaderResource"/>
-      <Texture2D name="HiZ" pre_condition_state="Alloc" post_update_state="FirstPass" access="AllShaderResource" format="R32_FLOAT" width="768" height="512" not_alias="true"/>
+      <Texture2D name="HiZ" pre_condition_state="Alloc" post_update_state="FirstPass" access="AllShaderResource" format="R32_FLOAT" width="768" height="512" not_alias="true" uav="true"/>
     </Dependencies>
     <Commands>
       <CullCityBoxes/>
@@ -193,100 +162,196 @@
       <DispatchCompute group_count_x="64" group_count_y="64"/>
     </Commands>
   </Pass>
-  <Pass name="Bloom_DownSample_2" group="PostProcess">
+  <Pass name="BloomDownSample0" group="PostProcess">
     <Dependencies>
-      <RenderTarget name="LightScene_DownSample_2" pre_condition_state="Alloc" post_update_state="Done" access="RenderTarget" format="R16G16B16A16_FLOAT" width_factor="0.5" height_factor="0.5"/>
-      <RenderTarget name="LightScene" pre_condition_state="LightFinished" access="AllShaderResource" format="R16G16B16A16_FLOAT"/>
+      <RenderTarget name="LightScene" pre_condition_state="LightFinished" post_update_state="BloomFinished" access="AllShaderResource"/>
+      <Texture2D name="BloomDownSample0" pre_condition_state="Alloc" post_update_state="DownSampleDone" access="UnorderedAccess" format="R16G16B16A16_FLOAT" width_factor ="0.5" height_factor="0.5" uav="true"/>
     </Dependencies>
     <Commands>
-      <SetRenderTarget>
-        <RenderTarget>LightScene_DownSample_2</RenderTarget>
-      </SetRenderTarget>
-      <SetRootSignature>BloomRootSignature</SetRootSignature>
-      <SetPipelineState>BloomDownSamplerPipelineState</SetPipelineState>
-      <SetDescriptorTable pipe="Graphics" root_param="0">
+      <SetRootSignature pipe="Compute">BloomFilterRootSignature</SetRootSignature>
+      <SetDescriptorTable pipe="Compute" root_param="0">
+        <Descriptor as="UnorderedAccess">BloomDownSample0</Descriptor>
         <Descriptor>ViewData</Descriptor>
         <Descriptor>LightScene</Descriptor>
       </SetDescriptorTable>
-      <DrawFullScreenQuad/>
+      <SetComputePipelineState>BloomFilterDownSampleFirst</SetComputePipelineState>
+      <DispatchComputeFilter tile_size_x="8" tile_size_y="8">BloomDownSample0</DispatchComputeFilter>
     </Commands>
   </Pass>
-  <Pass name="Bloom_DownSample_4" group="PostProcess">
+  <Pass name="BloomDownSample1" group="PostProcess">
     <Dependencies>
-      <RenderTarget name="LightScene_DownSample_4" pre_condition_state="Alloc" post_update_state="Done" access="RenderTarget" format="R16G16B16A16_FLOAT" width_factor="0.25" height_factor="0.25"/>
-      <RenderTarget name="LightScene_DownSample_2" pre_condition_state="Done" post_update_state="Free" access="AllShaderResource" format="R16G16B16A16_FLOAT" width_factor="0.5" height_factor="0.5"/>
+      <Texture2D name="BloomDownSample0" pre_condition_state="DownSampleDone" access="AllShaderResource"/>
+      <Texture2D name="BloomDownSample1" pre_condition_state="Alloc" post_update_state="DownSampleDone" access="UnorderedAccess" format="R16G16B16A16_FLOAT" width_factor ="0.25" height_factor="0.25" uav="true"/>
     </Dependencies>
     <Commands>
-      <SetRenderTarget>
-        <RenderTarget>LightScene_DownSample_4</RenderTarget>
-      </SetRenderTarget>
-      <SetRootSignature>BloomRootSignature</SetRootSignature>
-      <SetPipelineState>BloomDownSamplerPipelineState</SetPipelineState>
-      <SetDescriptorTable pipe="Graphics" root_param="0">
+      <SetRootSignature pipe="Compute">BloomFilterRootSignature</SetRootSignature>
+      <SetDescriptorTable pipe="Compute" root_param="0">
+        <Descriptor as="UnorderedAccess">BloomDownSample1</Descriptor>
         <Descriptor>ViewData</Descriptor>
-        <Descriptor>LightScene_DownSample_2</Descriptor>
+        <Descriptor>BloomDownSample0</Descriptor>
       </SetDescriptorTable>
-      <DrawFullScreenQuad/>
+      <SetComputePipelineState>BloomFilterDownSample</SetComputePipelineState>
+      <DispatchComputeFilter tile_size_x="8" tile_size_y="8">BloomDownSample1</DispatchComputeFilter>
     </Commands>
   </Pass>
-  <Pass name="Bloom_Threshold" group="PostProcess">
+  <Pass name="BloomDownSample2" group="PostProcess">
     <Dependencies>
-      <RenderTarget name="BloomThreshold" pre_condition_state="Alloc" post_update_state="Done" access="RenderTarget" format="R16G16B16A16_FLOAT" width_factor="0.25" height_factor="0.25"/>
-      <RenderTarget name="LightScene_DownSample_4" pre_condition_state="Done" post_update_state="Free" access="AllShaderResource" format="R16G16B16A16_FLOAT" width_factor="0.25" height_factor="0.25"/>
+      <Texture2D name="BloomDownSample1" pre_condition_state="DownSampleDone" access="AllShaderResource"/>
+      <Texture2D name="BloomDownSample2" pre_condition_state="Alloc" post_update_state="DownSampleDone" access="UnorderedAccess" format="R16G16B16A16_FLOAT" width_factor ="0.125" height_factor="0.125" uav="true"/>
     </Dependencies>
     <Commands>
-      <SetRenderTarget>
-        <RenderTarget>BloomThreshold</RenderTarget>
-      </SetRenderTarget>
-      <SetRootSignature>BloomRootSignature</SetRootSignature>
-      <SetPipelineState>BloomThresholdPipelineState</SetPipelineState>
-      <SetDescriptorTable pipe="Graphics" root_param="0">
+      <SetRootSignature pipe="Compute">BloomFilterRootSignature</SetRootSignature>
+      <SetDescriptorTable pipe="Compute" root_param="0">
+        <Descriptor as="UnorderedAccess">BloomDownSample2</Descriptor>
         <Descriptor>ViewData</Descriptor>
-        <Descriptor>LightScene_DownSample_4</Descriptor>
+        <Descriptor>BloomDownSample1</Descriptor>
       </SetDescriptorTable>
-      <DrawFullScreenQuad/>
+      <SetComputePipelineState>BloomFilterDownSample</SetComputePipelineState>
+      <DispatchComputeFilter tile_size_x="8" tile_size_y="8">BloomDownSample2</DispatchComputeFilter>
     </Commands>
   </Pass>
-  <Pass name="Blur_Down_0" group="PostProcess">
+  <Pass name="BloomDownSample3" group="PostProcess">
     <Dependencies>
-      <RenderTarget name="BlurDownsample" pre_condition_state="Alloc" post_update_state="Down0" access="RenderTarget" format="R16G16B16A16_FLOAT" width_factor="0.125" height_factor="0.125"/>
-      <RenderTarget name="BloomThreshold" pre_condition_state="Done" post_update_state="Free" access="AllShaderResource" format="R16G16B16A16_FLOAT" width_factor="0.25" height_factor="0.25"/>
+      <Texture2D name="BloomDownSample2" pre_condition_state="DownSampleDone" access="AllShaderResource"/>
+      <Texture2D name="BloomDownSample3" pre_condition_state="Alloc" post_update_state="DownSampleDone" access="UnorderedAccess" format="R16G16B16A16_FLOAT" width_factor ="0.0625" height_factor="0.0625" uav="true"/>
     </Dependencies>
     <Commands>
-      <SetRenderTarget>
-        <RenderTarget>BlurDownsample</RenderTarget>
-      </SetRenderTarget>
-      <SetRootSignature>BloomRootSignature</SetRootSignature>
-      <SetPipelineState>KawaseBlurDownSamplePipelineState</SetPipelineState>
-      <SetDescriptorTable pipe="Graphics" root_param="0">
+      <SetRootSignature pipe="Compute">BloomFilterRootSignature</SetRootSignature>
+      <SetDescriptorTable pipe="Compute" root_param="0">
+        <Descriptor as="UnorderedAccess">BloomDownSample3</Descriptor>
         <Descriptor>ViewData</Descriptor>
-        <Descriptor>BloomThreshold</Descriptor>
+        <Descriptor>BloomDownSample2</Descriptor>
       </SetDescriptorTable>
-      <DrawFullScreenQuad/>
+      <SetComputePipelineState>BloomFilterDownSample</SetComputePipelineState>
+      <DispatchComputeFilter tile_size_x="8" tile_size_y="8">BloomDownSample3</DispatchComputeFilter>
     </Commands>
   </Pass>
-  <Pass name="Blur_Up_0" group="PostProcess">
+  <Pass name="BloomDownSample4" group="PostProcess">
     <Dependencies>
-      <RenderTarget name="BloomBlurResult" pre_condition_state="Alloc" post_update_state="Blur0Done" access="RenderTarget" format="R16G16B16A16_FLOAT" width_factor="0.25" height_factor="0.25"/>
-      <RenderTarget name="BlurDownsample" pre_condition_state="Down0" post_update_state="Free" access="AllShaderResource" format="R16G16B16A16_FLOAT" width_factor="0.125" height_factor="0.125"/>
+      <Texture2D name="BloomDownSample3" pre_condition_state="DownSampleDone" access="AllShaderResource"/>
+      <Texture2D name="BloomDownSample4" pre_condition_state="Alloc" post_update_state="DownSampleDone" access="UnorderedAccess" format="R16G16B16A16_FLOAT" width_factor ="0.03125" height_factor="0.03125" uav="true"/>
     </Dependencies>
     <Commands>
-      <SetRenderTarget>
-        <RenderTarget>BloomBlurResult</RenderTarget>
-      </SetRenderTarget>
-      <SetRootSignature>BloomRootSignature</SetRootSignature>
-      <SetPipelineState>KawaseBlurUpSamplePipelineState</SetPipelineState>
-      <SetDescriptorTable pipe="Graphics" root_param="0">
+      <SetRootSignature pipe="Compute">BloomFilterRootSignature</SetRootSignature>
+      <SetDescriptorTable pipe="Compute" root_param="0">
+        <Descriptor as="UnorderedAccess">BloomDownSample4</Descriptor>
         <Descriptor>ViewData</Descriptor>
-        <Descriptor>BlurDownsample</Descriptor>
+        <Descriptor>BloomDownSample3</Descriptor>
       </SetDescriptorTable>
-      <DrawFullScreenQuad/>
+      <SetComputePipelineState>BloomFilterDownSample</SetComputePipelineState>
+      <DispatchComputeFilter tile_size_x="8" tile_size_y="8">BloomDownSample4</DispatchComputeFilter>
+    </Commands>
+  </Pass>
+  <Pass name="BloomDownSample5" group="PostProcess">
+    <Dependencies>
+      <Texture2D name="BloomDownSample4" pre_condition_state="DownSampleDone" access="AllShaderResource"/>
+      <Texture2D name="BloomDownSample5" pre_condition_state="Alloc" post_update_state="DownSampleDone" access="UnorderedAccess" format="R16G16B16A16_FLOAT" width_factor ="0.015625" height_factor="0.015625" uav="true"/>
+    </Dependencies>
+    <Commands>
+      <SetRootSignature pipe="Compute">BloomFilterRootSignature</SetRootSignature>
+      <SetDescriptorTable pipe="Compute" root_param="0">
+        <Descriptor as="UnorderedAccess">BloomDownSample5</Descriptor>
+        <Descriptor>ViewData</Descriptor>
+        <Descriptor>BloomDownSample4</Descriptor>
+      </SetDescriptorTable>
+      <SetComputePipelineState>BloomFilterDownSample</SetComputePipelineState>
+      <DispatchComputeFilter tile_size_x="8" tile_size_y="8">BloomDownSample5</DispatchComputeFilter>
+    </Commands>
+  </Pass>
+  <Pass name="BloomUpSample4" group="PostProcess">
+    <Dependencies>
+      <Texture2D name="BloomDownSample5" pre_condition_state="DownSampleDone" post_update_state="Free" access="AllShaderResource"/>
+      <Texture2D name="BloomDownSample4" pre_condition_state="DownSampleDone" post_update_state="Free" access="AllShaderResource"/>
+      <Texture2D name="UpSample4" pre_condition_state="Alloc" post_update_state="BloomDone" access="UnorderedAccess" format="R16G16B16A16_FLOAT" width_factor ="0.03125" height_factor="0.03125" uav="true"/>
+    </Dependencies>
+    <Commands>
+      <SetRootSignature pipe="Compute">BloomFilterAccumRootSignature</SetRootSignature>
+      <SetDescriptorTable pipe="Compute" root_param="0">
+        <Descriptor as="UnorderedAccess">UpSample4</Descriptor>
+        <Descriptor>ViewData</Descriptor>
+        <Descriptor>BloomDownSample4</Descriptor>
+        <Descriptor>BloomDownSample5</Descriptor>
+      </SetDescriptorTable>
+      <SetComputePipelineState>BloomFilterUpSample</SetComputePipelineState>
+      <DispatchComputeFilter tile_size_x="8" tile_size_y="8">UpSample4</DispatchComputeFilter>
+    </Commands>
+  </Pass>
+  <Pass name="BloomUpSample3" group="PostProcess">
+    <Dependencies>
+      <Texture2D name="UpSample4" pre_condition_state="BloomDone" post_update_state="Free" access="AllShaderResource"/>
+      <Texture2D name="BloomDownSample3" pre_condition_state="DownSampleDone" post_update_state="Free" access="AllShaderResource"/>
+      <Texture2D name="UpSample3" pre_condition_state="Alloc" post_update_state="BloomDone" access="UnorderedAccess" format="R16G16B16A16_FLOAT" width_factor ="0.0625" height_factor="0.0625" uav="true"/>
+    </Dependencies>
+    <Commands>
+      <SetRootSignature pipe="Compute">BloomFilterAccumRootSignature</SetRootSignature>
+      <SetDescriptorTable pipe="Compute" root_param="0">
+        <Descriptor as="UnorderedAccess">UpSample3</Descriptor>
+        <Descriptor>ViewData</Descriptor>
+        <Descriptor>BloomDownSample3</Descriptor>
+        <Descriptor>UpSample4</Descriptor>
+      </SetDescriptorTable>
+      <SetComputePipelineState>BloomFilterUpSample</SetComputePipelineState>
+      <DispatchComputeFilter tile_size_x="8" tile_size_y="8">UpSample3</DispatchComputeFilter>
+    </Commands>
+  </Pass>
+  <Pass name="BloomUpSample2" group="PostProcess">
+    <Dependencies>
+      <Texture2D name="UpSample3" pre_condition_state="BloomDone" post_update_state="Free" access="AllShaderResource"/>
+      <Texture2D name="BloomDownSample2" pre_condition_state="DownSampleDone" post_update_state="Free" access="AllShaderResource"/>
+      <Texture2D name="UpSample2" pre_condition_state="Alloc" post_update_state="BloomDone" access="UnorderedAccess" format="R16G16B16A16_FLOAT" width_factor ="0.125" height_factor="0.125" uav="true"/>
+    </Dependencies>
+    <Commands>
+      <SetRootSignature pipe="Compute">BloomFilterAccumRootSignature</SetRootSignature>
+      <SetDescriptorTable pipe="Compute" root_param="0">
+        <Descriptor as="UnorderedAccess">UpSample2</Descriptor>
+        <Descriptor>ViewData</Descriptor>
+        <Descriptor>BloomDownSample2</Descriptor>
+        <Descriptor>UpSample3</Descriptor>
+      </SetDescriptorTable>
+      <SetComputePipelineState>BloomFilterUpSample</SetComputePipelineState>
+      <DispatchComputeFilter tile_size_x="8" tile_size_y="8">UpSample2</DispatchComputeFilter>
+    </Commands>
+  </Pass>
+  <Pass name="BloomUpSample1" group="PostProcess">
+    <Dependencies>
+      <Texture2D name="UpSample2" pre_condition_state="BloomDone" post_update_state="Free" access="AllShaderResource"/>
+      <Texture2D name="BloomDownSample1" pre_condition_state="DownSampleDone" post_update_state="Free" access="AllShaderResource"/>
+      <Texture2D name="UpSample1" pre_condition_state="Alloc" post_update_state="BloomDone" access="UnorderedAccess" format="R16G16B16A16_FLOAT" width_factor ="0.25" height_factor="0.25" uav="true"/>
+    </Dependencies>
+    <Commands>
+      <SetRootSignature pipe="Compute">BloomFilterAccumRootSignature</SetRootSignature>
+      <SetDescriptorTable pipe="Compute" root_param="0">
+        <Descriptor as="UnorderedAccess">UpSample1</Descriptor>
+        <Descriptor>ViewData</Descriptor>
+        <Descriptor>BloomDownSample1</Descriptor>
+        <Descriptor>UpSample2</Descriptor>
+      </SetDescriptorTable>
+      <SetComputePipelineState>BloomFilterUpSample</SetComputePipelineState>
+      <DispatchComputeFilter tile_size_x="8" tile_size_y="8">UpSample1</DispatchComputeFilter>
+    </Commands>
+  </Pass>
+  <Pass name="BloomUpSample0" group="PostProcess">
+    <Dependencies>
+      <Texture2D name="UpSample1" pre_condition_state="BloomDone" post_update_state="Free" access="AllShaderResource"/>
+      <Texture2D name="BloomDownSample0" pre_condition_state="DownSampleDone" post_update_state="Free" access="AllShaderResource"/>
+      <Texture2D name="Bloom" pre_condition_state="Alloc" post_update_state="BloomDone" access="UnorderedAccess" format="R16G16B16A16_FLOAT" width_factor ="0.5" height_factor="0.5" uav="true"/>
+    </Dependencies>
+    <Commands>
+      <SetRootSignature pipe="Compute">BloomFilterAccumRootSignature</SetRootSignature>
+      <SetDescriptorTable pipe="Compute" root_param="0">
+        <Descriptor as="UnorderedAccess">Bloom</Descriptor>
+        <Descriptor>ViewData</Descriptor>
+        <Descriptor>BloomDownSample0</Descriptor>
+        <Descriptor>UpSample1</Descriptor>
+      </SetDescriptorTable>
+      <SetComputePipelineState>BloomFilterUpSample</SetComputePipelineState>
+      <DispatchComputeFilter tile_size_x="8" tile_size_y="8">Bloom</DispatchComputeFilter>
     </Commands>
   </Pass>
   <Pass name="ToneMapper" group="PostProcess">
     <Dependencies>
-      <RenderTarget name="LightScene" pre_condition_state="LightFinished" post_update_state="Free" access="AllShaderResource" format="R16G16B16A16_FLOAT"/>
-      <RenderTarget name="BloomBlurResult" pre_condition_state="Blur0Done" post_update_state="Free" access="AllShaderResource" format="R16G16B16A16_FLOAT"/>
+      <RenderTarget name="LightScene" pre_condition_state="BloomFinished" post_update_state="Free" access="AllShaderResource"/>
+      <Texture2D name="Bloom" pre_condition_state="BloomDone" post_update_state="Free" access="AllShaderResource"/>
       <Resource name="BackBuffer" access="RenderTarget"/>
     </Dependencies>
     <Commands>
@@ -298,7 +363,7 @@
       <SetDescriptorTable pipe="Graphics" root_param="0">
         <Descriptor>ViewData</Descriptor>
         <Descriptor>LightScene</Descriptor>
-        <Descriptor>BloomBlurResult</Descriptor>
+        <Descriptor>Bloom</Descriptor>
       </SetDescriptorTable>
       <DrawFullScreenQuad/>
     </Commands>

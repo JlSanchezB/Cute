@@ -423,17 +423,18 @@ namespace BoxCityTileSystem
 				float red = r / 255.f;
 				float green = g / 255.f;
 				float blue = b / 255.f;
-				return glm::vec4(glm::pow(red, 1.f / 2.2f), glm::pow(green, 1.f / 2.2f), glm::pow(blue, 1.f / 2.2f), 0.f);
+				return glm::vec4(glm::pow(red, 2.2f), glm::pow(green, 2.2f), glm::pow(blue, 2.2f), 0.f);
 			};
 
+		float emissive_factor = 5.f;
 		//Color palette
 		const glm::vec4 colour_palette[] =
 		{
-			colour_sRGB_to_linear(107, 238, 235),
-			colour_sRGB_to_linear(132, 238, 1),
-			colour_sRGB_to_linear(252, 230, 1),
-			colour_sRGB_to_linear(231, 1, 255),
-			colour_sRGB_to_linear(31, 36, 255)
+			emissive_factor * colour_sRGB_to_linear(107, 238, 235),
+			emissive_factor * colour_sRGB_to_linear(132, 238, 1),
+			emissive_factor * colour_sRGB_to_linear(252, 230, 1),
+			emissive_factor * colour_sRGB_to_linear(231, 1, 255),
+			emissive_factor * colour_sRGB_to_linear(30, 30, 255)
 		};
 
 		size_t allocation_size = 16 + sizeof(GPUBox) * box_data_array.size();
@@ -453,7 +454,7 @@ namespace BoxCityTileSystem
 			const auto& box_data = box_data_array[i];
 
 			uint8_t* dest_data = buffer.data() + 16 + i * sizeof(GPUBox);
-			reinterpret_cast<GPUBox*>(dest_data)->Fill(box_data.position, box_data.extents, (box_data.colour_palette == 0xFF) ? glm::vec3(0.1f, 0.1f, 0.1f) : colour_palette[box_data.colour_palette], (box_data.colour_palette == 0xFF) ? 0 : GPUBox::kFlags_Emissive);
+			reinterpret_cast<GPUBox*>(dest_data)->Fill(box_data.position, box_data.extents, (box_data.colour_palette == 0xFF) ? glm::vec3(0.05f, 0.05f, 0.05f) : colour_palette[box_data.colour_palette], (box_data.colour_palette == 0xFF) ? 0 : GPUBox::kFlags_Emissive);
 		}
 
 		//COUNTER_INC(c_Box_Count);
