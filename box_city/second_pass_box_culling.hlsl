@@ -18,7 +18,7 @@ RWStructuredBuffer<uint> indirect_culled_boxes_parameters : register(u0);
 //Buffer with the offsets of all the culled boxes
 RWStructuredBuffer<uint> indirect_culled_boxes : register(u1);
 
-#include "box_culling_common.h"
+#include "box_culling_common.hlsl"
 
 //Clear
 [numthreads(1, 1, 1)]

@@ -6,10 +6,8 @@ struct PSInput
     nointerpolation float3 world_normal : TEXCOORD0;
     nointerpolation float4 colour : TEXCOORD1;
 };
-cbuffer Root : register(b0)
-{
-    uint instance_data_offset;
-}
+
+ConstantBuffer<ViewDataStruct> ViewData : register(b0);
 
 ByteAddressBuffer static_gpu_memory: register(t0);
 ByteAddressBuffer dynamic_gpu_memory: register(t1);
@@ -83,7 +81,7 @@ PSInput vs_box_main(uint multi_instance_id : SV_InstanceID, uint vertex_id : SV_
     //https://twitter.com/SebAaltonen/status/1315982782439591938
     
     //Camera vector local to the cube
-    float3 camera_direction = camera_position.xyz - (quat_multiplication(instance_rotate_quat, box_translation) + instance_translation);
+    float3 camera_direction = ViewData.camera_position.xyz - (quat_multiplication(instance_rotate_quat, box_translation) + instance_translation);
     float3 local_camera_direction = quat_multiplication_transpose(instance_rotate_quat, camera_direction);
 
     //Calculate position, 8 vertices per box
@@ -99,7 +97,7 @@ PSInput vs_box_main(uint multi_instance_id : SV_InstanceID, uint vertex_id : SV_
     float3 box_position = position * box_extent + box_translation;
     float3 world_position = quat_multiplication(instance_rotate_quat, box_position) + instance_translation;
 
-    result.view_position = mul(view_projection_matrix, float4(world_position, 1.f));
+    result.view_position = mul(ViewData.view_projection_matrix, float4(world_position, 1.f));
 
     //vertex index to know the invoke vertex index
     //We know that all the face is going to use the normal of the invoke vertex and invoke vertex is not shared between the faces
@@ -128,7 +126,7 @@ float4 ps_box_main(PSInput input) : SV_TARGET
     else
     {
         //Basic NdL
-        float NL = (0.8f + 0.2f * saturate(dot(normalize(input.world_normal.xyz), sun_direction.xyz)));
+        float NL = (0.8f + 0.2f * saturate(dot(normalize(input.world_normal.xyz), ViewData.sun_direction.xyz)));
         return float4(input.colour.xyz * NL, 1.f);
     }
 }

@@ -1,6 +1,7 @@
 
 #include "constants.hlsl"
 
+ConstantBuffer<ViewDataStruct> ViewData : register(b0);
 RWTexture2D<float4> destination : register(u0);
 Texture2D source : register(t0);
 Texture2D source_blur : register(t1);
@@ -75,7 +76,7 @@ void up_sample(uint3 thread_id : SV_DispatchThreadID)
     uint dest_width, dest_height;
 	destination.GetDimensions(dest_width, dest_height);
     
-    float radius = bloom_radius;
+    float radius = ViewData.bloom_radius;
 
     if (all(thread_id.xy < uint2(dest_width, dest_height)))
     {

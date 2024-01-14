@@ -24,7 +24,7 @@ RWStructuredBuffer<uint> second_pass_indirect_culled_boxes_parameters : register
 //Buffer with the offsets of all the culled boxes, the first element is the number of boxes in the second pass
 RWStructuredBuffer<uint> second_pass_indirect_culled_boxes : register(u3);
 
-#include "box_culling_common.h"
+#include "box_culling_common.hlsl"
 
 //Clear
 [numthreads(1, 1, 1)]

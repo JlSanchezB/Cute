@@ -1,6 +1,7 @@
 
 #include "constants.hlsl"
 
+ConstantBuffer<ViewDataStruct> ViewData : register(b0);
 RWTexture2D<float4> result : register(u0);
 Texture2D scene_buffer : register(t0);
 Texture2D<float> depth_buffer : register(t1);
@@ -21,20 +22,20 @@ void fog(uint3 thread_id : SV_DispatchThreadID)
         viewport_position = 2.f * viewport_position - 1.f;
         float4 screen_position = float4(viewport_position.x, viewport_position.y, depth_value, 1.f);
 
-        float4 world_position = mul(view_projection_matrix_inv, screen_position);
+        float4 world_position = mul(ViewData.view_projection_matrix_inv, screen_position);
         world_position = world_position / world_position.w;
 
         //Calculate distance to the camera
-        float camera_distance = length(world_position.xyz - camera_position.xyz);
+        float camera_distance = length(world_position.xyz - ViewData.camera_position.xyz);
 
         //Calculate fog
-        float fog = exp2(-fog_density * camera_distance);
+        float fog = exp2(-ViewData.fog_density * camera_distance);
 
         //Read colour buffer
         float3 scene = scene_buffer[thread_id.xy].xyz;
        
         //Write out
-        result[thread_id.xy] = float4(lerp(fog_colour, scene, saturate(fog)), 1.f);
+        result[thread_id.xy] = float4(lerp(ViewData.fog_colour, scene, saturate(fog)), 1.f);
     }
 }
 

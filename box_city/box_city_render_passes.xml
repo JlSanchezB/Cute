@@ -12,7 +12,7 @@
   </Resource>
   <Resource type="RootSignature" name="ToneMapperRootSignature">
     <RootParam index="0" type="DescriptorTable">
-      <Range base_shader_register="1" size="1" type="ConstantBuffer" visibility="Pixel"/>
+      <Range base_shader_register="0" size="1" type="ConstantBuffer" visibility="Pixel"/>
       <Range base_shader_register="0" size="2" type="ShaderResource" visibility="Pixel"/>
     </RootParam>
     <StaticSample shader_register="0" visibility="Pixel" filter="Linear"/>
@@ -33,7 +33,7 @@
   <Resource type="RootSignature" name="BloomFilterRootSignature">
     <RootParam index="0" type="DescriptorTable">
       <Range base_shader_register="0" size="1" type="UnorderedAccessBuffer" visibility="All"/>
-      <Range base_shader_register="1" size="1" type="ConstantBuffer" visibility="All"/>
+      <Range base_shader_register="0" size="1" type="ConstantBuffer" visibility="All"/>
       <Range base_shader_register="0" size="1" type="ShaderResource" visibility="All"/>
     </RootParam>
     <StaticSample shader_register="0" visibility="All" filter="Linear"/>
@@ -41,7 +41,7 @@
   <Resource type="RootSignature" name="BloomFilterAccumRootSignature">
     <RootParam index="0" type="DescriptorTable">
       <Range base_shader_register="0" size="1" type="UnorderedAccessBuffer" visibility="All"/>
-      <Range base_shader_register="1" size="1" type="ConstantBuffer" visibility="All"/>
+      <Range base_shader_register="0" size="1" type="ConstantBuffer" visibility="All"/>
       <Range base_shader_register="0" size="2" type="ShaderResource" visibility="All"/>
     </RootParam>
     <StaticSample shader_register="0" visibility="All" filter="Linear"/>
@@ -61,7 +61,7 @@
   <Resource type="RootSignature" name="FogRootSignature">
     <RootParam index="0" type="DescriptorTable">
       <Range base_shader_register="0" size="1" type="UnorderedAccessBuffer" visibility="All"/>
-      <Range base_shader_register="1" size="1" type="ConstantBuffer" visibility="All"/>
+      <Range base_shader_register="0" size="1" type="ConstantBuffer" visibility="All"/>
       <Range base_shader_register="0" size="2" type="ShaderResource" visibility="All"/>
     </RootParam>
   </Resource>

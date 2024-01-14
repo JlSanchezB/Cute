@@ -1,4 +1,4 @@
-cbuffer ViewData : register(b1)
+struct ViewDataStruct
 {
     float4x4 view_projection_matrix;
     float4x4 last_frame_view_projection_matrix;

@@ -1,6 +1,8 @@
 
 #include "constants.hlsl"
 
+ConstantBuffer<ViewDataStruct> ViewData : register(b1);
+
 ByteAddressBuffer static_gpu_memory: register(t0);
 ByteAddressBuffer dynamic_gpu_memory: register(t1);
 Texture2D<float> HiZ : register(t2);
@@ -39,14 +41,14 @@ bool is_visible(float4 instance_rotate_quad, float3 instance_position, float3 bo
     // check box outside/inside of frustum
     for (int ii = 0; ii < 6; ii++)
     {
-        if ((dot(frustum_planes[ii], float4(box_points[0], 1.0f)) < 0.0f) &&
-            (dot(frustum_planes[ii], float4(box_points[1], 1.0f)) < 0.0f) &&
-            (dot(frustum_planes[ii], float4(box_points[2], 1.0f)) < 0.0f) &&
-            (dot(frustum_planes[ii], float4(box_points[3], 1.0f)) < 0.0f) &&
-            (dot(frustum_planes[ii], float4(box_points[4], 1.0f)) < 0.0f) &&
-            (dot(frustum_planes[ii], float4(box_points[5], 1.0f)) < 0.0f) &&
-            (dot(frustum_planes[ii], float4(box_points[6], 1.0f)) < 0.0f) &&
-            (dot(frustum_planes[ii], float4(box_points[7], 1.0f)) < 0.0f))
+        if ((dot(ViewData.frustum_planes[ii], float4(box_points[0], 1.0f)) < 0.0f) &&
+            (dot(ViewData.frustum_planes[ii], float4(box_points[1], 1.0f)) < 0.0f) &&
+            (dot(ViewData.frustum_planes[ii], float4(box_points[2], 1.0f)) < 0.0f) &&
+            (dot(ViewData.frustum_planes[ii], float4(box_points[3], 1.0f)) < 0.0f) &&
+            (dot(ViewData.frustum_planes[ii], float4(box_points[4], 1.0f)) < 0.0f) &&
+            (dot(ViewData.frustum_planes[ii], float4(box_points[5], 1.0f)) < 0.0f) &&
+            (dot(ViewData.frustum_planes[ii], float4(box_points[6], 1.0f)) < 0.0f) &&
+            (dot(ViewData.frustum_planes[ii], float4(box_points[7], 1.0f)) < 0.0f))
         {
             //Outside
             return false;
@@ -64,12 +66,12 @@ bool is_visible(float4 instance_rotate_quad, float3 instance_position, float3 bo
     int outside = 0;
 
     // check frustum outside/inside box
-    {outside = 0; for (int k = 0; k < 8; k++) outside += ((frustum_points[k].x > box_max.x) ? 1 : 0); if (outside == 8) return false; };
-    {outside = 0; for (int k = 0; k < 8; k++) outside += ((frustum_points[k].x < box_min.x) ? 1 : 0); if (outside == 8) return false; };
-    {outside = 0; for (int k = 0; k < 8; k++) outside += ((frustum_points[k].y > box_max.y) ? 1 : 0); if (outside == 8) return false; };
-    {outside = 0; for (int k = 0; k < 8; k++) outside += ((frustum_points[k].y < box_min.y) ? 1 : 0); if (outside == 8) return false; };
-    {outside = 0; for (int k = 0; k < 8; k++) outside += ((frustum_points[k].z > box_max.z) ? 1 : 0); if (outside == 8) return false; };
-    {outside = 0; for (int k = 0; k < 8; k++) outside += ((frustum_points[k].z < box_min.z) ? 1 : 0); if (outside == 8) return false; };
+    {outside = 0; for (int k = 0; k < 8; k++) outside += ((ViewData.frustum_points[k].x > box_max.x) ? 1 : 0); if (outside == 8) return false; };
+    {outside = 0; for (int k = 0; k < 8; k++) outside += ((ViewData.frustum_points[k].x < box_min.x) ? 1 : 0); if (outside == 8) return false; };
+    {outside = 0; for (int k = 0; k < 8; k++) outside += ((ViewData.frustum_points[k].y > box_max.y) ? 1 : 0); if (outside == 8) return false; };
+    {outside = 0; for (int k = 0; k < 8; k++) outside += ((ViewData.frustum_points[k].y < box_min.y) ? 1 : 0); if (outside == 8) return false; };
+    {outside = 0; for (int k = 0; k < 8; k++) outside += ((ViewData.frustum_points[k].z > box_max.z) ? 1 : 0); if (outside == 8) return false; };
+    {outside = 0; for (int k = 0; k < 8; k++) outside += ((ViewData.frustum_points[k].z < box_min.z) ? 1 : 0); if (outside == 8) return false; };
 
     return true;
 }
@@ -92,7 +94,7 @@ bool hiz_is_visible(float4 instance_rotate_quad, float3 instance_position, float
     float3 clip_box_points[8];
     [unroll] for (uint point_index = 0; point_index < 8; ++point_index)
     {
-        float4 view_box_point = mul(last_frame_view_projection_matrix, float4(box_points[point_index], 1.f));
+        float4 view_box_point = mul(ViewData.last_frame_view_projection_matrix, float4(box_points[point_index], 1.f));
         clip_box_points[point_index] = view_box_point.xyz / view_box_point.w;
     }
 

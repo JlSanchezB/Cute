@@ -131,11 +131,8 @@ void DrawCityBoxesPass::Render(render::RenderContext& render_context) const
 	}
 
 	context->SetRootSignature(display::Pipe::Graphics, m_display_resources->m_box_render_root_signature);
-	//Set the offset as a root constant, zero means use the indirect path
-	uint32_t offset_to_instance_offsets = 0;
 
-	context->SetConstants(display::Pipe::Graphics, 0, &offset_to_instance_offsets, 1);
-	context->SetDescriptorTable(display::Pipe::Graphics, 1, m_display_resources->m_box_render_description_table_handle);
+	context->SetDescriptorTable(display::Pipe::Graphics, 0, m_display_resources->m_box_render_description_table_handle);
 
 	//Render
 	context->SetPipelineState(m_display_resources->m_box_render_pipeline_state);

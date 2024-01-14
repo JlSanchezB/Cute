@@ -1,6 +1,7 @@
 
 #include "constants.hlsl"
 
+ConstantBuffer<ViewDataStruct> ViewData : register(b0);
 Texture2D light_scene : t0;
 SamplerState light_scene_sampler : s0;
 Texture2D light_scene_4 : t1;
@@ -139,10 +140,10 @@ float noise(float2 x) {
 
 float4 ps_main(PSInput input) : SV_TARGET
 {
-    float3 colour = light_scene.Sample(light_scene_sampler, input.tex).rgb * exposure;
+    float3 colour = light_scene.Sample(light_scene_sampler, input.tex).rgb * ViewData.exposure;
     
     //Add Bloom
-    float3 bloom = light_scene_4.Sample(light_scene_sampler, input.tex).rgb * bloom_intensity * exposure;
+    float3 bloom = light_scene_4.Sample(light_scene_sampler, input.tex).rgb * ViewData.bloom_intensity * ViewData.exposure;
 
     if (!BloomEnable) bloom = float3(0.f, 0.f, 0.f);
 
