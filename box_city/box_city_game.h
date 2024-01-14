@@ -93,7 +93,13 @@ public:
 	float m_bloom_radius = 1.f;
 
 	//Bloom Intensity
-	float m_bloom_intensity = 0.05f;
+	float m_bloom_intensity = 0.1f;
+
+	//Fog density
+	float m_fog_density = 0.0015f;
+
+	//Fog colour
+	glm::vec3 m_fog_colour = glm::vec3(0.01f, 0.01f, 0.1f);
 
 	BoxCityGame()
 	{

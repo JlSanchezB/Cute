@@ -58,6 +58,17 @@
     <RootSignature>BloomFilterAccumRootSignature</RootSignature>
     <ComputeShader entry_point="up_sample" target="cs_6_6">bloom.hlsl</ComputeShader>
   </Resource>
+  <Resource type="RootSignature" name="FogRootSignature">
+    <RootParam index="0" type="DescriptorTable">
+      <Range base_shader_register="0" size="1" type="UnorderedAccessBuffer" visibility="All"/>
+      <Range base_shader_register="1" size="1" type="ConstantBuffer" visibility="All"/>
+      <Range base_shader_register="0" size="2" type="ShaderResource" visibility="All"/>
+    </RootParam>
+  </Resource>
+  <Resource type="ComputePipelineState" name="Fog">
+    <RootSignature>FogRootSignature</RootSignature>
+    <ComputeShader entry_point="fog" target="cs_6_6">fog.hlsl</ComputeShader>
+  </Resource>
 </Global>
 <Passes>
   <Pass name="SyncStaticGPUMemory" group="Auto">
@@ -148,7 +159,7 @@
   <Pass name="SecondPassBuildHiZ" group="Solids">
     <Dependencies>
       <Texture2D name="HiZ" pre_condition_state="SecondPassReadyToUpdate" post_update_state="Free" access="UnorderedAccess" format="R32_FLOAT" width="768" height="512"/>
-      <DepthBuffer name="SceneDepth" pre_condition_state="SecondPassReadyToCapture" post_update_state="Free" format="D32_FLOAT" default_depth="0.f" access="AllShaderResource"/>
+      <DepthBuffer name="SceneDepth" pre_condition_state="SecondPassReadyToCapture" post_update_state="LightFinished" format="D32_FLOAT" default_depth="0.f" access="AllShaderResource"/>
       <Buffer name="HiZ_atomic" pre_condition_state="Alloc" post_update_state="Free" access="UnorderedAccess" size ="8192" clear="true"/>
     </Dependencies>
     <Commands>
@@ -162,9 +173,27 @@
       <DispatchCompute group_count_x="64" group_count_y="64"/>
     </Commands>
   </Pass>
+  <Pass name="Fog" group="PostProcess">
+    <Dependencies>
+      <RenderTarget name="LightScene" pre_condition_state="LightFinished" post_update_state="Free" access="AllShaderResource"/>
+      <Texture2D name="Scene" pre_condition_state="Alloc" post_update_state="FogFinished" access="UnorderedAccess" format="R16G16B16A16_FLOAT" uav="true"/>
+      <DepthBuffer name="SceneDepth" pre_condition_state="LightFinished" post_update_state="Free" access="AllShaderResource"/>
+    </Dependencies>
+    <Commands>
+      <SetRootSignature pipe="Compute">FogRootSignature</SetRootSignature>
+      <SetDescriptorTable pipe="Compute" root_param="0">
+        <Descriptor as="UnorderedAccess">Scene</Descriptor>
+        <Descriptor>ViewData</Descriptor>
+        <Descriptor>LightScene</Descriptor>
+        <Descriptor as="ShaderResource">SceneDepth</Descriptor>
+      </SetDescriptorTable>
+      <SetComputePipelineState>Fog</SetComputePipelineState>
+      <DispatchComputeFilter tile_size_x="8" tile_size_y="8">Scene</DispatchComputeFilter>
+    </Commands>
+  </Pass>
   <Pass name="BloomDownSample0" group="PostProcess">
     <Dependencies>
-      <RenderTarget name="LightScene" pre_condition_state="LightFinished" post_update_state="BloomFinished" access="AllShaderResource"/>
+      <RenderTarget name="Scene" pre_condition_state="FogFinished" post_update_state="BloomFinished" access="AllShaderResource"/>
       <Texture2D name="BloomDownSample0" pre_condition_state="Alloc" post_update_state="DownSampleDone" access="UnorderedAccess" format="R16G16B16A16_FLOAT" width_factor ="0.5" height_factor="0.5" uav="true"/>
     </Dependencies>
     <Commands>
@@ -172,7 +201,7 @@
       <SetDescriptorTable pipe="Compute" root_param="0">
         <Descriptor as="UnorderedAccess">BloomDownSample0</Descriptor>
         <Descriptor>ViewData</Descriptor>
-        <Descriptor>LightScene</Descriptor>
+        <Descriptor>Scene</Descriptor>
       </SetDescriptorTable>
       <SetComputePipelineState>BloomFilterDownSampleFirst</SetComputePipelineState>
       <DispatchComputeFilter tile_size_x="8" tile_size_y="8">BloomDownSample0</DispatchComputeFilter>
@@ -350,7 +379,7 @@
   </Pass>
   <Pass name="ToneMapper" group="PostProcess">
     <Dependencies>
-      <RenderTarget name="LightScene" pre_condition_state="BloomFinished" post_update_state="Free" access="AllShaderResource"/>
+      <RenderTarget name="Scene" pre_condition_state="BloomFinished" post_update_state="Free" access="AllShaderResource"/>
       <Texture2D name="Bloom" pre_condition_state="BloomDone" post_update_state="Free" access="AllShaderResource"/>
       <Resource name="BackBuffer" access="RenderTarget"/>
     </Dependencies>
@@ -362,7 +391,7 @@
       <SetPipelineState>ToneMapperPipelineState</SetPipelineState>
       <SetDescriptorTable pipe="Graphics" root_param="0">
         <Descriptor>ViewData</Descriptor>
-        <Descriptor>LightScene</Descriptor>
+        <Descriptor>Scene</Descriptor>
         <Descriptor>Bloom</Descriptor>
       </SetDescriptorTable>
       <DrawFullScreenQuad/>

@@ -17,6 +17,7 @@ struct ViewConstantBuffer
 {
 	glm::mat4x4 projection_view_matrix;
 	glm::mat4x4 last_frame_view_projection_matrix;
+	glm::mat4x4 projection_view_matrix_inv;
 	glm::vec4 camera_position;
 	float time;
 	glm::vec3 time_gap;
@@ -27,6 +28,8 @@ struct ViewConstantBuffer
 	float bloom_radius;
 	float bloom_intensity;
 	float gap;
+	float fog_density;
+	glm::vec3 fog_colour;
 };
 
 struct BoxCityResources

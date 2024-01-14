@@ -82,5 +82,6 @@
     <None Include="tonemapper.hlsl" />
     <None Include="constants.hlsl" />
     <None Include="bloom.hlsl" />
+    <None Include="fog.hlsl" />
   </ItemGroup>
 </Project>

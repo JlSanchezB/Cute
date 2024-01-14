@@ -1,14 +1,5 @@
 
-cbuffer ViewData : register(b1)
-{
-    float4x4 view_projection_matrix;
-    float4x4 last_frame_view_projection_matrix;
-    float4 camera_position;
-    float4 time;
-    float4 sun_direction;
-    float4 frustum_planes[6];
-    float4 frustum_points[8];
-};
+#include "constants.hlsl"
 
 ByteAddressBuffer static_gpu_memory: register(t0);
 ByteAddressBuffer dynamic_gpu_memory: register(t1);

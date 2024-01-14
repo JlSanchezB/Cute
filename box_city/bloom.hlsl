@@ -1,9 +1,9 @@
 
 #include "constants.hlsl"
 
-RWTexture2D<float4> destination : u0;
-Texture2D source : t0;
-Texture2D source_blur : t0;
+RWTexture2D<float4> destination : register(u0);
+Texture2D source : register(t0);
+Texture2D source_blur : register(t1);
 SamplerState source_sampler : s0;
 
 [numthreads(8, 8, 1)]

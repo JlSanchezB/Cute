@@ -306,6 +306,7 @@ void BoxCityGame::OnRender(double total_time, float elapsed_time)
 	ViewConstantBuffer view_constant_buffer;
 	view_constant_buffer.projection_view_matrix = camera->GetViewProjectionMatrix();
 	view_constant_buffer.last_frame_view_projection_matrix = last_frame_view_projection_matrix;
+	view_constant_buffer.projection_view_matrix_inv = glm::inverse(camera->GetViewProjectionMatrix());
 	view_constant_buffer.camera_position = glm::vec4(camera->GetInterpolatedPosition(), 0.f);
 	view_constant_buffer.time = static_cast<float>(total_time);
 	view_constant_buffer.sun_direction = glm::rotate(glm::radians(m_sun_direction_angles.y), glm::vec3(1.f, 0.f, 0.f)) * glm::rotate(glm::radians(m_sun_direction_angles.x), glm::vec3(0.f, 0.f, 1.f)) * glm::vec4(1.f, 0.f, 0.f, 0.f);
@@ -314,6 +315,8 @@ void BoxCityGame::OnRender(double total_time, float elapsed_time)
 	view_constant_buffer.exposure = m_exposure;
 	view_constant_buffer.bloom_radius = m_bloom_radius;
 	view_constant_buffer.bloom_intensity = m_bloom_intensity;
+	view_constant_buffer.fog_density = m_fog_density;
+	view_constant_buffer.fog_colour = m_fog_colour;
 	
 	render_frame.GetBeginFrameCommandBuffer().UploadResourceBuffer(m_display_resources.m_view_constant_buffer, &view_constant_buffer, sizeof(view_constant_buffer));
 	render_frame.GetBeginFrameCommandBuffer().Close();
@@ -432,6 +435,7 @@ void BoxCityGame::OnAddImguiMenu()
 		ImGui::SliderFloat("Exposure", &m_exposure, 0.f, 10.f);
 		ImGui::SliderFloat("Bloom Radius", &m_bloom_radius, 0.f, 10.f);
 		ImGui::SliderFloat("Bloom Intensity", &m_bloom_intensity, 0.f, 1.f);
+		ImGui::SliderFloat("Fog Density", &m_fog_density, 0.f, 0.01f, "%.6f");
 
 		ImGui::EndMenu();
 	}
