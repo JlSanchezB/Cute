@@ -84,7 +84,7 @@ namespace display
 		uint32_t aligned_offset = 0;
 		InputType input_type = InputType::Vertex;
 		uint32_t instance_step_rate = 0;
-		
+
 		InputElementDesc()
 		{
 		}
@@ -146,10 +146,10 @@ namespace display
 	struct PipelineStateDesc
 	{
 		WeakRootSignatureHandle root_signature;
-		
+
 		CompileShaderDesc vertex_shader;
 		CompileShaderDesc pixel_shader;
-		
+
 		InputLayoutDesc input_layout;
 		RasterizationDesc rasteritation_state;
 		BlendDesc blend_desc;
@@ -181,7 +181,7 @@ namespace display
 		float height;
 		float min_depth = 0.f;
 		float max_depth = 1.f;
-		
+
 		Viewport()
 		{
 		}
@@ -196,7 +196,7 @@ namespace display
 		uint32_t top;
 		uint32_t right;
 		uint32_t bottom;
-		
+
 		Rect()
 		{
 		}
@@ -212,7 +212,7 @@ namespace display
 		Access access = Access::Static;
 		Format format = Format::R16_UINT; //Used for index buffers
 		BufferType type = BufferType::ConstantBuffer;
-		
+
 		//Init data
 		const void* init_data = nullptr;
 
@@ -222,10 +222,10 @@ namespace display
 		//StructuredBuffers
 		uint32_t num_elements = 0;
 		uint32_t structure_stride = 0; //Used in vertex buffers as well
-		
+
 		//UAV access
 		bool is_UAV = false;
-		
+
 		//Helpers to create the different types of buffes
 		static BufferDesc CreateStructuredBuffer(Access access, uint32_t num_elements, uint32_t structure_stride, bool is_UAV = false, const void* init_data = nullptr)
 		{
@@ -249,7 +249,7 @@ namespace display
 			desc.is_UAV = is_UAV;
 			return desc;
 		}
-		
+
 		static BufferDesc CreateConstantBuffer(Access access, size_t size, const void* init_data = nullptr)
 		{
 			assert(access != Access::Static);
@@ -296,13 +296,14 @@ namespace display
 		uint16_t mips = 1;
 		size_t size = 0;
 		const void* init_data = nullptr;
-		float default_colour_clear[4] = {0.f, 0.f, 0.f, 0.f}; //Colour
+		float default_colour_clear[4] = { 0.f, 0.f, 0.f, 0.f }; //Colour
 		float default_clear = 1.f; //Depth
 		uint8_t default_stencil = 0; //Stencil
 
 		bool is_UAV = false;
 		bool is_render_target = false;
 		bool is_depth_buffer = false;
+		bool is_texture_file = false; //In PC is DDS
 
 		static Texture2DDesc CreateTexture2D(Access _access, Format format, uint32_t width, uint32_t height, uint32_t pitch, uint32_t size, uint16_t mips, const void* init_data = nullptr, bool is_UAV = false)
 		{
@@ -321,6 +322,17 @@ namespace display
 			desc.default_colour_clear[1] = 0.f;
 			desc.default_colour_clear[2] = 0.f;
 			desc.default_colour_clear[3] = 0.f;
+			return desc;
+		}
+
+		static Texture2DDesc CreateTexture2DFromFile(const void* texture_buffer, uint32_t size)
+		{
+			Texture2DDesc desc;
+			desc.access = Access::Static;
+			desc.init_data = texture_buffer;
+			desc.size = size;
+			desc.is_texture_file = true;
+
 			return desc;
 		}
 
@@ -371,7 +383,7 @@ namespace display
 		}
 	};
 
-	struct AsDepthBuffer: WeakTexture2DHandle
+	struct AsDepthBuffer : WeakTexture2DHandle
 	{
 		uint32_t index = 0;
 

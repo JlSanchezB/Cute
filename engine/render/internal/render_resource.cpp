@@ -36,7 +36,7 @@ namespace
 			{"Dynamic", display::Access::Dynamic}
 		};
 	};
-	
+
 	template<>
 	struct ConversionTable<display::RootSignatureParameterType>
 	{
@@ -236,7 +236,8 @@ namespace render
 		if (texture_buffer.size() > 0)
 		{
 			//Load the texture
-			//Init(display::CreateTextureResource(load_context.device, reinterpret_cast<void*>(&texture_buffer[0]), texture_buffer.size(), load_context.name));
+			display::Texture2DDesc texture_desc = display::Texture2DDesc::CreateTexture2DFromFile(reinterpret_cast<void*>(&texture_buffer[0]), static_cast<uint32_t>(texture_buffer.size()));
+			Init(display::CreateTexture2D(load_context.device, texture_desc, load_context.name));
 
 			if (!GetHandle().IsValid())
 			{
@@ -361,7 +362,7 @@ namespace render
 		}
 	}
 
-	void RenderTargetResource::Load(LoadContext & load_context)
+	void RenderTargetResource::Load(LoadContext& load_context)
 	{
 		uint32_t width;
 		uint32_t height;
@@ -378,18 +379,18 @@ namespace render
 		m_heigth = height;
 	}
 
-	void DepthBufferResource::Load(LoadContext & load_context)
+	void DepthBufferResource::Load(LoadContext& load_context)
 	{
 		//Depth buffers are dynamic, they are created during init pass when the resolution is known
 	}
 
-	void GraphicsPipelineStateResource::Load(LoadContext & load_context)
+	void GraphicsPipelineStateResource::Load(LoadContext& load_context)
 	{
 		display::PipelineStateDesc pipeline_state_desc;
 
 		std::vector<char> vertex_shader;
 		std::vector<char> pixel_shader;
-		
+
 		QueryTableAttribute(load_context, load_context.current_xml_element, "primitive_topology", pipeline_state_desc.primitive_topology, AttributeType::Optional);
 		QueryAttribute(load_context, load_context.current_xml_element, "depth_enable", pipeline_state_desc.depth_enable, AttributeType::Optional);
 		QueryAttribute(load_context, load_context.current_xml_element, "depth_write", pipeline_state_desc.depth_write, AttributeType::Optional);
@@ -561,7 +562,7 @@ namespace render
 		}
 	}
 
-	void ComputePipelineStateResource::Load(LoadContext & load_context)
+	void ComputePipelineStateResource::Load(LoadContext& load_context)
 	{
 		display::ComputePipelineStateDesc pipeline_state_desc;
 
@@ -621,7 +622,7 @@ namespace render
 		}
 	}
 
-	void DescriptorTableResource::Load(LoadContext & load_context)
+	void DescriptorTableResource::Load(LoadContext& load_context)
 	{
 		display::DescriptorTableDesc descriptor_table_desc;
 
@@ -634,7 +635,7 @@ namespace render
 			if (CheckNodeName(xml_element_root, "Descriptor"))
 			{
 				ResourceName resource_name(xml_element_root->GetText());
-				
+
 				if (descriptor_table_desc.num_descriptors == descriptor_table_desc.kNumMaxDescriptors)
 				{
 					AddError(load_context, "Number max of descriptor reach in descriptor table <%s>", load_context.name);

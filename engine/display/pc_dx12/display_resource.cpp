@@ -3,33 +3,16 @@
 
 namespace
 {
-	struct SourceResourceData
-	{
-		size_t size = 0;
-		size_t row_pitch = 0; //Needed for textures
-		size_t slice_pitch = 0;
-		const void* data;
-
-		//It is a simple buffer
-		SourceResourceData(const void* _data, size_t _size) : data(_data), size(_size), row_pitch(_size), slice_pitch(_size)
-		{
-		}
-		//Texture buffer
-		SourceResourceData(const void* _data, size_t _size, size_t _row_pitch, size_t _slice_pitch) : data(_data), size(_size), row_pitch(_row_pitch), slice_pitch(_slice_pitch)
-		{
-		}
-	};
-
 	//Update a resource
-	bool UpdateResource(display::Device* device, const SourceResourceData& source_data, const D3D12_RESOURCE_DESC& buffer_desc, ComPtr<ID3D12Resource>& resource, D3D12_RESOURCE_STATES resource_state)
+	bool UpdateResource(display::Device* device, std::vector<D3D12_SUBRESOURCE_DATA>& source_data, const D3D12_RESOURCE_DESC& buffer_desc, ComPtr<ID3D12Resource>& resource, D3D12_RESOURCE_STATES resource_state)
 	{
 		if (buffer_desc.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER)
 		{
 			//Use the buffer upload path
-			display::AllocationUploadBuffer upload_buffer_alloc = display::AllocateUploadBuffer(device, source_data.size);
-			
+			display::AllocationUploadBuffer upload_buffer_alloc = display::AllocateUploadBuffer(device, source_data[0].SlicePitch);
+
 			//Copy to the upload buffer
-			memcpy(upload_buffer_alloc.memory, source_data.data, source_data.size);
+			memcpy(upload_buffer_alloc.memory, source_data[0].pData, source_data[0].SlicePitch);
 
 			//Send to the GPU a copy
 
@@ -39,7 +22,7 @@ namespace
 
 			dx12_context->command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(resource.Get(), resource_state, D3D12_RESOURCE_STATE_COPY_DEST));
 
-			dx12_context->command_list->CopyBufferRegion(resource.Get(), 0, upload_buffer_alloc.resource.Get(), upload_buffer_alloc.offset, source_data.size);
+			dx12_context->command_list->CopyBufferRegion(resource.Get(), 0, upload_buffer_alloc.resource.Get(), upload_buffer_alloc.offset, source_data[0].SlicePitch);
 
 			//Left the resource as it was originally
 			dx12_context->command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(resource.Get(), D3D12_RESOURCE_STATE_COPY_DEST, resource_state));
@@ -58,11 +41,14 @@ namespace
 			ComPtr<ID3D12Resource> upload_resource;
 			ComPtr<D3D12MA::Allocation> upload_allocation;
 
+			//Calculate the size needed
+			UINT64 required_size = GetRequiredIntermediateSize(resource.Get(), 0, static_cast<UINT>(source_data.size()));
+
 			//Create upload resource
 			allocationDesc.HeapType = D3D12_HEAP_TYPE_UPLOAD;
 			if (FAILED(device->m_allocator->CreateResource(
 				&allocationDesc,
-				&CD3DX12_RESOURCE_DESC::Buffer(source_data.size),
+				&CD3DX12_RESOURCE_DESC::Buffer(required_size),
 				D3D12_RESOURCE_STATE_GENERIC_READ,
 				nullptr,
 				&upload_allocation,
@@ -73,13 +59,6 @@ namespace
 			}
 			SetObjectName(upload_resource.Get(), "CopyResource");
 
-			// Copy data to the intermediate upload heap and then schedule a copy 
-			// from the upload heap to the default heap
-			D3D12_SUBRESOURCE_DATA copy_data = {};
-			copy_data.pData = source_data.data;
-			copy_data.RowPitch = source_data.row_pitch;
-			copy_data.SlicePitch = source_data.slice_pitch;
-
 			//Command list
 			auto& command_list = device->Get(device->m_resource_command_list).resource;
 
@@ -87,7 +66,7 @@ namespace
 			display::Context* context = OpenCommandList(device, device->m_resource_command_list);
 			auto dx12_context = reinterpret_cast<display::DX12Context*>(context);
 
-			UpdateSubresources<1>(command_list.Get(), resource.Get(), upload_resource.Get(), 0, 0, 1, &copy_data);
+			UpdateSubresources<15>(command_list.Get(), resource.Get(), upload_resource.Get(), 0, 0, static_cast<UINT>(source_data.size()), &source_data[0]);
 
 			//Left the resource as it was originally
 			dx12_context->command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(resource.Get(), D3D12_RESOURCE_STATE_COPY_DEST, resource_state));
@@ -106,10 +85,10 @@ namespace
 	}
 
 	//Create a resource
-	bool CreateResource(display::Device* device, const SourceResourceData& source_data, const D3D12_HEAP_TYPE heap_type, const D3D12_RESOURCE_DESC& buffer_desc, ComPtr<ID3D12Resource>& resource, ComPtr<D3D12MA::Allocation>& allocation, display::ResourceMemoryAccess& resource_memory_access, D3D12_RESOURCE_STATES resource_state, D3D12_CLEAR_VALUE* clear_values = nullptr)
+	bool CreateResource(display::Device* device, std::vector<D3D12_SUBRESOURCE_DATA>& source_data, const D3D12_HEAP_TYPE heap_type, const D3D12_RESOURCE_DESC& buffer_desc, ComPtr<ID3D12Resource>& resource, ComPtr<D3D12MA::Allocation>& allocation, display::ResourceMemoryAccess& resource_memory_access, D3D12_RESOURCE_STATES resource_state, D3D12_CLEAR_VALUE* clear_values = nullptr)
 	{
 		D3D12MA::ALLOCATION_DESC allocationDesc = {};
-		
+
 		//Upload resource
 		ComPtr<ID3D12Resource> upload_resource;
 		ComPtr<D3D12MA::Allocation> upload_allocation;
@@ -126,7 +105,7 @@ namespace
 			SetLastErrorMessage(device, "Error creating a resource in the default heap");
 			return false;
 		}
-		
+
 		if (heap_type == D3D12_HEAP_TYPE_UPLOAD || heap_type == D3D12_HEAP_TYPE_READBACK)
 		{
 			//capture memory pointer and size
@@ -136,10 +115,10 @@ namespace
 				SetLastErrorMessage(device, "Error mapping to CPU memory a resource");
 				return false;
 			}
-			resource_memory_access.memory_size = source_data.size;
+			resource_memory_access.memory_size = allocation.Get()->GetSize();
 		}
 
-		if (source_data.data)
+		if (source_data.size() > 0)
 		{
 			if (heap_type == D3D12_HEAP_TYPE_DEFAULT)
 			{
@@ -157,7 +136,7 @@ namespace
 					SetLastErrorMessage(device, "Error mapping to CPU memory a resource");
 					return false;
 				}
-				memcpy(destination_buffer, source_data.data, source_data.size);
+				memcpy(destination_buffer, source_data[0].pData, source_data[0].SlicePitch);
 				resource->Unmap(0, nullptr);
 			}
 		}
@@ -167,7 +146,7 @@ namespace
 
 	//Helper function to create a ring resources
 	template <typename FUNCTION, typename POOL>
-	auto CreateRingResources(display::Device* device, const SourceResourceData& source_data, const display::Access access, const D3D12_HEAP_TYPE heap_type, const D3D12_RESOURCE_DESC& buffer_desc, POOL& pool, D3D12_RESOURCE_STATES resource_state, FUNCTION&& view_create, D3D12_CLEAR_VALUE* clear_values = nullptr)
+	auto CreateRingResources(display::Device* device, std::vector<D3D12_SUBRESOURCE_DATA>& source_data, const display::Access access, const D3D12_HEAP_TYPE heap_type, const D3D12_RESOURCE_DESC& buffer_desc, POOL& pool, D3D12_RESOURCE_STATES resource_state, FUNCTION&& view_create, D3D12_CLEAR_VALUE* clear_values = nullptr)
 	{
 		//Allocs first resource from the pool
 		auto resource_handle = pool.Alloc();
@@ -202,7 +181,7 @@ namespace
 			}
 			count--;
 		}
-	
+
 		return resource_handle;
 	}
 }
@@ -302,12 +281,12 @@ namespace display
 				{
 					//Check if the active is in the current frame
 					assert(device->m_upload_buffer_pool[active_allocation.pool_index].frame == device->m_frame_index);
-					
+
 					//It just need to get reset
 					active_allocation = Device::ActiveUploadBuffer();
 				}
 				uint64_t last_completed_gpu_frame = display::GetLastCompletedGPUFrame(device);
-				
+
 				//Visit the pool for a free slot
 				for (size_t i = 0; i < device->m_upload_buffer_pool.size(); ++i)
 				{
@@ -332,16 +311,16 @@ namespace display
 
 					ComPtr<D3D12MA::Allocation> upload_allocation;
 					ComPtr<ID3D12Resource> upload_resource;
-					SourceResourceData no_source_data(nullptr, 0);
+					std::vector<D3D12_SUBRESOURCE_DATA> sub_resources;
 					ResourceMemoryAccess resource_memory_access;
 
 					//Create upload resource
-					CreateResource(device, no_source_data, D3D12_HEAP_TYPE_UPLOAD, d12_resource_desc, upload_resource, upload_allocation, resource_memory_access, init_resource_state);
+					CreateResource(device, sub_resources, D3D12_HEAP_TYPE_UPLOAD, d12_resource_desc, upload_resource, upload_allocation, resource_memory_access, init_resource_state);
 
 					SetObjectName(upload_resource.Get(), "PooledUploadResource");
 
 					//Add buffer into the pool
-					device->m_upload_buffer_pool.emplace_back(Device::PooledUploadBuffer{ upload_allocation.Get() , device->m_frame_index , resource_memory_access});
+					device->m_upload_buffer_pool.emplace_back(Device::PooledUploadBuffer{ upload_allocation.Get() , device->m_frame_index , resource_memory_access });
 
 					//Setup active allocation with the last element of the pool
 					auto& upload_buffer_slot = device->m_upload_buffer_pool.back();
@@ -356,7 +335,7 @@ namespace display
 			ret.resource = active_allocation.allocation->GetResource();
 			ret.offset = active_allocation.current_offset;
 			ret.memory = reinterpret_cast<uint8_t*>(active_allocation.memory_access.memory_data) + active_allocation.current_offset;
-			
+
 			//Reserve
 			assert(active_allocation.current_offset + size <= device->m_upload_buffer_max_size);
 			active_allocation.current_offset += size;
@@ -372,11 +351,11 @@ namespace display
 
 			ComPtr<D3D12MA::Allocation> upload_allocation;
 			ComPtr<ID3D12Resource> upload_resource;
-			SourceResourceData no_source_data(nullptr, 0);
+			std::vector<D3D12_SUBRESOURCE_DATA> sub_resources;
 			ResourceMemoryAccess resource_memory_access;
 
 			//Create upload resource
-			CreateResource(device, no_source_data, D3D12_HEAP_TYPE_UPLOAD, d12_resource_desc, upload_resource, upload_allocation, resource_memory_access, init_resource_state);
+			CreateResource(device, sub_resources, D3D12_HEAP_TYPE_UPLOAD, d12_resource_desc, upload_resource, upload_allocation, resource_memory_access, init_resource_state);
 
 			SetObjectName(upload_resource.Get(), "CopyResource");
 
@@ -408,7 +387,7 @@ namespace display
 		device->m_upload_buffer_pool.clear();
 	}
 
-	DescriptorTableHandle CreateDescriptorTable(Device * device, const DescriptorTableDesc & descriptor_table_desc)
+	DescriptorTableHandle CreateDescriptorTable(Device* device, const DescriptorTableDesc& descriptor_table_desc)
 	{
 		DescriptorTableHandle handle = device->m_descriptor_table_pool.Alloc(static_cast<uint16_t>(descriptor_table_desc.num_descriptors));
 		auto& descriptor_table = device->Get(handle);
@@ -438,21 +417,21 @@ namespace display
 						},
 						[&](WeakTexture2DHandle resource)
 						{
-							//Set it as shader resource or constant buffer
-							device->m_native_device->CopyDescriptorsSimple(1, device->m_descriptor_table_pool.GetDescriptor(handle, i),
-							device->m_texture_2d_pool.GetDescriptor(resource, Texture2D::kShaderResourceDescriptorIndex), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-						},
-						[&](AsUAVTexture2D resource)
-						{
-							assert(device->m_texture_2d_pool[resource].UAV);
-							//Set it as unordered access buffer
-							device->m_native_device->CopyDescriptorsSimple(1, device->m_descriptor_table_pool.GetDescriptor(handle, i),
-							device->m_texture_2d_pool.GetDescriptor(resource, Texture2D::kShaderUnorderedAccessDescriptorIndex), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-						},
-						[&](DescriptorTableDesc::NullDescriptor null_descriptor)
-						{
-							//Nothing to do
-						}
+						//Set it as shader resource or constant buffer
+						device->m_native_device->CopyDescriptorsSimple(1, device->m_descriptor_table_pool.GetDescriptor(handle, i),
+						device->m_texture_2d_pool.GetDescriptor(resource, Texture2D::kShaderResourceDescriptorIndex), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+					},
+					[&](AsUAVTexture2D resource)
+					{
+						assert(device->m_texture_2d_pool[resource].UAV);
+						//Set it as unordered access buffer
+						device->m_native_device->CopyDescriptorsSimple(1, device->m_descriptor_table_pool.GetDescriptor(handle, i),
+						device->m_texture_2d_pool.GetDescriptor(resource, Texture2D::kShaderUnorderedAccessDescriptorIndex), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+					},
+					[&](DescriptorTableDesc::NullDescriptor null_descriptor)
+					{
+						//Nothing to do
+					}
 					},
 					descriptor_table_item);
 			}
@@ -491,23 +470,23 @@ namespace display
 							},
 							[&](WeakTexture2DHandle resource)
 							{
-								//Set it as shader resource or constant buffer
-								device->m_native_device->CopyDescriptorsSimple(1, device->m_descriptor_table_pool.GetDescriptor(handle_it, i),
-								device->m_texture_2d_pool.GetDescriptor(GetRingResource(device, resource, frame_index), Texture2D::kShaderResourceDescriptorIndex), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-							},
-							[&](AsUAVTexture2D resource)
-							{
-								assert(device->m_texture_2d_pool[resource].UAV);
-								//Set it as unordered access buffer
-								device->m_native_device->CopyDescriptorsSimple(1, device->m_descriptor_table_pool.GetDescriptor(handle_it, i),
-								device->m_texture_2d_pool.GetDescriptor(GetRingResource(device, WeakTexture2DHandle(resource), frame_index), Texture2D::kShaderUnorderedAccessDescriptorIndex), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-							},
-							[&](DescriptorTableDesc::NullDescriptor null_descriptor)
-							{
-								//Nothing to do
-							}
+							//Set it as shader resource or constant buffer
+							device->m_native_device->CopyDescriptorsSimple(1, device->m_descriptor_table_pool.GetDescriptor(handle_it, i),
+							device->m_texture_2d_pool.GetDescriptor(GetRingResource(device, resource, frame_index), Texture2D::kShaderResourceDescriptorIndex), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 						},
-					descriptor_table_item);
+						[&](AsUAVTexture2D resource)
+						{
+							assert(device->m_texture_2d_pool[resource].UAV);
+							//Set it as unordered access buffer
+							device->m_native_device->CopyDescriptorsSimple(1, device->m_descriptor_table_pool.GetDescriptor(handle_it, i),
+							device->m_texture_2d_pool.GetDescriptor(GetRingResource(device, WeakTexture2DHandle(resource), frame_index), Texture2D::kShaderUnorderedAccessDescriptorIndex), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+						},
+						[&](DescriptorTableDesc::NullDescriptor null_descriptor)
+						{
+							//Nothing to do
+						}
+						},
+						descriptor_table_item);
 				}
 
 				if (count > 0)
@@ -520,10 +499,10 @@ namespace display
 				frame_index++;
 			}
 		}
-		
+
 		return handle;
 	}
-	void DestroyDescriptorTable(Device * device, DescriptorTableHandle & handle)
+	void DestroyDescriptorTable(Device* device, DescriptorTableHandle& handle)
 	{
 		//Delete handle and linked ones
 		DeleteRingResource(device, handle, device->m_descriptor_table_pool);
@@ -557,21 +536,21 @@ namespace display
 					},
 					[&](WeakTexture2DHandle resource)
 					{
-						//Set it as shader resource or constant buffer
-						device->m_native_device->CopyDescriptorsSimple(1, device->m_descriptor_table_pool.GetDescriptor(current_frame_descriptor_table_handle, i),
-						device->m_texture_2d_pool.GetDescriptor(GetRingResource(device, resource, device->m_frame_index), Texture2D::kShaderResourceDescriptorIndex), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-					},
-					[&](AsUAVTexture2D resource)
-					{
-						assert(device->m_texture_2d_pool[resource].UAV);
-						//Set it as unordered access buffer
-						device->m_native_device->CopyDescriptorsSimple(1, device->m_descriptor_table_pool.GetDescriptor(current_frame_descriptor_table_handle, i),
-						device->m_texture_2d_pool.GetDescriptor(resource, Texture2D::kShaderUnorderedAccessDescriptorIndex), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-					},
-					[&](DescriptorTableDesc::NullDescriptor null_descriptor)
-					{
-						//Nothing to do
-					}
+					//Set it as shader resource or constant buffer
+					device->m_native_device->CopyDescriptorsSimple(1, device->m_descriptor_table_pool.GetDescriptor(current_frame_descriptor_table_handle, i),
+					device->m_texture_2d_pool.GetDescriptor(GetRingResource(device, resource, device->m_frame_index), Texture2D::kShaderResourceDescriptorIndex), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+				},
+				[&](AsUAVTexture2D resource)
+				{
+					assert(device->m_texture_2d_pool[resource].UAV);
+					//Set it as unordered access buffer
+					device->m_native_device->CopyDescriptorsSimple(1, device->m_descriptor_table_pool.GetDescriptor(current_frame_descriptor_table_handle, i),
+					device->m_texture_2d_pool.GetDescriptor(resource, Texture2D::kShaderUnorderedAccessDescriptorIndex), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+				},
+				[&](DescriptorTableDesc::NullDescriptor null_descriptor)
+				{
+					//Nothing to do
+				}
 				},
 				descriptor_table_item);
 		}
@@ -591,7 +570,7 @@ namespace display
 		return handle;
 	}
 
-	void DestroySamplerDescriptorTable(Device * device, SamplerDescriptorTableHandle& handle)
+	void DestroySamplerDescriptorTable(Device* device, SamplerDescriptorTableHandle& handle)
 	{
 		device->m_sampler_descriptor_table_pool.Free(handle);
 	}
@@ -600,6 +579,7 @@ namespace display
 	{
 		D3D12_RESOURCE_STATES init_resource_state;
 		D3D12_RESOURCE_DESC d12_resource_desc = {};
+		std::vector<D3D12_SUBRESOURCE_DATA> sub_resources;
 
 		size_t size = buffer_desc.size;
 
@@ -615,113 +595,121 @@ namespace display
 		init_resource_state = D3D12_RESOURCE_STATE_COMMON;
 
 		auto CreateViewsForResource = [&buffer_desc, size, &d12_resource_desc, name](display::Device* device, const WeakBufferHandle& handle, display::Buffer& resource)
-		{
-			//All resources have resource view
-			D3D12_SHADER_RESOURCE_VIEW_DESC dx12_shader_resource_desc = {};
-			dx12_shader_resource_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-			bool needs_shader_resource_view = true;
-
-			dx12_shader_resource_desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
-			switch (buffer_desc.type)
 			{
-			case BufferType::VertexBuffer:
-			case BufferType::ConstantBuffer:
-			case BufferType::IndexBuffer:
-				//Nothing to create
-				needs_shader_resource_view = false;
-				break;
-				
-			case BufferType::StructuredBuffer:
-				dx12_shader_resource_desc.Format = DXGI_FORMAT_UNKNOWN;
-				dx12_shader_resource_desc.Buffer.NumElements = static_cast<UINT>(buffer_desc.num_elements);
-				dx12_shader_resource_desc.Buffer.StructureByteStride = static_cast<UINT>(buffer_desc.structure_stride);
-				break;
-			case BufferType::RawAccessBuffer:
-				dx12_shader_resource_desc.Format = DXGI_FORMAT_R32_TYPELESS;
-				dx12_shader_resource_desc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_RAW;
-				dx12_shader_resource_desc.Buffer.NumElements = static_cast<UINT>(buffer_desc.size / 4);
-				break;
-			}
+				//All resources have resource view
+				D3D12_SHADER_RESOURCE_VIEW_DESC dx12_shader_resource_desc = {};
+				dx12_shader_resource_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+				bool needs_shader_resource_view = true;
 
-			if (needs_shader_resource_view)
-			{
-				resource.shader_access = true;
-				device->m_native_device->CreateShaderResourceView(resource.resource.Get(), &dx12_shader_resource_desc, device->m_buffer_pool.GetDescriptor(handle, Buffer::kShaderResourceOrConstantBufferDescriptorIndex));
-			}
-
-			if (buffer_desc.is_UAV)
-			{
-				assert(buffer_desc.type != BufferType::ConstantBuffer);
-				assert(buffer_desc.type != BufferType::VertexBuffer);
-
-				resource.UAV = true;
-
-				//Create UAV
-				D3D12_UNORDERED_ACCESS_VIEW_DESC dx12_unordered_access_buffer_desc_desc = {};
-				dx12_unordered_access_buffer_desc_desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
-				dx12_unordered_access_buffer_desc_desc.Buffer.FirstElement = 0;
-				dx12_unordered_access_buffer_desc_desc.Buffer.CounterOffsetInBytes = 0;
-
+				dx12_shader_resource_desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
 				switch (buffer_desc.type)
 				{
-				case BufferType::ConstantBuffer:
 				case BufferType::VertexBuffer:
-					assert(false);
-					break;
+				case BufferType::ConstantBuffer:
 				case BufferType::IndexBuffer:
-					dx12_unordered_access_buffer_desc_desc.Format = Convert(buffer_desc.format);
-					dx12_unordered_access_buffer_desc_desc.Buffer.NumElements = static_cast<UINT>(buffer_desc.num_elements);
-					dx12_unordered_access_buffer_desc_desc.Buffer.StructureByteStride = static_cast<UINT>(buffer_desc.structure_stride);
+					//Nothing to create
+					needs_shader_resource_view = false;
 					break;
 
 				case BufferType::StructuredBuffer:
-					dx12_unordered_access_buffer_desc_desc.Format = DXGI_FORMAT_UNKNOWN;
-					dx12_unordered_access_buffer_desc_desc.Buffer.NumElements = static_cast<UINT>(buffer_desc.num_elements);
-					dx12_unordered_access_buffer_desc_desc.Buffer.StructureByteStride = static_cast<UINT>(buffer_desc.structure_stride);
-					dx12_unordered_access_buffer_desc_desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_NONE;
+					dx12_shader_resource_desc.Format = DXGI_FORMAT_UNKNOWN;
+					dx12_shader_resource_desc.Buffer.NumElements = static_cast<UINT>(buffer_desc.num_elements);
+					dx12_shader_resource_desc.Buffer.StructureByteStride = static_cast<UINT>(buffer_desc.structure_stride);
 					break;
 				case BufferType::RawAccessBuffer:
-					dx12_unordered_access_buffer_desc_desc.Format = DXGI_FORMAT_R32_TYPELESS;
-					dx12_unordered_access_buffer_desc_desc.Buffer.NumElements = static_cast<UINT>(buffer_desc.size / 4);
-					dx12_unordered_access_buffer_desc_desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_RAW;
+					dx12_shader_resource_desc.Format = DXGI_FORMAT_R32_TYPELESS;
+					dx12_shader_resource_desc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_RAW;
+					dx12_shader_resource_desc.Buffer.NumElements = static_cast<UINT>(buffer_desc.size / 4);
 					break;
 				}
 
-				device->m_native_device->CreateUnorderedAccessView(resource.resource.Get(), nullptr, &dx12_unordered_access_buffer_desc_desc, device->m_buffer_pool.GetDescriptor(handle, Buffer::kShaderUnorderedAccessDescriptorIndex));
-			}
+				if (needs_shader_resource_view)
+				{
+					resource.shader_access = true;
+					device->m_native_device->CreateShaderResourceView(resource.resource.Get(), &dx12_shader_resource_desc, device->m_buffer_pool.GetDescriptor(handle, Buffer::kShaderResourceOrConstantBufferDescriptorIndex));
+				}
 
-			
-			if (buffer_desc.type == BufferType::IndexBuffer)
-			{
-				// Initialize the vertex buffer view.
-				resource.index_buffer_view.BufferLocation = resource.resource->GetGPUVirtualAddress();
-				resource.index_buffer_view.Format = Convert(buffer_desc.format);
-				resource.index_buffer_view.SizeInBytes = static_cast<UINT>(buffer_desc.size);
-			}
-			//Access as a vertex buffer
-			else if (buffer_desc.type == BufferType::VertexBuffer || buffer_desc.type == BufferType::StructuredBuffer || buffer_desc.type == BufferType::RawAccessBuffer)
-			{
-				// Initialize the vertex buffer view.
-				resource.vertex_buffer_view.BufferLocation = resource.resource->GetGPUVirtualAddress();
-				resource.vertex_buffer_view.StrideInBytes = static_cast<UINT>(buffer_desc.structure_stride);
-				resource.vertex_buffer_view.SizeInBytes = static_cast<UINT>(buffer_desc.size);
-			}
-			else if (buffer_desc.type == BufferType::ConstantBuffer)
-			{
-				D3D12_CONSTANT_BUFFER_VIEW_DESC dx12_constant_buffer_desc = {};
-				dx12_constant_buffer_desc.BufferLocation = resource.resource->GetGPUVirtualAddress();
-				dx12_constant_buffer_desc.SizeInBytes = static_cast<UINT>(size);
-				device->m_native_device->CreateConstantBufferView(&dx12_constant_buffer_desc, device->m_buffer_pool.GetDescriptor(handle, Buffer::kShaderResourceOrConstantBufferDescriptorIndex));
+				if (buffer_desc.is_UAV)
+				{
+					assert(buffer_desc.type != BufferType::ConstantBuffer);
+					assert(buffer_desc.type != BufferType::VertexBuffer);
 
-				resource.shader_access = true;
-			}
+					resource.UAV = true;
 
-			resource.type = buffer_desc.type;
-			resource.name = name;
+					//Create UAV
+					D3D12_UNORDERED_ACCESS_VIEW_DESC dx12_unordered_access_buffer_desc_desc = {};
+					dx12_unordered_access_buffer_desc_desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
+					dx12_unordered_access_buffer_desc_desc.Buffer.FirstElement = 0;
+					dx12_unordered_access_buffer_desc_desc.Buffer.CounterOffsetInBytes = 0;
 
-			SetObjectName(resource.resource.Get(), name);
-		};
+					switch (buffer_desc.type)
+					{
+					case BufferType::ConstantBuffer:
+					case BufferType::VertexBuffer:
+						assert(false);
+						break;
+					case BufferType::IndexBuffer:
+						dx12_unordered_access_buffer_desc_desc.Format = Convert(buffer_desc.format);
+						dx12_unordered_access_buffer_desc_desc.Buffer.NumElements = static_cast<UINT>(buffer_desc.num_elements);
+						dx12_unordered_access_buffer_desc_desc.Buffer.StructureByteStride = static_cast<UINT>(buffer_desc.structure_stride);
+						break;
 
+					case BufferType::StructuredBuffer:
+						dx12_unordered_access_buffer_desc_desc.Format = DXGI_FORMAT_UNKNOWN;
+						dx12_unordered_access_buffer_desc_desc.Buffer.NumElements = static_cast<UINT>(buffer_desc.num_elements);
+						dx12_unordered_access_buffer_desc_desc.Buffer.StructureByteStride = static_cast<UINT>(buffer_desc.structure_stride);
+						dx12_unordered_access_buffer_desc_desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_NONE;
+						break;
+					case BufferType::RawAccessBuffer:
+						dx12_unordered_access_buffer_desc_desc.Format = DXGI_FORMAT_R32_TYPELESS;
+						dx12_unordered_access_buffer_desc_desc.Buffer.NumElements = static_cast<UINT>(buffer_desc.size / 4);
+						dx12_unordered_access_buffer_desc_desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_RAW;
+						break;
+					}
+
+					device->m_native_device->CreateUnorderedAccessView(resource.resource.Get(), nullptr, &dx12_unordered_access_buffer_desc_desc, device->m_buffer_pool.GetDescriptor(handle, Buffer::kShaderUnorderedAccessDescriptorIndex));
+				}
+
+
+				if (buffer_desc.type == BufferType::IndexBuffer)
+				{
+					// Initialize the vertex buffer view.
+					resource.index_buffer_view.BufferLocation = resource.resource->GetGPUVirtualAddress();
+					resource.index_buffer_view.Format = Convert(buffer_desc.format);
+					resource.index_buffer_view.SizeInBytes = static_cast<UINT>(buffer_desc.size);
+				}
+				//Access as a vertex buffer
+				else if (buffer_desc.type == BufferType::VertexBuffer || buffer_desc.type == BufferType::StructuredBuffer || buffer_desc.type == BufferType::RawAccessBuffer)
+				{
+					// Initialize the vertex buffer view.
+					resource.vertex_buffer_view.BufferLocation = resource.resource->GetGPUVirtualAddress();
+					resource.vertex_buffer_view.StrideInBytes = static_cast<UINT>(buffer_desc.structure_stride);
+					resource.vertex_buffer_view.SizeInBytes = static_cast<UINT>(buffer_desc.size);
+				}
+				else if (buffer_desc.type == BufferType::ConstantBuffer)
+				{
+					D3D12_CONSTANT_BUFFER_VIEW_DESC dx12_constant_buffer_desc = {};
+					dx12_constant_buffer_desc.BufferLocation = resource.resource->GetGPUVirtualAddress();
+					dx12_constant_buffer_desc.SizeInBytes = static_cast<UINT>(size);
+					device->m_native_device->CreateConstantBufferView(&dx12_constant_buffer_desc, device->m_buffer_pool.GetDescriptor(handle, Buffer::kShaderResourceOrConstantBufferDescriptorIndex));
+
+					resource.shader_access = true;
+				}
+
+				resource.type = buffer_desc.type;
+				resource.name = name;
+
+				SetObjectName(resource.resource.Get(), name);
+			};
+
+		if (buffer_desc.init_data)
+		{
+			D3D12_SUBRESOURCE_DATA data;
+			data.pData = buffer_desc.init_data;
+			data.SlicePitch = buffer_desc.size;
+			data.RowPitch = 0;
+			sub_resources.push_back(data);
+		}
 
 		if (buffer_desc.access == Access::Static || buffer_desc.access == Access::Upload)
 		{
@@ -730,9 +718,7 @@ namespace display
 
 			resource.access = buffer_desc.access;
 
-			SourceResourceData data(buffer_desc.init_data, buffer_desc.size, 0, 0);
-
-			if (!CreateResource(device, data, (buffer_desc.access == Access::Static) ? D3D12_HEAP_TYPE_DEFAULT : D3D12_HEAP_TYPE_UPLOAD, d12_resource_desc, resource.resource, resource.allocation, resource, init_resource_state))
+			if (!CreateResource(device, sub_resources, (buffer_desc.access == Access::Static) ? D3D12_HEAP_TYPE_DEFAULT : D3D12_HEAP_TYPE_UPLOAD, d12_resource_desc, resource.resource, resource.allocation, resource, init_resource_state))
 			{
 				device->m_buffer_pool.Free(handle);
 				return BufferHandle();
@@ -744,9 +730,7 @@ namespace display
 		}
 		else if (buffer_desc.access == Access::Dynamic || buffer_desc.access == Access::ReadBack)
 		{
-			SourceResourceData data(buffer_desc.init_data, buffer_desc.size);
-
-			BufferHandle handle = CreateRingResources(device, data, buffer_desc.access, (buffer_desc.access == Access::Dynamic) ? D3D12_HEAP_TYPE_UPLOAD : D3D12_HEAP_TYPE_READBACK,
+			BufferHandle handle = CreateRingResources(device, sub_resources, buffer_desc.access, (buffer_desc.access == Access::Dynamic) ? D3D12_HEAP_TYPE_UPLOAD : D3D12_HEAP_TYPE_READBACK,
 				d12_resource_desc, device->m_buffer_pool, init_resource_state,
 				[&](display::Device* device, const WeakBufferHandle& handle, display::Buffer& resource)
 				{
@@ -769,115 +753,150 @@ namespace display
 	{
 		D3D12_RESOURCE_STATES init_resource_state;
 		D3D12_RESOURCE_DESC d12_resource_desc = {};
-		D3D12_CLEAR_VALUE clear_values;
+		D3D12_CLEAR_VALUE clear_values = {};
 		D3D12_CLEAR_VALUE* clear_values_ptr = nullptr;
+		D3D12_SHADER_RESOURCE_VIEW_DESC dds_d12_resource_view_desc = {};
+		std::vector<D3D12_SUBRESOURCE_DATA> sub_resources;
 
-		size_t size = texture_2d_desc.size;
-
-		d12_resource_desc.MipLevels = static_cast<UINT>(texture_2d_desc.mips);
-		d12_resource_desc.Format = Convert(texture_2d_desc.format);
-		d12_resource_desc.Width = static_cast<UINT>(texture_2d_desc.width);
-		d12_resource_desc.Height = static_cast<UINT>(texture_2d_desc.height);
-		d12_resource_desc.Flags = D3D12_RESOURCE_FLAG_NONE;
-
-		if (texture_2d_desc.is_UAV) d12_resource_desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
-
-		d12_resource_desc.DepthOrArraySize = 1;
-		d12_resource_desc.SampleDesc.Count = 1;
-		d12_resource_desc.SampleDesc.Quality = 0;
-		d12_resource_desc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-
-		if (texture_2d_desc.is_render_target)
+		size_t size;
+		if (texture_2d_desc.is_texture_file)
 		{
-			init_resource_state = D3D12_RESOURCE_STATE_RENDER_TARGET;
-			d12_resource_desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
+			//Fill the Resource Desc from the DDS file
+			//Get all information from the texture file
+			dds_loader::CalculateD12Loader(device->m_native_device.Get(), reinterpret_cast<const uint8_t*>(texture_2d_desc.init_data), texture_2d_desc.size, dds_loader::DDS_LOADER_DEFAULT,
+				d12_resource_desc, sub_resources, dds_d12_resource_view_desc);
 
-			clear_values.Color[0] = texture_2d_desc.default_colour_clear[0];
-			clear_values.Color[1] = texture_2d_desc.default_colour_clear[1];
-			clear_values.Color[2] = texture_2d_desc.default_colour_clear[2];
-			clear_values.Color[3] = texture_2d_desc.default_colour_clear[3];
-			clear_values.Format = Convert(texture_2d_desc.format);
-
-			clear_values_ptr = &clear_values;
-		} 
-		else if (texture_2d_desc.is_depth_buffer)
-		{
-			init_resource_state = D3D12_RESOURCE_STATE_DEPTH_WRITE;
-			d12_resource_desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
-
-			clear_values.DepthStencil = { texture_2d_desc.default_clear, texture_2d_desc.default_stencil };
-			clear_values.Format = Convert(texture_2d_desc.format);
-
-			clear_values_ptr = &clear_values;
+			init_resource_state = D3D12_RESOURCE_STATE_COMMON;
 		}
 		else
 		{
-			init_resource_state = D3D12_RESOURCE_STATE_COMMON;
-		}
 
-		auto CreateViewsForResource = [&texture_2d_desc, size, &d12_resource_desc, name](display::Device* device, const WeakTexture2DHandle& handle, display::Texture2D& resource)
-		{
-			Format read_format = texture_2d_desc.format;
-			if (texture_2d_desc.is_depth_buffer && read_format == Format::D32_FLOAT)
-			{
-				read_format = Format::R32_FLOAT;
-			}
-			//All resources have resource view
-			D3D12_SHADER_RESOURCE_VIEW_DESC dx12_shader_resource_desc = {};
-			dx12_shader_resource_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-			dx12_shader_resource_desc.Format = Convert(read_format);
-			dx12_shader_resource_desc.Texture2D.MipLevels = d12_resource_desc.MipLevels;
-			dx12_shader_resource_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+			size = texture_2d_desc.size;
 
-			device->m_native_device->CreateShaderResourceView(resource.resource.Get(), &dx12_shader_resource_desc, device->m_texture_2d_pool.GetDescriptor(handle, Texture2D::kShaderResourceDescriptorIndex));
+			d12_resource_desc.MipLevels = static_cast<UINT>(texture_2d_desc.mips);
+			d12_resource_desc.Format = Convert(texture_2d_desc.format);
+			d12_resource_desc.Width = static_cast<UINT>(texture_2d_desc.width);
+			d12_resource_desc.Height = static_cast<UINT>(texture_2d_desc.height);
+			d12_resource_desc.Flags = D3D12_RESOURCE_FLAG_NONE;
 
-			if (texture_2d_desc.is_UAV)
-			{
-				resource.UAV = true;
+			if (texture_2d_desc.is_UAV) d12_resource_desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 
-				Format uav_read_format = texture_2d_desc.format;
-				if (texture_2d_desc.is_depth_buffer && uav_read_format == Format::D32_FLOAT)
-				{
-					uav_read_format = Format::R32_FLOAT;
-				}
-
-				//Create UAV
-				D3D12_UNORDERED_ACCESS_VIEW_DESC dx12_unordered_access_buffer_desc_desc = {};
-				dx12_unordered_access_buffer_desc_desc.Format = Convert(uav_read_format);
-				dx12_unordered_access_buffer_desc_desc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
-
-				device->m_native_device->CreateUnorderedAccessView(resource.resource.Get(), nullptr, &dx12_unordered_access_buffer_desc_desc, device->m_texture_2d_pool.GetDescriptor(handle, Texture2D::kShaderUnorderedAccessDescriptorIndex));
-			}
+			d12_resource_desc.DepthOrArraySize = 1;
+			d12_resource_desc.SampleDesc.Count = 1;
+			d12_resource_desc.SampleDesc.Quality = 0;
+			d12_resource_desc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
 
 			if (texture_2d_desc.is_render_target)
 			{
-				assert(texture_2d_desc.access == Access::Static);
+				init_resource_state = D3D12_RESOURCE_STATE_RENDER_TARGET;
+				d12_resource_desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
 
-				resource.RenderTarget = true;
-				//Create render target view
-				D3D12_RENDER_TARGET_VIEW_DESC dx12_render_target_view_desc = {};
-				dx12_render_target_view_desc.Format = Convert(texture_2d_desc.format);
-				dx12_render_target_view_desc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
-				dx12_render_target_view_desc.Texture2D.MipSlice = 0;
-				dx12_render_target_view_desc.Texture2D.PlaneSlice = 0;
-				device->m_native_device->CreateRenderTargetView(resource.resource.Get(), &dx12_render_target_view_desc, device->m_texture_2d_pool.GetDescriptor(handle, Texture2D::kRenderTargetDescriptorIndex));
+				clear_values.Color[0] = texture_2d_desc.default_colour_clear[0];
+				clear_values.Color[1] = texture_2d_desc.default_colour_clear[1];
+				clear_values.Color[2] = texture_2d_desc.default_colour_clear[2];
+				clear_values.Color[3] = texture_2d_desc.default_colour_clear[3];
+				clear_values.Format = Convert(texture_2d_desc.format);
+
+				clear_values_ptr = &clear_values;
 			}
 			else if (texture_2d_desc.is_depth_buffer)
 			{
-				assert(texture_2d_desc.access == Access::Static);
+				init_resource_state = D3D12_RESOURCE_STATE_DEPTH_WRITE;
+				d12_resource_desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
 
-				resource.DepthBuffer = true;
-				D3D12_DEPTH_STENCIL_VIEW_DESC dx12_depth_stencil_desc = {};
-				dx12_depth_stencil_desc.Format = Convert(texture_2d_desc.format);
-				dx12_depth_stencil_desc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
-				dx12_depth_stencil_desc.Flags = D3D12_DSV_FLAG_NONE;
+				clear_values.DepthStencil = { texture_2d_desc.default_clear, texture_2d_desc.default_stencil };
+				clear_values.Format = Convert(texture_2d_desc.format);
 
-				device->m_native_device->CreateDepthStencilView(resource.resource.Get(), &dx12_depth_stencil_desc, device->m_texture_2d_pool.GetDescriptor(handle, Texture2D::kDepthBufferDescriptorIndex));
+				clear_values_ptr = &clear_values;
 			}
-		
-			resource.name = name;
-			SetObjectName(resource.resource.Get(), name);
-		};
+			else
+			{
+				init_resource_state = D3D12_RESOURCE_STATE_COMMON;
+			}
+		}
+
+		auto CreateViewsForResource = [&texture_2d_desc, size, &d12_resource_desc, &dds_d12_resource_view_desc, name](display::Device* device, const WeakTexture2DHandle& handle, display::Texture2D& resource)
+			{
+				if (texture_2d_desc.is_texture_file)
+				{
+					//Just use the one from the dds loader
+					device->m_native_device->CreateShaderResourceView(resource.resource.Get(), &dds_d12_resource_view_desc, device->m_texture_2d_pool.GetDescriptor(handle, Texture2D::kShaderResourceDescriptorIndex));
+				}
+				else
+				{
+					Format read_format = texture_2d_desc.format;
+					if (texture_2d_desc.is_depth_buffer && read_format == Format::D32_FLOAT)
+					{
+						read_format = Format::R32_FLOAT;
+					}
+					//All resources have resource view
+					D3D12_SHADER_RESOURCE_VIEW_DESC dx12_shader_resource_desc = {};
+
+					dx12_shader_resource_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+					dx12_shader_resource_desc.Format = Convert(read_format);
+					dx12_shader_resource_desc.Texture2D.MipLevels = d12_resource_desc.MipLevels;
+					dx12_shader_resource_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+
+					device->m_native_device->CreateShaderResourceView(resource.resource.Get(), &dx12_shader_resource_desc, device->m_texture_2d_pool.GetDescriptor(handle, Texture2D::kShaderResourceDescriptorIndex));
+
+					if (texture_2d_desc.is_UAV)
+					{
+						resource.UAV = true;
+
+						Format uav_read_format = texture_2d_desc.format;
+						if (texture_2d_desc.is_depth_buffer && uav_read_format == Format::D32_FLOAT)
+						{
+							uav_read_format = Format::R32_FLOAT;
+						}
+
+						//Create UAV
+						D3D12_UNORDERED_ACCESS_VIEW_DESC dx12_unordered_access_buffer_desc_desc = {};
+						dx12_unordered_access_buffer_desc_desc.Format = Convert(uav_read_format);
+						dx12_unordered_access_buffer_desc_desc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
+
+						device->m_native_device->CreateUnorderedAccessView(resource.resource.Get(), nullptr, &dx12_unordered_access_buffer_desc_desc, device->m_texture_2d_pool.GetDescriptor(handle, Texture2D::kShaderUnorderedAccessDescriptorIndex));
+					}
+
+					if (texture_2d_desc.is_render_target)
+					{
+						assert(texture_2d_desc.access == Access::Static);
+
+						resource.RenderTarget = true;
+						//Create render target view
+						D3D12_RENDER_TARGET_VIEW_DESC dx12_render_target_view_desc = {};
+						dx12_render_target_view_desc.Format = Convert(texture_2d_desc.format);
+						dx12_render_target_view_desc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
+						dx12_render_target_view_desc.Texture2D.MipSlice = 0;
+						dx12_render_target_view_desc.Texture2D.PlaneSlice = 0;
+						device->m_native_device->CreateRenderTargetView(resource.resource.Get(), &dx12_render_target_view_desc, device->m_texture_2d_pool.GetDescriptor(handle, Texture2D::kRenderTargetDescriptorIndex));
+					}
+					else if (texture_2d_desc.is_depth_buffer)
+					{
+						assert(texture_2d_desc.access == Access::Static);
+
+						resource.DepthBuffer = true;
+						D3D12_DEPTH_STENCIL_VIEW_DESC dx12_depth_stencil_desc = {};
+						dx12_depth_stencil_desc.Format = Convert(texture_2d_desc.format);
+						dx12_depth_stencil_desc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
+						dx12_depth_stencil_desc.Flags = D3D12_DSV_FLAG_NONE;
+
+						device->m_native_device->CreateDepthStencilView(resource.resource.Get(), &dx12_depth_stencil_desc, device->m_texture_2d_pool.GetDescriptor(handle, Texture2D::kDepthBufferDescriptorIndex));
+					}
+				}
+
+				resource.name = name;
+				SetObjectName(resource.resource.Get(), name);
+			};
+
+		if (!texture_2d_desc.is_texture_file && texture_2d_desc.init_data)
+		{
+			//Just one subresource, it only supports one at the moment
+			D3D12_SUBRESOURCE_DATA data;
+			data.pData = texture_2d_desc.init_data;
+			data.SlicePitch = texture_2d_desc.size;
+			data.RowPitch = texture_2d_desc.pitch;
+			sub_resources.push_back(data);
+		}
 
 
 		if (texture_2d_desc.access == Access::Static || texture_2d_desc.access == Access::Upload)
@@ -885,9 +904,7 @@ namespace display
 			Texture2DHandle handle = device->m_texture_2d_pool.Alloc();
 			auto& resource = device->Get(handle);
 
-			SourceResourceData data(texture_2d_desc.init_data, texture_2d_desc.size, texture_2d_desc.pitch, texture_2d_desc.slice_pitch);
-
-			if (!CreateResource(device, data, (texture_2d_desc.access == Access::Static) ? D3D12_HEAP_TYPE_DEFAULT : D3D12_HEAP_TYPE_UPLOAD, d12_resource_desc, resource.resource, resource.allocation, resource, init_resource_state, clear_values_ptr))
+			if (!CreateResource(device, sub_resources, (texture_2d_desc.access == Access::Static) ? D3D12_HEAP_TYPE_DEFAULT : D3D12_HEAP_TYPE_UPLOAD, d12_resource_desc, resource.resource, resource.allocation, resource, init_resource_state, clear_values_ptr))
 			{
 				device->m_texture_2d_pool.Free(handle);
 				return Texture2DHandle();
@@ -899,9 +916,7 @@ namespace display
 		}
 		else if (texture_2d_desc.access == Access::Dynamic)
 		{
-			SourceResourceData data(texture_2d_desc.init_data, texture_2d_desc.size);
-
-			Texture2DHandle handle = CreateRingResources(device, data, texture_2d_desc.access, D3D12_HEAP_TYPE_UPLOAD, d12_resource_desc, device->m_texture_2d_pool, init_resource_state,
+			Texture2DHandle handle = CreateRingResources(device, sub_resources, texture_2d_desc.access, D3D12_HEAP_TYPE_UPLOAD, d12_resource_desc, device->m_texture_2d_pool, init_resource_state,
 				[&](display::Device* device, const WeakTexture2DHandle& handle, display::Texture2D& resource)
 				{
 					CreateViewsForResource(device, handle, resource);
@@ -929,7 +944,7 @@ namespace display
 		height = static_cast<uint32_t>(desc.Height);
 	}
 
-	void UpdateResourceBuffer(Device * device, const UpdatableResourceHandle& handle, const void * data, size_t size)
+	void UpdateResourceBuffer(Device* device, const UpdatableResourceHandle& handle, const void* data, size_t size)
 	{
 		void* memory_data = nullptr;
 		size_t memory_size = 0;
