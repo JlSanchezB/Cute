@@ -83,5 +83,6 @@
     <None Include="constants.hlsl" />
     <None Include="bloom.hlsl" />
     <None Include="fog.hlsl" />
+    <None Include="skydome.hlsl" />
   </ItemGroup>
 </Project>

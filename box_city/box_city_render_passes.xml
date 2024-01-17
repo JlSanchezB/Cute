@@ -1,5 +1,21 @@
 <Root>
 <Global>
+  <Resource type="RootSignature" name="SkyDomeRootSignature">
+    <RootParam index="0" type="ConstantBuffer" shader_register="0" visibility="Pixel"/>
+  </Resource>
+  <Resource type="GraphicsPipelineState" name="SkyDomePipelineState">
+    <RootSignature>SkyDomeRootSignature</RootSignature>
+    <InputLayouts>
+      <Input semantic_name="POSITION" semantic_index="0" format="R32G32B32A32_FLOAT" input_slot="0"/>
+      <Input semantic_name="TEXCOORD" semantic_index="0" format="R32G32_FLOAT" input_slot="0" aligned_offset="16"/>
+    </InputLayouts>
+    <PixelShader entry_point="ps_main" target="ps_6_6">skydome.hlsl</PixelShader>
+    <VertexShader entry_point="vs_main" target="vs_6_6">skydome.hlsl</VertexShader>
+    <Rasterization/>
+    <RenderTargets>
+      <RenderTarget format="R16G16B16A16_FLOAT"/>
+    </RenderTargets>
+  </Resource>
   <Resource type="RootSignature" name="BuildHiZRootSignature">
     <RootParam index="0" type="DescriptorTable">
       <Range base_shader_register="0" size="2" type="UnorderedAccessBuffer"/>
@@ -105,8 +121,13 @@
 		    <RenderTarget>LightScene</RenderTarget>
         <DepthBuffer>SceneDepth</DepthBuffer>
 	    </SetRenderTarget>
-	    <ClearRenderTarget colour="0,0,0,0">LightScene</ClearRenderTarget>
       <ClearDepthStencil>SceneDepth</ClearDepthStencil>
+      <SetRootSignature>SkyDomeRootSignature</SetRootSignature>
+      <SetPipelineState>SkyDomePipelineState</SetPipelineState>
+      <SetRootConstantBuffer pipe="Graphics" root_param="0">
+        ViewData
+      </SetRootConstantBuffer>
+      <DrawFullScreenQuad/>
       <DrawCityBoxes/>
     </Commands>
   </Pass>

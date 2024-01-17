@@ -96,10 +96,16 @@ public:
 	float m_bloom_intensity = 0.1f;
 
 	//Fog density
-	float m_fog_density = 0.0015f;
+	float m_fog_density = 0.001f;
 
 	//Fog colour
 	glm::vec3 m_fog_colour = glm::vec3(0.01f, 0.01f, 0.1f);
+
+	//Fog top height
+	float m_fog_top_height = 670.f;
+
+	//Fog bottom height
+	float m_fog_bottom_height = -500.f;
 
 	BoxCityGame()
 	{
