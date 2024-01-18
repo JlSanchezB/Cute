@@ -3,7 +3,7 @@
   <Resource type="RootSignature" name="SkyDomeRootSignature">
     <RootParam index="0" type="ConstantBuffer" shader_register="0" visibility="Pixel"/>
   </Resource>
-  <Resource type="GraphicsPipelineState" name="SkyDomePipelineState">
+  <Resource type="GraphicsPipelineState" name="SkyDomePipelineState" depth_enable="true" depth_stencil_format="D32_FLOAT" depth_func="Greater_Equal">
     <RootSignature>SkyDomeRootSignature</RootSignature>
     <InputLayouts>
       <Input semantic_name="POSITION" semantic_index="0" format="R32G32B32A32_FLOAT" input_slot="0"/>
@@ -121,13 +121,8 @@
 		    <RenderTarget>LightScene</RenderTarget>
         <DepthBuffer>SceneDepth</DepthBuffer>
 	    </SetRenderTarget>
+      <ClearRenderTarget colour="0,0,0,0">LightScene</ClearRenderTarget>
       <ClearDepthStencil>SceneDepth</ClearDepthStencil>
-      <SetRootSignature>SkyDomeRootSignature</SetRootSignature>
-      <SetPipelineState>SkyDomePipelineState</SetPipelineState>
-      <SetRootConstantBuffer pipe="Graphics" root_param="0">
-        ViewData
-      </SetRootConstantBuffer>
-      <DrawFullScreenQuad/>
       <DrawCityBoxes/>
     </Commands>
   </Pass>
@@ -175,6 +170,12 @@
         <DepthBuffer>SceneDepth</DepthBuffer>
       </SetRenderTarget>
       <DrawCityBoxes/>
+      <SetRootSignature>SkyDomeRootSignature</SetRootSignature>
+      <SetPipelineState>SkyDomePipelineState</SetPipelineState>
+      <SetRootConstantBuffer pipe="Graphics" root_param="0">
+        ViewData
+      </SetRootConstantBuffer>
+      <DrawFullScreenQuad/>
     </Commands>
   </Pass>
   <Pass name="SecondPassBuildHiZ" group="Solids">

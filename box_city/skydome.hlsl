@@ -13,7 +13,7 @@ PSInput vs_main(float4 position : POSITION, float2 tex : TEXCOORD0)
 {
     PSInput result;
 
-    result.position = position;
+    result.position = float4(position.xy, 0.f, 1.f);
     result.tex = tex;
 
     return result;
