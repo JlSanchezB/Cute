@@ -69,14 +69,16 @@ void CullCityBoxesPass::Render(render::RenderContext& render_context) const
 void CullSecondPassCityBoxesPass::Render(render::RenderContext& render_context) const
 {
 	//Collect offsets from the point of view data
+	const render::PointOfView* point_of_view = render_context.GetPointOfView();
+	const BoxCityCustomPointOfViewData& box_city_custom_data = point_of_view->GetData<BoxCityCustomPointOfViewData>();
 	auto* gpu_memory = render::GetModule<render::GPUMemoryRenderModule>(render_context.GetRenderSystem(), "GPUMemory"_sh32);
 
 	//Setup compute
 	render_context.GetContext()->SetRootSignature(display::Pipe::Compute, m_display_resources->m_second_pass_box_culling_root_signature);
 
-	uint32_t constants[1] = { m_display_resources->kIndirectBoxBufferCount };
+	uint32_t constants[2] = { box_city_custom_data.instance_lists_offset, m_display_resources->kIndirectBoxBufferCount };
 
-	render_context.GetContext()->SetConstants(display::Pipe::Compute, 0, constants, 1);
+	render_context.GetContext()->SetConstants(display::Pipe::Compute, 0, constants, 2);
 
 	//Update the descriptor table
 	display::DescriptorTableDesc::Descritor descriptors[7];
@@ -132,7 +134,9 @@ void DrawCityBoxesPass::Render(render::RenderContext& render_context) const
 
 	context->SetRootSignature(display::Pipe::Graphics, m_display_resources->m_box_render_root_signature);
 
-	context->SetDescriptorTable(display::Pipe::Graphics, 0, m_display_resources->m_box_render_description_table_handle);
+	uint32_t constants[1] = { box_city_custom_data.instance_lists_offset};
+	render_context.GetContext()->SetConstants(display::Pipe::Graphics, 0, constants, 1);
+	context->SetDescriptorTable(display::Pipe::Graphics, 1, m_display_resources->m_box_render_description_table_handle);
 
 	//Render
 	context->SetPipelineState(m_display_resources->m_box_render_pipeline_state);

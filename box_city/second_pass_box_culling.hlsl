@@ -6,6 +6,7 @@ COUNTER(BoxCulling, SecondPassTotalCubes)
 
 cbuffer Root : register(b0)
 {
+    uint instance_lists_offset;
     uint indirect_box_buffer_count;
 }
 
@@ -52,9 +53,14 @@ void second_pass_box_culling(uint3 dispatch_thread_id : SV_DispatchThreadID)
 
         uint indirect_box = second_pass_indirect_culled_boxes[dispatch_thread_id.x + 1];
 
-        //Extract the instance offset and the box index
-        uint instance_data_offset_byte = (indirect_box >> 8) * 16;
-        uint box_index = indirect_box & 0xFF;
+        //Extract the instance list index, instance index and box index
+        uint instance_list_index = (indirect_box >> 22) & 0x3FF;
+        uint instance_index = (indirect_box >> 12) & 0x3FF;
+        uint box_index = indirect_box & 0xFFF;
+
+        //Read instance list offset and then the instance data offset
+        uint instance_list_offset_byte = dynamic_gpu_memory.Load(instance_lists_offset + (1 + instance_list_index) * 4);
+        uint instance_data_offset_byte = static_gpu_memory.Load(instance_list_offset_byte + (1 + instance_index) * 4);
 
         //Read the instance data
         float4 instance_data[3];

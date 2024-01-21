@@ -7,7 +7,12 @@ struct PSInput
     nointerpolation float4 colour : TEXCOORD1;
 };
 
-ConstantBuffer<ViewDataStruct> ViewData : register(b0);
+cbuffer Root : register(b0)
+{
+    uint instance_lists_offset;
+}
+
+ConstantBuffer<ViewDataStruct> ViewData : register(b1);
 
 ByteAddressBuffer static_gpu_memory: register(t0);
 ByteAddressBuffer dynamic_gpu_memory: register(t1);
@@ -48,8 +53,14 @@ PSInput vs_box_main(uint multi_instance_id : SV_InstanceID, uint vertex_id : SV_
     //The offset is in the indirect buffer
     uint indirect_box = indirect_box_buffer[instance_id + 1];
 
-    //Extract the instance data
-    uint instance_data_offset_byte = (indirect_box >> 8) * 16;
+    //Extract the instance list index, instance index and box index
+    uint instance_list_index = (indirect_box >> 22) & 0x3FF;
+    uint instance_index = (indirect_box >> 12) & 0x3FF;
+    uint box_index = indirect_box & 0xFFF;
+
+    //Read instance list offset and then the instance data offset
+    uint instance_list_offset_byte = dynamic_gpu_memory.Load(instance_lists_offset + (1 + instance_list_index) * 4);
+    uint instance_data_offset_byte = static_gpu_memory.Load(instance_list_offset_byte + (1 + instance_index) * 4);
 
     //Read Box instance data
     float4 instance_data[3];
@@ -62,7 +73,6 @@ PSInput vs_box_main(uint multi_instance_id : SV_InstanceID, uint vertex_id : SV_
     float3 instance_translation = float3(instance_data[0].x, instance_data[0].y, instance_data[0].z);
 
     //Then extract the box obb
-    uint box_index = indirect_box & 0xFF;
     uint box_list_offset_byte = asuint(instance_data[0].w);
     box_list_offset_byte += 16; //Skip the box_list count
     box_list_offset_byte += box_index * 16 * 3; //Each box is a float4 * 3

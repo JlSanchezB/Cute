@@ -14,16 +14,20 @@ void BoxCityResources::Load(display::Device* device, render::System* render_syst
 	//Box render root signature
 	{
 		display::RootSignatureDesc desc;
-		desc.num_root_parameters = 1;
-		desc.root_parameters[0].type = display::RootSignatureParameterType::DescriptorTable;
+		desc.num_root_parameters = 2;
+		desc.root_parameters[0].type = display::RootSignatureParameterType::Constants;
 		desc.root_parameters[0].visibility = display::ShaderVisibility::All;
-		desc.root_parameters[0].table.num_ranges = 2;
-		desc.root_parameters[0].table.range[0].base_shader_register = 0;
-		desc.root_parameters[0].table.range[0].size = 1;
-		desc.root_parameters[0].table.range[0].type = display::DescriptorTableParameterType::ConstantBuffer;
-		desc.root_parameters[0].table.range[1].base_shader_register = 0;
-		desc.root_parameters[0].table.range[1].size = 3;
-		desc.root_parameters[0].table.range[1].type = display::DescriptorTableParameterType::ShaderResource;
+		desc.root_parameters[0].root_param.shader_register = 0;
+		desc.root_parameters[0].root_param.num_constants = 1;
+		desc.root_parameters[1].type = display::RootSignatureParameterType::DescriptorTable;
+		desc.root_parameters[1].visibility = display::ShaderVisibility::All;
+		desc.root_parameters[1].table.num_ranges = 2;
+		desc.root_parameters[1].table.range[0].base_shader_register = 1;
+		desc.root_parameters[1].table.range[0].size = 1;
+		desc.root_parameters[1].table.range[0].type = display::DescriptorTableParameterType::ConstantBuffer;
+		desc.root_parameters[1].table.range[1].base_shader_register = 0;
+		desc.root_parameters[1].table.range[1].size = 3;
+		desc.root_parameters[1].table.range[1].type = display::DescriptorTableParameterType::ShaderResource;
 		desc.num_static_samplers = 0;
 
 		m_box_render_root_signature = display::CreateRootSignature(device, desc, "BoxRenderRootSignature");
@@ -117,7 +121,7 @@ void BoxCityResources::Load(display::Device* device, render::System* render_syst
 		desc.root_parameters[0].type = display::RootSignatureParameterType::Constants;
 		desc.root_parameters[0].visibility = display::ShaderVisibility::All;
 		desc.root_parameters[0].root_param.shader_register = 0;
-		desc.root_parameters[0].root_param.num_constants = 1;
+		desc.root_parameters[0].root_param.num_constants = 2;
 
 		desc.root_parameters[1].type = display::RootSignatureParameterType::DescriptorTable;
 		desc.root_parameters[1].visibility = display::ShaderVisibility::All;

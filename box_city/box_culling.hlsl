@@ -50,8 +50,10 @@ void clear_indirect_arguments()
 [numthreads(32, 1, 1)]
 void box_culling(uint3 group : SV_GroupID, uint3 group_thread_id : SV_GroupThreadID)
 {
+    uint instance_list_index = group.x;
+
     //Each group handles one instance list
-    uint instance_list_offset = dynamic_gpu_memory.Load(instance_lists_offset + (1 + group.x) * 4);
+    uint instance_list_offset = dynamic_gpu_memory.Load(instance_lists_offset + (1 + instance_list_index) * 4);
 
     //Read number of instances
     uint num_instances = static_gpu_memory.Load(instance_list_offset);
@@ -137,8 +139,8 @@ void box_culling(uint3 group : SV_GroupID, uint3 group_thread_id : SV_GroupThrea
                         first_pass = true;
                     }
                     
-                    uint indirect_box; //Encode the instance offset and the index of the box
-                    indirect_box = ((instance_offset / 16) << 8) | j;
+                    uint indirect_box; //Encode the instance list index (10bits), instance index (10bits), box index (12 bits);
+                    indirect_box = ((instance_list_index & 0x3FF) << 22) | ((instance_index & 0x3FF)  << 12) | (j & 0xFFF);
 
                     if (first_pass)
                     {
