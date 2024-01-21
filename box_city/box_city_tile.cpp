@@ -426,7 +426,7 @@ namespace BoxCityTileSystem
 				return glm::vec4(glm::pow(red, 2.2f), glm::pow(green, 2.2f), glm::pow(blue, 2.2f), 0.f);
 			};
 
-		float emissive_factor = 5.f;
+		float emissive_factor = 20.f;
 		//Color palette
 		const glm::vec4 colour_palette[] =
 		{

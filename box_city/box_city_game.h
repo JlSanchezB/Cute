@@ -93,7 +93,7 @@ public:
 	float m_bloom_radius = 1.f;
 
 	//Bloom Intensity
-	float m_bloom_intensity = 0.1f;
+	float m_bloom_intensity = 0.05f;
 
 	//Fog density
 	float m_fog_density = 0.001f;
