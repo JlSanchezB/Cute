@@ -54,8 +54,9 @@ PSInput vs_box_main(uint multi_instance_id : SV_InstanceID, uint vertex_id : SV_
     uint indirect_box = indirect_box_buffer[instance_id + 1];
 
     //Extract the instance list index, instance index and box index
-    uint instance_list_index = (indirect_box >> 22) & 0x3FF;
-    uint instance_index = (indirect_box >> 12) & 0x3FF;
+    //Encode the instance list index (8bits), instance index (12bits), box index (12 bits);
+    uint instance_list_index = (indirect_box >> 24) & 0xFF;
+    uint instance_index = (indirect_box >> 12) & 0xFFF;
     uint box_index = indirect_box & 0xFFF;
 
     //Read instance list offset and then the instance data offset

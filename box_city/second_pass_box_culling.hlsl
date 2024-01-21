@@ -54,8 +54,9 @@ void second_pass_box_culling(uint3 dispatch_thread_id : SV_DispatchThreadID)
         uint indirect_box = second_pass_indirect_culled_boxes[dispatch_thread_id.x + 1];
 
         //Extract the instance list index, instance index and box index
-        uint instance_list_index = (indirect_box >> 22) & 0x3FF;
-        uint instance_index = (indirect_box >> 12) & 0x3FF;
+        //Encode the instance list index (8bits), instance index (12bits), box index (12 bits);
+        uint instance_list_index = (indirect_box >> 24) & 0xFF;
+        uint instance_index = (indirect_box >> 12) & 0xFFF;
         uint box_index = indirect_box & 0xFFF;
 
         //Read instance list offset and then the instance data offset

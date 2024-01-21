@@ -139,8 +139,8 @@ void box_culling(uint3 group : SV_GroupID, uint3 group_thread_id : SV_GroupThrea
                         first_pass = true;
                     }
                     
-                    uint indirect_box; //Encode the instance list index (10bits), instance index (10bits), box index (12 bits);
-                    indirect_box = ((instance_list_index & 0x3FF) << 22) | ((instance_index & 0x3FF)  << 12) | (j & 0xFFF);
+                    uint indirect_box; //Encode the instance list index (8bits), instance index (12bits), box index (12 bits);
+                    indirect_box = ((instance_list_index & 0xFF) << 24) | ((instance_index & 0xFFF)  << 12) | (j & 0xFFF);
 
                     if (first_pass)
                     {
