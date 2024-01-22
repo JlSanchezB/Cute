@@ -493,8 +493,12 @@ namespace display
 		
 		BufferHandle m_development_shaders_counters_buffer;
 		size_t m_development_shaders_counters_size = 0;
-
 		BufferHandle m_development_shaders_counters_readback_buffer;
+
+		BufferHandle m_development_shaders_commands_buffer;
+		size_t m_development_shaders_commands_size = 0;
+		size_t m_development_shaders_commands_used_size = 0;
+		BufferHandle m_development_shaders_commands_readback_buffer;
 
 		DescriptorTableHandle m_development_shaders_descriptor_table;
 
@@ -520,6 +524,14 @@ namespace display
 		};
 		//Map of the indexes for all GPU counters
 		core::FastMap<std::string, Counter> m_counters;
+
+		struct ShaderFile
+		{
+			std::string source_code;
+			uint32_t file_id;
+		};
+		//From file name it gets the source code and the file id
+		core::FastMap<std::string, ShaderFile> m_shader_files;
 
 		//Accesor to the resources (we need a specialitation for each type)
 		template<typename HANDLE>

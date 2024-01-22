@@ -8,9 +8,56 @@
 #include <helpers/imgui_helper.h>
 #include <regex>
 #include <core/control_variables.h>
+#include <string>
 
 extern "C" { __declspec(dllexport) extern const UINT D3D12SDKVersion = 608; }
 extern "C" { __declspec(dllexport) extern const char* D3D12SDKPath = u8".\\D3D12\\"; }
+
+#pragma optimize("", off)
+
+namespace
+{
+	std::string GetLine(const std::string& source_code, const uint32_t line)
+	{
+		size_t start = 0;
+		size_t end = 0;
+
+		for (size_t i = 0; i < line; ++i)
+		{
+			end = source_code.find('\n', start);
+			if (end == std::string::npos)
+			{
+				//Bad
+				return "Line not found";
+			}
+			start = end + 1;
+		}
+		//Find the end
+		end = source_code.find('\n', start + 1);
+
+		return source_code.substr(start, end - start - 1); //Removing the return
+	}
+
+	struct AssertPosition
+	{
+		uint32_t shader_file_id;
+		uint32_t line_num;
+
+		bool operator==(const AssertPosition& a) const
+		{
+			return shader_file_id == a.shader_file_id && line_num == a.line_num;
+		}
+	};
+}
+
+namespace std {
+	template<>
+	struct hash<AssertPosition> {
+		inline size_t operator()(const AssertPosition& x) const {
+			return x.line_num + x.shader_file_id;
+		}
+	};
+}
 
 namespace display
 {
@@ -228,6 +275,29 @@ namespace display
 				descriptor_needs_update = true;
 			}
 
+			if (device->m_development_shaders_commands_size == 0 || device->m_development_shaders_commands_used_size >= device->m_development_shaders_commands_size * 2 / 3)
+			{
+				//Grow if the used size is more than 2/3 the size of the commands buffer
+
+				//Delete old buffers
+				if (device->m_development_shaders_commands_buffer.IsValid())
+					display::DestroyBuffer(device, device->m_development_shaders_commands_buffer);
+				if (device->m_development_shaders_commands_readback_buffer.IsValid())
+					display::DestroyBuffer(device, device->m_development_shaders_commands_readback_buffer);
+
+				device->m_development_shaders_commands_size = std::max(1024ull, device->m_development_shaders_commands_used_size * 2);
+
+				//Create development shaders buffer supporting UAV
+				display::BufferDesc buffer_desc = display::BufferDesc::CreateStructuredBuffer(display::Access::Static, static_cast<uint32_t>(device->m_development_shaders_commands_size), 4, true);
+				device->m_development_shaders_commands_buffer = display::CreateBuffer(device, buffer_desc, "Development Shaders Commands Buffer");
+
+				//Create development shaders read back buffer, so the data can go from the GPU to the CPU as needed
+				buffer_desc = display::BufferDesc::CreateStructuredBuffer(display::Access::ReadBack, static_cast<uint32_t>(device->m_development_shaders_commands_size), 4);
+				device->m_development_shaders_commands_readback_buffer = display::CreateBuffer(device, buffer_desc, "Development Shaders Commands ReadBack Buffer");
+
+				descriptor_needs_update = true;
+			}
+
 			//Reset the header, control variables and stats of the buffer
 
 			//Open command list
@@ -271,6 +341,17 @@ namespace display
 
 				context->AddResourceBarriers({ display::ResourceBarrier(device->m_development_shaders_counters_buffer, display::TranstitionState::CopyDest, display::TranstitionState::UnorderedAccess) });
 			}
+			//Reset commands size to zero (just the first integer)
+			{
+				context->AddResourceBarriers({ display::ResourceBarrier(device->m_development_shaders_commands_buffer, display::TranstitionState::UnorderedAccess, display::TranstitionState::CopyDest) });
+
+				uint32_t* upload_buffer_data = reinterpret_cast<uint32_t*>(context->UpdateBufferResource(device->m_development_shaders_commands_buffer, 0, 2 * sizeof(uint32_t)));
+
+				upload_buffer_data[0] = 2; //All commands reset to zero (the start index is the second uint)
+				upload_buffer_data[1] = static_cast<uint32_t>(device->m_development_shaders_commands_size - 2); //Total command size
+
+				context->AddResourceBarriers({ display::ResourceBarrier(device->m_development_shaders_commands_buffer, display::TranstitionState::CopyDest, display::TranstitionState::UnorderedAccess) });
+			}
 
 			//If buffers have been recreated, build the descriptor
 			if (descriptor_needs_update)
@@ -281,6 +362,7 @@ namespace display
 					display::DescriptorTableDesc descriptors;
 					descriptors.AddDescriptor(device->m_development_shaders_control_variables_buffer);
 					descriptors.AddDescriptor(AsUAVBuffer(device->m_development_shaders_counters_buffer));
+					descriptors.AddDescriptor(AsUAVBuffer(device->m_development_shaders_commands_buffer));
 		
 					device->m_development_shaders_descriptor_table = CreateDescriptorTable(device, descriptors);
 				}
@@ -290,6 +372,7 @@ namespace display
 					display::DescriptorTableDesc descriptors;
 					descriptors.AddDescriptor(device->m_development_shaders_control_variables_buffer);
 					descriptors.AddDescriptor(AsUAVBuffer(device->m_development_shaders_counters_buffer));
+					descriptors.AddDescriptor(AsUAVBuffer(device->m_development_shaders_commands_buffer));
 					UpdateDescriptorTable(device, device->m_development_shaders_descriptor_table, descriptors.descriptors.data(), descriptors.num_descriptors);
 				}		
 			}
@@ -306,7 +389,6 @@ namespace display
 	{
 		if (device->m_development_shaders && device->m_development_shaders_counters_buffer.IsValid() && device->m_counters.size() > 0)
 		{
-	
 			//Copy counters to the read back buffer
 			{
 				//Open command list
@@ -332,6 +414,85 @@ namespace display
 			{
 				counter.second.counter.Set(counters_buffer[counter.second.index]);
 			}
+		}
+		if (device->m_development_shaders && device->m_development_shaders_commands_buffer.IsValid())
+		{
+			//Copy commands to the read back buffer
+			{
+				//Open command list
+				display::Context* context = OpenCommandList(device, device->m_resource_command_list);
+
+				context->AddResourceBarriers({ display::ResourceBarrier(device->m_development_shaders_commands_buffer, display::TranstitionState::UnorderedAccess, display::TranstitionState::CopySource) });
+
+				context->CopyBuffer(device->m_development_shaders_commands_readback_buffer, 0, device->m_development_shaders_commands_buffer, 0, device->m_development_shaders_commands_size * 4);
+
+				context->AddResourceBarriers({ display::ResourceBarrier(device->m_development_shaders_commands_buffer, display::TranstitionState::CopySource, display::TranstitionState::UnorderedAccess) });
+
+				//Close command list
+				CloseCommandList(device, context);
+
+				//Execute the command list
+				ExecuteCommandList(device, device->m_resource_command_list);
+			}
+
+			//Read commands
+			const uint32_t* commands_buffer = reinterpret_cast<const uint32_t*>(GetLastWrittenResourceMemoryBuffer(device, device->m_development_shaders_commands_readback_buffer));
+
+			//Execute commands from the GPU (CurrentSize, MaxSize)
+			//Command List:
+			// ASSERT 0, FileID, LineNumber
+			device->m_development_shaders_commands_used_size = commands_buffer[0];
+			uint32_t commands_total = commands_buffer[0];
+
+			//Merge asserts
+			core::FastMap<AssertPosition, uint32_t> assert_merged;
+
+			//Process commands to collect the information
+			size_t command_offset = 2;
+			while (command_offset < commands_total)
+			{
+				//Read command
+				switch (commands_buffer[command_offset])
+				{
+				case 0: //ASSERT
+				{
+					AssertPosition assert_position{ commands_buffer[command_offset + 1], commands_buffer[command_offset + 2] };
+					auto& it = assert_merged.Find(assert_position);
+					if (it)
+					{
+						//Increase the assert found
+						(*it)++;
+					}
+					else
+					{
+						assert_merged.Insert(assert_position, 0);
+					}
+					
+					command_offset += 3;
+					break;
+				}
+				default:
+					core::LogWarning("Incorrect command ID read from the command development shaders");
+					break;
+				}
+			}
+
+			//Print the information in the log for each merged log
+			assert_merged.VisitNamed([&](const AssertPosition& assert_position, const uint32_t& assert_count)
+				{
+					//Get the file name
+					device->m_shader_files.VisitNamed([&](const std::string& file_name, const Device::ShaderFile& shader_file)
+						{
+							if (assert_position.shader_file_id == shader_file.file_id)
+							{
+								//Extract the line
+								std::string line = GetLine(shader_file.source_code, assert_position.line_num);
+
+								//Print
+								core::LogWarning("GPU ASSERTs triggered: Shader<%s>, Line<%d>, Code<%s>, Count<%d>", file_name.c_str(), assert_position.line_num, line.c_str(), assert_count);
+							}
+						});
+				});
 		}
 	}
 }
@@ -622,6 +783,10 @@ namespace display
 			display::DestroyBuffer(device, device->m_development_shaders_counters_buffer);
 		if (device->m_development_shaders_counters_readback_buffer.IsValid())
 			display::DestroyBuffer(device, device->m_development_shaders_counters_readback_buffer);
+		if (device->m_development_shaders_commands_buffer.IsValid())
+			display::DestroyBuffer(device, device->m_development_shaders_commands_buffer);
+		if (device->m_development_shaders_commands_readback_buffer.IsValid())
+			display::DestroyBuffer(device, device->m_development_shaders_commands_readback_buffer);
 		if (device->m_development_shaders_descriptor_table.IsValid())
 			display::DestroyDescriptorTable(device, device->m_development_shaders_descriptor_table);
 
@@ -981,7 +1146,7 @@ namespace display
 		if (device->m_development_shaders)
 		{
 			range[root_signature_desc.num_root_parameters][0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1000);
-			range[root_signature_desc.num_root_parameters][1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 1000);
+			range[root_signature_desc.num_root_parameters][1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 2, 1000);
 
 			//Create slot for the descriptor table that represent the shader development
 			root_parameters[root_signature_desc.num_root_parameters].InitAsDescriptorTable(2, &range[root_signature_desc.num_root_parameters][0], D3D12_SHADER_VISIBILITY_ALL);
@@ -1135,13 +1300,32 @@ namespace display
 
 		if (device->m_development_shaders)
 		{
-			//Define the shader development buffer
-			//0 -> number of control variables
-			//1 -> number of stats
-			// control variables
-			// stats
+			//Calculate the shader file id
+			uint32_t shader_file_id = 0xFFFFFFFF; //Internal, no filename
+			if (compile_shader_desc.file_name)
+			{
+				auto& it = device->m_shader_files.Find(compile_shader_desc.file_name);
+				if (it)
+				{
+					//Just update the source code and get the shader file id
+					shader_file_id = it->file_id;
+					it->source_code = std::string(reinterpret_cast<const char*>(source_buffer.Ptr), source_buffer.Size);
+				}
+				else
+				{
+					//Needs a new one
+					shader_file_id = static_cast<uint32_t>(device->m_shader_files.size() + 1);
+					std::string source_code;
+					source_code.append(reinterpret_cast<const char*>(source_buffer.Ptr), source_buffer.Size);
+					device->m_shader_files.Insert(compile_shader_desc.file_name, Device::ShaderFile{ std::move(source_code), shader_file_id });
+				}
+			}
+			
+
+			//Define the shader development buffers
 			shader_prefix += "StructuredBuffer<uint> ControlVariablesBuffer : register(t1000);\n";
 			shader_prefix += "RWStructuredBuffer<uint> CountersBuffer : register(u1000);\n";
+			shader_prefix += "RWStructuredBuffer<uint> CommandsBuffer : register(u1001);\n";
 
 			//CONTROL VARIABLES
 			{
@@ -1270,6 +1454,15 @@ namespace display
 				shader_prefix += "#define COUNTER_INC(variable) {uint retvalue; InterlockedAdd(CountersBuffer[variable##_index], 1, retvalue);}\n";
 				shader_prefix += "#define COUNTER_INC_VALUE(variable, value) {uint retvalue; InterlockedAdd(CountersBuffer[variable##_index], value, retvalue);}\n";
 			}
+			//ASSERTS
+			{
+				//Asserts are command zero and it has two more parameters (fileID and line)
+				shader_prefix += "#define assert(test) {if (!(test)){ uint offset_command; InterlockedAdd(CommandsBuffer[0], 3, offset_command); if ((offset_command + 3) < CommandsBuffer[1]){ CommandsBuffer[offset_command] = 0; CommandsBuffer[offset_command + 1] = " +
+					std::to_string(shader_file_id) +"; CommandsBuffer[offset_command + 2] = __LINE__;} else {InterlockedAdd(CommandsBuffer[0], -3, offset_command);} }}\n";
+			}
+			//Reset the line count, so the assert can work
+			const char* file_name = (compile_shader_desc.file_name) ? compile_shader_desc.file_name : compile_shader_desc.name;
+			shader_prefix += std::string("#line 0 \"") + file_name + "\"\n";
 		}
 		else
 		{
@@ -1279,6 +1472,12 @@ namespace display
 			shader_prefix += "#define COUNTER(variable, group, name)\n";
 			shader_prefix += "#define COUNTER_INC(variable)\n";
 			shader_prefix += "#define COUNTER_INC_VALUE(variable, value)\n";
+			//ASSERTS
+			shader_prefix += "#define assert(test)\n";
+
+			//Reset the line count
+			const char* file_name = (compile_shader_desc.file_name) ? compile_shader_desc.file_name : compile_shader_desc.name;
+			shader_prefix += std::string("#line 0 \"") + file_name + "\"\n";
 		}
 
 		//Add the shader prefix before the code

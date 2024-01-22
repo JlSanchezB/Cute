@@ -124,5 +124,6 @@ float4 ps_main(PSInput input) : SV_TARGET
     //Tonemapper
     result = tonemap_reinhard(result);
 
+    assert(!any(isnan(result)));
     return float4(result, 1.f);
 }

@@ -140,6 +140,9 @@ void box_culling(uint3 group : SV_GroupID, uint3 group_thread_id : SV_GroupThrea
                     }
                     
                     uint indirect_box; //Encode the instance list index (8bits), instance index (12bits), box index (12 bits);
+                    assert(instance_list_index < (1 << 8)); //check range
+                    assert(instance_index < (1 << 12)); //check range
+                    assert(j < (1 << 12)); //check range
                     indirect_box = ((instance_list_index & 0xFF) << 24) | ((instance_index & 0xFFF)  << 12) | (j & 0xFFF);
 
                     if (first_pass)
@@ -155,6 +158,7 @@ void box_culling(uint3 group : SV_GroupID, uint3 group_thread_id : SV_GroupThrea
                             InterlockedAdd(indirect_culled_boxes_parameters[1], 1, offset_instance);
                         }
 
+                        assert(offset < indirect_box_buffer_count); //check range
                         if (offset < indirect_box_buffer_count)
                         {
                             indirect_culled_boxes[offset] = indirect_box;
@@ -169,6 +173,7 @@ void box_culling(uint3 group : SV_GroupID, uint3 group_thread_id : SV_GroupThrea
                         uint offset;
                         InterlockedAdd(second_pass_indirect_culled_boxes[0], 1, offset);
            
+                        assert(offset < second_pass_indirect_box_buffer_count); //check range
                         if (offset < second_pass_indirect_box_buffer_count)
                         {
                             second_pass_indirect_culled_boxes[offset] = indirect_box;

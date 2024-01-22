@@ -71,6 +71,7 @@ void build_hz(uint3 group : SV_GroupID, uint3 group_thread_id : SV_GroupThreadID
 			KERNEL(8, 8)
 
 		//Write output
+		assert(!isnan(min_value));
 		hz_texture[source_min] = min_value;
 	}
 	DeviceMemoryBarrier();
@@ -125,6 +126,7 @@ void build_hz(uint3 group : SV_GroupID, uint3 group_thread_id : SV_GroupThreadID
 		float min_value = min(value0, min(value1, min(value2, value3)));
 
 		//Write result in the correct offset
+		assert(!isnan(min_value));
 		hz_texture[GetMipOffset(mip_index) + dest_tex_coords.xy] = min_value;
 
 		group_reduced = group_reduced / 2;
