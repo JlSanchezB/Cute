@@ -203,6 +203,9 @@ namespace platform
 	};
 
 	char Run(const char* name, void* param, uint32_t width, uint32_t height, Game* game);
+
+	//Show modal dialog, returns if yes/no was clicked
+	bool ShowModalDialog(const char* title, const char* message);
 }
 
 #endif PLATFORM_H_

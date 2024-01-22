@@ -1199,4 +1199,16 @@ namespace platform
 		// Return this part of the WM_QUIT message to Windows.
 		return static_cast<char>(msg.wParam);
 	}
+
+	bool ShowModalDialog(const char* title, const char* message)
+	{
+		int msgboxID = MessageBox(
+			NULL,
+			message,
+			title,
+			MB_ICONEXCLAMATION | MB_YESNO
+		);
+
+		return (msgboxID == IDYES);
+	}
 }

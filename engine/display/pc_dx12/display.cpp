@@ -9,6 +9,7 @@
 #include <regex>
 #include <core/control_variables.h>
 #include <string>
+#include <core/platform.h>
 
 extern "C" { __declspec(dllexport) extern const UINT D3D12SDKVersion = 608; }
 extern "C" { __declspec(dllexport) extern const char* D3D12SDKPath = u8".\\D3D12\\"; }
@@ -1258,7 +1259,7 @@ namespace display
 		}
 	};
 
-	static bool CompileShader(Device* device, const CompileShaderDesc& compile_shader_desc, ComPtr<IDxcBlob>& shader_blob, std::unordered_set<std::string>& include_set)
+	static bool CompileShader(Device* device, const CompileShaderDesc& compile_shader_desc, ComPtr<IDxcBlob>& shader_blob, std::unordered_set<std::string>& include_set, bool allow_reload = true)
 	{
 		ComPtr<ID3DBlob> blob;
 
@@ -1272,288 +1273,300 @@ namespace display
 			defines.get()[compile_shader_desc.defines.size()].Definition = nullptr;
 		}
 
-		HRESULT hr;
-		DxcBuffer source_buffer;
-		source_buffer.Encoding = 0;
-		std::vector<char> source_shader_blob;
+		bool reload = true;
 
-		if (compile_shader_desc.file_name)
+		//It allows to reload during init
+		while (reload && allow_reload && device->m_development_shaders)
 		{
-			//Use the file name
-			source_shader_blob = ReadFileToBuffer(compile_shader_desc.file_name);
-			source_buffer.Ptr = source_shader_blob.data();
-			source_buffer.Size = source_shader_blob.size();
-		}
-		else if (compile_shader_desc.shader_code)
-		{
-			source_buffer.Ptr = compile_shader_desc.shader_code;
-			source_buffer.Size = strnlen_s(compile_shader_desc.shader_code, 512 * 1024);
-		}
-		else
-		{
-			//Error compiling
-			SetLastErrorMessage(device, "Error compiling shader <%s>, filename or shader_code was not defined", compile_shader_desc.name);
-			return false;
-		}
+			HRESULT hr;
+			DxcBuffer source_buffer;
+			source_buffer.Encoding = 0;
+			std::vector<char> source_shader_blob;
 
-		std::string shader_prefix;
-
-		if (device->m_development_shaders)
-		{
-			//Calculate the shader file id
-			uint32_t shader_file_id = 0xFFFFFFFF; //Internal, no filename
 			if (compile_shader_desc.file_name)
 			{
-				auto& it = device->m_shader_files.Find(compile_shader_desc.file_name);
-				if (it)
-				{
-					//Just update the source code and get the shader file id
-					shader_file_id = it->file_id;
-					it->source_code = std::string(reinterpret_cast<const char*>(source_buffer.Ptr), source_buffer.Size);
-				}
-				else
-				{
-					//Needs a new one
-					shader_file_id = static_cast<uint32_t>(device->m_shader_files.size() + 1);
-					std::string source_code;
-					source_code.append(reinterpret_cast<const char*>(source_buffer.Ptr), source_buffer.Size);
-					device->m_shader_files.Insert(compile_shader_desc.file_name, Device::ShaderFile{ std::move(source_code), shader_file_id });
-				}
+				//Use the file name
+				source_shader_blob = ReadFileToBuffer(compile_shader_desc.file_name);
+				source_buffer.Ptr = source_shader_blob.data();
+				source_buffer.Size = source_shader_blob.size();
 			}
-			
-
-			//Define the shader development buffers
-			shader_prefix += "StructuredBuffer<uint> ControlVariablesBuffer : register(t1000);\n";
-			shader_prefix += "RWStructuredBuffer<uint> CountersBuffer : register(u1000);\n";
-			shader_prefix += "RWStructuredBuffer<uint> CommandsBuffer : register(u1001);\n";
-
-			//CONTROL VARIABLES
+			else if (compile_shader_desc.shader_code)
 			{
-				//Undefine then, are going to be define as offsets in a buffer
-				shader_prefix += "#define CONTROL_VARIABLE(type, group, name, default_value)\n";
+				source_buffer.Ptr = compile_shader_desc.shader_code;
+				source_buffer.Size = strnlen_s(compile_shader_desc.shader_code, 512 * 1024);
+			}
+			else
+			{
+				//Error compiling
+				SetLastErrorMessage(device, "Error compiling shader <%s>, filename or shader_code was not defined", compile_shader_desc.name);
+				return false;
+			}
 
-				//Look for control variables "CONTROL_VARIABLE(" in the shader code
-				std::string shader_code = reinterpret_cast<const char*>(source_buffer.Ptr);
+			std::string shader_prefix;
 
-				std::regex pattern("CONTROL_VARIABLE\\((\\w+), (\\w+), (\\w+), (\\w+)\\)");
-				std::smatch match;
-
-				while (std::regex_search(shader_code, match, pattern))
+			if (device->m_development_shaders)
+			{
+				//Calculate the shader file id
+				uint32_t shader_file_id = 0xFFFFFFFF; //Internal, no filename
+				if (compile_shader_desc.file_name)
 				{
-					//Collect control variable name and type
-
-					const std::string& type_variable_string = match[1].str();
-					const std::string& group = match[2].str();
-					const std::string& control_variable = match[3].str();
-					const std::string& default_value_string = match[4].str();
-
-					std::variant<float, uint32_t, bool> default_value;
-					if (type_variable_string == "float")
+					auto& it = device->m_shader_files.Find(compile_shader_desc.file_name);
+					if (it)
 					{
-						default_value = std::stof(default_value_string);
-					}
-					else if (type_variable_string == "uint")
-					{
-						default_value = (uint32_t)std::stoul(default_value_string);
-					}
-					else if (type_variable_string == "bool")
-					{
-						default_value = (default_value_string == "true");
+						//Just update the source code and get the shader file id
+						shader_file_id = it->file_id;
+						it->source_code = std::string(reinterpret_cast<const char*>(source_buffer.Ptr), source_buffer.Size);
 					}
 					else
 					{
-						default_value = false;
-						core::LogWarning("The control variable <%s> type <%s> is not a supported one (float, uint, bool). Reset to bool.", control_variable.c_str(), type_variable_string.c_str());
+						//Needs a new one
+						shader_file_id = static_cast<uint32_t>(device->m_shader_files.size() + 1);
+						std::string source_code;
+						source_code.append(reinterpret_cast<const char*>(source_buffer.Ptr), source_buffer.Size);
+						device->m_shader_files.Insert(compile_shader_desc.file_name, Device::ShaderFile{ std::move(source_code), shader_file_id });
 					}
-					
-					auto control_variable_item = device->m_control_variables.Find(control_variable);
-					size_t index;
-					if (control_variable_item)
+				}
+
+
+				//Define the shader development buffers
+				shader_prefix += "StructuredBuffer<uint> ControlVariablesBuffer : register(t1000);\n";
+				shader_prefix += "RWStructuredBuffer<uint> CountersBuffer : register(u1000);\n";
+				shader_prefix += "RWStructuredBuffer<uint> CommandsBuffer : register(u1001);\n";
+
+				//CONTROL VARIABLES
+				{
+					//Undefine then, are going to be define as offsets in a buffer
+					shader_prefix += "#define CONTROL_VARIABLE(type, group, name, default_value)\n";
+
+					//Look for control variables "CONTROL_VARIABLE(" in the shader code
+					std::string shader_code = reinterpret_cast<const char*>(source_buffer.Ptr);
+
+					std::regex pattern("CONTROL_VARIABLE\\((\\w+), (\\w+), (\\w+), (\\w+)\\)");
+					std::smatch match;
+
+					while (std::regex_search(shader_code, match, pattern))
 					{
-						//Check if the default variable is ok
-						if (default_value != control_variable_item->default_value)
+						//Collect control variable name and type
+
+						const std::string& type_variable_string = match[1].str();
+						const std::string& group = match[2].str();
+						const std::string& control_variable = match[3].str();
+						const std::string& default_value_string = match[4].str();
+
+						std::variant<float, uint32_t, bool> default_value;
+						if (type_variable_string == "float")
 						{
-							core::LogWarning("The control variable <%s> is define with different default values in different shaders. The behaviour is undefined.", control_variable.c_str());
+							default_value = std::stof(default_value_string);
 						}
-						index = control_variable_item->index;
-					}
-					else
-					{
-						//We need to add a new element to the map
-						index = device->m_control_variables.size();
+						else if (type_variable_string == "uint")
+						{
+							default_value = (uint32_t)std::stoul(default_value_string);
+						}
+						else if (type_variable_string == "bool")
+						{
+							default_value = (default_value_string == "true");
+						}
+						else
+						{
+							default_value = false;
+							core::LogWarning("The control variable <%s> type <%s> is not a supported one (float, uint, bool). Reset to bool.", control_variable.c_str(), type_variable_string.c_str());
+						}
+
+						auto control_variable_item = device->m_control_variables.Find(control_variable);
+						size_t index;
+						if (control_variable_item)
+						{
+							//Check if the default variable is ok
+							if (default_value != control_variable_item->default_value)
+							{
+								core::LogWarning("The control variable <%s> is define with different default values in different shaders. The behaviour is undefined.", control_variable.c_str());
+							}
+							index = control_variable_item->index;
+						}
+						else
+						{
+							//We need to add a new element to the map
+							index = device->m_control_variables.size();
+
+							switch (default_value.index())
+							{
+							case 0:
+								device->m_control_variables.Insert(control_variable, Device::ControlVariable{ index, default_value, core::RegisterControlVariable(std::get<float>(default_value), core::ControlVariableGroupName(group.c_str()), core::ControlVariableName(control_variable.c_str()), core::ConsoleVariableType::Render) });
+								break;
+							case 1:
+								device->m_control_variables.Insert(control_variable, Device::ControlVariable{ index, default_value, core::RegisterControlVariable(std::get<uint32_t>(default_value), core::ControlVariableGroupName(group.c_str()), core::ControlVariableName(control_variable.c_str()), core::ConsoleVariableType::Render) });
+								break;
+							case 2:
+								device->m_control_variables.Insert(control_variable, Device::ControlVariable{ index, default_value, core::RegisterControlVariable(std::get<bool>(default_value), core::ControlVariableGroupName(group.c_str()), core::ControlVariableName(control_variable.c_str()), core::ConsoleVariableType::Render) });
+								break;
+							}
+						}
 
 						switch (default_value.index())
 						{
 						case 0:
-							device->m_control_variables.Insert(control_variable, Device::ControlVariable{ index, default_value, core::RegisterControlVariable(std::get<float>(default_value), core::ControlVariableGroupName(group.c_str()), core::ControlVariableName(control_variable.c_str()), core::ConsoleVariableType::Render)});
+							shader_prefix += std::string("#define ") + control_variable + " asfloat(ControlVariablesBuffer[" + std::to_string(index) + "])\n";
 							break;
 						case 1:
-							device->m_control_variables.Insert(control_variable, Device::ControlVariable{ index, default_value, core::RegisterControlVariable(std::get<uint32_t>(default_value), core::ControlVariableGroupName(group.c_str()), core::ControlVariableName(control_variable.c_str()), core::ConsoleVariableType::Render) });
+							shader_prefix += std::string("#define ") + control_variable + " ControlVariablesBuffer[" + std::to_string(index) + "]\n";
 							break;
 						case 2:
-							device->m_control_variables.Insert(control_variable, Device::ControlVariable{ index, default_value, core::RegisterControlVariable(std::get<bool>(default_value), core::ControlVariableGroupName(group.c_str()), core::ControlVariableName(control_variable.c_str()), core::ConsoleVariableType::Render) });
+							shader_prefix += std::string("#define ") + control_variable + " (ControlVariablesBuffer[" + std::to_string(index) + "] != 0)\n";
 							break;
-						}		
-					}
+						}
 
-					switch (default_value.index())
-					{
-					case 0:
-						shader_prefix += std::string("#define ") + control_variable + " asfloat(ControlVariablesBuffer[" + std::to_string(index) + "])\n";
-						break;
-					case 1:
-						shader_prefix += std::string("#define ") + control_variable + " ControlVariablesBuffer[" + std::to_string(index) + "]\n";
-						break;
-					case 2:
-						shader_prefix += std::string("#define ") + control_variable + " (ControlVariablesBuffer[" + std::to_string(index) + "] != 0)\n";
-						break;
+						//Continue to the rest of the shader
+						shader_code = match.suffix();
 					}
-					
-					//Continue to the rest of the shader
-					shader_code = match.suffix();
 				}
-			}
 
-			//COUNTERS
-			{
-				//Look for control variables "COUNTER(" in the shader code
-				std::string shader_code = reinterpret_cast<const char*>(source_buffer.Ptr);
-
-				std::regex pattern("COUNTER\\((\\w+), (\\w+)\\)");
-				std::smatch match;
-
-				//Undefine then, are going to be define as offsets in a buffer
-				shader_prefix += "#define COUNTER(group, variable)\n";
-
-				while (std::regex_search(shader_code, match, pattern))
+				//COUNTERS
 				{
-					//Collect control variable
-					const std::string& group = match[1].str();
-					const std::string& variable = match[2].str();
+					//Look for control variables "COUNTER(" in the shader code
+					std::string shader_code = reinterpret_cast<const char*>(source_buffer.Ptr);
 
-					auto stat_index = device->m_counters.Find(variable);
-					size_t index;
-					if (stat_index)
+					std::regex pattern("COUNTER\\((\\w+), (\\w+)\\)");
+					std::smatch match;
+
+					//Undefine then, are going to be define as offsets in a buffer
+					shader_prefix += "#define COUNTER(group, variable)\n";
+
+					while (std::regex_search(shader_code, match, pattern))
 					{
-						index = stat_index->index;
-					}
-					else
-					{
-						//We need to add a new element to the map
-						index = device->m_counters.size();
-						device->m_counters.Insert(variable, Device::Counter{ index, core::CounterGroupName(group.c_str()), core::CounterName(variable.c_str()), core::CounterType::Render, true});
+						//Collect control variable
+						const std::string& group = match[1].str();
+						const std::string& variable = match[2].str();
+
+						auto stat_index = device->m_counters.Find(variable);
+						size_t index;
+						if (stat_index)
+						{
+							index = stat_index->index;
+						}
+						else
+						{
+							//We need to add a new element to the map
+							index = device->m_counters.size();
+							device->m_counters.Insert(variable, Device::Counter{ index, core::CounterGroupName(group.c_str()), core::CounterName(variable.c_str()), core::CounterType::Render, true });
+						}
+
+						shader_prefix += std::string("#define ") + variable + "_index " + std::to_string(index) + "\n";
+
+						//Continue to the rest of the shader
+						shader_code = match.suffix();
 					}
 
-					shader_prefix += std::string("#define ") + variable + "_index " + std::to_string(index) + "\n";
-
-					//Continue to the rest of the shader
-					shader_code = match.suffix();
+					//Define stats operators
+					shader_prefix += "#define COUNTER_INC(variable) {uint retvalue; InterlockedAdd(CountersBuffer[variable##_index], 1, retvalue);}\n";
+					shader_prefix += "#define COUNTER_INC_VALUE(variable, value) {uint retvalue; InterlockedAdd(CountersBuffer[variable##_index], value, retvalue);}\n";
 				}
-
-				//Define stats operators
-				shader_prefix += "#define COUNTER_INC(variable) {uint retvalue; InterlockedAdd(CountersBuffer[variable##_index], 1, retvalue);}\n";
-				shader_prefix += "#define COUNTER_INC_VALUE(variable, value) {uint retvalue; InterlockedAdd(CountersBuffer[variable##_index], value, retvalue);}\n";
-			}
-			//ASSERTS
-			{
-				//Asserts are command zero and it has two more parameters (fileID and line)
-				shader_prefix += "#define assert(test) {if (!(test)){ uint offset_command; InterlockedAdd(CommandsBuffer[0], 3, offset_command); if ((offset_command + 3) < CommandsBuffer[1]){ CommandsBuffer[offset_command] = 0; CommandsBuffer[offset_command + 1] = " +
-					std::to_string(shader_file_id) +"; CommandsBuffer[offset_command + 2] = __LINE__;} else {InterlockedAdd(CommandsBuffer[0], -3, offset_command);} }}\n";
-			}
-			//Reset the line count, so the assert can work
-			const char* file_name = (compile_shader_desc.file_name) ? compile_shader_desc.file_name : compile_shader_desc.name;
-			shader_prefix += std::string("#line 0 \"") + file_name + "\"\n";
-		}
-		else
-		{
-			//CONTROL VARIABLES
-			shader_prefix += "#define CONTROL_VARIABLE(type, name, default_value) const type name = defaul_value;\n";
-			//STATS
-			shader_prefix += "#define COUNTER(variable, group, name)\n";
-			shader_prefix += "#define COUNTER_INC(variable)\n";
-			shader_prefix += "#define COUNTER_INC_VALUE(variable, value)\n";
-			//ASSERTS
-			shader_prefix += "#define assert(test)\n";
-
-			//Reset the line count
-			const char* file_name = (compile_shader_desc.file_name) ? compile_shader_desc.file_name : compile_shader_desc.name;
-			shader_prefix += std::string("#line 0 \"") + file_name + "\"\n";
-		}
-
-		//Add the shader prefix before the code
-		shader_prefix.append(reinterpret_cast<const char*>(source_buffer.Ptr), source_buffer.Size);
-
-		source_buffer.Ptr = shader_prefix.data();
-		source_buffer.Size = shader_prefix.size();
-
-		std::vector<LPCWSTR> arguments;
-		std::wstring entry_point = FromChar(compile_shader_desc.entry_point);
-		std::wstring target = FromChar(compile_shader_desc.target);
-
-		arguments.push_back(L"-E");
-		arguments.push_back(entry_point.c_str());
-
-		arguments.push_back(L"-T");
-		arguments.push_back(target.c_str());
-		
-		arguments.push_back(DXC_ARG_WARNINGS_ARE_ERRORS); //-WX
-
-		if (device->m_debug_shaders)
-		{
-			arguments.push_back(L"-Qembed_debug");
-			arguments.push_back(DXC_ARG_DEBUG); //-Zi
-			arguments.push_back(DXC_ARG_DEBUG_NAME_FOR_SOURCE);
-		}
-
-		std::vector<std::wstring> defines_array;
-		for (auto& define_it : compile_shader_desc.defines)
-		{
-			defines_array.push_back(FromChar(define_it.first) + L"=" + FromChar(define_it.second));
-		}
-
-		for (auto& define : defines_array)
-		{
-			arguments.push_back(L"-D");
-			arguments.push_back(define.c_str());
-		}
-
-		//Create custom include handler
-		CustomIncludeHandler custom_include_handler(device, &include_set);
-
-		ComPtr<IDxcResult> shader_results;
-		hr = device->m_shader_compiler->Compile(&source_buffer, arguments.data(), static_cast<uint32_t>(arguments.size()), &custom_include_handler, IID_PPV_ARGS(shader_results.GetAddressOf()));
-
-		if (SUCCEEDED(hr))
-		{
-			//Get status
-			shader_results->GetStatus(&hr);
-
-			if (SUCCEEDED(hr))
-			{
-				shader_results->GetResult(&shader_blob);
-
-				return true;
+				//ASSERTS
+				{
+					//Asserts are command zero and it has two more parameters (fileID and line)
+					shader_prefix += "#define assert(test) {if (!(test)){ uint offset_command; InterlockedAdd(CommandsBuffer[0], 3, offset_command); if ((offset_command + 3) < CommandsBuffer[1]){ CommandsBuffer[offset_command] = 0; CommandsBuffer[offset_command + 1] = " +
+						std::to_string(shader_file_id) + "; CommandsBuffer[offset_command + 2] = __LINE__;} else {InterlockedAdd(CommandsBuffer[0], -3, offset_command);} }}\n";
+				}
+				//Reset the line count, so the assert can work
+				const char* file_name = (compile_shader_desc.file_name) ? compile_shader_desc.file_name : compile_shader_desc.name;
+				shader_prefix += std::string("#line 0 \"") + file_name + "\"\n";
 			}
 			else
 			{
-				//Error Handling
-				ComPtr<IDxcBlobUtf8> errors;
-				shader_results->GetOutput(DXC_OUT_ERRORS, IID_PPV_ARGS(errors.GetAddressOf()), nullptr);
-				if (errors && errors->GetStringLength() > 0)
+				//CONTROL VARIABLES
+				shader_prefix += "#define CONTROL_VARIABLE(type, name, default_value) const type name = defaul_value;\n";
+				//STATS
+				shader_prefix += "#define COUNTER(variable, group, name)\n";
+				shader_prefix += "#define COUNTER_INC(variable)\n";
+				shader_prefix += "#define COUNTER_INC_VALUE(variable, value)\n";
+				//ASSERTS
+				shader_prefix += "#define assert(test)\n";
+
+				//Reset the line count
+				const char* file_name = (compile_shader_desc.file_name) ? compile_shader_desc.file_name : compile_shader_desc.name;
+				shader_prefix += std::string("#line 0 \"") + file_name + "\"\n";
+			}
+
+			//Add the shader prefix before the code
+			shader_prefix.append(reinterpret_cast<const char*>(source_buffer.Ptr), source_buffer.Size);
+
+			source_buffer.Ptr = shader_prefix.data();
+			source_buffer.Size = shader_prefix.size();
+
+			std::vector<LPCWSTR> arguments;
+			std::wstring entry_point = FromChar(compile_shader_desc.entry_point);
+			std::wstring target = FromChar(compile_shader_desc.target);
+
+			arguments.push_back(L"-E");
+			arguments.push_back(entry_point.c_str());
+
+			arguments.push_back(L"-T");
+			arguments.push_back(target.c_str());
+
+			arguments.push_back(DXC_ARG_WARNINGS_ARE_ERRORS); //-WX
+
+			if (device->m_debug_shaders)
+			{
+				arguments.push_back(L"-Qembed_debug");
+				arguments.push_back(DXC_ARG_DEBUG); //-Zi
+				arguments.push_back(DXC_ARG_DEBUG_NAME_FOR_SOURCE);
+			}
+
+			std::vector<std::wstring> defines_array;
+			for (auto& define_it : compile_shader_desc.defines)
+			{
+				defines_array.push_back(FromChar(define_it.first) + L"=" + FromChar(define_it.second));
+			}
+
+			for (auto& define : defines_array)
+			{
+				arguments.push_back(L"-D");
+				arguments.push_back(define.c_str());
+			}
+
+			//Create custom include handler
+			CustomIncludeHandler custom_include_handler(device, &include_set);
+
+			ComPtr<IDxcResult> shader_results;
+			hr = device->m_shader_compiler->Compile(&source_buffer, arguments.data(), static_cast<uint32_t>(arguments.size()), &custom_include_handler, IID_PPV_ARGS(shader_results.GetAddressOf()));
+
+			if (SUCCEEDED(hr))
+			{
+				//Get status
+				shader_results->GetStatus(&hr);
+
+				if (SUCCEEDED(hr))
 				{
-					//Error compiling
-					SetLastErrorMessage(device, "Error compiling shader <%s> errors <%s>", compile_shader_desc.name, static_cast<char*>(errors->GetBufferPointer()));
+					shader_results->GetResult(&shader_blob);
+
+					return true;
 				}
-				return false;
+				else
+				{
+					//Error Handling
+					ComPtr<IDxcBlobUtf8> errors;
+					shader_results->GetOutput(DXC_OUT_ERRORS, IID_PPV_ARGS(errors.GetAddressOf()), nullptr);
+					if (errors && errors->GetStringLength() > 0)
+					{
+						//Error compiling
+						SetLastErrorMessage(device, "Error compiling shader <%s> errors <%s>", compile_shader_desc.name, static_cast<char*>(errors->GetBufferPointer()));
+					}
+
+					std::string msg = std::string("Error compiling shader ") + compile_shader_desc.name + "with errors:\n" + static_cast<char*>(errors->GetBufferPointer()) + "\n";
+					msg += "Do you want to retry to load the shader?\n";
+
+					reload = platform::ShowModalDialog("Shader Compilation failed during init", msg.c_str());
+				}
+			}
+			else
+			{
+				//Error compiling
+				SetLastErrorMessage(device, "Error compiling shader <%s>, invalid arguments", compile_shader_desc.name);
+				//This error doesn't support reloading
+				reload = false;
 			}
 		}
-		else
-		{
-			//Error compiling
-			SetLastErrorMessage(device, "Error compiling shader <%s>, invalid arguments", compile_shader_desc.name);
 
-			return false;
-		}
+		return false;
 	}
 
 	PipelineStateHandle CreatePipelineState(Device * device, const PipelineStateDesc & pipeline_state_desc, const char* name)
@@ -1760,9 +1773,9 @@ namespace display
 							std::unordered_set<std::string> vertex_shader_include_set;
 
 							ComPtr<IDxcBlob> vertex_shader_blob;
-							if (!CompileShader(device, reload_pipeline.VertexShaderCompileReloadData.GetCompileShaderDescriptor(), vertex_shader_blob, vertex_shader_include_set))
+							if (!CompileShader(device, reload_pipeline.VertexShaderCompileReloadData.GetCompileShaderDescriptor(), vertex_shader_blob, vertex_shader_include_set, false))
 							{
-								core::LogWarning("Error reloading graphics pipeline state <%s>, keeping last working one", reload_pipeline.name.c_str());
+								core::LogWarning("Error reloading graphics pipeline state <%s> with errors <%s>, keeping last working one", reload_pipeline.name.c_str(), GetLastErrorMessage(device));
 								return;
 							}
 							graphics_pipeline_desc.VS.pShaderBytecode = vertex_shader_blob->GetBufferPointer();
@@ -1771,9 +1784,9 @@ namespace display
 							std::unordered_set<std::string> pixel_shader_include_set;
 
 							ComPtr<IDxcBlob> pixel_shader_blob;
-							if (!CompileShader(device, reload_pipeline.PixelShaderCompileReloadData.GetCompileShaderDescriptor(), pixel_shader_blob, pixel_shader_include_set))
+							if (!CompileShader(device, reload_pipeline.PixelShaderCompileReloadData.GetCompileShaderDescriptor(), pixel_shader_blob, pixel_shader_include_set, false))
 							{
-								core::LogWarning("Error reloading graphics pipeline state <%s>, keeping last working one", reload_pipeline.name.c_str());
+								core::LogWarning("Error reloading graphics pipeline state <%s> with errors <%s>, keeping last working one", reload_pipeline.name.c_str(), GetLastErrorMessage(device));
 								return;
 							}
 							graphics_pipeline_desc.PS.pShaderBytecode = pixel_shader_blob->GetBufferPointer();
@@ -1789,7 +1802,7 @@ namespace display
 							ComPtr<ID3D12PipelineState> new_pipeline_state;
 							if (FAILED(device->m_native_device->CreateGraphicsPipelineState(&graphics_pipeline_desc, IID_PPV_ARGS(&new_pipeline_state))))
 							{
-								core::LogWarning("Error reloading graphics pipeline state <%s>, keeping last working one", reload_pipeline.name.c_str());
+								core::LogWarning("Error reloading graphics pipeline state <%s> with errors <%s>, keeping last working one", reload_pipeline.name.c_str(), GetLastErrorMessage(device));
 							}
 							else
 							{
@@ -1815,9 +1828,9 @@ namespace display
 							std::unordered_set<std::string> include_set;
 
 							ComPtr<IDxcBlob> shader_blob;
-							if (!CompileShader(device, reload_pipeline.ComputeShaderCompileReloadData.GetCompileShaderDescriptor(), shader_blob, include_set))
+							if (!CompileShader(device, reload_pipeline.ComputeShaderCompileReloadData.GetCompileShaderDescriptor(), shader_blob, include_set, false))
 							{
-								core::LogWarning("Error reloading compute pipeline state <%s>, keeping last working one", reload_pipeline.name.c_str());
+								core::LogWarning("Error reloading compute pipeline state <%s> with errors<%s>, keeping last working one", reload_pipeline.name.c_str(), GetLastErrorMessage(device));
 								return;
 							}
 							compute_pipeline_desc.CS.pShaderBytecode = shader_blob->GetBufferPointer();
@@ -1827,7 +1840,7 @@ namespace display
 							ComPtr<ID3D12PipelineState> new_pipeline_state;
 							if (FAILED(device->m_native_device->CreateComputePipelineState(&compute_pipeline_desc, IID_PPV_ARGS(&new_pipeline_state))))
 							{
-								core::LogWarning("Error reloading compute pipeline state <%s>, keeping last working one", reload_pipeline.name.c_str());
+								core::LogWarning("Error reloading compute pipeline state <%s> with errors<%s>, keeping last working one", reload_pipeline.name.c_str(), GetLastErrorMessage(device));
 							}
 							else
 							{
