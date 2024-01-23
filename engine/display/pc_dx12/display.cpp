@@ -14,8 +14,6 @@
 extern "C" { __declspec(dllexport) extern const UINT D3D12SDKVersion = 608; }
 extern "C" { __declspec(dllexport) extern const char* D3D12SDKPath = u8".\\D3D12\\"; }
 
-#pragma optimize("", off)
-
 namespace
 {
 	std::string GetLine(const std::string& source_code, const uint32_t line)
