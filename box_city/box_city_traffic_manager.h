@@ -202,7 +202,7 @@ namespace BoxCityTrafficSystem
 		render::AllocHandle m_gpu_memory;
 
 		//GPU car box list
-		std::array<render::AllocHandle, 2> m_gpu_car_box_list;
+		std::array<render::AllocHandle, 5> m_gpu_car_box_list;
 	};
 }
 
