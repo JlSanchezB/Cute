@@ -244,7 +244,7 @@ namespace BoxCityTrafficSystem
 		uint32_t car_type = (random() % 5);
 		
 		auto car_dimensions = std::array{	glm::vec3(1.0f, 1.f, 0.7f),
-											glm::vec3(1.0f, 3.f, 0.9f),
+											glm::vec3(0.8f, 1.5f, 0.9f),
 											glm::vec3(1.0f, 1.0f, 0.6f), 
 											glm::vec3(1.0f, 1.1f, 0.7f),
 											glm::vec3(1.1f, 1.f, 0.7f) };
