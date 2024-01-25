@@ -1274,7 +1274,7 @@ namespace display
 		bool reload = true;
 
 		//It allows to reload during init
-		while (reload && allow_reload && device->m_development_shaders)
+		do
 		{
 			HRESULT hr;
 			DxcBuffer source_buffer;
@@ -1301,6 +1301,12 @@ namespace display
 			}
 
 			std::string shader_prefix;
+
+			//Functions needed for all shaders
+			shader_prefix += "bool IsNaN(float a) { return (asuint(a) & 0x7fffffff) > 0x7f800000; };";
+			shader_prefix += "bool2 IsNaN(float2 a) { return bool2(IsNaN(a.x), IsNaN(a.y)); };";
+			shader_prefix += "bool3 IsNaN(float3 a) { return bool3(IsNaN(a.x), IsNaN(a.y), IsNaN(a.z)); };";
+			shader_prefix += "bool4 IsNaN(float4 a) { return bool4(IsNaN(a.x), IsNaN(a.y), IsNaN(a.z), IsNaN(a.w)); };";
 
 			if (device->m_development_shaders)
 			{
@@ -1509,6 +1515,11 @@ namespace display
 				arguments.push_back(DXC_ARG_DEBUG_NAME_FOR_SOURCE);
 			}
 
+			if (device->m_development_shaders)
+			{
+				arguments.push_back(DXC_ARG_IEEE_STRICTNESS); //-Gis
+			}
+
 			std::vector<std::wstring> defines_array;
 			for (auto& define_it : compile_shader_desc.defines)
 			{
@@ -1549,10 +1560,18 @@ namespace display
 						SetLastErrorMessage(device, "Error compiling shader <%s> errors <%s>", compile_shader_desc.name, static_cast<char*>(errors->GetBufferPointer()));
 					}
 
-					std::string msg = std::string("Error compiling shader ") + compile_shader_desc.name + "with errors:\n" + static_cast<char*>(errors->GetBufferPointer()) + "\n";
-					msg += "Do you want to retry to load the shader?\n";
+					if (allow_reload)
+					{
 
-					reload = platform::ShowModalDialog("Shader Compilation failed during init", msg.c_str());
+						std::string msg = std::string("Error compiling shader ") + compile_shader_desc.name + "with errors:\n" + static_cast<char*>(errors->GetBufferPointer()) + "\n";
+						msg += "Do you want to retry to load the shader?\n";
+
+						reload = platform::ShowModalDialog("Shader Compilation failed during init", msg.c_str());
+					}
+					else
+					{
+						reload = false;
+					}
 				}
 			}
 			else
@@ -1563,6 +1582,7 @@ namespace display
 				reload = false;
 			}
 		}
+		while (reload && allow_reload && device->m_development_shaders);
 
 		return false;
 	}
