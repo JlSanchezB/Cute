@@ -106,7 +106,6 @@ void box_culling(uint3 group : SV_GroupID, uint3 group_thread_id : SV_GroupThrea
             //Read the GPUBoxList number of boxes
             uint box_list_offset = asuint(instance_data[0].w);
 
-            if (box_list_offset != 0)
             {
                 uint box_list_count = static_gpu_memory.Load(box_list_offset);
 
