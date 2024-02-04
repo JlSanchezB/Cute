@@ -426,15 +426,15 @@ namespace BoxCityTileSystem
 				return glm::vec4(glm::pow(red, 2.2f), glm::pow(green, 2.2f), glm::pow(blue, 2.2f), 0.f);
 			};
 
-		float emissive_factor = 20.f;
+		float emissive_factor = 15.f;
 		//Color palette
 		const glm::vec4 colour_palette[] =
 		{
-			emissive_factor * colour_sRGB_to_linear(0x01, 0xFF, 0x03),
-			emissive_factor * colour_sRGB_to_linear(0xFF, 0xE6, 0x2D),
-			emissive_factor * colour_sRGB_to_linear(0x9B, 0xFE, 0x01),
-			emissive_factor * colour_sRGB_to_linear(0x00, 0xEC, 0xFF),
-			emissive_factor * colour_sRGB_to_linear(0xFF, 0x00, 0xC2)
+			emissive_factor * colour_sRGB_to_linear(0x24, 0xFD, 0x36), //Green
+			emissive_factor * colour_sRGB_to_linear(0xFF, 0xEF, 0x06), //Yellow
+			emissive_factor * colour_sRGB_to_linear(0xFF, 0x3A, 0x06), //Orange
+			emissive_factor * colour_sRGB_to_linear(0x0C, 0xD4, 0xFF), //Blue
+			emissive_factor * colour_sRGB_to_linear(0xF5, 0x00, 0xEB) //Pink
 		};
 
 		size_t allocation_size = 16 + sizeof(GPUBox) * box_data_array.size();
