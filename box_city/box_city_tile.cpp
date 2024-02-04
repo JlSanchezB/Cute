@@ -430,11 +430,11 @@ namespace BoxCityTileSystem
 		//Color palette
 		const glm::vec4 colour_palette[] =
 		{
-			emissive_factor * colour_sRGB_to_linear(107, 238, 235),
-			emissive_factor * colour_sRGB_to_linear(132, 238, 1),
-			emissive_factor * colour_sRGB_to_linear(252, 230, 1),
-			emissive_factor * colour_sRGB_to_linear(231, 1, 255),
-			emissive_factor * colour_sRGB_to_linear(30, 30, 255)
+			emissive_factor * colour_sRGB_to_linear(0x01, 0xFF, 0x03),
+			emissive_factor * colour_sRGB_to_linear(0xFF, 0xE6, 0x2D),
+			emissive_factor * colour_sRGB_to_linear(0x9B, 0xFE, 0x01),
+			emissive_factor * colour_sRGB_to_linear(0x00, 0xEC, 0xFF),
+			emissive_factor * colour_sRGB_to_linear(0xFF, 0x00, 0xC2)
 		};
 
 		size_t allocation_size = 16 + sizeof(GPUBox) * box_data_array.size();
