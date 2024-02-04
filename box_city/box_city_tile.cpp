@@ -181,18 +181,18 @@ namespace BoxCityTileSystem
 
 			const ZoneDescriptor& zone_descriptor = kZoneDescriptors[descriptor_index.value()];
 
+			//Get the building type
+			const Manager::BuildingType& building_type = manager->GetBuildingType(descriptor_index.value(), random());
+
 			std::uniform_real_distribution<float> angle_inc_range(zone_descriptor.angle_inc_range_min, zone_descriptor.angle_inc_range_max);
 			std::uniform_real_distribution<float> angle_rotation_range(0.f, glm::two_pi<float>());
-			std::uniform_real_distribution<float> length_range(zone_descriptor.length_range_min, zone_descriptor.length_range_max);
-			std::uniform_real_distribution<float> size_range(zone_descriptor.size_range_min, zone_descriptor.size_range_max);
-
+			
 			std::uniform_real_distribution<float> range_animation_range(zone_descriptor.animation_distance_range_min, zone_descriptor.animation_distance_range_max);
 			std::uniform_real_distribution<float> frecuency_animation_range(zone_descriptor.animation_frecuency_range_min, zone_descriptor.animation_frecuency_range_max);
 			std::uniform_real_distribution<float> offset_animation_range(zone_descriptor.animation_offset_range_min, zone_descriptor.animation_offset_range_max);
 
 
-			float size = size_range(random);
-			obb_box.extents = glm::vec3(size, size, length_range(random));
+			obb_box.extents = building_type.extents;
 			obb_box.rotation = glm::rotate(angle_inc_range(random), glm::vec3(1.f, 0.f, 0.f)) * glm::rotate(angle_rotation_range(random), glm::vec3(0.f, 0.f, 1.f));
 
 
@@ -269,11 +269,39 @@ namespace BoxCityTileSystem
 				m_generated_boxes.push_back({ extended_aabb_box, extended_obb_box });
 			}
 
-			//Block can be build, the aabb will be the extended one of it is an animated box
-			BuildBlockData(random, obb_box, (dynamic_box) ? extended_aabb_box : aabb_box, dynamic_box, animated_box, descriptor_index.value());
-
 			//Gow zone AABB by the bounding box
 			m_bounding_box.Add(extended_aabb_box);
+
+			bool top = (obb_box.position.z + obb_box.extents.z > kTileHeightTopViewRange);
+			uint32_t building_type_offset = static_cast<uint32_t>(manager->GetGPUMemoryRenderModule()->GetStaticGPUMemoryOffset(building_type.handle));
+
+			if (!dynamic_box)
+			{
+				if (top)
+				{
+					//Top box
+					GetLodGroupData(LODGroup::TopBuildings).building_data.emplace_back(obb_box, building_type_offset);
+				}
+				else
+				{
+					//Bottom box
+					GetLodGroupData(LODGroup::Rest).building_data.emplace_back(obb_box, building_type_offset);
+				}
+			}
+			else
+			{
+				//We create an animated from the instance data
+				if (top)
+				{
+					//Top box
+					GetLodGroupData(LODGroup::TopBuildings).animated_building_data.emplace_back(obb_box, building_type_offset, animated_box);
+				}
+				else
+				{
+					//Bottom box
+					GetLodGroupData(LODGroup::Rest).animated_building_data.emplace_back(obb_box, building_type_offset, animated_box);
+				}
+			}
 		}
 
 		//Build the BVH
@@ -285,182 +313,6 @@ namespace BoxCityTileSystem
 		assert(m_state == State::Loaded || m_state == State::Unloaded || m_state == State::Loading);
 		SetState(State::Loaded);
 		m_lod = -1;
-	}
-
-	void Tile::BuildBlockData(std::mt19937& random, const helpers::OBB& obb, helpers::AABB& aabb, const bool dynamic_box, const AnimationBox& animated_box, uint32_t descriptor_index)
-	{
-		const ZoneDescriptor& zone_descriptor = kZoneDescriptors[descriptor_index];
-
-		//Just a little smaller, so it has space for the panels
-		const float panel_depth = zone_descriptor.panel_depth_panel;
-
-		bool top = (obb.position.z + obb.extents.z > kTileHeightTopViewRange);
-
-		//Build the instance data
-		InstanceData building_instance;
-		building_instance.oob_box = obb;
-
-		//Add bulding box
-		BoxData building_box;
-		building_box.colour_palette = 0xFF;
-		building_box.position = glm::vec3(0.f, 0.f, 0.f);
-		building_box.extents = obb.extents;
-		building_box.extents -= glm::vec3(panel_depth, panel_depth, 0.f);
-
-		building_instance.m_boxes.push_back(building_box);
-
-		assert(building_box.extents.x > 0.f);
-		assert(building_box.extents.y > 0.f);
-		assert(building_box.extents.z > 0.f);
-
-		uint8_t border_colour_palette = random() % 5;
-
-		//Create the boxes that makes this building
-		std::vector<std::pair<glm::vec2, glm::vec2>> panels_generated;
-		for (size_t face = 0; face < 4; ++face)
-		{
-			//For each face try to create panels
-			const float wall_width = (face % 2 == 0) ? building_box.extents.x : building_box.extents.y;
-			const float wall_heigh = building_box.extents.z;
-			panels_generated.clear();
-
-			std::uniform_real_distribution<float> panel_size_range(zone_descriptor.panel_size_range_min, glm::min(wall_width, zone_descriptor.panel_size_range_max));
-
-			//Calculate rotation matrix of the face and position
-			glm::mat3x3 face_rotation = glm::mat3x3(glm::rotate(glm::half_pi<float>(), glm::vec3(1.f, 0.f, 0.f))) * glm::mat3x3(glm::rotate(glm::half_pi<float>() * face, glm::vec3(0.f, 0.f, 1.f)));
-			glm::vec3 face_position = glm::vec3(0.f, 0.f, wall_width) * face_rotation;
-
-			//Create the borders
-			BoxData border_box;
-			border_box.colour_palette = border_colour_palette;
-			border_box.position = face_position + glm::vec3(wall_width, 0.f, 0.f) * face_rotation;
-			border_box.extents = glm::abs(glm::vec3(panel_depth, wall_heigh, panel_depth) * face_rotation);
-			building_instance.m_boxes.push_back(border_box);
-
-			border_box.position = face_position + glm::vec3(0.f, wall_heigh, 0.f) * face_rotation;
-			border_box.extents = glm::abs(glm::vec3(wall_width, panel_depth, panel_depth) * face_rotation);
-			building_instance.m_boxes.push_back(border_box);
-
-			border_box.position = face_position + glm::vec3(0.f, -wall_heigh, 0.f) * face_rotation;
-			border_box.extents = glm::abs(glm::vec3(wall_width, panel_depth, panel_depth) * face_rotation);
-			building_instance.m_boxes.push_back(border_box);
-
-			for (size_t i = 0; i < zone_descriptor.num_panel_generated; ++i)
-			{
-				glm::vec2 panel_size(panel_size_range(random), panel_size_range(random));
-				std::uniform_real_distribution<float> panel_position_x_range(-wall_width * 0.97f + panel_size.x, wall_width * 0.97f - panel_size.x);
-				std::uniform_real_distribution<float> panel_position_y_range(-wall_heigh * 0.97f + panel_size.y, wall_heigh * 0.97f - panel_size.y);
-				glm::vec2 panel_position(panel_position_x_range(random), panel_position_y_range(random));
-
-				//Check if it collides
-				bool collide = false;
-				for (auto& generated_panel : panels_generated)
-				{
-					//If collides
-					if (CollisionPanelVsPanel(panel_position, panel_size, generated_panel.first, generated_panel.second))
-					{
-						//Next
-						collide = true;
-						break;
-					}
-				}
-
-				if (collide)
-				{
-					continue;
-				}
-
-				panels_generated.emplace_back(panel_position, panel_size);
-
-
-				uint8_t colour_palette = random() % 5;
-				BoxData panel_box;
-
-				panel_box.colour_palette = colour_palette;
-				panel_box.position = face_position + glm::vec3(panel_position.x, panel_position.y, panel_depth / 2.f) * face_rotation;
-				panel_box.extents = glm::abs(glm::vec3(panel_size.x, panel_size.y, panel_depth / 2.f) * face_rotation);
-				
-				building_instance.m_boxes.push_back(panel_box);
-			}
-		}
-
-		if (!dynamic_box)
-		{
-			if (top)
-			{
-				//Top box
-				GetLodGroupData(LODGroup::TopBuildings).building_data.push_back(std::move(building_instance));
-			}
-			else
-			{
-				//Bottom box
-				GetLodGroupData(LODGroup::Rest).building_data.push_back(std::move(building_instance));
-			}
-		}
-		else
-		{
-			//We create an animated from the instance data
-			AnimatedInstanceData animated_building_instance(std::move(building_instance));
-			animated_building_instance.animation = animated_box;
-
-			if (top)
-			{
-				//Top box
-				GetLodGroupData(LODGroup::TopBuildings).animated_building_data.push_back(std::move(animated_building_instance));
-			}
-			else
-			{
-				//Bottom box
-				GetLodGroupData(LODGroup::Rest).animated_building_data.push_back(std::move(animated_building_instance));
-			}
-		}
-	}
-
-	render::AllocHandle Tile::CreateBoxList(Manager* manager, const std::vector<BoxData>& box_data_array)
-	{
-		auto colour_sRGB_to_linear = [](uint8_t r, uint8_t g, uint8_t b)
-			{
-				float red = r / 255.f;
-				float green = g / 255.f;
-				float blue = b / 255.f;
-				return glm::vec4(glm::pow(red, 2.2f), glm::pow(green, 2.2f), glm::pow(blue, 2.2f), 0.f);
-			};
-
-		float emissive_factor = 15.f;
-		//Color palette
-		const glm::vec4 colour_palette[] =
-		{
-			emissive_factor * colour_sRGB_to_linear(0x24, 0xFD, 0x36), //Green
-			emissive_factor * colour_sRGB_to_linear(0xFF, 0xEF, 0x06), //Yellow
-			emissive_factor * colour_sRGB_to_linear(0xFF, 0x3A, 0x06), //Orange
-			emissive_factor * colour_sRGB_to_linear(0x0C, 0xD4, 0xFF), //Blue
-			emissive_factor * colour_sRGB_to_linear(0xF5, 0x00, 0xEB) //Pink
-		};
-
-		size_t allocation_size = 16 + sizeof(GPUBox) * box_data_array.size();
-
-		//Create the memory with the box list
-		std::vector<uint8_t> buffer(allocation_size);
-
-		//Set the size
-		uint32_t* size_data = reinterpret_cast<uint32_t*>(buffer.data());
-		size_data[0] = static_cast<uint32_t>(box_data_array.size());
-		size_data[1] = 0;
-		size_data[2] = 0;
-		size_data[3] = 0;
-
-		for (size_t i = 0; i < box_data_array.size(); ++i)
-		{
-			const auto& box_data = box_data_array[i];
-
-			uint8_t* dest_data = buffer.data() + 16 + i * sizeof(GPUBox);
-			reinterpret_cast<GPUBox*>(dest_data)->Fill(box_data.position, box_data.extents, (box_data.colour_palette == 0xFF) ? glm::vec3(0.05f, 0.05f, 0.05f) : colour_palette[box_data.colour_palette], (box_data.colour_palette == 0xFF) ? 0 : GPUBox::kFlags_Emissive);
-		}
-
-		//COUNTER_INC(c_Box_Count);
-
-		//Allocate it
-		return manager->GetGPUMemoryRenderModule()->AllocStaticGPUMemory(manager->GetDevice(), allocation_size, buffer.data(), render::GetGameFrameIndex(manager->GetRenderSystem()));
 	}
 
 	void Tile::SpawnLodGroup(Manager* manager, const LODGroup lod_group)
@@ -501,11 +353,9 @@ namespace BoxCityTileSystem
 		//First dynamic
 		for (auto& building_data : lod_group_data.animated_building_data)
 		{
-			//Create Box list
-			render::AllocHandle box_list_handle = CreateBoxList(manager, building_data.m_boxes);
 			//GPU memory
 			GPUBoxInstance gpu_box_instance;
-			gpu_box_instance.Fill(building_data.oob_box.position, building_data.oob_box.extents, glm::toQuat(building_data.oob_box.rotation), building_data.oob_box.position, glm::toQuat(building_data.oob_box.rotation), static_cast<uint32_t>(manager->GetGPUMemoryRenderModule()->GetStaticGPUMemoryOffset(box_list_handle)));
+			gpu_box_instance.Fill(building_data.oob_box.position, building_data.oob_box.extents, glm::toQuat(building_data.oob_box.rotation), building_data.oob_box.position, glm::toQuat(building_data.oob_box.rotation), building_data.building_type_offset);
 
 			//Update the GPU memory
 			manager->GetGPUMemoryRenderModule()->UpdateStaticGPUMemory(manager->GetDevice(), instances_gpu_allocation, &gpu_box_instance, sizeof(GPUBoxInstance), render::GetGameFrameIndex(manager->GetRenderSystem()), gpu_offset * sizeof(GPUBoxInstance));
@@ -525,7 +375,6 @@ namespace BoxCityTileSystem
 				.Init<RangeAABB>(range_aabb)
 				.Init<AnimationBox>(building_data.animation)
 				.Init<BoxGPUHandle>(gpu_offset, static_cast<uint32_t>(lod_group))
-				.Init<BoxListHandle>(std::move(box_list_handle))
 				.Init<InterpolatedPosition>(interpolated_position)
 				.Init<LastPosition>(interpolated_position.position.Last()));
 
@@ -535,12 +384,9 @@ namespace BoxCityTileSystem
 
 		for (auto& building_data : lod_group_data.building_data)
 		{
-			//Create Box list
-			render::AllocHandle box_list_handle = CreateBoxList(manager, building_data.m_boxes);
-
 			//GPU memory
 			GPUBoxInstance gpu_box_instance;
-			gpu_box_instance.Fill(building_data.oob_box.position, building_data.oob_box.extents, glm::toQuat(building_data.oob_box.rotation), building_data.oob_box.position, glm::toQuat(building_data.oob_box.rotation), static_cast<uint32_t>(manager->GetGPUMemoryRenderModule()->GetStaticGPUMemoryOffset(box_list_handle)));
+			gpu_box_instance.Fill(building_data.oob_box.position, building_data.oob_box.extents, glm::toQuat(building_data.oob_box.rotation), building_data.oob_box.position, glm::toQuat(building_data.oob_box.rotation), building_data.building_type_offset);
 
 			//Update the GPU memory
 			manager->GetGPUMemoryRenderModule()->UpdateStaticGPUMemory(manager->GetDevice(), instances_gpu_allocation, &gpu_box_instance, sizeof(GPUBoxInstance), render::GetGameFrameIndex(manager->GetRenderSystem()), gpu_offset * sizeof(GPUBoxInstance));
@@ -553,7 +399,6 @@ namespace BoxCityTileSystem
 			instances_vector.push_back(ecs::AllocInstance<GameDatabase, BoxType>(m_zone_id)
 				.Init<OBBBox>(building_data.oob_box)
 				.Init<RangeAABB>(range_aabb)
-				.Init<BoxListHandle>(std::move(box_list_handle))
 				.Init<BoxGPUHandle>(gpu_offset, static_cast<uint32_t>(lod_group)));
 
 			gpu_offset++;
@@ -586,9 +431,6 @@ namespace BoxCityTileSystem
 
 			//Set to invalid to the GPU memory
 			instance.Get<BoxGPUHandle>().offset_gpu_allocator = BoxGPUHandle::kInvalidOffset;
-
-			//Deallocate the box list
-			manager->GetGPUMemoryRenderModule()->DeallocStaticGPUMemory(manager->GetDevice(), instance.Get<BoxListHandle>().box_list_handle, render::GetGameFrameIndex(manager->GetRenderSystem()));
 
 			//Dealloc instance
 			ecs::DeallocInstance<GameDatabase>(instance);

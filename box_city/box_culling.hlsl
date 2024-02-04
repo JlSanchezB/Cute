@@ -91,7 +91,7 @@ void box_culling(uint3 group : SV_GroupID, uint3 group_thread_id : SV_GroupThrea
             float3 translation = float3(instance_data[0].x, instance_data[0].y, instance_data[0].z);
             float3 last_frame_translation = float3(instance_data[3].x, instance_data[3].y, instance_data[3].z);
             float4 last_frame_rotate_quat = instance_data[4];
-            uint box_list_offset_byte = asuint(instance_data[0].w);
+            uint box_list_offset_byte = asuint(instance_data[1].w);
 
             //Frustum collision, check if the instance is visible
             if (!is_visible(rotate_quat, translation, extent, float3(0.f, 0.f, 0.f)) && MainPassFrustumCulling)
@@ -104,10 +104,8 @@ void box_culling(uint3 group : SV_GroupID, uint3 group_thread_id : SV_GroupThrea
             //TODO, implement small instance culling
             
             //Read the GPUBoxList number of boxes
-            uint box_list_offset = asuint(instance_data[0].w);
-
             {
-                uint box_list_count = static_gpu_memory.Load(box_list_offset);
+                uint box_list_count = static_gpu_memory.Load(box_list_offset_byte);
 
                 COUNTER_INC_VALUE(TotalCubes, box_list_count);
                 //Loop for each box, REALLY BAD for performance

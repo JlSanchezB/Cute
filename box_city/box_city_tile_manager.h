@@ -156,6 +156,18 @@ namespace BoxCityTileSystem
 
 		bool GetNextTrafficTarget(std::mt19937& random, const glm::vec3& position, glm::vec3& next_target) const;
 
+		//Building type, described by the extents and the GPU handle
+		struct BuildingType
+		{
+			glm::vec3 extents;
+			render::AllocHandle handle;
+		};
+
+		const BuildingType& GetBuildingType(const uint32_t zone_descriptor_index, const uint32_t random)
+		{
+			return m_building_types[zone_descriptor_index][random % kBuildingsTypesPerDescriptor];
+		}
+
 	private:
 		//System
 		display::Device* m_device = nullptr;
@@ -204,6 +216,13 @@ namespace BoxCityTileSystem
 			uint32_t descriptor_index;
 		};
 		std::vector<ZoneDescriptor> m_descriptor_zones;
+
+
+		constexpr static size_t kBuildingsTypesPerDescriptor = 30;
+		std::vector<std::array<BuildingType, kBuildingsTypesPerDescriptor>> m_building_types;
+
+		//Generate all the building types during loading
+		void GenerateBuildingsTypes();
 
 		//Loading system
 		struct LoadingJob

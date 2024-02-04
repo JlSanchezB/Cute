@@ -9,6 +9,22 @@
 
 CONTROL_VARIABLE_BOOL(c_use_loading_thread, true, "BoxCityTileManager", "Use loading thread for loading");
 
+namespace
+{
+	bool CollisionPanelVsPanel(const glm::vec2& position_a, const glm::vec2& size_a, const glm::vec2& position_b, const glm::vec2& size_b)
+	{
+		glm::vec2 min_a = position_a - size_a;
+		glm::vec2 max_a = position_a + size_a;
+		glm::vec2 min_b = position_b - size_b;
+		glm::vec2 max_b = position_b + size_b;
+		// Exit with no intersection if separated along an axis
+		if (max_a.x < min_b.x || min_a.x > max_b.x) return false;
+		if (max_a.y < min_b.y || min_a.y > max_b.y) return false;
+		// Overlapping
+		return true;
+	}
+}
+
 namespace BoxCityTileSystem
 {
 	void Manager::AppendVisibleInstanceLists(const helpers::Frustum& frustum, std::vector<uint32_t>& instance_lists_offsets_array)
@@ -37,6 +53,9 @@ namespace BoxCityTileSystem
 
 		//Generate zone descriptors
 		GenerateZoneDescriptors();
+
+		//Generate building types
+		GenerateBuildingsTypes();
 
 		//Create loading thread
 		m_loading_thread.reset( new core::Thread(L"TileLoading Thread", core::ThreadPriority::Background, &LoadingThreadRun, this));
@@ -68,6 +87,15 @@ namespace BoxCityTileSystem
 			if (tile.IsVisible())
 			{
 				tile.DespawnTile(this);
+			}
+		}
+
+		//Dealloc each building type
+		for (auto& building_type_descriptor : m_building_types)
+		{
+			for (auto& building_type : building_type_descriptor)
+			{
+				m_GPU_memory_render_module->DeallocStaticGPUMemory(m_device, building_type.handle, render::GetGameFrameIndex(m_render_system));
 			}
 		}
 	}
@@ -379,6 +407,124 @@ namespace BoxCityTileSystem
 			return sort_data[0].descriptor_index;
 		}
 	}
+	
+	void Manager::GenerateBuildingsTypes()
+	{
+		m_building_types.resize(kNumZoneDescriptors);
+		std::mt19937 random(0);
+
+		auto colour_sRGB_to_linear = [](uint8_t r, uint8_t g, uint8_t b)
+			{
+				float red = r / 255.f;
+				float green = g / 255.f;
+				float blue = b / 255.f;
+				return glm::vec4(glm::pow(red, 2.2f), glm::pow(green, 2.2f), glm::pow(blue, 2.2f), 0.f);
+			};
+
+		float emissive_factor = 15.f;
+		//Color palette
+		const glm::vec4 colour_palette[] =
+		{
+			emissive_factor * colour_sRGB_to_linear(0x24, 0xFD, 0x36), //Green
+			emissive_factor * colour_sRGB_to_linear(0xFF, 0xEF, 0x06), //Yellow
+			emissive_factor * colour_sRGB_to_linear(0xFF, 0x3A, 0x06), //Orange
+			emissive_factor * colour_sRGB_to_linear(0x0C, 0xD4, 0xFF), //Blue
+			emissive_factor * colour_sRGB_to_linear(0xF5, 0x00, 0xEB) //Pink
+		};
+
+		for (size_t iZoneDescriptor = 0; iZoneDescriptor < kNumZoneDescriptors; ++iZoneDescriptor)
+		{
+			const auto& zone_descriptor = kZoneDescriptors[iZoneDescriptor];
+			//Create a list of buildings associated to this descriptor
+			for (size_t jBuilding = 0; jBuilding < kBuildingsTypesPerDescriptor; ++jBuilding)
+			{
+				BuildingType& building_type = m_building_types[iZoneDescriptor][jBuilding];
+				std::uniform_real_distribution<float> length_range(zone_descriptor.length_range_min, zone_descriptor.length_range_max);
+				std::uniform_real_distribution<float> size_range(zone_descriptor.size_range_min, zone_descriptor.size_range_max);
+
+				const float size = size_range(random);
+				building_type.extents = glm::vec3(size, size, length_range(random));
+
+				const float panel_depth = zone_descriptor.panel_depth_panel;
+
+				std::vector<GPUBox> boxes;
+				//Build the boxes associated to it
+				boxes.emplace_back(glm::vec3(0.f, 0.f, 0.f), building_type.extents, glm::vec3(0.05f, 0.05f, 0.05f), 0);
+
+				uint8_t border_colour_palette = random() % 5;
+
+				//Create the boxes that makes this building
+				std::vector<std::pair<glm::vec2, glm::vec2>> panels_generated;
+				for (size_t face = 0; face < 4; ++face)
+				{
+					//For each face try to create panels
+					const float wall_width = (face % 2 == 0) ? building_type.extents.x : building_type.extents.y;
+					const float wall_heigh = building_type.extents.z;
+					panels_generated.clear();
+
+					std::uniform_real_distribution<float> panel_size_range(zone_descriptor.panel_size_range_min, glm::min(wall_width, zone_descriptor.panel_size_range_max));
+
+					//Calculate rotation matrix of the face and position
+					glm::mat3x3 face_rotation = glm::mat3x3(glm::rotate(glm::half_pi<float>(), glm::vec3(1.f, 0.f, 0.f))) * glm::mat3x3(glm::rotate(glm::half_pi<float>() * face, glm::vec3(0.f, 0.f, 1.f)));
+					glm::vec3 face_position = glm::vec3(0.f, 0.f, wall_width) * face_rotation;
+
+					//Create the borders
+					boxes.emplace_back(face_position + glm::vec3(wall_width, 0.f, 0.f) * face_rotation, glm::abs(glm::vec3(panel_depth, wall_heigh, panel_depth) * face_rotation), colour_palette[border_colour_palette], GPUBox::kFlags_Emissive);
+					boxes.emplace_back(face_position + glm::vec3(0.f, wall_heigh, 0.f) * face_rotation, glm::abs(glm::vec3(wall_width, panel_depth, panel_depth) * face_rotation), colour_palette[border_colour_palette], GPUBox::kFlags_Emissive);
+					boxes.emplace_back(face_position + glm::vec3(0.f, -wall_heigh, 0.f) * face_rotation, glm::abs(glm::vec3(wall_width, panel_depth, panel_depth) * face_rotation), colour_palette[border_colour_palette], GPUBox::kFlags_Emissive);
+
+					for (size_t i = 0; i < zone_descriptor.num_panel_generated; ++i)
+					{
+						glm::vec2 panel_size(panel_size_range(random), panel_size_range(random));
+						std::uniform_real_distribution<float> panel_position_x_range(-wall_width * 0.97f + panel_size.x, wall_width * 0.97f - panel_size.x);
+						std::uniform_real_distribution<float> panel_position_y_range(-wall_heigh * 0.97f + panel_size.y, wall_heigh * 0.97f - panel_size.y);
+						glm::vec2 panel_position(panel_position_x_range(random), panel_position_y_range(random));
+
+						//Check if it collides
+						bool collide = false;
+						for (auto& generated_panel : panels_generated)
+						{
+							//If collides
+							if (CollisionPanelVsPanel(panel_position, panel_size, generated_panel.first, generated_panel.second))
+							{
+								//Next
+								collide = true;
+								break;
+							}
+						}
+
+						if (collide)
+						{
+							continue;
+						}
+
+						panels_generated.emplace_back(panel_position, panel_size);
+
+						uint8_t colour_palette_index = random() % 5;
+						boxes.emplace_back(face_position + glm::vec3(panel_position.x, panel_position.y, panel_depth / 2.f) * face_rotation, glm::abs(glm::vec3(panel_size.x, panel_size.y, panel_depth / 2.f) * face_rotation), colour_palette[colour_palette_index], GPUBox::kFlags_Emissive);
+					}
+				}
+
+				//Allocate the gpu memory and initialize it with the building
+
+				//Header
+				uint32_t header[4];
+				header[0] = static_cast<uint32_t>(boxes.size());
+				header[1] = 0;
+				header[2] = 0;
+				header[3] = 0;
+
+
+				building_type.handle = m_GPU_memory_render_module->AllocStaticGPUMemory(m_device, 16 + boxes.size() * sizeof(GPUBox), nullptr, render::GetGameFrameIndex(m_render_system));
+
+				//Upload the header
+				m_GPU_memory_render_module->UpdateStaticGPUMemory(m_device, building_type.handle, header, 16, render::GetGameFrameIndex(m_render_system), 0);
+				//Upload the boxes
+				m_GPU_memory_render_module->UpdateStaticGPUMemory(m_device, building_type.handle, boxes.data(), boxes.size() * sizeof(GPUBox), render::GetGameFrameIndex(m_render_system), 16);
+			}
+		}
+	}
+
 	void Manager::AddTileToLoad(Tile& tile, const LocalTilePosition& local_tile_position, const WorldTilePosition& world_tile_position)
 	{
 		assert(!tile.IsVisible());

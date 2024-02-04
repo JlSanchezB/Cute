@@ -67,14 +67,14 @@ PSInput vs_box_main(uint multi_instance_id : SV_InstanceID, uint vertex_id : SV_
     float4 instance_data[3];
 
     instance_data[0] = asfloat(static_gpu_memory.Load4(instance_data_offset_byte + 0));
-    //instance_data[1] = asfloat(static_gpu_memory.Load4(instance_data_offset_byte + 16));
+    instance_data[1] = asfloat(static_gpu_memory.Load4(instance_data_offset_byte + 16));
     instance_data[2] = asfloat(static_gpu_memory.Load4(instance_data_offset_byte + 32));
 
     float4 instance_rotate_quat = instance_data[2];
     float3 instance_translation = float3(instance_data[0].x, instance_data[0].y, instance_data[0].z);
 
     //Then extract the box obb
-    uint box_list_offset_byte = asuint(instance_data[0].w);
+    uint box_list_offset_byte = asuint(instance_data[1].w);
     box_list_offset_byte += 16; //Skip the box_list count
     box_list_offset_byte += box_index * 16 * 3; //Each box is a float4 * 3
 

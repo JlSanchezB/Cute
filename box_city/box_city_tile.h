@@ -54,27 +54,26 @@ namespace BoxCityTileSystem
 		1 << static_cast<uint32_t>(LODGroup::TopBuildings)
 	};
 
-	struct BoxData
-	{
-		glm::vec3 position;
-		glm::vec3 extents;
-		uint8_t colour_palette;
-	};
+
 
 	struct InstanceData
 	{
 		helpers::OBB oob_box;
-		std::vector<BoxData> m_boxes; //Include the building itself
+		uint32_t building_type_offset;
+
+		InstanceData(const helpers::OBB& _oob_box, const uint32_t _building_type_offset) :
+			oob_box(_oob_box), building_type_offset(_building_type_offset)
+		{
+		}
 	};
 
 	struct AnimatedInstanceData : public InstanceData
 	{
 		AnimationBox animation;
 
-		AnimatedInstanceData(const InstanceData&& instance_data)
+		AnimatedInstanceData(const helpers::OBB& _oob_box, const uint32_t _building_type_offset, const AnimationBox& _animation) :
+			InstanceData(_oob_box, _building_type_offset), animation(_animation)
 		{
-			oob_box = instance_data.oob_box;
-			m_boxes = std::move(instance_data.m_boxes);
 		}
 	};
 
@@ -118,8 +117,6 @@ namespace BoxCityTileSystem
 
 		//Building logic
 		void BuildTileData(Manager* manager, const LocalTilePosition& local_tile, const WorldTilePosition& world_tile);
-		void BuildBlockData(std::mt19937& random, const helpers::OBB& obb, helpers::AABB& aabb, const bool dynamic_box, const AnimationBox& animated_box, const uint32_t descriptor_index = 0);
-		render::AllocHandle CreateBoxList(Manager* manager, const std::vector<BoxData>& box_data);
 
 		//Spawn/Despawn logic
 		void SpawnLodGroup(Manager* manager, const LODGroup lod_group);

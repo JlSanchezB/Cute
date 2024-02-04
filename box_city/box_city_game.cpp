@@ -364,9 +364,9 @@ void BoxCityGame::OnRender(double total_time, float elapsed_time)
 
 	//Add task
 	//Interpolate animation
-	ecs::AddJobs<GameDatabase, const OBBBox, const InterpolatedPosition, const BoxGPUHandle, const BoxListHandle, LastPosition>(m_job_system, culling_fence, m_render_job_allocator, 256,
+	ecs::AddJobs<GameDatabase, const OBBBox, const InterpolatedPosition, const BoxGPUHandle, LastPosition>(m_job_system, culling_fence, m_render_job_allocator, 256,
 		[camera = camera, render_system = m_render_system, device = m_device, render_gpu_memory_module = m_GPU_memory_render_module, tile_manager = &m_tile_manager, render_frame_index]
-	(const auto& instance_iterator, const OBBBox obb_box,const InterpolatedPosition interpolated_position, const BoxGPUHandle& box_gpu_handle, const BoxListHandle& box_list_handle, LastPosition& last_position)
+	(const auto& instance_iterator, const OBBBox obb_box,const InterpolatedPosition interpolated_position, const BoxGPUHandle& box_gpu_handle, LastPosition& last_position)
 		{
 			//Calculate if it is in the camera and has still a gpu memory handle
 			if (box_gpu_handle.IsValid())
@@ -378,7 +378,7 @@ void BoxCityGame::OnRender(double total_time, float elapsed_time)
 				glm::vec3 position = instance_iterator.Get<InterpolatedPosition>().position.GetInterpolated();
 
 				GPUBoxInstance gpu_box_instance;
-				gpu_box_instance.FillForUpdatePosition(position, last_position.last_position, static_cast<uint32_t>(render_gpu_memory_module->GetStaticGPUMemoryOffset(box_list_handle.box_list_handle)));
+				gpu_box_instance.FillForUpdatePosition(position, last_position.last_position);
 
 				//Update for the next time
 				last_position.last_position = position;
