@@ -67,6 +67,8 @@ CONTROL_VARIABLE(float, c_car_ai_min_target_range, 1.f, 10000.f, 500.f, "Car", "
 CONTROL_VARIABLE(float, c_car_ai_min_target_distance, 1.f, 10000.f, 50.f, "Car", "Car AI min target distance");
 CONTROL_VARIABLE(float, c_car_ai_close_target_distance, 1.f, 10000.f, 50.f, "Car", "Car AI close target distance");
 CONTROL_VARIABLE(float, c_car_ai_close_target_distance_slow, 0.f, 1.f, 0.8f, "Car", "Car AI close target distance slow");
+CONTROL_VARIABLE(float, c_car_ai_lane_size, 0.f, 10.f, 2.0f, "Car", "Car AI lane size");
+
 
 namespace BoxCityCarControl
 {
@@ -181,10 +183,27 @@ namespace BoxCityCarControl
 		if (car_target.target_valid)
 		{
 			car_target.last_target = last_target;
+
+			if (car_target.target != last_target)
+			{
+				//Move the target with a lane size
+				glm::vec3 direction = glm::normalize(car_target.target - last_target);
+
+				glm::vec3 offset;
+				if (direction != glm::vec3(0.f, 0.f, 1.f))
+				{
+					offset = glm::normalize(glm::cross(direction, glm::vec3(0.f, 0.f, 1.f)));
+				}
+				else
+				{
+					offset = glm::normalize(glm::cross(direction, glm::vec3(0.f, 1.f, 0.f)));
+				}
+
+				car_target.target = car_target.target + c_car_ai_lane_size * offset;
+			}
 		}
 		assert(glm::all(glm::isfinite(car_target.target)));
 		assert(glm::all(glm::isfinite(car_target.last_target)));
-		assert(reset || !car_target.target_valid || glm::distance(glm::vec2(*car.position), glm::vec2(car_target.target)) < 2000.f);
 	}
 	void UpdateAIControl(std::mt19937& random, uint32_t instance_index, CarControl& car_control, const Car& car, const CarMovement& car_movement, const CarSettings& car_settings, CarTarget& car_target, CarBuildingsCache& car_buildings_cache, uint32_t frame_index, float elapsed_time, BoxCityTileSystem::Manager* tile_manager, BoxCityTrafficSystem::Manager* traffic_manager, const glm::vec3& camera_pos)
 	{
