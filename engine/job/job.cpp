@@ -143,6 +143,8 @@ namespace job
 
 		size_t m_count_for_yield = 0;
 
+		size_t m_begin_extra_workers = 0;
+
 		//Stats
 		std::atomic<size_t> m_jobs_added = 0;
 		std::atomic<size_t> m_jobs_stolen = 0;
@@ -203,6 +205,10 @@ namespace job
 			//One worker per hardware thread
 			num_workers = std::thread::hardware_concurrency();
 		}
+
+		system->m_begin_extra_workers = num_workers;
+		num_workers += system_desc.extra_workers;
+
 		system->m_workers.reserve(num_workers);
 		
 		g_num_workers = num_workers;
@@ -280,6 +286,11 @@ namespace job
 	bool GetSingleThreadMode(System * system)
 	{
 		return system->m_single_thread_mode;
+	}
+
+	void RegisterExtraWorker(System* system, size_t extra_worker_index)
+	{
+		g_worker_id = system->m_begin_extra_workers + extra_worker_index;
 	}
 
 	void AddJob(System * system, const JobFunction job, void* data, Fence& fence)

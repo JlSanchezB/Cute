@@ -166,7 +166,7 @@ namespace BoxCityTileSystem
 
 
 		//Create boxes
-		for (size_t i = 0; i < 450; ++i)
+		for (size_t i = 0; i < 650; ++i)
 		{
 			helpers::OBB obb_box;
 			
@@ -182,7 +182,7 @@ namespace BoxCityTileSystem
 			const ZoneDescriptor& zone_descriptor = kZoneDescriptors[descriptor_index.value()];
 
 			//Get the building type
-			const Manager::BuildingType& building_type = manager->GetBuildingType(descriptor_index.value(), random());
+			const Manager::BuildingArchetype& building_archetype = manager->GetBuildingArchetype(descriptor_index.value(), random());
 
 			std::uniform_real_distribution<float> angle_inc_range(zone_descriptor.angle_inc_range_min, zone_descriptor.angle_inc_range_max);
 			std::uniform_real_distribution<float> angle_rotation_range(0.f, glm::two_pi<float>());
@@ -192,7 +192,7 @@ namespace BoxCityTileSystem
 			std::uniform_real_distribution<float> offset_animation_range(zone_descriptor.animation_offset_range_min, zone_descriptor.animation_offset_range_max);
 
 
-			obb_box.extents = building_type.extents;
+			obb_box.extents = building_archetype.extents;
 			obb_box.rotation = glm::rotate(angle_inc_range(random), glm::vec3(1.f, 0.f, 0.f)) * glm::rotate(angle_rotation_range(random), glm::vec3(0.f, 0.f, 1.f));
 
 
@@ -273,19 +273,19 @@ namespace BoxCityTileSystem
 			m_bounding_box.Add(extended_aabb_box);
 
 			bool top = (obb_box.position.z + obb_box.extents.z > kTileHeightTopViewRange);
-			uint32_t building_type_offset = static_cast<uint32_t>(manager->GetGPUMemoryRenderModule()->GetStaticGPUMemoryOffset(building_type.handle));
+			uint32_t building_archetype_offset = static_cast<uint32_t>(manager->GetGPUMemoryRenderModule()->GetStaticGPUMemoryOffset(building_archetype.handle));
 
 			if (!dynamic_box)
 			{
 				if (top)
 				{
 					//Top box
-					GetLodGroupData(LODGroup::TopBuildings).building_data.emplace_back(obb_box, building_type_offset);
+					GetLodGroupData(LODGroup::TopBuildings).building_data.emplace_back(obb_box, building_archetype_offset);
 				}
 				else
 				{
 					//Bottom box
-					GetLodGroupData(LODGroup::Rest).building_data.emplace_back(obb_box, building_type_offset);
+					GetLodGroupData(LODGroup::Rest).building_data.emplace_back(obb_box, building_archetype_offset);
 				}
 			}
 			else
@@ -294,12 +294,12 @@ namespace BoxCityTileSystem
 				if (top)
 				{
 					//Top box
-					GetLodGroupData(LODGroup::TopBuildings).animated_building_data.emplace_back(obb_box, building_type_offset, animated_box);
+					GetLodGroupData(LODGroup::TopBuildings).animated_building_data.emplace_back(obb_box, building_archetype_offset, animated_box);
 				}
 				else
 				{
 					//Bottom box
-					GetLodGroupData(LODGroup::Rest).animated_building_data.emplace_back(obb_box, building_type_offset, animated_box);
+					GetLodGroupData(LODGroup::Rest).animated_building_data.emplace_back(obb_box, building_archetype_offset, animated_box);
 				}
 			}
 		}

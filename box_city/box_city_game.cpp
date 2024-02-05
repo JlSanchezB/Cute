@@ -16,6 +16,7 @@ void BoxCityGame::OnInit()
 
 	//Create job system
 	job::SystemDesc job_system_desc;
+	job_system_desc.extra_workers = 1; //For the loading system
 	m_job_system = job::CreateSystem(job_system_desc);
 	RegisterImguiDebugSystem("Job System"_sh32, [&](bool* activated)
 		{
@@ -112,7 +113,7 @@ void BoxCityGame::OnInit()
 	m_fly_camera.SetNearFar(0.5f, 8000.f);
 	m_car_camera.SetNearFar(0.5f, 8000.f);
 
-	m_tile_manager.Init(m_device, m_render_system, m_GPU_memory_render_module);
+	m_tile_manager.Init(m_device, m_render_system, m_GPU_memory_render_module, m_job_system);
 	m_traffic_system.Init(m_device, m_render_system, m_GPU_memory_render_module);
 
 	//Register the callback transaction function in the ecs

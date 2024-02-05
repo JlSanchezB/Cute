@@ -84,7 +84,7 @@ namespace BoxCityTileSystem
 		void AppendVisibleInstanceLists(const helpers::Frustum& frustum, std::vector<uint32_t>& instance_lists_offsets_array);
 
 		//Init
-		void Init(display::Device* device, render::System* render_system, render::GPUMemoryRenderModule* GPU_memory_render_module);
+		void Init(display::Device* device, render::System* render_system, render::GPUMemoryRenderModule* GPU_memory_render_module, job::System* job_system);
 
 		//Shutdown
 		void Shutdown();
@@ -156,23 +156,22 @@ namespace BoxCityTileSystem
 
 		bool GetNextTrafficTarget(std::mt19937& random, const glm::vec3& position, glm::vec3& next_target) const;
 
-		//Building type, described by the extents and the GPU handle
-		struct BuildingType
+		//Building archetype, described by the extents and the GPU handle
+		struct BuildingArchetype
 		{
 			glm::vec3 extents;
 			render::AllocHandle handle;
 		};
 
-		const BuildingType& GetBuildingType(const uint32_t zone_descriptor_index, const uint32_t random)
-		{
-			return m_building_types[zone_descriptor_index][random % kBuildingsTypesPerDescriptor];
-		}
+		//Gets or create the building archetype, first time can be slow
+		const BuildingArchetype& GetBuildingArchetype(const uint32_t zone_descriptor_index, const uint32_t random);
 
 	private:
 		//System
 		display::Device* m_device = nullptr;
 		render::System* m_render_system = nullptr;
 		render::GPUMemoryRenderModule* m_GPU_memory_render_module = nullptr;
+		job::System* m_job_system = nullptr;
 
 		struct TileDescriptor
 		{
@@ -218,11 +217,9 @@ namespace BoxCityTileSystem
 		std::vector<ZoneDescriptor> m_descriptor_zones;
 
 
-		constexpr static size_t kBuildingsTypesPerDescriptor = 30;
-		std::vector<std::array<BuildingType, kBuildingsTypesPerDescriptor>> m_building_types;
+		constexpr static size_t kBuildingsArchetypesPerDescriptor = 30;
+		std::vector<std::array<BuildingArchetype, kBuildingsArchetypesPerDescriptor>> m_building_archetypes;
 
-		//Generate all the building types during loading
-		void GenerateBuildingsTypes();
 
 		//Loading system
 		struct LoadingJob

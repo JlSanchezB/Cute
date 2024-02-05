@@ -26,6 +26,7 @@ namespace job
 	{
 		size_t num_workers = static_cast<size_t>(-1);
 		size_t count_for_yield = 128;
+		size_t extra_workers = 0;
 	};
 
 	System* CreateSystem(const SystemDesc& system_desc);
@@ -36,6 +37,9 @@ namespace job
 	//Run all tasks in a single thread
 	void SetSingleThreadMode(System* system, bool single_thread_mode);
 	bool GetSingleThreadMode(System* system);
+
+	//Register extra worker
+	void RegisterExtraWorker(System* system, size_t extra_worker_index);
 
 	//Add job
 	void AddJob(System* system, const JobFunction job, void* data, Fence& fence);
