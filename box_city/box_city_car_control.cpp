@@ -1,5 +1,6 @@
 #include "box_city_car_control.h"
 #include <core/control_variables.h>
+#include <core/counters.h>
 #include <core/platform.h>
 #include "box_city_tile_manager.h"
 #include "box_city_traffic_manager.h"
@@ -8,7 +9,7 @@
 
 CONTROL_VARIABLE_BOOL(c_car_ai_avoidance_enable, true, "Car", "Car AI avoidance enabled");
 CONTROL_VARIABLE_BOOL(c_car_ai_targeting_enable, true, "Car", "Car AI targeting enabled");
-CONTROL_VARIABLE_BOOL(c_car_collision_enable, false, "Car", "Car collision enabled");
+CONTROL_VARIABLE_BOOL(c_car_collision_enable, true, "Car", "Car collision enabled");
 
 //Pitch input
 CONTROL_VARIABLE(float, c_car_Y_range, 0.f, 1.f, 0.9f, "Car", "Y Range");
@@ -44,6 +45,9 @@ CONTROL_VARIABLE(float, c_car_foward_kill_height_force, 0.f, 100.f, 2.0f, "Car",
 CONTROL_VARIABLE(float, c_car_friction_linear_force, 0.f, 10.f, 1.4f, "Car", "Linear Friction Force");
 CONTROL_VARIABLE(float, c_car_friction_angular_force, 0.f, 10.f, 1.8f, "Car", "Angular Friction Force");
 
+//Collision
+CONTROL_VARIABLE(float, c_car_collision_lost, 0.f, 1.f, 0.5f, "Car", "Energy lost during collision");
+
 //Aerodynamic forces
 CONTROL_VARIABLE(float, c_car_aerodynamic_linear_force, 0.f, 10.f, 1.5f, "Car", "Linear Aerodynamic Force");
 
@@ -69,6 +73,12 @@ CONTROL_VARIABLE(float, c_car_ai_close_target_distance, 1.f, 10000.f, 50.f, "Car
 CONTROL_VARIABLE(float, c_car_ai_close_target_distance_slow, 0.f, 1.f, 0.8f, "Car", "Car AI close target distance slow");
 CONTROL_VARIABLE(float, c_car_ai_lane_size, 0.f, 10.f, 2.0f, "Car", "Car AI lane size");
 
+//Counters
+COUNTER(c_Car_Collisions, "Cars", "Cars collision", true);
+COUNTER(c_Car_Retargets, "Cars", "Cars retargetting", true);
+COUNTER(c_Car_Caching_Buildings, "Cars", "Cars Caching Buildings", true);
+
+//#pragma optimize("", off)
 
 namespace BoxCityCarControl
 {
@@ -233,6 +243,8 @@ namespace BoxCityCarControl
 			//Only update the buildings if needed, each 4 frames
 			if (NeedsUpdate(instance_index, frame_index, 4))
 			{
+				COUNTER_INC(c_Car_Caching_Buildings);
+
 				//Calculate visibility AABB
 				helpers::AABB car_frustum;
 				car_frustum.Add(car_position - car_direction * c_car_ai_visibility_distance * 0.05f);
@@ -339,6 +351,8 @@ namespace BoxCityCarControl
 		{
 			//Retarget
 			SetupCarTarget(random, tile_manager, car, car_target);
+
+			COUNTER_INC(c_Car_Retargets);
 		}
 
 		if (c_car_ai_targeting_enable && car_target.target_valid)
@@ -447,7 +461,7 @@ namespace BoxCityCarControl
 		assert(glm::all(glm::isfinite(linear_forces)));
 		assert(glm::all(glm::isfinite(angular_forces)));
 	}
-	void CalculateCollisionForces(BoxCityTileSystem::Manager* manager, const glm::vec3& camera_pos, OBBBox& obb, glm::vec3& linear_forces, glm::vec3& angular_forces, glm::vec3& position_offset)
+	void CalculateCollisionForces(BoxCityTileSystem::Manager* manager, const glm::vec3& camera_pos, OBBBox& obb, glm::vec3& linear_forces, glm::vec3& angular_forces, CarMovement& car_movement, glm::vec3& position_offset)
 	{
 		if (c_car_collision_enable && glm::distance2(obb.position, camera_pos) < c_car_ai_avoidance_calculation_distance * c_car_ai_avoidance_calculation_distance)
 		{
@@ -464,8 +478,44 @@ namespace BoxCityCarControl
 					helpers::CollisionReturn collision_return;
 					if (helpers::CollisionFeaturesOBBvsOBB(obb, building_box, collision_return))
 					{
-						//linear_forces += -collision_return.normal * 2000.f;
+						//Bounce the lineal velocity
+						//car_movement.lineal_velocity -= (1.f + c_car_collision_lost) * glm::dot(car_movement.lineal_velocity, collision_return.normal) * collision_return.normal;
+						
+						//Kill forces and velocity
+						linear_forces -= glm::dot(linear_forces, collision_return.normal) * collision_return.normal;
+						car_movement.lineal_velocity -= glm::dot(car_movement.lineal_velocity, collision_return.normal) * collision_return.normal;
+
+						//Bounce
+						if (collision_return.contacts.size() > 0)
+						{
+							
+							//Calculate average contact 
+							glm::vec3 average_contact = collision_return.contacts[0];
+							for (size_t i = 1; i < collision_return.contacts.size(); ++i)
+							{
+								average_contact += collision_return.contacts[i];
+							}
+							
+							average_contact = average_contact / static_cast<float>(collision_return.contacts.size());
+							glm::vec3 contact_vector = average_contact - obb.position;
+
+							if (glm::length2(contact_vector) > 0.f)
+							{
+
+								//Calculate bounce back velocity in the contact point
+								glm::vec3 contact_velocity = car_movement.lineal_velocity + glm::cross(car_movement.rotation_velocity, contact_vector);
+								glm::vec3 bounce_back_velocity = -(1.f + c_car_collision_lost) * glm::dot(contact_velocity, collision_return.normal) * collision_return.normal;
+
+								//Apply the bounce back velocity to the linear and angular velocity
+								car_movement.lineal_velocity += glm::dot(bounce_back_velocity, contact_vector) * glm::normalize(contact_vector);
+								car_movement.rotation_velocity += glm::cross(contact_vector, bounce_back_velocity);
+							}
+						}
+
+						//Readjust position
 						position_offset -= collision_return.normal * collision_return.depth;
+
+						COUNTER_INC(c_Car_Collisions);
 					}
 				});
 		}
