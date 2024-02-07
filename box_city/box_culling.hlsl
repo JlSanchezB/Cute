@@ -126,7 +126,7 @@ void box_culling(uint3 group : SV_GroupID, uint3 group_thread_id : SV_GroupThrea
                     float3 box_extent = float3(box_data[1].x, box_data[1].y, box_data[1].z);
                     float3 box_translation = float3(box_data[0].x, box_data[0].y, box_data[0].z);
             
-                    if (!hiz_is_visible(last_frame_rotate_quat, last_frame_translation, box_extent, box_translation) || SkipMainPassCulling)
+                    if (!hiz_is_visible(ViewData.last_frame_view_projection_matrix, last_frame_rotate_quat, last_frame_translation, box_extent, box_translation) || SkipMainPassCulling)
                     {
                         //Occluded, it needs to go to the second pass
                         first_pass = false;

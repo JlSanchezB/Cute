@@ -84,7 +84,7 @@ void second_pass_box_culling(uint3 dispatch_thread_id : SV_DispatchThreadID)
         float3 box_extent = float3(box_data[1].x, box_data[1].y, box_data[1].z);
         float3 box_translation = float3(box_data[0].x, box_data[0].y, box_data[0].z);
        
-        if (!hiz_is_visible(instance_rotate_quat, instance_translation, box_extent, box_translation) && SecondaryPassCulling)
+        if (!hiz_is_visible(ViewData.view_projection_matrix, instance_rotate_quat, instance_translation, box_extent, box_translation) && SecondaryPassCulling)
         {
             //Occluded, nothing to do
             return;
@@ -95,6 +95,7 @@ void second_pass_box_culling(uint3 dispatch_thread_id : SV_DispatchThreadID)
             uint offset;
             InterlockedAdd(indirect_culled_boxes[0], 1, offset);
 
+            assert(offset < indirect_box_buffer_count);
             if (offset < indirect_box_buffer_count)
             {
                 indirect_culled_boxes[offset] = indirect_box;

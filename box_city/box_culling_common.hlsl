@@ -77,7 +77,7 @@ bool is_visible(float4 instance_rotate_quad, float3 instance_position, float3 bo
 }
 
 //Visible using the HiZ
-bool hiz_is_visible(float4 instance_rotate_quad, float3 instance_position, float3 box_extent, float3 box_position)
+bool hiz_is_visible(float4x4 view_projection, float4 instance_rotate_quad, float3 instance_position, float3 box_extent, float3 box_position)
 {
     //Calculate 8 points in the box, last frame
     float3 box_points[8];
@@ -94,7 +94,7 @@ bool hiz_is_visible(float4 instance_rotate_quad, float3 instance_position, float
     float3 clip_box_points[8];
     [unroll] for (uint point_index = 0; point_index < 8; ++point_index)
     {
-        float4 view_box_point = mul(ViewData.last_frame_view_projection_matrix, float4(box_points[point_index], 1.f));
+        float4 view_box_point = mul(view_projection, float4(box_points[point_index], 1.f));
         clip_box_points[point_index] = view_box_point.xyz / view_box_point.w;
     }
 
