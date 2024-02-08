@@ -215,9 +215,9 @@ struct VelocityComponent
 	{
 	}
 
-	void AddLinealVelocity(const glm::vec2& lineal_velocity)
+	void AddLinealVelocity(const glm::vec2& linear_velocity)
 	{
-		lineal += lineal_velocity;
+		lineal += linear_velocity;
 	}
 
 	void AddAngleVelocity(float angle_velocity)

@@ -80,7 +80,7 @@ namespace BoxCityTrafficSystem
 			fill_box(9, glm::vec3(-0.6f, -0.975f, 0.f), glm::vec3(0.2f, 0.025f, 0.2f), glm::vec3(5.f, 0.f, 0.f) * emissive_factor, true);
 
 			//Allocate GPU car box list
-			m_gpu_car_box_list[0] = m_GPU_memory_render_module->AllocStaticGPUMemory(m_device, car_buffer.size(), car_buffer.data(), render::GetGameFrameIndex(m_render_system));
+			m_gpu_car_box_list[1] = m_GPU_memory_render_module->AllocStaticGPUMemory(m_device, car_buffer.size(), car_buffer.data(), render::GetGameFrameIndex(m_render_system));
 		}
 		//Create the car box list, car 1
 		{
@@ -113,7 +113,7 @@ namespace BoxCityTrafficSystem
 			fill_box(9, glm::vec3(-0.6f, -0.975f * length_factor, 0.f), glm::vec3(0.2f, 0.025f, 0.2f), glm::vec3(5.f, 0.f, 0.f) * emissive_factor, true);
 
 			//Allocate GPU car box list
-			m_gpu_car_box_list[1] = m_GPU_memory_render_module->AllocStaticGPUMemory(m_device, car_buffer.size(), car_buffer.data(), render::GetGameFrameIndex(m_render_system));
+			m_gpu_car_box_list[0] = m_GPU_memory_render_module->AllocStaticGPUMemory(m_device, car_buffer.size(), car_buffer.data(), render::GetGameFrameIndex(m_render_system));
 		}
 		//Create the car box list, car 2
 		{
@@ -253,7 +253,7 @@ namespace BoxCityTrafficSystem
 		
 		car.position.Reset(position);
 		car.rotation.Reset(glm::quat(glm::vec3(0.f, 0.f, 0.f)));
-		car_movement.lineal_velocity = glm::vec3(0.f, 0.f, 0.f);
+		car_movement.linear_velocity = glm::vec3(0.f, 0.f, 0.f);
 		car_movement.rotation_velocity = glm::vec3(0.f, 0.f, 0.f);
 
 		car_settings.size = size;

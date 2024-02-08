@@ -394,12 +394,12 @@ namespace helpers
 		float distance = (i.max - i.min) * 0.5f - collision_return.depth * 0.5f;
 		glm::vec3 pointOnPlane = obb1.position + axis * distance;
 
-		for (int32_t i = (int32_t)(collision_return.contacts.size() - 1); i >= 0; --i) {
+		for (int32_t i = (int32_t)(collision_return.contacts.size()) - 1; i >= 0; --i) {
 			glm::vec3 contact = collision_return.contacts[i];
 			collision_return.contacts[i] = contact + (axis * glm::dot(axis, pointOnPlane - contact));
 
 			// This bit is in the "There is more" section of the book
-			for (int32_t j = (int32_t)(collision_return.contacts.size() - 1); j > i; --j) {
+			for (int32_t j = (int32_t)(collision_return.contacts.size()) - 1; j > i; --j) {
 				if (glm::length2(collision_return.contacts[j] - collision_return.contacts[i]) < 0.0001f) {
 					collision_return.contacts.erase(collision_return.contacts.begin() + j);
 					break;

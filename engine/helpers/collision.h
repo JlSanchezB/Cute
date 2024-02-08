@@ -138,7 +138,7 @@ namespace helpers
 	
 	struct CollisionReturn
 	{
-		glm::vec3 normal = glm::vec3(0.f, 0.f, 0.f);
+		glm::vec3 normal = glm::vec3(0.f, 0.f, 1.f);
 		float depth = FLT_MAX;
 		std::vector<glm::vec3> contacts = {};
 	};

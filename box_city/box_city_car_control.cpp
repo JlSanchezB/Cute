@@ -238,7 +238,7 @@ namespace BoxCityCarControl
 		float avoidance_factor = 0.f;
 		if (c_car_ai_avoidance_enable && camera_distance2 < c_car_ai_avoidance_calculation_distance * c_car_ai_avoidance_calculation_distance)
 		{
-			const glm::vec3 car_direction = glm::normalize(car_movement.lineal_velocity);
+			const glm::vec3 car_direction = glm::normalize(car_movement.linear_velocity);
 
 			//Only update the buildings if needed, each 4 frames
 			if (NeedsUpdate(instance_index, frame_index, 4))
@@ -443,17 +443,17 @@ namespace BoxCityCarControl
 
 		//Apply friction
 		{
-			linear_forces -= car_movement.lineal_velocity * glm::clamp(c_car_friction_linear_force * elapsed_time, 0.f, 1.f) / elapsed_time;
+			linear_forces -= car_movement.linear_velocity * glm::clamp(c_car_friction_linear_force * elapsed_time, 0.f, 1.f) / elapsed_time;
 			angular_forces -= car_movement.rotation_velocity * glm::clamp(c_car_friction_angular_force * elapsed_time, 0.f, 1.f) / elapsed_time;
 		}
 
 		//Apply aerodynamic forces
-		if (glm::length2(car_movement.lineal_velocity) > 0.001f)
+		if (glm::length2(car_movement.linear_velocity) > 0.001f)
 		{
-			float aerodynamic_factor = glm::abs(glm::dot(car_front_vector, car_movement.lineal_velocity));
+			float aerodynamic_factor = glm::abs(glm::dot(car_front_vector, car_movement.linear_velocity));
 
 			//Remove linear velocity in the direction of the car
-			linear_forces -= glm::normalize(car_movement.lineal_velocity) * glm::clamp(c_car_aerodynamic_linear_force * elapsed_time, 0.f, 1.f) / elapsed_time;
+			linear_forces -= glm::normalize(car_movement.linear_velocity) * glm::clamp(c_car_aerodynamic_linear_force * elapsed_time, 0.f, 1.f) / elapsed_time;
 			//Add same force to the direction of the car
 			linear_forces += car_front_vector * glm::clamp(c_car_aerodynamic_linear_force * elapsed_time, 0.f, 1.f) / elapsed_time;
 		}
@@ -473,45 +473,36 @@ namespace BoxCityCarControl
 					assert(building.IsValid());
 					assert(building.Get<GameDatabase>().Is<BoxType>() || building.Get<GameDatabase>().Is<AnimatedBoxType>());
 
-					OBBBox building_box = building.Get<GameDatabase>().Get<OBBBox>();
+					const OBBBox& building_box = building.Get<GameDatabase>().Get<OBBBox>();
 
 					helpers::CollisionReturn collision_return;
 					if (helpers::CollisionFeaturesOBBvsOBB(obb, building_box, collision_return))
-					{
-						//Bounce the lineal velocity
-						//car_movement.lineal_velocity -= (1.f + c_car_collision_lost) * glm::dot(car_movement.lineal_velocity, collision_return.normal) * collision_return.normal;
-						
+					{	
+						glm::vec3 old_car_linear_velocity = car_movement.linear_velocity;
+
 						//Kill forces and velocity
-						linear_forces -= glm::dot(linear_forces, collision_return.normal) * collision_return.normal;
-						car_movement.lineal_velocity -= glm::dot(car_movement.lineal_velocity, collision_return.normal) * collision_return.normal;
+						linear_forces -= glm::min(0.f, glm::dot(linear_forces, collision_return.normal)) * collision_return.normal;
+						car_movement.linear_velocity -= glm::min(0.f, glm::dot(car_movement.linear_velocity, collision_return.normal)) * collision_return.normal;
 
 						//Bounce
-						if (collision_return.contacts.size() > 0)
-						{
-							
-							//Calculate average contact 
-							glm::vec3 average_contact = collision_return.contacts[0];
-							for (size_t i = 1; i < collision_return.contacts.size(); ++i)
-							{
-								average_contact += collision_return.contacts[i];
-							}
-							
-							average_contact = average_contact / static_cast<float>(collision_return.contacts.size());
-							glm::vec3 contact_vector = average_contact - obb.position;
+						for (auto& contact : collision_return.contacts)
+						{	
+							glm::vec3 contact_vector = contact - obb.position;
 
 							if (glm::length2(contact_vector) > 0.f)
 							{
-
 								//Calculate bounce back velocity in the contact point
-								glm::vec3 contact_velocity = car_movement.lineal_velocity + glm::cross(car_movement.rotation_velocity, contact_vector);
-								glm::vec3 bounce_back_velocity = -(1.f + c_car_collision_lost) * glm::dot(contact_velocity, collision_return.normal) * collision_return.normal;
+								glm::vec3 contact_velocity = old_car_linear_velocity + glm::cross(contact_vector, car_movement.rotation_velocity);
+								glm::vec3 bounce_back_velocity = -glm::min(0.f, glm::dot(contact_velocity, collision_return.normal)) * collision_return.normal;
+
+								bounce_back_velocity *= c_car_collision_lost * (1.f / static_cast<float>(collision_return.contacts.size()));
 
 								//Apply the bounce back velocity to the linear and angular velocity
-								car_movement.lineal_velocity += glm::dot(bounce_back_velocity, contact_vector) * glm::normalize(contact_vector);
-								car_movement.rotation_velocity += glm::cross(contact_vector, bounce_back_velocity);
+								car_movement.linear_velocity += glm::dot(bounce_back_velocity, contact_vector) * glm::normalize(contact_vector);
+								car_movement.rotation_velocity += glm::cross(bounce_back_velocity, contact_vector);
 							}
 						}
-
+						
 						//Readjust position
 						position_offset -= collision_return.normal * collision_return.depth;
 
@@ -527,8 +518,8 @@ namespace BoxCityCarControl
 		const glm::mat3x3 car_matrix = glm::toMat3(*car.rotation);
 
 		//Integrate velocity
-		car_movement.lineal_velocity += linear_forces * car_settings.inv_mass * elapsed_time;
-		assert(glm::all(glm::isfinite(car_movement.lineal_velocity)));
+		car_movement.linear_velocity += linear_forces * car_settings.inv_mass * elapsed_time;
+		assert(glm::all(glm::isfinite(car_movement.linear_velocity)));
 
 		//Calculate world inertia mass
 		glm::mat3x3 inertia_matrix = glm::scale(car_settings.inv_mass_inertia);
@@ -537,7 +528,7 @@ namespace BoxCityCarControl
 		assert(glm::all(glm::isfinite(car_movement.rotation_velocity)));
 
 		//Integrate position
-		*car.position = car.position.Last() + car_movement.lineal_velocity * elapsed_time + position_offset;
+		*car.position = car.position.Last() + car_movement.linear_velocity * elapsed_time + position_offset;
 		float rotation_angle = glm::length(car_movement.rotation_velocity * elapsed_time);
 		if (rotation_angle > 0.000001f)
 		{

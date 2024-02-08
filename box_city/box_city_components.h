@@ -77,13 +77,13 @@ struct Car
 
 struct CarMovement
 {
-	glm::vec3 lineal_velocity = glm::vec3(0.f, 0.f, 0.f);
+	glm::vec3 linear_velocity = glm::vec3(0.f, 0.f, 0.f);
 	glm::vec3 rotation_velocity = glm::vec3(0.f, 0.f, 0.f);
 
 	CarMovement()
 	{
 	};
-	CarMovement(const glm::vec3& _lineal_velocity, const glm::vec3& _rotation_velocity) : lineal_velocity(_lineal_velocity), rotation_velocity(_rotation_velocity)
+	CarMovement(const glm::vec3& _lineal_velocity, const glm::vec3& _rotation_velocity) : linear_velocity(_lineal_velocity), rotation_velocity(_rotation_velocity)
 	{
 	};
 };
