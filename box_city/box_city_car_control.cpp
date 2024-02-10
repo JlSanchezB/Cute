@@ -73,7 +73,9 @@ CONTROL_VARIABLE(float, c_car_ai_close_target_distance, 1.f, 10000.f, 50.f, "Car
 CONTROL_VARIABLE(float, c_car_ai_close_target_distance_slow, 0.f, 1.f, 0.8f, "Car", "Car AI close target distance slow");
 CONTROL_VARIABLE(float, c_car_ai_lane_size, 0.f, 10.f, 2.0f, "Car", "Car AI lane size");
 
-CONTROL_VARIABLE(float, c_car_ai_collision_rotation_factor, 0.f, 1.f, 0.01f, "Car", "Car collision rotation control factor");
+CONTROL_VARIABLE(float, c_car_gyroscope_collision_control, 0.f, 1.f, 0.1f, "Car", "Car gyroscope collision control");
+CONTROL_VARIABLE(float, c_car_gyroscope_control_min, 0.f, 10.f, 1.0f, "Car", "Car gyroscope control min");
+CONTROL_VARIABLE(float, c_car_gyroscope_control_factor, 0.f, 10.f, 1.0f, "Car", "Car gyroscope control factor");
 
 //Counters
 COUNTER(c_Car_Collisions, "Cars", "Cars collision", true);
@@ -460,6 +462,23 @@ namespace BoxCityCarControl
 			linear_forces += car_front_vector * glm::clamp(c_car_aerodynamic_linear_force * elapsed_time, 0.f, 1.f) / elapsed_time;
 		}
 
+		//Apply gyroscope control
+		float rotation_moment = glm::length(car_movement.rotation_velocity);
+		if (rotation_moment > c_car_gyroscope_control_min)
+		{
+			float force_factor = glm::clamp((rotation_moment - c_car_gyroscope_control_min) * c_car_gyroscope_control_factor * elapsed_time, 0.f, 1.f) / elapsed_time;
+
+			//We need to apply forces to kill the rotation velocity
+			angular_forces -= car_movement.rotation_velocity * force_factor;
+
+			//We want always to force it to loop up
+			float diff_angle = 0.f - (glm::angle(car_front_vector, up_vector) - glm::half_pi<float>());
+			angular_forces += car_left_flat * diff_angle * force_factor;
+			diff_angle = 0.f - (glm::angle(car_left_vector, -up_vector) - glm::half_pi<float>());
+			angular_forces += car_front_vector * diff_angle * force_factor;
+		}
+
+
 		assert(glm::all(glm::isfinite(linear_forces)));
 		assert(glm::all(glm::isfinite(angular_forces)));
 	}
@@ -498,7 +517,7 @@ namespace BoxCityCarControl
 
 									//Apply the bounce back force to the linear and angular velocity
 									car_movement.linear_velocity += bounce_back_force * car_settings.inv_mass;
-									car_movement.rotation_velocity -= c_car_ai_collision_rotation_factor * glm::cross(contact_vector, bounce_back_force) * car_settings.inv_mass_inertia;
+									car_movement.rotation_velocity -= c_car_gyroscope_collision_control * glm::cross(contact_vector, bounce_back_force) * car_settings.inv_mass_inertia;
 
 									/*
 									//Friction
@@ -512,7 +531,7 @@ namespace BoxCityCarControl
 
 									//Apply the friction velocity to the linear and angular velocity
 									car_movement.linear_velocity += friction_force * car_settings.inv_mass;
-									car_movement.rotation_velocity -= c_car_ai_collision_rotation_factor * glm::cross(contact_vector, friction_force) * car_settings.inv_mass_inertia;
+									car_movement.rotation_velocity -= glm::cross(contact_vector, friction_force) * car_settings.inv_mass_inertia;
 									*/
 								}
 							}
