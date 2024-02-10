@@ -203,6 +203,8 @@ namespace BoxCityTrafficSystem
 
 		//GPU car box list
 		std::array<render::AllocHandle, 5> m_gpu_car_box_list;
+		//Car type dimensions
+		std::array<helpers::AABB, 5> m_car_type_dimensions;
 	};
 }
 

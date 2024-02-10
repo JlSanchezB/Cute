@@ -46,7 +46,7 @@ CONTROL_VARIABLE(float, c_car_friction_linear_force, 0.f, 10.f, 1.4f, "Car", "Li
 CONTROL_VARIABLE(float, c_car_friction_angular_force, 0.f, 10.f, 1.8f, "Car", "Angular Friction Force");
 
 //Collision
-CONTROL_VARIABLE(float, c_car_collision_lost, 0.f, 1.f, 0.5f, "Car", "Energy lost during collision");
+CONTROL_VARIABLE(float, c_car_collision_lost, 0.f, 1.f, 1.0f, "Car", "Energy lost during collision");
 
 //Aerodynamic forces
 CONTROL_VARIABLE(float, c_car_aerodynamic_linear_force, 0.f, 10.f, 1.5f, "Car", "Linear Aerodynamic Force");
@@ -72,6 +72,8 @@ CONTROL_VARIABLE(float, c_car_ai_min_target_distance, 1.f, 10000.f, 50.f, "Car",
 CONTROL_VARIABLE(float, c_car_ai_close_target_distance, 1.f, 10000.f, 50.f, "Car", "Car AI close target distance");
 CONTROL_VARIABLE(float, c_car_ai_close_target_distance_slow, 0.f, 1.f, 0.8f, "Car", "Car AI close target distance slow");
 CONTROL_VARIABLE(float, c_car_ai_lane_size, 0.f, 10.f, 2.0f, "Car", "Car AI lane size");
+
+CONTROL_VARIABLE(float, c_car_ai_collision_rotation_factor, 0.f, 1.f, 0.01f, "Car", "Car collision rotation control factor");
 
 //Counters
 COUNTER(c_Car_Collisions, "Cars", "Cars collision", true);
@@ -461,7 +463,7 @@ namespace BoxCityCarControl
 		assert(glm::all(glm::isfinite(linear_forces)));
 		assert(glm::all(glm::isfinite(angular_forces)));
 	}
-	void CalculateCollisionForces(BoxCityTileSystem::Manager* manager, const glm::vec3& camera_pos, OBBBox& obb, glm::vec3& linear_forces, glm::vec3& angular_forces, CarMovement& car_movement, glm::vec3& position_offset)
+	void CalculateCollisionForces(BoxCityTileSystem::Manager* manager, const glm::vec3& camera_pos, OBBBox& obb, glm::vec3& linear_forces, glm::vec3& angular_forces, CarMovement& car_movement, CarSettings& car_settings, glm::vec3& position_offset)
 	{
 		if (c_car_collision_enable && glm::distance2(obb.position, camera_pos) < c_car_ai_avoidance_calculation_distance * c_car_ai_avoidance_calculation_distance)
 		{
@@ -478,28 +480,41 @@ namespace BoxCityCarControl
 					helpers::CollisionReturn collision_return;
 					if (helpers::CollisionFeaturesOBBvsOBB(obb, building_box, collision_return))
 					{	
-						glm::vec3 old_car_linear_velocity = car_movement.linear_velocity;
-
-						//Kill forces and velocity
-						linear_forces -= glm::min(0.f, glm::dot(linear_forces, collision_return.normal)) * collision_return.normal;
-						car_movement.linear_velocity -= glm::min(0.f, glm::dot(car_movement.linear_velocity, collision_return.normal)) * collision_return.normal;
-
 						//Bounce
 						for (auto& contact : collision_return.contacts)
 						{	
-							glm::vec3 contact_vector = contact - obb.position;
+							glm::vec3 contact_vector = contact.position - obb.position;
 
 							if (glm::length2(contact_vector) > 0.f)
 							{
-								//Calculate bounce back velocity in the contact point
-								glm::vec3 contact_velocity = old_car_linear_velocity + glm::cross(contact_vector, car_movement.rotation_velocity);
-								glm::vec3 bounce_back_velocity = -glm::min(0.f, glm::dot(contact_velocity, collision_return.normal)) * collision_return.normal;
+								//Calculate bounce back force in the contact point from velocity
+								glm::vec3 contact_force = car_movement.linear_velocity + glm::cross(car_movement.rotation_velocity, contact_vector);
+								if (glm::dot(contact_force, contact.normal) < 0.f)
+								{
+									glm::vec3 bounce_back_force = -(1.f + c_car_collision_lost) * glm::dot(contact_force, contact.normal) * contact.normal;
+									bounce_back_force /= (car_settings.inv_mass + glm::dot(contact.normal, glm::cross(glm::cross(contact_vector, contact.normal) * car_settings.inv_mass_inertia, contact_vector)));
 
-								bounce_back_velocity *= c_car_collision_lost * (1.f / static_cast<float>(collision_return.contacts.size()));
+									bounce_back_force *= (1.f / static_cast<float>(collision_return.contacts.size()));
 
-								//Apply the bounce back velocity to the linear and angular velocity
-								car_movement.linear_velocity += glm::dot(bounce_back_velocity, contact_vector) * glm::normalize(contact_vector);
-								car_movement.rotation_velocity += glm::cross(bounce_back_velocity, contact_vector);
+									//Apply the bounce back force to the linear and angular velocity
+									car_movement.linear_velocity += bounce_back_force * car_settings.inv_mass;
+									car_movement.rotation_velocity -= c_car_ai_collision_rotation_factor * glm::cross(contact_vector, bounce_back_force) * car_settings.inv_mass_inertia;
+
+									/*
+									//Friction
+									glm::vec3 contact_velocity_tangent = contact_force - glm::dot(contact_force, contact.normal) * contact.normal;
+									//float friction_factor = glm::dot(contact_velocity_tangent, contact_force);
+
+									//friction_factor *= (1.f / static_cast<float>(collision_return.contacts.size()));
+
+									//Really simple friction
+									glm::vec3 friction_force = -contact_velocity_tangent * 0.25f; //sticky
+
+									//Apply the friction velocity to the linear and angular velocity
+									car_movement.linear_velocity += friction_force * car_settings.inv_mass;
+									car_movement.rotation_velocity -= c_car_ai_collision_rotation_factor * glm::cross(contact_vector, friction_force) * car_settings.inv_mass_inertia;
+									*/
+								}
 							}
 						}
 						

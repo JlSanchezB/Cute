@@ -135,12 +135,23 @@ namespace helpers
 		segment_a_point = P1 + t_a * V1;
 		segment_b_point = P2 + t_b * V2;
 	}
-	
+	struct CollisionContact
+	{
+		glm::vec3 position;
+		glm::vec3 normal;
+		float depth = FLT_MAX;
+
+		CollisionContact(const glm::vec3 _position, const glm::vec3 _normal, const float _depth):
+			position(_position), normal(_normal), depth(_depth)
+		{
+		}
+	};
 	struct CollisionReturn
 	{
-		glm::vec3 normal = glm::vec3(0.f, 0.f, 1.f);
+		uint32_t code;
+		glm::vec3 normal;
 		float depth = FLT_MAX;
-		std::vector<glm::vec3> contacts = {};
+		std::vector<CollisionContact> contacts = {};
 	};
 	bool CollisionFeaturesOBBvsOBB(const OBB& obb1, const OBB& obb2, CollisionReturn& collision_return);
 
