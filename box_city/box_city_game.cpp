@@ -246,7 +246,7 @@ void BoxCityGame::OnLogic(double total_time, float elapsed_time)
 	case CameraMode::Car:
 		if (m_traffic_system.GetPlayerCar().IsValid())
 		{
-			m_car_camera.Update(this, m_traffic_system.GetPlayerCar().Get<GameDatabase>().Get<Car>(), elapsed_time);
+			m_car_camera.Update(this, m_traffic_system.GetPlayerCar().Get<GameDatabase>().Get<Car>(), m_traffic_system.GetPlayerCar().Get<GameDatabase>().Get<CarMovement>(), elapsed_time);
 		}
 		break;
 	}

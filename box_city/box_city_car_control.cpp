@@ -55,6 +55,8 @@ CONTROL_VARIABLE(float, c_car_camera_distance, 0.f, 100.f, 4.5f, "Car", "Camera 
 CONTROL_VARIABLE(float, c_car_camera_up_offset, 0.f, 100.f, 1.f, "Car", "Camera Up Offset");
 CONTROL_VARIABLE(float, c_car_camera_fov, 60.f, 180.f, 100.f, "Car", "Camera Fov");
 CONTROL_VARIABLE(float, c_car_camera_speed, 0.f, 200.f, 30.f, "Car", "Camera Speed");
+CONTROL_VARIABLE(float, c_car_camera_car_rotation_min, 0.f, 10.f, 0.4f, "Car", "Camera Car Rotation Min");
+CONTROL_VARIABLE(float, c_car_camera_car_rotation_factor, 0.f, 10.f, 2.f, "Car", "Camera Car Rotation Factor");
 
 CONTROL_VARIABLE(float, c_car_ai_forward, 0.f, 1.f, 0.2f, "Car", "Camera AI foward");
 CONTROL_VARIABLE(float, c_car_ai_min_forward, 0.f, 1.f, 0.05f, "Car", "Camera AI min foward");
@@ -73,7 +75,7 @@ CONTROL_VARIABLE(float, c_car_ai_close_target_distance, 1.f, 10000.f, 50.f, "Car
 CONTROL_VARIABLE(float, c_car_ai_close_target_distance_slow, 0.f, 1.f, 0.8f, "Car", "Car AI close target distance slow");
 CONTROL_VARIABLE(float, c_car_ai_lane_size, 0.f, 10.f, 2.0f, "Car", "Car AI lane size");
 
-CONTROL_VARIABLE(float, c_car_gyroscope_collision_control, 0.f, 1.f, 0.1f, "Car", "Car gyroscope collision control");
+CONTROL_VARIABLE(float, c_car_gyroscope_collision_control, 0.f, 1.f, 0.05f, "Car", "Car gyroscope collision control");
 CONTROL_VARIABLE(float, c_car_gyroscope_control_min, 0.f, 10.f, 1.0f, "Car", "Car gyroscope control min");
 CONTROL_VARIABLE(float, c_car_gyroscope_control_factor, 0.f, 10.f, 1.0f, "Car", "Car gyroscope control factor");
 
@@ -101,10 +103,16 @@ namespace BoxCityCarControl
 		return NeedsUpdate(instance_index, frame_index, frame_rate);
 	}
 
-	void CarCamera::Update(platform::Game* game, Car& car, float elapsed_time)
+	void CarCamera::Update(platform::Game* game, const Car& car, const CarMovement& car_movement, float elapsed_time)
 	{
 		glm::mat3x3 car_matrix = glm::toMat3(*car.rotation);
-		*m_position = glm::mix(*m_position, *car.position - glm::row(car_matrix, 1) * c_car_camera_distance + glm::vec3(0.f, 0.f, c_car_camera_up_offset), glm::clamp(elapsed_time * c_car_camera_speed, 0.f, 1.f));
+		glm::vec3 car_vector = glm::row(car_matrix, 1);
+		glm::vec3 camera_vector = glm::normalize(*car.position - *m_position);
+		float car_rotation_velocity = glm::length(car_movement.rotation_velocity);
+		//Now we choose the best one, depends of the car rotation speed
+		glm::vec3 vector = glm::normalize(glm::mix(car_vector, camera_vector, glm::clamp((car_rotation_velocity - c_car_camera_car_rotation_min) * c_car_camera_car_rotation_factor, 0.f, 1.f)));
+
+		*m_position = glm::mix(*m_position, *car.position - vector * c_car_camera_distance + glm::vec3(0.f, 0.f, c_car_camera_up_offset), glm::clamp(elapsed_time * c_car_camera_speed, 0.f, 1.f));
 		*m_target = *car.position;
 		m_fov_y = glm::radians(c_car_camera_fov);
 	}
