@@ -482,7 +482,7 @@ namespace BoxCityCarControl
 		assert(glm::all(glm::isfinite(linear_forces)));
 		assert(glm::all(glm::isfinite(angular_forces)));
 	}
-	void CalculateCollisionForces(BoxCityTileSystem::Manager* manager, const glm::vec3& camera_pos, OBBBox& obb, glm::vec3& linear_forces, glm::vec3& angular_forces, CarMovement& car_movement, CarSettings& car_settings, glm::vec3& position_offset)
+	void CalculateCollisionForces(BoxCityTileSystem::Manager* manager, const float elapsed_time, const glm::vec3& camera_pos, OBBBox& obb, glm::vec3& linear_forces, glm::vec3& angular_forces, CarMovement& car_movement, CarSettings& car_settings, glm::vec3& position_offset)
 	{
 		if (c_car_collision_enable && glm::distance2(obb.position, camera_pos) < c_car_ai_avoidance_calculation_distance * c_car_ai_avoidance_calculation_distance)
 		{
@@ -499,6 +499,16 @@ namespace BoxCityCarControl
 					helpers::CollisionReturn collision_return;
 					if (helpers::CollisionFeaturesOBBvsOBB(obb, building_box, collision_return))
 					{	
+						//Calculate the speed of the building, it is only linear
+						glm::vec3 building_velocity = glm::vec3(0.f, 0.f, 0.f);
+						if (building.Get<GameDatabase>().Is<AnimatedBoxType>())
+						{
+							platform::Interpolated<glm::vec3> position = building.Get<GameDatabase>().Get<InterpolatedPosition>().position;
+
+							building_velocity = (*position - position.Last()) * elapsed_time;
+						}
+			
+
 						//Bounce
 						for (auto& contact : collision_return.contacts)
 						{	
@@ -507,7 +517,7 @@ namespace BoxCityCarControl
 							if (glm::length2(contact_vector) > 0.f)
 							{
 								//Calculate bounce back force in the contact point from velocity
-								glm::vec3 contact_force = car_movement.linear_velocity + glm::cross(car_movement.rotation_velocity, contact_vector);
+								glm::vec3 contact_force = -building_velocity + car_movement.linear_velocity + glm::cross(car_movement.rotation_velocity, contact_vector);
 								if (glm::dot(contact_force, contact.normal) < 0.f)
 								{
 									glm::vec3 bounce_back_force = -(1.f + c_car_collision_lost) * glm::dot(contact_force, contact.normal) * contact.normal;

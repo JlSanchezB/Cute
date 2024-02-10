@@ -466,7 +466,7 @@ namespace BoxCityTrafficSystem
 				glm::vec3 position_offset(0.f, 0.f, 0.f);
 
 				BoxCityCarControl::CalculateControlForces(car, car_movement, car_settings, car_control, elapsed_time, linear_forces, angular_forces);
-				BoxCityCarControl::CalculateCollisionForces(tile_manager, camera_position, obb_box, linear_forces, angular_forces, car_movement, car_settings, position_offset);
+				BoxCityCarControl::CalculateCollisionForces(tile_manager, elapsed_time, camera_position, obb_box, linear_forces, angular_forces, car_movement, car_settings, position_offset);
 
 				//Integrate
 				BoxCityCarControl::IntegrateCar(car, car_movement, car_settings, linear_forces, angular_forces, position_offset, elapsed_time);
