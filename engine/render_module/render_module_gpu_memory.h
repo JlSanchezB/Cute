@@ -89,6 +89,12 @@ namespace render
 		friend class SyncStaticGPUMemoryPass;
 
 	public:
+
+		static ModuleName GetModuleName()
+		{
+			return "GPUMemory"_sh32;
+		}
+
 		struct GPUMemoryDesc
 		{
 			uint32_t static_gpu_memory_size = 128 * 1024;
@@ -116,7 +122,7 @@ namespace render
 		void* AllocDynamicGPUMemory(display::Device* device, const size_t size, const uint64_t frame_index);
 
 		//Alloc dynamic gpy memory segment, it allocates a full segment and return the segment size
-		void* AllocDynamicSegmentGPUMemory(display::Device* device, const uint64_t frame_index, size_t& segment_size);
+		void* AllocDynamicSegmentGPUMemory(display::Device* device, const uint64_t frame_index);
 
 		//Get static gpu memory resource
 		display::WeakBufferHandle GetStaticGPUMemoryResource();

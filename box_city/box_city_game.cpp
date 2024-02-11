@@ -68,7 +68,7 @@ void BoxCityGame::OnInit()
 	gpu_memory_desc.dynamic_gpu_memory_size = 25 * 1024 * 1024;
 	gpu_memory_desc.dynamic_gpu_memory_segment_size = 64 * 1024;
 
-	m_GPU_memory_render_module = render::RegisterModule<render::GPUMemoryRenderModule>(m_render_system, "GPUMemory"_sh32, gpu_memory_desc);
+	m_GPU_memory_render_module = render::RegisterModule<render::GPUMemoryRenderModule>(m_render_system, gpu_memory_desc);
 
 	m_display_resources.Load(m_device, m_render_system);
 	DrawCityBoxesPass::m_display_resources = &m_display_resources;

@@ -582,6 +582,7 @@
     <ClInclude Include="render\render_passes_loader.h" />
     <ClInclude Include="render\render_resource.h" />
     <ClInclude Include="render_module\render_freelist_allocator.h" />
+    <ClInclude Include="render_module\render_module_debug_primitives.h" />
     <ClInclude Include="render_module\render_module_gpu_memory.h" />
     <ClInclude Include="render_module\render_segment_allocator.h" />
   </ItemGroup>
@@ -616,6 +617,7 @@
     <ClCompile Include="render\internal\render_pass.cpp" />
     <ClCompile Include="render\internal\render_passes_loader.cpp" />
     <ClCompile Include="render\internal\render_resource.cpp" />
+    <ClCompile Include="render_module\render_module_debug_primitives.cpp" />
     <ClCompile Include="render_module\render_module_gpu_memory.cpp" />
   </ItemGroup>
   <ItemGroup>

@@ -198,11 +198,11 @@ namespace render
 	void RegisterModule(System* system, const ModuleName name, std::unique_ptr<Module>&& module);
 
 	template<typename MODULE, typename ...ARGS>
-	MODULE* RegisterModule(System* system, const ModuleName name, ARGS&& ...args)
+	MODULE* RegisterModule(System* system, ARGS&& ...args)
 	{
-		RegisterModule(system, name, std::make_unique<MODULE>(std::forward<ARGS>(args)...));
+		RegisterModule(system, MODULE::GetModuleName(), std::make_unique<MODULE>(std::forward<ARGS>(args)...));
 
-		return dynamic_cast<MODULE*>(GetModule(system, name));
+		return dynamic_cast<MODULE*>(GetModule(system, MODULE::GetModuleName()));
 	}
 
 	//Display stats

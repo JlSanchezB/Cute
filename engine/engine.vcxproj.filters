@@ -959,6 +959,9 @@
     <ClInclude Include="display\pc_dx12\D3D12MemAlloc.h">
       <Filter>display</Filter>
     </ClInclude>
+    <ClInclude Include="render_module\render_module_debug_primitives.h">
+      <Filter>render_module</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="display\pc_dx12\display.cpp">
@@ -1053,6 +1056,9 @@
     </ClCompile>
     <ClCompile Include="display\pc_dx12\D3D12MemAlloc.cpp">
       <Filter>display</Filter>
+    </ClCompile>
+    <ClCompile Include="render_module\render_module_debug_primitives.cpp">
+      <Filter>render_module</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
