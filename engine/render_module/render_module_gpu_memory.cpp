@@ -161,6 +161,19 @@ namespace render
 		return reinterpret_cast<uint8_t*>(display::GetResourceMemoryBuffer(device, m_dynamic_gpu_memory_buffer)) + offset;
 	}
 
+	void* GPUMemoryRenderModule::AllocDynamicSegmentGPUMemory(display::Device* device, const uint64_t frame_index, size_t& segment_size)
+	{
+		segment_size = m_dynamic_gpu_memory_segment_size;
+
+		size_t segment_index = m_dynamic_gpu_memory_allocator.AllocFullSegment(frame_index);
+
+		m_dynamic_frame_memory_allocated += m_dynamic_gpu_memory_segment_size;
+		m_dynamic_frame_allocations++;
+
+		//Return the memory address inside the resource
+		return reinterpret_cast<uint8_t*>(display::GetResourceMemoryBuffer(device, m_dynamic_gpu_memory_buffer)) + segment_index * m_dynamic_gpu_memory_segment_size;
+	}
+
 	AllocHandle GPUMemoryRenderModule::AllocStaticGPUMemory(display::Device* device, const size_t size, const void* data, const uint64_t frame_index)
 	{
 		assert(size > 0);

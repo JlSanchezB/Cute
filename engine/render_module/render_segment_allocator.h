@@ -52,6 +52,9 @@ namespace render
 		//Allocs memory in the allocation for the frame index
 		size_t Alloc(size_t size, uint64_t allocation_frame_index);
 
+		//Allocs a full segment and keep it alive
+		size_t AllocFullSegment(uint64_t allocation_frame_index);
+
 		struct Stats
 		{
 			size_t m_memory_alive= 0; //Memory that is allocated and needed for all the frames in the GPU
@@ -61,6 +64,9 @@ namespace render
 		void CollectStats(Stats& stats);
 
 	private:
+
+		//Allocs a full segment for this frame
+		size_t AllocSegment(uint64_t allocation_frame_index);
 
 		//An over approximation of max distance between CPU and GPU
 		//That is from the GAME thread to the GPU
@@ -152,36 +158,7 @@ namespace render
 
 			//Alloc a new segment
 			{
-				core::MutexGuard guard(m_access_mutex);
-				if (m_free_allocations.size() > 0)
-				{
-					current_allocation.segment_index = m_free_allocations.back();
-					m_free_allocations.pop_back();
-				}
-				else
-				{
-					//We need to reserve more segments
-					if (m_segment_count == m_resource_size / m_segment_size)
-					{
-						//Out of memory, there is no memory for allocating more inside the resource
-						core::LogError("Segment allocation out of memory");
-						throw std::runtime_error("Segment allocation out of memory");
-					}
-
-					size_t old_count = m_segment_count;
-					m_segment_count = std::min(old_count * 2, m_resource_size / m_segment_size);
-
-					//Use the first new segment for the allocation
-					current_allocation.segment_index = old_count;
-
-					//Add the rest as free
-					for (size_t i = m_segment_count - 1; i > old_count; --i)
-					{
-						m_free_allocations.push_back(m_segment_count - i + old_count);
-					}
-
-					OnResize(m_segment_count);
-				}
+				current_allocation.segment_index = AllocSegment(allocation_frame_index);
 			}
 
 			//A clean new allocation ready
@@ -196,6 +173,52 @@ namespace render
 
 		//Return
 		return allocation_offset;
+	}
+
+	inline size_t SegmentAllocator::AllocFullSegment(uint64_t allocation_frame_index)
+	{
+		size_t segment_index = AllocSegment(allocation_frame_index);
+
+		GetFrame(allocation_frame_index).live_segments.emplace_back(segment_index);
+
+		return segment_index;
+	}
+
+	inline size_t SegmentAllocator::AllocSegment(uint64_t allocation_frame_index)
+	{
+		core::MutexGuard guard(m_access_mutex);
+		size_t segment_index;
+		if (m_free_allocations.size() > 0)
+		{
+			segment_index = m_free_allocations.back();
+			m_free_allocations.pop_back();
+		}
+		else
+		{
+			//We need to reserve more segments
+			if (m_segment_count == m_resource_size / m_segment_size)
+			{
+				//Out of memory, there is no memory for allocating more inside the resource
+				core::LogError("Segment allocation out of memory");
+				throw std::runtime_error("Segment allocation out of memory");
+			}
+
+			size_t old_count = m_segment_count;
+			m_segment_count = std::min(old_count * 2, m_resource_size / m_segment_size);
+
+			//Use the first new segment for the allocation
+			segment_index = old_count;
+
+			//Add the rest as free
+			for (size_t i = m_segment_count - 1; i > old_count; --i)
+			{
+				m_free_allocations.push_back(m_segment_count - i + old_count);
+			}
+
+			OnResize(m_segment_count);
+		}
+
+		return segment_index;
 	}
 
 	inline void SegmentAllocator::Sync(uint64_t cpu_frame_index, uint64_t freed_frame_index)

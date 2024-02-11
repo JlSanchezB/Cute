@@ -115,6 +115,9 @@ namespace render
 		//Alloc dynamic gpu memory
 		void* AllocDynamicGPUMemory(display::Device* device, const size_t size, const uint64_t frame_index);
 
+		//Alloc dynamic gpy memory segment, it allocates a full segment and return the segment size
+		void* AllocDynamicSegmentGPUMemory(display::Device* device, const uint64_t frame_index, size_t& segment_size);
+
 		//Get static gpu memory resource
 		display::WeakBufferHandle GetStaticGPUMemoryResource();
 
