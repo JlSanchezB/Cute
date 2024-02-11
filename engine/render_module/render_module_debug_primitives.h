@@ -47,8 +47,8 @@ namespace render
 			//Vector of segments with debug primitives
 			std::vector<GPULine*> segment_vector;
 
-			//Last segment memory used
-			size_t last_segment_used = 0;
+			//Last segment line index
+			size_t last_segment_line_index = 0;
 		};
 
 		//Thread local storage with the collect debug primitives
@@ -56,8 +56,8 @@ namespace render
 
 		GPUMemoryRenderModule* m_gpu_memory_render_module;
 		size_t m_gpu_memory_segment_size;
-		display::Device* m_device;
-		render::System* m_render_system;
+		display::Device* m_device = nullptr;
+		render::System* m_render_system = nullptr;
 
 		friend class RenderDebugPrimitivesPass;
 	};

@@ -36,22 +36,22 @@ namespace render
 		//Check if there is space
 		auto& debug_primitives = m_debug_primitives.Get();
 
-		if (debug_primitives.segment_vector.empty() || debug_primitives.last_segment_used == m_gpu_memory_segment_size / sizeof(GPULine))
+		if (debug_primitives.segment_vector.empty() || debug_primitives.last_segment_line_index == m_gpu_memory_segment_size / sizeof(GPULine))
 		{
 			//Needs a new segment
 			debug_primitives.segment_vector.push_back(reinterpret_cast<GPULine*>(m_gpu_memory_render_module->AllocDynamicSegmentGPUMemory(m_device, render::GetRenderFrameIndex(m_render_system))));
-			debug_primitives.last_segment_used = 0;
+			debug_primitives.last_segment_line_index = 0;
 		}
 
 		//Add line (do not read)
-		GPULine& line = debug_primitives.segment_vector.back()[debug_primitives.last_segment_used];
+		GPULine& line = debug_primitives.segment_vector.back()[debug_primitives.last_segment_line_index];
 
 		line.a = a;
 		line.b = b;
 		line.colour_a = colour_a;
 		line.colour_b = colour_b;
 
-		debug_primitives.last_segment_used++;
+		debug_primitives.last_segment_line_index++;
 	}
 
 	void DebugPrimitivesRenderModule::Render(display::Device* device, render::System* render_system, display::Context* context)
@@ -61,13 +61,13 @@ namespace render
 			{
 				for (auto& segment : debug_primitives.segment_vector)
 				{
-					uint32_t num_lines = (segment == debug_primitives.segment_vector.back()) ? debug_primitives.last_segment_used : m_gpu_memory_segment_size / sizeof(GPULine);
+					uint32_t num_lines = static_cast<uint32_t>((segment == debug_primitives.segment_vector.back()) ? debug_primitives.last_segment_line_index : m_gpu_memory_segment_size / sizeof(GPULine));
 
 					//Add draw primitive
 				}
 
 				debug_primitives.segment_vector.clear();
-				debug_primitives.last_segment_used = 0;
+				debug_primitives.last_segment_line_index = 0;
 			}
 		);
 	}
