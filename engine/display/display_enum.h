@@ -81,14 +81,16 @@ namespace display
 		Always
 	};
 
-	enum class Topology : uint8_t
-	{
-		Triangle
-	};
-
 	enum class PrimitiveTopology : uint8_t
 	{
+		LineList,
 		TriangleList
+	};
+
+	enum class PrimitiveTopologyType : uint8_t
+	{
+		Line,
+		Triangle
 	};
 
 	enum class BlendOp : uint8_t

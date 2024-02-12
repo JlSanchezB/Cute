@@ -159,12 +159,14 @@ namespace display
 		bool stencil_enable = false;
 		ComparationFunction depth_func = ComparationFunction::Less_Equal;
 
-		Topology primitive_topology;
+		
 
 		uint8_t num_render_targets = 0;
 		std::array<Format, kMaxNumRenderTargets> render_target_format;
 		Format depth_stencil_format;
 		uint8_t sample_count = 1;
+		PrimitiveTopologyType primitive_topology_type = PrimitiveTopologyType::Triangle;
+		bool antialiasing_lines = false;
 	};
 
 	struct ComputePipelineStateDesc

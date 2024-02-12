@@ -191,16 +191,18 @@ namespace
 	{
 		constexpr static std::pair<const char*, display::PrimitiveTopology> table[] =
 		{
-			{"TriangleList", display::PrimitiveTopology::TriangleList}
+			{"TriangleList", display::PrimitiveTopology::TriangleList},
+			{"LineList", display::PrimitiveTopology::LineList}
 		};
 	};
 
 	template<>
-	struct ConversionTable<display::Topology>
+	struct ConversionTable<display::PrimitiveTopologyType>
 	{
-		constexpr static std::pair<const char*, display::Topology> table[] =
+		constexpr static std::pair<const char*, display::PrimitiveTopologyType> table[] =
 		{
-			{"Triangle", display::Topology::Triangle}
+			{"Triangle", display::PrimitiveTopologyType::Triangle},
+			{"Line", display::PrimitiveTopologyType::Line}
 		};
 	};
 }
@@ -391,7 +393,7 @@ namespace render
 		std::vector<char> vertex_shader;
 		std::vector<char> pixel_shader;
 
-		QueryTableAttribute(load_context, load_context.current_xml_element, "primitive_topology", pipeline_state_desc.primitive_topology, AttributeType::Optional);
+		QueryTableAttribute(load_context, load_context.current_xml_element, "primitive_topology_type", pipeline_state_desc.primitive_topology_type, AttributeType::Optional);
 		QueryAttribute(load_context, load_context.current_xml_element, "depth_enable", pipeline_state_desc.depth_enable, AttributeType::Optional);
 		QueryAttribute(load_context, load_context.current_xml_element, "depth_write", pipeline_state_desc.depth_write, AttributeType::Optional);
 		QueryTableAttribute(load_context, load_context.current_xml_element, "depth_func", pipeline_state_desc.depth_func, AttributeType::Optional);

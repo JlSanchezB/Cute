@@ -1654,6 +1654,7 @@ namespace display
 		rasterizer_state.AntialiasedLineEnable = false;
 		rasterizer_state.ForcedSampleCount = static_cast<UINT>(pipeline_state_desc.rasteritation_state.forced_sample_count);
 		rasterizer_state.ConservativeRaster = (pipeline_state_desc.rasteritation_state.convervative_mode) ? D3D12_CONSERVATIVE_RASTERIZATION_MODE_ON : D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF;					
+		rasterizer_state.AntialiasedLineEnable = pipeline_state_desc.antialiasing_lines;
 		DX12_pipeline_state_desc.RasterizerState = rasterizer_state;
 
 		D3D12_BLEND_DESC blend_desc;
@@ -1685,7 +1686,7 @@ namespace display
 
 		DX12_pipeline_state_desc.SampleMask = UINT_MAX;
 		
-		DX12_pipeline_state_desc.PrimitiveTopologyType = Convert(pipeline_state_desc.primitive_topology);
+		DX12_pipeline_state_desc.PrimitiveTopologyType = Convert(pipeline_state_desc.primitive_topology_type);
 
 		DX12_pipeline_state_desc.NumRenderTargets = static_cast<UINT>(pipeline_state_desc.num_render_targets);
 		for (size_t i = 0; i < kMaxNumRenderTargets; i++)

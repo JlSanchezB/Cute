@@ -90,21 +90,23 @@ namespace display
 		}
 	}
 
-	inline D3D12_PRIMITIVE_TOPOLOGY_TYPE Convert(Topology topology)
+	inline D3D12_PRIMITIVE_TOPOLOGY_TYPE Convert(PrimitiveTopologyType topology)
 	{
 		switch (topology)
 		{
 		default:
-		case Topology::Triangle: return D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+		case PrimitiveTopologyType::Triangle: return D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+		case PrimitiveTopologyType::Line: return D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE;
 		}
 	}
 
-	inline D3D_PRIMITIVE_TOPOLOGY Convert(PrimitiveTopology primitive_topology)
+	inline D3D_PRIMITIVE_TOPOLOGY  Convert(PrimitiveTopology topology)
 	{
-		switch (primitive_topology)
+		switch (topology)
 		{
 		default:
 		case PrimitiveTopology::TriangleList: return D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+		case PrimitiveTopology::LineList: return D3D_PRIMITIVE_TOPOLOGY_LINELIST;
 		}
 	}
 

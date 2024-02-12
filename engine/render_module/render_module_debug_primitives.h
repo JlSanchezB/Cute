@@ -29,6 +29,8 @@ namespace render
 		void AddLine(const glm::vec3& a, const glm::vec3& b, uint32_t colour);
 		void AddLine(const glm::vec3& a, const glm::vec3& b, uint32_t colour_a, uint32_t colour_b);
 
+		//Set view projection matrix
+		void SetViewProjectionMatrix(const glm::mat4x4& view_projection_matrix);
 	private:
 
 		void Render(display::Device* device, render::System* render_system, display::Context* context);
@@ -54,10 +56,17 @@ namespace render
 		//Thread local storage with the collect debug primitives
 		job::ThreadData<DebugPrimitives> m_debug_primitives;
 
+		//View projection matrix
+		glm::mat4x4 m_view_projection_matrix[2];
+
 		GPUMemoryRenderModule* m_gpu_memory_render_module;
 		size_t m_gpu_memory_segment_size;
 		display::Device* m_device = nullptr;
 		render::System* m_render_system = nullptr;
+
+		display::RootSignatureHandle m_root_signature;
+		display::PipelineStateHandle m_pipeline_state;
+		display::BufferHandle m_constant_buffer;
 
 		friend class RenderDebugPrimitivesPass;
 	};
