@@ -359,11 +359,6 @@ namespace helpers
 //Integrated from bulletphysics engine
 //https://github.com/bulletphysics/bullet3/blob/master/src/BulletCollision/CollisionDispatch/btBoxBoxDetector.cpp
 
-#define btScalar float
-#define btVector3 glm::vec3
-#define btFabs fabsf
-#define btAtan2 atan2f
-#define btSqrt sqrtf
 #define SIMD_EPSILON   FLT_EPSILON
 #define BT_LARGE_FLOAT   1e18f
 // given two boxes (p1,R1,side1) and (p2,R2,side2), collide them together and
@@ -381,15 +376,10 @@ namespace helpers
 // `contact' and `skip' are the contact array information provided to the
 // collision functions. this function only fills in the position and depth
 // fields.
-	struct dContactGeom;
+
 #define dDOTpq(a, b, p, q) ((a)[0] * (b)[0] + (a)[p] * (b)[q] + (a)[2 * (p)] * (b)[2 * (q)])
 #define dInfinity FLT_MAX
 
-	/*PURE_INLINE btScalar dDOT   (const btScalar *a, const btScalar *b) { return dDOTpq(a,b,1,1); }
-	PURE_INLINE btScalar dDOT13 (const btScalar *a, const btScalar *b) { return dDOTpq(a,b,1,3); }
-	PURE_INLINE btScalar dDOT31 (const btScalar *a, const btScalar *b) { return dDOTpq(a,b,3,1); }
-	PURE_INLINE btScalar dDOT33 (const btScalar *a, const btScalar *b) { return dDOTpq(a,b,3,3); }
-	*/
 #define dDOT(a,b) dDOTpq(a, b, 1, 1)
 #define dDOT44(a,b) dDOTpq(a, b, 4, 4)
 #define dDOT41(a,b) dDOTpq(a, b, 4, 1)
@@ -411,24 +401,24 @@ namespace helpers
 #define dMULTIPLY1_331(A, B, C) dMULTIPLYOP1_331(A, =, B, C)
 #define dMULTIPLY0_331(A, B, C) dMULTIPLYOP0_331(A, =, B, C)
 
-	typedef btScalar dMatrix3[4 * 3];
+	typedef float dMatrix3[4 * 3];
 
-	void dLineClosestApproach(const btVector3& pa, const btVector3& ua,
-		const btVector3& pb, const btVector3& ub,
-		btScalar* alpha, btScalar* beta);
-	void dLineClosestApproach(const btVector3& pa, const btVector3& ua,
-		const btVector3& pb, const btVector3& ub,
-		btScalar* alpha, btScalar* beta)
+	void dLineClosestApproach(const glm::vec3& pa, const glm::vec3& ua,
+		const glm::vec3& pb, const glm::vec3& ub,
+		float* alpha, float* beta);
+	void dLineClosestApproach(const glm::vec3& pa, const glm::vec3& ua,
+		const glm::vec3& pb, const glm::vec3& ub,
+		float* alpha, float* beta)
 	{
-		btVector3 p;
+		glm::vec3 p;
 		p[0] = pb[0] - pa[0];
 		p[1] = pb[1] - pa[1];
 		p[2] = pb[2] - pa[2];
-		btScalar uaub = dDOT(ua, ub);
-		btScalar q1 = dDOT(ua, p);
-		btScalar q2 = -dDOT(ub, p);
-		btScalar d = 1 - uaub * uaub;
-		if (d <= btScalar(0.0001f))
+		float uaub = dDOT(ua, ub);
+		float q1 = dDOT(ua, p);
+		float q2 = -dDOT(ub, p);
+		float d = 1 - uaub * uaub;
+		if (d <= float(0.0001f))
 		{
 			// @@@ this needs to be made more robust
 			*alpha = 0;
@@ -450,22 +440,22 @@ namespace helpers
 	// the number of intersection points is returned by the function (this will
 	// be in the range 0 to 8).
 
-	static int intersectRectQuad2(btScalar h[2], btScalar p[8], btScalar ret[16])
+	static int intersectRectQuad2(float h[2], float p[8], float ret[16])
 	{
 		// q (and r) contain nq (and nr) coordinate points for the current (and
 		// chopped) polygons
 		int nq = 4, nr = 0;
-		btScalar buffer[16];
-		btScalar* q = p;
-		btScalar* r = ret;
+		float buffer[16];
+		float* q = p;
+		float* r = ret;
 		for (int dir = 0; dir <= 1; dir++)
 		{
 			// direction notation: xy[0] = x axis, xy[1] = y axis
 			for (int sign = -1; sign <= 1; sign += 2)
 			{
 				// chop q along the line xy[dir] = sign*h[dir]
-				btScalar* pq = q;
-				btScalar* pr = r;
+				float* pq = q;
+				float* pr = r;
 				nr = 0;
 				for (int i = nq; i > 0; i--)
 				{
@@ -483,7 +473,7 @@ namespace helpers
 							goto done;
 						}
 					}
-					btScalar* nextq = (i > 1) ? pq + 2 : q;
+					float* nextq = (i > 1) ? pq + 2 : q;
 					if ((sign * pq[dir] < h[dir]) ^ (sign * nextq[dir] < h[dir]))
 					{
 						// this line crosses the chopping line
@@ -506,7 +496,7 @@ namespace helpers
 			}
 		}
 	done:
-		if (q != ret) memcpy(ret, q, nr * 2 * sizeof(btScalar));
+		if (q != ret) memcpy(ret, q, nr * 2 * sizeof(float));
 		return nr;
 	}
 
@@ -520,12 +510,12 @@ namespace helpers
 	// n must be in the range [1..8]. m must be in the range [1..n]. i0 must be
 	// in the range [0..n-1].
 
-	void cullPoints2(int n, btScalar p[], int m, int i0, int iret[]);
-	void cullPoints2(int n, btScalar p[], int m, int i0, int iret[])
+	void cullPoints2(int n, float p[], int m, int i0, int iret[]);
+	void cullPoints2(int n, float p[], int m, int i0, int iret[])
 	{
 		// compute the centroid of the polygon in cx,cy
 		int i, j;
-		btScalar a, cx, cy, q;
+		float a, cx, cy, q;
 		if (n == 1)
 		{
 			cx = p[0];
@@ -533,8 +523,8 @@ namespace helpers
 		}
 		else if (n == 2)
 		{
-			cx = btScalar(0.5) * (p[0] + p[2]);
-			cy = btScalar(0.5) * (p[1] + p[3]);
+			cx = float(0.5) * (p[0] + p[2]);
+			cy = float(0.5) * (p[1] + p[3]);
 		}
 		else
 		{
@@ -549,9 +539,9 @@ namespace helpers
 				cy += q * (p[i * 2 + 1] + p[i * 2 + 3]);
 			}
 			q = p[n * 2 - 2] * p[1] - p[0] * p[n * 2 - 1];
-			if (btFabs(a + q) > SIMD_EPSILON)
+			if (fabsf(a + q) > SIMD_EPSILON)
 			{
-				a = 1.f / (btScalar(3.0) * (a + q));
+				a = 1.f / (float(3.0) * (a + q));
 			}
 			else
 			{
@@ -562,8 +552,8 @@ namespace helpers
 		}
 
 		// compute the angle of each point w.r.t. the centroid
-		btScalar A[8];
-		for (i = 0; i < n; i++) A[i] = btAtan2(p[i * 2 + 1] - cy, p[i * 2] - cx);
+		float A[8];
+		for (i = 0; i < n; i++) A[i] = atan2f(p[i * 2 + 1] - cy, p[i * 2] - cx);
 
 		// search for points that have angles closest to A[i0] + i*(2*pi/m).
 		int avail[8];
@@ -573,9 +563,9 @@ namespace helpers
 		iret++;
 		for (j = 1; j < m; j++)
 		{
-			a = btScalar(j) * (2 * M__PI / m) + A[i0];
+			a = float(j) * (2 * M__PI / m) + A[i0];
 			if (a > M__PI) a -= 2 * M__PI;
-			btScalar maxdiff = 1e9, diff;
+			float maxdiff = 1e9, diff;
 
 			*iret = i0;  // iret is not allowed to keep this value, but it sometimes does, when diff=#QNAN0
 
@@ -583,7 +573,7 @@ namespace helpers
 			{
 				if (avail[i])
 				{
-					diff = btFabs(A[i] - a);
+					diff = fabsf(A[i] - a);
 					if (diff > M__PI) diff = 2 * M__PI - diff;
 					if (diff < maxdiff)
 					{
@@ -600,17 +590,17 @@ namespace helpers
 		}
 	}
 
-	//int dBoxBox2(const btVector3& p1, const dMatrix3 R1,
-	//	const btVector3& side1, const btVector3& p2,
-	//	const dMatrix3 R2, const btVector3& side2,
-	//	btVector3& normal, btScalar* depth, int* return_code,
+	//int dBoxBox2(const glm::vec3& p1, const dMatrix3 R1,
+	//	const glm::vec3& side1, const glm::vec3& p2,
+	//	const dMatrix3 R2, const glm::vec3& side2,
+	//	glm::vec3& normal, float* depth, int* return_code,
 	//	int maxc, dContactGeom* /*contact*/, int /*skip*/, btDiscreteCollisionDetectorInterface::Result& output)
 
 	bool CollisionFeaturesOBBvsOBB(const OBB& obb1, const OBB& obb2, CollisionReturn& collision_return)
 	{
-		btVector3& normal = collision_return.normal;
-		btScalar* depth = &collision_return.depth;
-		const btVector3 p1 = obb1.position;
+		glm::vec3& normal = collision_return.normal;
+		float* depth = &collision_return.depth;
+		const glm::vec3 p1 = obb1.position;
 		dMatrix3 R1 = {};
 		R1[0] = obb1.rotation[0][0];
 		R1[1] = obb1.rotation[0][1];
@@ -626,9 +616,9 @@ namespace helpers
 		R1[11] = 0.f;
 		
 
-		const btVector3 side1 = obb1.extents * 2.f;
+		const glm::vec3 side1 = obb1.extents * 2.f;
 
-		const btVector3 p2 = obb2.position;
+		const glm::vec3 p2 = obb2.position;
 		dMatrix3 R2 = {};
 		R2[0] = obb2.rotation[0][0];
 		R2[1] = obb2.rotation[0][1];
@@ -643,12 +633,12 @@ namespace helpers
 		R2[10] = obb2.rotation[2][2];
 		R2[11] = 0.f;
 
-		const btVector3 side2 = obb2.extents * 2.f;
+		const glm::vec3 side2 = obb2.extents * 2.f;
 
-		const btScalar fudge_factor = btScalar(1.05);
-		btVector3 p, pp, normalC(0.f, 0.f, 0.f);
-		const btScalar* normalR = 0;
-		btScalar A[3], B[3], R11, R12, R13, R21, R22, R23, R31, R32, R33,
+		const float fudge_factor = float(1.05);
+		glm::vec3 p, pp, normalC(0.f, 0.f, 0.f);
+		const float* normalR = 0;
+		float A[3], B[3], R11, R12, R13, R21, R22, R23, R31, R32, R33,
 			Q11, Q12, Q13, Q21, Q22, Q23, Q31, Q32, Q33, s, s2, l;
 		int i, j, invert_normal, code;
 
@@ -657,12 +647,12 @@ namespace helpers
 		dMULTIPLY1_331(pp, R1, p);  // get pp = p relative to body 1
 
 		// get side lengths / 2
-		A[0] = side1[0] * btScalar(0.5);
-		A[1] = side1[1] * btScalar(0.5);
-		A[2] = side1[2] * btScalar(0.5);
-		B[0] = side2[0] * btScalar(0.5);
-		B[1] = side2[1] * btScalar(0.5);
-		B[2] = side2[2] * btScalar(0.5);
+		A[0] = side1[0] * float(0.5);
+		A[1] = side1[1] * float(0.5);
+		A[2] = side1[2] * float(0.5);
+		B[0] = side2[0] * float(0.5);
+		B[1] = side2[1] * float(0.5);
+		B[2] = side2[2] * float(0.5);
 
 		// Rij is R1'*R2, i.e. the relative rotation between R1 and R2
 		R11 = dDOT44(R1 + 0, R2 + 0);
@@ -675,15 +665,15 @@ namespace helpers
 		R32 = dDOT44(R1 + 2, R2 + 1);
 		R33 = dDOT44(R1 + 2, R2 + 2);
 
-		Q11 = btFabs(R11);
-		Q12 = btFabs(R12);
-		Q13 = btFabs(R13);
-		Q21 = btFabs(R21);
-		Q22 = btFabs(R22);
-		Q23 = btFabs(R23);
-		Q31 = btFabs(R31);
-		Q32 = btFabs(R32);
-		Q33 = btFabs(R33);
+		Q11 = fabsf(R11);
+		Q12 = fabsf(R12);
+		Q13 = fabsf(R13);
+		Q21 = fabsf(R21);
+		Q22 = fabsf(R22);
+		Q23 = fabsf(R23);
+		Q31 = fabsf(R31);
+		Q32 = fabsf(R32);
+		Q33 = fabsf(R33);
 
 		// for all 15 possible separating axes:
 		//   * see if the axis separates the boxes. if so, return 0.
@@ -696,7 +686,7 @@ namespace helpers
 		// the normal should be flipped.
 
 #define TST(expr1, expr2, norm, cc)    \
-	s2 = btFabs(expr1) - (expr2);      \
+	s2 = fabsf(expr1) - (expr2);      \
 	if (s2 > 0) return 0;              \
 	if (s2 > s)                        \
 	{                                  \
@@ -724,9 +714,9 @@ namespace helpers
 		// normal (n1,n2,n3) is relative to box 1.
 #undef TST
 #define TST(expr1, expr2, n1, n2, n3, cc)                \
-	s2 = btFabs(expr1) - (expr2);                        \
+	s2 = fabsf(expr1) - (expr2);                        \
 	if (s2 > SIMD_EPSILON) return 0;                     \
-	l = btSqrt((n1) * (n1) + (n2) * (n2) + (n3) * (n3)); \
+	l = sqrtf((n1) * (n1) + (n2) * (n2) + (n3) * (n3)); \
 	if (l > SIMD_EPSILON)                                \
 	{                                                    \
 		s2 /= l;                                         \
@@ -742,7 +732,7 @@ namespace helpers
 		}                                                \
 	}
 
-		btScalar fudge2(1.0e-5f);
+		float fudge2(1.0e-5f);
 
 		Q11 += fudge2;
 		Q12 += fudge2;
@@ -801,26 +791,26 @@ namespace helpers
 		{
 			// an edge from box 1 touches an edge from box 2.
 			// find a point pa on the intersecting edge of box 1
-			btVector3 pa;
-			btScalar sign;
+			glm::vec3 pa;
+			float sign;
 			for (i = 0; i < 3; i++) pa[i] = p1[i];
 			for (j = 0; j < 3; j++)
 			{
-				sign = (dDOT14(normal, R1 + j) > 0) ? btScalar(1.0) : btScalar(-1.0);
+				sign = (dDOT14(normal, R1 + j) > 0) ? float(1.0) : float(-1.0);
 				for (i = 0; i < 3; i++) pa[i] += sign * A[j] * R1[i * 4 + j];
 			}
 
 			// find a point pb on the intersecting edge of box 2
-			btVector3 pb;
+			glm::vec3 pb;
 			for (i = 0; i < 3; i++) pb[i] = p2[i];
 			for (j = 0; j < 3; j++)
 			{
-				sign = (dDOT14(normal, R2 + j) > 0) ? btScalar(-1.0) : btScalar(1.0);
+				sign = (dDOT14(normal, R2 + j) > 0) ? float(-1.0) : float(1.0);
 				for (i = 0; i < 3; i++) pb[i] += sign * B[j] * R2[i * 4 + j];
 			}
 
-			btScalar alpha, beta;
-			btVector3 ua, ub;
+			float alpha, beta;
+			glm::vec3 ua, ub;
 			for (i = 0; i < 3; i++) ua[i] = R1[((code)-7) / 3 + i * 4];
 			for (i = 0; i < 3; i++) ub[i] = R2[((code)-7) % 3 + i * 4];
 
@@ -829,13 +819,13 @@ namespace helpers
 			for (i = 0; i < 3; i++) pb[i] += ub[i] * beta;
 
 			{
-				//contact[0].pos[i] = btScalar(0.5)*(pa[i]+pb[i]);
+				//contact[0].pos[i] = float(0.5)*(pa[i]+pb[i]);
 				//contact[0].depth = *depth;
 				
 #ifdef USE_CENTER_POINT
-				btVector3 pointInWorld;
+				glm::vec3 pointInWorld;
 				for (i = 0; i < 3; i++)
-					pointInWorld[i] = (pa[i] + pb[i]) * btScalar(0.5);
+					pointInWorld[i] = (pa[i] + pb[i]) * float(0.5);
 				collision_return.contacts.emplace_back(pointInWorld, -normal, -*depth);
 #else
 				collision_return.contacts.emplace_back(pb , -normal, -*depth);
@@ -851,8 +841,8 @@ namespace helpers
 		// face (i.e. the normal vector is perpendicular to this) and face 'b' to be
 		// the incident face (the closest face of the other box).
 
-		const btScalar* Ra, * Rb, * Sa, * Sb;
-		btVector3 pa, pb;
+		const float* Ra, * Rb, * Sa, * Sb;
+		glm::vec3 pa, pb;
 		if (code <= 3)
 		{
 			Ra = R1;
@@ -874,7 +864,7 @@ namespace helpers
 
 		// nr = normal vector of reference face dotted with axes of incident box.
 		// anr = absolute values of nr.
-		btVector3 normal2, nr, anr;
+		glm::vec3 normal2, nr, anr;
 		if (code <= 3)
 		{
 			normal2[0] = normal[0];
@@ -888,9 +878,9 @@ namespace helpers
 			normal2[2] = -normal[2];
 		}
 		dMULTIPLY1_331(nr, Rb, normal2);
-		anr[0] = btFabs(nr[0]);
-		anr[1] = btFabs(nr[1]);
-		anr[2] = btFabs(nr[2]);
+		anr[0] = fabsf(nr[0]);
+		anr[1] = fabsf(nr[1]);
+		anr[2] = fabsf(nr[2]);
 
 		// find the largest compontent of anr: this corresponds to the normal
 		// for the indident face. the other axis numbers of the indicent face
@@ -928,7 +918,7 @@ namespace helpers
 		}
 
 		// compute center point of incident face, in reference-face coordinates
-		btVector3 center;
+		glm::vec3 center;
 		if (nr[lanr] < 0)
 		{
 			for (i = 0; i < 3; i++) center[i] = pb[i] - pa[i] + Sb[lanr] * Rb[i * 4 + lanr];
@@ -961,8 +951,8 @@ namespace helpers
 		}
 
 		// find the four corners of the incident face, in reference-face coordinates
-		btScalar quad[8];  // 2D coordinate of incident face (x,y pairs)
-		btScalar c1, c2, m11, m12, m21, m22;
+		float quad[8];  // 2D coordinate of incident face (x,y pairs)
+		float c1, c2, m11, m12, m21, m22;
 		c1 = dDOT14(center, Ra + code1);
 		c2 = dDOT14(center, Ra + code2);
 		// optimize this? - we have already computed this data above, but it is not
@@ -973,10 +963,10 @@ namespace helpers
 		m21 = dDOT44(Ra + code2, Rb + a1);
 		m22 = dDOT44(Ra + code2, Rb + a2);
 		{
-			btScalar k1 = m11 * Sb[a1];
-			btScalar k2 = m21 * Sb[a1];
-			btScalar k3 = m12 * Sb[a2];
-			btScalar k4 = m22 * Sb[a2];
+			float k1 = m11 * Sb[a1];
+			float k2 = m21 * Sb[a1];
+			float k3 = m12 * Sb[a2];
+			float k4 = m22 * Sb[a2];
 			quad[0] = c1 - k1 - k3;
 			quad[1] = c2 - k2 - k4;
 			quad[2] = c1 - k1 + k3;
@@ -988,12 +978,12 @@ namespace helpers
 		}
 
 		// find the size of the reference face
-		btScalar rect[2];
+		float rect[2];
 		rect[0] = Sa[code1];
 		rect[1] = Sa[code2];
 
 		// intersect the incident and reference faces
-		btScalar ret[16];
+		float ret[16];
 		int n = intersectRectQuad2(rect, quad, ret);
 		if (n < 1) return 0;  // this should never happen
 
@@ -1001,9 +991,9 @@ namespace helpers
 		// and compute the contact position and depth for each point. only keep
 		// those points that have a positive (penetrating) depth. delete points in
 		// the 'ret' array as necessary so that 'point' and 'ret' correspond.
-		btScalar point[3 * 8];  // penetrating contact points
-		btScalar dep[8];        // depths for those points
-		btScalar det1 = 1.f / (m11 * m22 - m12 * m21);
+		float point[3 * 8];  // penetrating contact points
+		float dep[8];        // depths for those points
+		float det1 = 1.f / (m11 * m22 - m12 * m21);
 		m11 *= det1;
 		m12 *= det1;
 		m21 *= det1;
@@ -1011,8 +1001,8 @@ namespace helpers
 		int cnum = 0;  // number of penetrating contact points found
 		for (j = 0; j < n; j++)
 		{
-			btScalar k1 = m22 * (ret[j * 2] - c1) - m12 * (ret[j * 2 + 1] - c2);
-			btScalar k2 = -m21 * (ret[j * 2] - c1) + m11 * (ret[j * 2 + 1] - c2);
+			float k1 = m22 * (ret[j * 2] - c1) - m12 * (ret[j * 2 + 1] - c2);
+			float k2 = -m21 * (ret[j * 2] - c1) + m11 * (ret[j * 2 + 1] - c2);
 			for (i = 0; i < 3; i++) point[cnum * 3 + i] =
 				center[i] + k1 * Rb[i * 4 + a1] + k2 * Rb[i * 4 + a2];
 			dep[cnum] = Sa[codeN] - dDOT(normal2, point + cnum * 3);
@@ -1036,7 +1026,7 @@ namespace helpers
 				// we have less contacts than we need, so we use them all
 				for (j = 0; j < cnum; j++)
 				{
-					btVector3 pointInWorld;
+					glm::vec3 pointInWorld;
 					for (i = 0; i < 3; i++)
 						pointInWorld[i] = point[j * 3 + i] + pa[i];
 					collision_return.contacts.emplace_back(pointInWorld, -normal, -dep[j]);
@@ -1047,7 +1037,7 @@ namespace helpers
 				// we have less contacts than we need, so we use them all
 				for (j = 0; j < cnum; j++)
 				{
-					btVector3 pointInWorld;
+					glm::vec3 pointInWorld;
 					for (i = 0; i < 3; i++)
 						pointInWorld[i] = point[j * 3 + i] + pa[i] - normal[i] * dep[j];
 					//pointInWorld[i] = point[j*3+i] + pa[i];
@@ -1060,7 +1050,7 @@ namespace helpers
 			// we have more contacts than are wanted, some of them must be culled.
 			// find the deepest point, it is always the first contact.
 			int i1 = 0;
-			btScalar maxdepth = dep[0];
+			float maxdepth = dep[0];
 			for (i = 1; i < cnum; i++)
 			{
 				if (dep[i] > maxdepth)
@@ -1079,7 +1069,7 @@ namespace helpers
 				//    for (i=0; i<3; i++) con->pos[i] = point[iret[j]*3+i] + pa[i];
 				//  con->depth = dep[iret[j]];
 
-				btVector3 posInWorld;
+				glm::vec3 posInWorld;
 				for (i = 0; i < 3; i++)
 					posInWorld[i] = point[iret[j] * 3 + i] + pa[i];
 				if (code < 4)
