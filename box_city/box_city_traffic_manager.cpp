@@ -457,7 +457,7 @@ namespace BoxCityTrafficSystem
 				else
 				{
 					//AI car
-					BoxCityCarControl::UpdateAIControl(random_thread_local, instance_iterator.m_instance_index, car_control, car, car_movement, car_settings, car_target, car_buildings_cache, frame_index, elapsed_time, tile_manager, manager,  camera_position);
+					BoxCityCarControl::UpdateAIControl(random_thread_local, instance_iterator.m_instance_index, car_control, car, car_movement, car_settings, car_target, car_buildings_cache, frame_index, elapsed_time, tile_manager, manager,  camera_position, instance_iterator == manager->GetPlayerCar().Get<GameDatabase>());
 				}
 				
 				//Calculate forces

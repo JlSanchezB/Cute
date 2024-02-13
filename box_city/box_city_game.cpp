@@ -1,5 +1,6 @@
 #include "box_city_game.h"
 #include <core/counters.h>
+#include <render/render_debug_primitives.h>
 
 PROFILE_DEFINE_MARKER(g_profile_marker_UpdatePosition, "Main", 0xFFFFAAAA, "BoxUpdate");
 PROFILE_DEFINE_MARKER(g_profile_marker_Culling, "Main", 0xFFFFAAAA, "BoxInterpolating");
@@ -70,6 +71,9 @@ void BoxCityGame::OnInit()
 
 	m_GPU_memory_render_module = render::RegisterModule<render::GPUMemoryRenderModule>(m_render_system, gpu_memory_desc);
 
+	//Init the debug primitives
+	render::debug_primitives::Init(m_device, m_render_system, m_GPU_memory_render_module);
+
 	m_display_resources.Load(m_device, m_render_system);
 	DrawCityBoxesPass::m_display_resources = &m_display_resources;
 	CullCityBoxesPass::m_display_resources = &m_display_resources;
@@ -137,6 +141,9 @@ void BoxCityGame::OnPrepareDestroy()
 
 	//Destroy traffic manager
 	m_traffic_system.Shutdown();
+
+	//Shutdown the debug primitives
+	render::debug_primitives::Shutdown(m_device, m_render_system);
 
 	//Sync the render and the jobs, so we can safe destroy the resources
 	if (m_render_system)

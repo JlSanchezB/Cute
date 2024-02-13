@@ -179,6 +179,9 @@ namespace core
 		va_start(args, message);
 		Log(Priority::Error, message, args);
 		va_end(args);
+
+		//It needs to break or crash
+		abort();
 	}
 
 	bool LogRender()

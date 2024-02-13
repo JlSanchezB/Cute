@@ -4,6 +4,7 @@
 #include <core/platform.h>
 #include "box_city_tile_manager.h"
 #include "box_city_traffic_manager.h"
+#include <render/render_debug_primitives.h>
 
 //List of control variables
 
@@ -78,6 +79,8 @@ CONTROL_VARIABLE(float, c_car_ai_lane_size, 0.f, 10.f, 2.0f, "Car", "Car AI lane
 CONTROL_VARIABLE(float, c_car_gyroscope_collision_control, 0.f, 1.f, 0.05f, "Car", "Car gyroscope collision control");
 CONTROL_VARIABLE(float, c_car_gyroscope_control_min, 0.f, 10.f, 1.0f, "Car", "Car gyroscope control min");
 CONTROL_VARIABLE(float, c_car_gyroscope_control_factor, 0.f, 10.f, 1.0f, "Car", "Car gyroscope control factor");
+
+CONTROL_VARIABLE_BOOL(c_car_ai_debug_render, false, "Car", "Car AI debug render");
 
 //Counters
 COUNTER(c_Car_Collisions, "Cars", "Cars collision", true);
@@ -178,20 +181,6 @@ namespace BoxCityCarControl
 
 	void SetupCarTarget(std::mt19937& random, BoxCityTileSystem::Manager* manager, const Car& car, CarTarget& car_target, bool reset)
 	{
-		/*
-		//Calculate a new position as target for rogue
-		std::uniform_real_distribution<float> position_range(-c_car_ai_target_range + c_car_ai_min_target_range, c_car_ai_target_range - c_car_ai_min_target_range);
-		std::uniform_real_distribution<float> position_range_z(BoxCityTileSystem::kTileHeightBottom, BoxCityTileSystem::kTileHeightTop);
-
-		float range_x = position_range(random);
-		float range_y = position_range(random);
-
-		//Add the min target distance
-		range_x += glm::sign(range_x) * c_car_ai_min_target_range;
-		range_y += glm::sign(range_x) * c_car_ai_min_target_range;
-
-		car_target.target = glm::vec3((*car.position).x + range_x, (*car.position).y + range_y, position_range_z(random));
-		*/
 		glm::vec3 last_target;
 		if (reset)
 		{
@@ -227,7 +216,7 @@ namespace BoxCityCarControl
 		assert(glm::all(glm::isfinite(car_target.target)));
 		assert(glm::all(glm::isfinite(car_target.last_target)));
 	}
-	void UpdateAIControl(std::mt19937& random, uint32_t instance_index, CarControl& car_control, const Car& car, const CarMovement& car_movement, const CarSettings& car_settings, CarTarget& car_target, CarBuildingsCache& car_buildings_cache, uint32_t frame_index, float elapsed_time, BoxCityTileSystem::Manager* tile_manager, BoxCityTrafficSystem::Manager* traffic_manager, const glm::vec3& camera_pos)
+	void UpdateAIControl(std::mt19937& random, uint32_t instance_index, CarControl& car_control, const Car& car, const CarMovement& car_movement, const CarSettings& car_settings, CarTarget& car_target, CarBuildingsCache& car_buildings_cache, uint32_t frame_index, float elapsed_time, BoxCityTileSystem::Manager* tile_manager, BoxCityTrafficSystem::Manager* traffic_manager, const glm::vec3& camera_pos, bool is_player_car)
 	{
 		const glm::vec3 car_position = *car.position;
 		float camera_distance2 = glm::distance2(camera_pos, car_position);
@@ -393,6 +382,11 @@ namespace BoxCityCarControl
 			{
 				//Reduce speed for improving targeting
 				car_control.foward -= c_car_ai_close_target_distance_slow * (1.f - glm::pow2(glm::clamp(target_distance2 / c_car_ai_close_target_distance * c_car_ai_close_target_distance, 0.f, 1.f)));
+			}
+
+			if (c_car_ai_debug_render && is_player_car)
+			{
+				render::debug_primitives::DrawStar(car_target.target, 5.f, render::debug_primitives::kGreen);
 			}
 		}
 		car_control.foward = glm::max(car_control.foward, c_car_ai_min_forward);
