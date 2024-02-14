@@ -419,5 +419,16 @@
       <DrawFullScreenQuad/>
     </Commands>
   </Pass>
+  <Pass name="DebugPrimitives" group="PostProcess">
+    <Dependencies>
+      <Resource name="BackBuffer" access="RenderTarget"/>
+    </Dependencies>
+    <Commands>
+      <SetRenderTarget>
+        <RenderTarget>BackBuffer</RenderTarget>
+      </SetRenderTarget>
+      <RenderDebugPrimitives/>
+    </Commands>
+  </Pass>
 </Passes>
 </Root>

@@ -12,13 +12,13 @@ namespace render
 	{
 		struct GPULine
 		{
-			glm::vec3 a;
-			glm::vec3 b;
-			uint32_t colour_a;
-			uint32_t colour_b;
+			glm::vec3 a; //4 * 3 bytes
+			uint32_t colour_a; //4 bytes
+			glm::vec3 b; //4 * 3 bytes
+			uint32_t colour_b; //4 bytes
 		};
 
-		struct Renderer
+		struct Renderer : public Module
 		{
 			//Debug primitives associated to this worker thread
 			struct DebugPrimitives
@@ -31,7 +31,7 @@ namespace render
 			};
 
 			//Thread local storage with the collect debug primitives
-			job::ThreadData<DebugPrimitives> m_debug_primitives;
+			job::ThreadData<DebugPrimitives> m_debug_primitives[2];
 
 			//View projection matrix
 			glm::mat4x4 m_view_projection_matrix[2];
@@ -47,6 +47,15 @@ namespace render
 
 			void Render(display::Device* device, render::System* render_system, display::Context* context);
 			void DrawLine(const glm::vec3& a, const glm::vec3& b, const uint32_t colour_a, const uint32_t colour_b);
+
+
+			//Module interface
+			static ModuleName GetModuleName()
+			{
+				return "DebugPrimitives"_sh32;
+			}
+			void Shutdown(display::Device* device, System* system) override;
+			void EndFrame(display::Device* device, System* system);
 		};
 
 		Renderer* g_renderer = nullptr;
@@ -65,7 +74,7 @@ namespace render
 		{
 			assert(g_renderer == nullptr);
 
-			g_renderer = new Renderer();
+			g_renderer = RegisterModule<Renderer>(system);
 
 			g_renderer->m_device = device;
 			g_renderer->m_render_system = system;
@@ -122,7 +131,7 @@ namespace render
 						uint4 line_data = dynamic_gpu_memory.Load4(data_offset + vertex_id * 16);\n\
 						PSInput ret;\n\
 						ret.view_position = mul(camera.view_projection_matrix, float4(asfloat(line_data.x), asfloat(line_data.y), asfloat(line_data.z), 1.f));\n\
-						ret.colour = float4(((line_data.w >> 0) & 0xFF) / 255.f, ((line_data.w >> 6) & 0xFF) / 255.f, ((line_data.w >> 16) & 0xFF) / 255.f, ((line_data.w >> 24) & 0xFF) / 255.f);\n\
+						ret.colour = float4(((line_data.w >> 0) & 0xFF) / 255.f, ((line_data.w >> 8) & 0xFF) / 255.f, ((line_data.w >> 16) & 0xFF) / 255.f, ((line_data.w >> 24) & 0xFF) / 255.f);\n\
 						return ret; \n\
 					}\n\
 					\n\
@@ -157,20 +166,29 @@ namespace render
 				g_renderer->m_constant_buffer = display::CreateBuffer(device, constant_buffer_desc, "Debug Primitives Camera");
 			}
 		}
-		void Shutdown(display::Device* device, System* system)
-		{
-			assert(g_renderer);
-
-			display::DestroyRootSignature(device, g_renderer->m_root_signature);
-			display::DestroyPipelineState(device, g_renderer->m_pipeline_state);
-			display::DestroyBuffer(device, g_renderer->m_constant_buffer);
-
-			delete g_renderer;
-		}
 
 		void SetViewProjectionMatrix(const glm::mat4x4& view_projection_matrix)
 		{
 			g_renderer->m_view_projection_matrix[render::GetGameFrameIndex(g_renderer->m_render_system) % 2] = view_projection_matrix;
+		}
+
+		void Renderer::Shutdown(display::Device* device, System* system)
+		{
+			display::DestroyRootSignature(device, m_root_signature);
+			display::DestroyPipelineState(device, m_pipeline_state);
+			display::DestroyBuffer(device, m_constant_buffer);
+
+			assert(g_renderer);
+			g_renderer = nullptr;
+		};
+		void Renderer::EndFrame(display::Device* device, System* system)
+		{
+			//Clean the frame
+			m_debug_primitives[render::GetRenderFrameIndex(system) % 2].Visit([&](DebugPrimitives& debug_primitives)
+				{
+					debug_primitives.last_segment_line_index = 0;
+					debug_primitives.segment_vector.clear();
+				});
 		}
 
 		void Renderer::DrawLine(const glm::vec3& a, const glm::vec3& b, const uint32_t colour_a, const uint32_t colour_b)
@@ -179,7 +197,7 @@ namespace render
 			if (m_device == nullptr) return;
 
 			//Check if there is space
-			auto& debug_primitives = g_renderer->m_debug_primitives.Get();
+			auto& debug_primitives = g_renderer->m_debug_primitives[render::GetGameFrameIndex(m_render_system) % 2].Get();
 
 			if (debug_primitives.segment_vector.empty() || debug_primitives.last_segment_line_index == g_renderer->m_gpu_memory_segment_size / sizeof(GPULine))
 			{
@@ -212,7 +230,7 @@ namespace render
 			context->SetShaderResource(display::Pipe::Graphics, 2, m_gpu_memory_render_module->GetDynamicGPUMemoryResource());
 
 			//Generate a draw call for each segment filled in each worker thread
-			m_debug_primitives.Visit([&](DebugPrimitives& debug_primitives)
+			m_debug_primitives[render::GetRenderFrameIndex(render_system) % 2].Visit([&](DebugPrimitives& debug_primitives)
 				{
 					for (auto& segment : debug_primitives.segment_vector)
 					{

@@ -142,9 +142,6 @@ void BoxCityGame::OnPrepareDestroy()
 	//Destroy traffic manager
 	m_traffic_system.Shutdown();
 
-	//Shutdown the debug primitives
-	render::debug_primitives::Shutdown(m_device, m_render_system);
-
 	//Sync the render and the jobs, so we can safe destroy the resources
 	if (m_render_system)
 	{
@@ -333,6 +330,8 @@ void BoxCityGame::OnRender(double total_time, float elapsed_time)
 	
 	render_frame.GetBeginFrameCommandBuffer().UploadResourceBuffer(m_display_resources.m_view_constant_buffer, &view_constant_buffer, sizeof(view_constant_buffer));
 	render_frame.GetBeginFrameCommandBuffer().Close();
+
+	render::debug_primitives::SetViewProjectionMatrix(camera->GetViewProjectionMatrix());
 
 	//Fill the custom data for the point of view
 	BoxCityCustomPointOfViewData point_of_view_data;

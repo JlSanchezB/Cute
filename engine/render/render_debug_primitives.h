@@ -46,7 +46,6 @@ namespace render
 
 		//Register interface
 		void Init(display::Device* device, System* system, GPUMemoryRenderModule* gpu_memory_render_module);
-		void Shutdown(display::Device* device, System* system);
 
 		//Each frame needs to know the view projection matrix
 		void SetViewProjectionMatrix(const glm::mat4x4& view_projection_matrix);

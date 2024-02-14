@@ -8,79 +8,79 @@
 
 //List of control variables
 
-CONTROL_VARIABLE_BOOL(c_car_ai_avoidance_enable, true, "Car", "Car AI avoidance enabled");
-CONTROL_VARIABLE_BOOL(c_car_ai_targeting_enable, true, "Car", "Car AI targeting enabled");
-CONTROL_VARIABLE_BOOL(c_car_collision_enable, true, "Car", "Car collision enabled");
+CONTROL_VARIABLE_BOOL(c_car_ai_avoidance_enable, true, "Car AI", "Car AI avoidance enabled");
+CONTROL_VARIABLE_BOOL(c_car_ai_targeting_enable, true, "Car AI", "Car AI targeting enabled");
+CONTROL_VARIABLE_BOOL(c_car_collision_enable, true, "Car Collision", "Car collision enabled");
 
 //Pitch input
-CONTROL_VARIABLE(float, c_car_Y_range, 0.f, 1.f, 0.9f, "Car", "Y Range");
-CONTROL_VARIABLE(float, c_car_Y_mouse_factor, 0.f, 10.f, 0.2f, "Car", "Y Mouse Factor");
-CONTROL_VARIABLE(float, c_car_Y_keyboard_factor, 0.f, 10.f, 2.0f, "Car", "Y Keyboard Factor");
-CONTROL_VARIABLE_BOOL(c_car_inverse_Y, false, "Car", "Y Inverse");
-CONTROL_VARIABLE(float, c_car_Y_absorber, 0.f, 1.f, 0.15f, "Car", "Y Absorber");
+CONTROL_VARIABLE(float, c_car_Y_range, 0.f, 1.f, 0.9f, "Car Control", "Y Range");
+CONTROL_VARIABLE(float, c_car_Y_mouse_factor, 0.f, 10.f, 0.2f, "Car Control", "Y Mouse Factor");
+CONTROL_VARIABLE(float, c_car_Y_keyboard_factor, 0.f, 10.f, 2.0f, "Car Control", "Y Keyboard Factor");
+CONTROL_VARIABLE_BOOL(c_car_inverse_Y, false, "Car Control", "Y Inverse");
+CONTROL_VARIABLE(float, c_car_Y_absorber, 0.f, 1.f, 0.15f, "Car Control", "Y Absorber");
 
 //Roll input
-CONTROL_VARIABLE(float, c_car_X_range, 0.f, 1.f, 0.8f, "Car", "X Range");
-CONTROL_VARIABLE(float, c_car_X_mouse_factor, 0.f, 10.f, 0.2f, "Car", "X Mouse Factor");
-CONTROL_VARIABLE(float, c_car_X_keyboard_factor, 0.f, 10.f, 2.f, "Car", "X Keyboard Factor");
-CONTROL_VARIABLE(float, c_car_X_absorber, 0.f, 1.f, 0.15f, "Car", "X Absorber");
+CONTROL_VARIABLE(float, c_car_X_range, 0.f, 1.f, 0.8f, "Car Control", "X Range");
+CONTROL_VARIABLE(float, c_car_X_mouse_factor, 0.f, 10.f, 0.2f, "Car Control", "X Mouse Factor");
+CONTROL_VARIABLE(float, c_car_X_keyboard_factor, 0.f, 10.f, 2.f, "Car Control", "X Keyboard Factor");
+CONTROL_VARIABLE(float, c_car_X_absorber, 0.f, 1.f, 0.15f, "Car Control", "X Absorber");
 
 //Foward input
-CONTROL_VARIABLE(float, c_car_foward_mouse_factor, 0.f, 10.f, 2.25f, "Car", "Foward Mouse Factor");
-CONTROL_VARIABLE(float, c_car_foward_keyboard_factor, 0.f, 10.f, 1.25f, "Car", "Foward Keybard Factor");
+CONTROL_VARIABLE(float, c_car_foward_mouse_factor, 0.f, 10.f, 2.25f, "Car Control", "Foward Mouse Factor");
+CONTROL_VARIABLE(float, c_car_foward_keyboard_factor, 0.f, 10.f, 1.25f, "Car Control", "Foward Keybard Factor");
 
 //Pitch control
-CONTROL_VARIABLE(float, c_car_Y_pitch_force, 0.f, 10.f, 0.02f, "Car", "Y Pitch Force");
-CONTROL_VARIABLE(float, c_car_Y_pitch_linear_force, 0.f, 10.f, 0.00f, "Car", "Y Pitch Linear Force");
+CONTROL_VARIABLE(float, c_car_Y_pitch_force, 0.f, 10.f, 0.02f, "Car Control", "Y Pitch Force");
+CONTROL_VARIABLE(float, c_car_Y_pitch_linear_force, 0.f, 10.f, 0.00f, "Car Control", "Y Pitch Linear Force");
 
 //Roll control
-CONTROL_VARIABLE(float, c_car_X_roll_angular_force, 0.f, 10.f, 0.02f, "Car", "X Roll Angular Force");
-CONTROL_VARIABLE(float, c_car_X_jaw_angular_force, 0.f, 10.f, 0.05f, "Car", "X Jaw Angular Force");
-CONTROL_VARIABLE(float, c_car_X_linear_force, 0.f, 10.f, 0.00f, "Car", "X Linear Force");
+CONTROL_VARIABLE(float, c_car_X_roll_angular_force, 0.f, 10.f, 0.02f, "Car Control", "X Roll Angular Force");
+CONTROL_VARIABLE(float, c_car_X_jaw_angular_force, 0.f, 10.f, 0.05f, "Car Control", "X Jaw Angular Force");
+CONTROL_VARIABLE(float, c_car_X_linear_force, 0.f, 10.f, 0.00f, "Car Control", "X Linear Force");
 
 //Forward
-CONTROL_VARIABLE(float, c_car_foward_force, 0.f, 10000.f, 200.0f, "Car", "Foward Force");
-CONTROL_VARIABLE(float, c_car_foward_kill_height_force, 0.f, 100.f, 2.0f, "Car", "Foward Kill Heigth Force");
+CONTROL_VARIABLE(float, c_car_foward_force, 0.f, 10000.f, 200.0f, "Car Control", "Foward Force");
+CONTROL_VARIABLE(float, c_car_foward_kill_height_force, 0.f, 100.f, 2.0f, "Car Control", "Foward Kill Heigth Force");
 
 //Friction
-CONTROL_VARIABLE(float, c_car_friction_linear_force, 0.f, 10.f, 1.4f, "Car", "Linear Friction Force");
-CONTROL_VARIABLE(float, c_car_friction_angular_force, 0.f, 10.f, 1.8f, "Car", "Angular Friction Force");
+CONTROL_VARIABLE(float, c_car_friction_linear_force, 0.f, 10.f, 1.4f, "Car Control", "Linear Friction Force");
+CONTROL_VARIABLE(float, c_car_friction_angular_force, 0.f, 10.f, 1.8f, "Car Control", "Angular Friction Force");
 
 //Collision
-CONTROL_VARIABLE(float, c_car_collision_lost, 0.f, 1.f, 1.0f, "Car", "Energy lost during collision");
+CONTROL_VARIABLE(float, c_car_collision_lost, 0.f, 1.f, 1.0f, "Car Collision", "Energy lost during collision");
 
 //Aerodynamic forces
-CONTROL_VARIABLE(float, c_car_aerodynamic_linear_force, 0.f, 10.f, 1.5f, "Car", "Linear Aerodynamic Force");
+CONTROL_VARIABLE(float, c_car_aerodynamic_linear_force, 0.f, 10.f, 1.5f, "Car Control", "Linear Aerodynamic Force");
 
-CONTROL_VARIABLE(float, c_car_camera_distance, 0.f, 100.f, 4.5f, "Car", "Camera Distance");
-CONTROL_VARIABLE(float, c_car_camera_up_offset, 0.f, 100.f, 1.f, "Car", "Camera Up Offset");
-CONTROL_VARIABLE(float, c_car_camera_fov, 60.f, 180.f, 100.f, "Car", "Camera Fov");
-CONTROL_VARIABLE(float, c_car_camera_speed, 0.f, 200.f, 30.f, "Car", "Camera Speed");
-CONTROL_VARIABLE(float, c_car_camera_car_rotation_min, 0.f, 10.f, 0.4f, "Car", "Camera Car Rotation Min");
-CONTROL_VARIABLE(float, c_car_camera_car_rotation_factor, 0.f, 10.f, 2.f, "Car", "Camera Car Rotation Factor");
+CONTROL_VARIABLE(float, c_car_camera_distance, 0.f, 100.f, 4.5f, "Car Camera", "Camera Distance");
+CONTROL_VARIABLE(float, c_car_camera_up_offset, 0.f, 100.f, 1.f, "Car Camera", "Camera Up Offset");
+CONTROL_VARIABLE(float, c_car_camera_fov, 60.f, 180.f, 100.f, "Car Camera", "Camera Fov");
+CONTROL_VARIABLE(float, c_car_camera_speed, 0.f, 200.f, 30.f, "Car Camera", "Camera Speed");
+CONTROL_VARIABLE(float, c_car_camera_car_rotation_min, 0.f, 10.f, 0.4f, "Car Camera", "Camera Car Rotation Min");
+CONTROL_VARIABLE(float, c_car_camera_car_rotation_factor, 0.f, 10.f, 2.f, "Car Camera", "Camera Car Rotation Factor");
 
-CONTROL_VARIABLE(float, c_car_ai_forward, 0.f, 1.f, 0.2f, "Car", "Camera AI foward");
-CONTROL_VARIABLE(float, c_car_ai_min_forward, 0.f, 1.f, 0.05f, "Car", "Camera AI min foward");
-CONTROL_VARIABLE(float, c_car_ai_avoidance_calculation_distance, 0.f, 10000.f, 1000.f, "Car", "Camera AI avoidance calculation distance");
-CONTROL_VARIABLE(float, c_car_ai_visibility_distance, 0.f, 10.f, 80.f, "Car", "Camera AI visibility distance");
-CONTROL_VARIABLE(float, c_car_ai_visibility_side_distance, 0.f, 10.f, 30.f, "Car", "Camera AI visibility side distance");
-CONTROL_VARIABLE(float, c_car_ai_avoidance_extra_distance, 0.f, 1000.f, 15.f, "Car", "Camera AI avoidance extra distance with building");
-CONTROL_VARIABLE(float, c_car_ai_avoidance_distance_expansion, 0.f, 1000.f, 20.f, "Car", "Camera AI avoidance extra expansion apply to buildings when far");
-CONTROL_VARIABLE(float, c_car_ai_avoidance_reaction_factor, 0.f, 10.f, 0.8f, "Car", "Car AI avoidance reaction factor");
-CONTROL_VARIABLE(float, c_car_ai_avoidance_reaction_power, 0.f, 10.f, 1.0f, "Car", "Car AI avoidance reaction power");
-CONTROL_VARIABLE(float, c_car_ai_avoidance_slow_factor, 0.f, 1.f, 0.0f, "Car", "Car AI avoidance slow factor");
-CONTROL_VARIABLE(float, c_car_ai_target_range, 1.f, 10000.f, 2000.f, "Car", "Car AI target range");
-CONTROL_VARIABLE(float, c_car_ai_min_target_range, 1.f, 10000.f, 500.f, "Car", "Car AI min target range");
-CONTROL_VARIABLE(float, c_car_ai_min_target_distance, 1.f, 10000.f, 50.f, "Car", "Car AI min target distance");
-CONTROL_VARIABLE(float, c_car_ai_close_target_distance, 1.f, 10000.f, 50.f, "Car", "Car AI close target distance");
-CONTROL_VARIABLE(float, c_car_ai_close_target_distance_slow, 0.f, 1.f, 0.8f, "Car", "Car AI close target distance slow");
-CONTROL_VARIABLE(float, c_car_ai_lane_size, 0.f, 10.f, 2.0f, "Car", "Car AI lane size");
+CONTROL_VARIABLE(float, c_car_ai_forward, 0.f, 1.f, 0.2f, "Car AI", "Camera AI foward");
+CONTROL_VARIABLE(float, c_car_ai_min_forward, 0.f, 1.f, 0.05f, "Car AI", "Camera AI min foward");
+CONTROL_VARIABLE(float, c_car_ai_avoidance_calculation_distance, 0.f, 10000.f, 1000.f, "Car AI", "Camera AI avoidance calculation distance");
+CONTROL_VARIABLE(float, c_car_ai_visibility_distance, 0.f, 10.f, 80.f, "Car AI", "Camera AI visibility distance");
+CONTROL_VARIABLE(float, c_car_ai_visibility_side_distance, 0.f, 10.f, 30.f, "Car AI", "Camera AI visibility side distance");
+CONTROL_VARIABLE(float, c_car_ai_avoidance_extra_distance, 0.f, 1000.f, 15.f, "Car AI", "Camera AI avoidance extra distance with building");
+CONTROL_VARIABLE(float, c_car_ai_avoidance_distance_expansion, 0.f, 1000.f, 20.f, "Car AI", "Camera AI avoidance extra expansion apply to buildings when far");
+CONTROL_VARIABLE(float, c_car_ai_avoidance_reaction_factor, 0.f, 10.f, 0.8f, "Car AI", "Car AI avoidance reaction factor");
+CONTROL_VARIABLE(float, c_car_ai_avoidance_reaction_power, 0.f, 10.f, 1.0f, "Car AI", "Car AI avoidance reaction power");
+CONTROL_VARIABLE(float, c_car_ai_avoidance_slow_factor, 0.f, 1.f, 0.0f, "Car AI", "Car AI avoidance slow factor");
+CONTROL_VARIABLE(float, c_car_ai_target_range, 1.f, 10000.f, 2000.f, "Car AI", "Car AI target range");
+CONTROL_VARIABLE(float, c_car_ai_min_target_range, 1.f, 10000.f, 500.f, "Car AI", "Car AI min target range");
+CONTROL_VARIABLE(float, c_car_ai_min_target_distance, 1.f, 10000.f, 50.f, "Car AI", "Car AI min target distance");
+CONTROL_VARIABLE(float, c_car_ai_close_target_distance, 1.f, 10000.f, 50.f, "Car AI", "Car AI close target distance");
+CONTROL_VARIABLE(float, c_car_ai_close_target_distance_slow, 0.f, 1.f, 0.8f, "Car AI", "Car AI close target distance slow");
+CONTROL_VARIABLE(float, c_car_ai_lane_size, 0.f, 10.f, 2.0f, "Car AI", "Car AI lane size");
 
-CONTROL_VARIABLE(float, c_car_gyroscope_collision_control, 0.f, 1.f, 0.05f, "Car", "Car gyroscope collision control");
-CONTROL_VARIABLE(float, c_car_gyroscope_control_min, 0.f, 10.f, 1.0f, "Car", "Car gyroscope control min");
-CONTROL_VARIABLE(float, c_car_gyroscope_control_factor, 0.f, 10.f, 1.0f, "Car", "Car gyroscope control factor");
+CONTROL_VARIABLE(float, c_car_gyroscope_collision_control, 0.f, 1.f, 0.05f, "Car Control", "Car gyroscope collision control");
+CONTROL_VARIABLE(float, c_car_gyroscope_control_min, 0.f, 10.f, 1.0f, "Car Control", "Car gyroscope control min");
+CONTROL_VARIABLE(float, c_car_gyroscope_control_factor, 0.f, 10.f, 1.0f, "Car Control", "Car gyroscope control factor");
 
-CONTROL_VARIABLE_BOOL(c_car_ai_debug_render, false, "Car", "Car AI debug render");
+CONTROL_VARIABLE_BOOL(c_car_ai_debug_render, false, "Car Debug", "Car AI debug render");
 
 //Counters
 COUNTER(c_Car_Collisions, "Cars", "Cars collision", true);
@@ -335,6 +335,18 @@ namespace BoxCityCarControl
 							car_control.foward -= c_car_ai_avoidance_slow_factor * (1.f - car_t);
 
 							avoidance_factor = glm::max(avoidance_factor, 1.f - car_t);
+
+							if (c_car_ai_debug_render && is_player_car)
+							{
+								render::debug_primitives::DrawLine(building_bottom, building_top, render::debug_primitives::kRed);
+							}
+						}
+						else
+						{
+							if (c_car_ai_debug_render && is_player_car)
+							{
+								render::debug_primitives::DrawLine(building_bottom, building_top, render::debug_primitives::kGreen);
+							}
 						}
 					}
 				}
