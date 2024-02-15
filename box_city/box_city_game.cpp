@@ -71,9 +71,6 @@ void BoxCityGame::OnInit()
 
 	m_GPU_memory_render_module = render::RegisterModule<render::GPUMemoryRenderModule>(m_render_system, gpu_memory_desc);
 
-	//Init the debug primitives
-	render::debug_primitives::Init(m_device, m_render_system, m_GPU_memory_render_module);
-
 	m_display_resources.Load(m_device, m_render_system);
 	DrawCityBoxesPass::m_display_resources = &m_display_resources;
 	CullCityBoxesPass::m_display_resources = &m_display_resources;
@@ -83,6 +80,9 @@ void BoxCityGame::OnInit()
 	render::RegisterPassFactory<DrawCityBoxesPass>(m_render_system);
 	render::RegisterPassFactory<CullCityBoxesPass>(m_render_system);
 	render::RegisterPassFactory<CullSecondPassCityBoxesPass>(m_render_system);
+
+	//Register debug primitives pass
+	render::RegisterPassFactory<render::RenderDebugPrimitivesPass>(m_render_system);
 
 	//Register the ViewConstantBuffer for Main pass, ID 0
 	render::AddGameResource(m_render_system, "ViewData"_sh32, CreateResourceFromHandle<render::BufferResource>(display::WeakBufferHandle(m_display_resources.m_view_constant_buffer)));

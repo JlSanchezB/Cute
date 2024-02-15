@@ -189,9 +189,9 @@ namespace render
 	Module* GetModule(System* system, const ModuleName name);
 
 	template<typename MODULE>
-	MODULE* GetModule(System* system, const ModuleName name)
+	MODULE* GetModule(System* system)
 	{
-		return dynamic_cast<MODULE*>(GetModule(system, name));
+		return dynamic_cast<MODULE*>(GetModule(system, MODULE::GetModuleName()));
 	}
 
 	//Register render module

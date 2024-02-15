@@ -6,7 +6,7 @@ void CullCityBoxesPass::Render(render::RenderContext& render_context) const
 	//Collect offsets from the point of view data
 	const render::PointOfView* point_of_view = render_context.GetPointOfView();
 	const BoxCityCustomPointOfViewData& box_city_custom_data = point_of_view->GetData<BoxCityCustomPointOfViewData>();
-	auto* gpu_memory = render::GetModule<render::GPUMemoryRenderModule>(render_context.GetRenderSystem(), "GPUMemory"_sh32);
+	auto* gpu_memory = render::GetModule<render::GPUMemoryRenderModule>(render_context.GetRenderSystem());
 
 	if (box_city_custom_data.num_instance_lists == 0)
 	{
@@ -71,7 +71,7 @@ void CullSecondPassCityBoxesPass::Render(render::RenderContext& render_context) 
 	//Collect offsets from the point of view data
 	const render::PointOfView* point_of_view = render_context.GetPointOfView();
 	const BoxCityCustomPointOfViewData& box_city_custom_data = point_of_view->GetData<BoxCityCustomPointOfViewData>();
-	auto* gpu_memory = render::GetModule<render::GPUMemoryRenderModule>(render_context.GetRenderSystem(), "GPUMemory"_sh32);
+	auto* gpu_memory = render::GetModule<render::GPUMemoryRenderModule>(render_context.GetRenderSystem());
 
 	//Setup compute
 	render_context.GetContext()->SetRootSignature(display::Pipe::Compute, m_display_resources->m_second_pass_box_culling_root_signature);

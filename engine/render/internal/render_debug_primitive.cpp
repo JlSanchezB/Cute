@@ -3,8 +3,8 @@
 #include <display/display_handle.h>
 #include <ext/glm/glm.hpp>
 #include <job/job_helper.h>
-#include <render_module/render_module_gpu_memory.h>
 #include <render/render_debug_primitives.h>
+#include <core/platform.h>
 
 namespace render
 {
@@ -16,27 +16,31 @@ namespace render
 			uint32_t colour_a; //4 bytes
 			glm::vec3 b; //4 * 3 bytes
 			uint32_t colour_b; //4 bytes
+
+			GPULine(const glm::vec3& _a, uint32_t _colour_a, const glm::vec3& _b, uint32_t _colour_b) :
+				a(_a), colour_a(_colour_a), b(_b), colour_b(_colour_b) {};
 		};
 
-		struct Renderer : public Module
+		enum class FrameSlot
 		{
-			//Debug primitives associated to this worker thread
-			struct DebugPrimitives
-			{
-				//Vector of segments with debug primitives
-				std::vector<GPULine*> segment_vector;
+			Game,
+			Render
+		};
 
-				//Last segment line index
-				size_t last_segment_line_index = 0;
+		struct Renderer
+		{
+			struct DebugPrimitivesFrame
+			{
+				std::vector<GPULine> update_debug_primitives;
+				std::vector<GPULine> render_debug_primitives;
 			};
 
 			//Thread local storage with the collect debug primitives
-			job::ThreadData<DebugPrimitives> m_debug_primitives[2];
+			job::ThreadData<DebugPrimitivesFrame> m_debug_primitives[2];
 
 			//View projection matrix
 			glm::mat4x4 m_view_projection_matrix[2];
 
-			GPUMemoryRenderModule* m_gpu_memory_render_module;
 			size_t m_gpu_memory_segment_size;
 			display::Device* m_device = nullptr;
 			render::System* m_render_system = nullptr;
@@ -45,80 +49,125 @@ namespace render
 			display::PipelineStateHandle m_pipeline_state;
 			display::BufferHandle m_constant_buffer;
 
+			display::BufferHandle m_line_buffer;
+			uint32_t m_line_buffer_size = 4 * 1024;
+
+			//current frame slot
+			FrameSlot m_frame_slot = FrameSlot::Game;
+
 			void Render(display::Device* device, render::System* render_system, display::Context* context);
 			void DrawLine(const glm::vec3& a, const glm::vec3& b, const uint32_t colour_a, const uint32_t colour_b);
 
 
-			//Module interface
-			static ModuleName GetModuleName()
+			void Init(display::Device* device, System* system);
+			void Shutdown();
+			void ResetGameFrame()
 			{
-				return "DebugPrimitives"_sh32;
+				m_frame_slot = FrameSlot::Game;
+
+				//Clear debug primitives from update
 			}
-			void Shutdown(display::Device* device, System* system) override;
-			void EndFrame(display::Device* device, System* system);
+			void ResetRenderFrame()
+			{
+				m_frame_slot = FrameSlot::Render;
+
+				//Clear debug primitives from render
+			}
+
 		};
 
 		Renderer* g_renderer = nullptr;
 
-		class RenderDebugPrimitivesPass : public Pass
+		//Platform module to comunicate with the platform
+		struct DebugPrimitivesModule : platform::Module
 		{
-		public:
-			inline static Renderer* m_renderer = nullptr;
+			DebugPrimitivesModule()
+			{
+				//During construction register as a module
+				platform::RegisterModule(this);
+			}
 
-			DECLARE_RENDER_CLASS("RenderDebugPrimitives");
+			//Callbacks
+			virtual void OnInit(display::Device* device, render::System* render_system)
+			{
+				if (device && render_system)
+				{
 
-			void Render(RenderContext& render_context) const override;
+					//It can be inited
+					assert(g_renderer == nullptr);
+					g_renderer = new Renderer;
+
+					g_renderer->Init(device, render_system);
+					return;
+				}
+
+				core::LogInfo("DrawPrimitives renderer can not start with the current configuration");
+			};
+			virtual void OnDestroy() override
+			{
+				if (g_renderer)
+				{
+					g_renderer->Shutdown();
+
+					delete g_renderer;
+					g_renderer = nullptr;
+				}
+			};
+				
+			virtual void OnResetFrame()
+			{
+				if (g_renderer)
+				{
+					g_renderer->ResetGameFrame();
+				}
+			};
+			virtual void OnRender(double total_time, float elapsed_time)
+			{
+				if (g_renderer)
+				{
+					g_renderer->ResetRenderFrame();
+				}
+			};
 		};
 
-		void Init(display::Device* device, System* system, GPUMemoryRenderModule* gpu_memory_render_module)
+		//It will register the platform module and all the callbacks
+		DebugPrimitivesModule g_platform_module;
+
+		void Renderer::Init(display::Device* device, render::System* system)
 		{
-			assert(g_renderer == nullptr);
-
-			g_renderer = RegisterModule<Renderer>(system);
-
-			g_renderer->m_device = device;
-			g_renderer->m_render_system = system;
-			g_renderer->m_gpu_memory_render_module = gpu_memory_render_module;
-
-			RenderDebugPrimitivesPass::m_renderer = g_renderer;
-
-			//Register pass
-			render::RegisterPassFactory<RenderDebugPrimitivesPass>(system);
+			m_device = device;
+			m_render_system = system;
 
 			//Create root signature
 			{
 				//Create compute root signature
 				display::RootSignatureDesc root_signature_desc;
-				root_signature_desc.num_root_parameters = 3;
-				root_signature_desc.root_parameters[0].type = display::RootSignatureParameterType::Constants;
-				root_signature_desc.root_parameters[0].root_param.num_constants = 1;
-				root_signature_desc.root_parameters[0].root_param.shader_register = 0;
+				root_signature_desc.num_root_parameters = 2;
+
+				root_signature_desc.root_parameters[0].type = display::RootSignatureParameterType::ConstantBuffer;
+				root_signature_desc.root_parameters[0].root_param.shader_register = 1;
 				root_signature_desc.root_parameters[0].visibility = display::ShaderVisibility::Vertex;
 
-				root_signature_desc.root_parameters[1].type = display::RootSignatureParameterType::ConstantBuffer;
-				root_signature_desc.root_parameters[1].root_param.shader_register = 1;
+				root_signature_desc.root_parameters[1].type = display::RootSignatureParameterType::ShaderResource;
+				root_signature_desc.root_parameters[1].root_param.shader_register = 0;
 				root_signature_desc.root_parameters[1].visibility = display::ShaderVisibility::Vertex;
-
-				root_signature_desc.root_parameters[2].type = display::RootSignatureParameterType::ShaderResource;
-				root_signature_desc.root_parameters[2].root_param.shader_register = 0;
-				root_signature_desc.root_parameters[2].visibility = display::ShaderVisibility::Vertex;
 
 				root_signature_desc.num_static_samplers = 0;
 
 				//Create the root signature
-				g_renderer->m_root_signature = display::CreateRootSignature(device, root_signature_desc, "Debug Primitives");
+				m_root_signature = display::CreateRootSignature(device, root_signature_desc, "Debug Primitives");
 			}
 
 			{
 				//Draw primitives shaders
-				const char* shader_code =
-					"uint data_offset : register(b0); \n\
+				const char* shader_code = "\
 					struct Camera\n\
 					{\n\
 						float4x4 view_projection_matrix;\n\
 					};\n\
 					ConstantBuffer<Camera> camera : register(b1);	\n\
-					ByteAddressBuffer dynamic_gpu_memory: register(t0);\n\
+					struct GPULine {float3 a; uint colour_a; float3 b; uint colour_b;};\n\
+					StructuredBuffer<GPULine> line_buffer: register(t0);\n\
 					\n\
 					struct PSInput\n\
 					{\n\
@@ -128,10 +177,12 @@ namespace render
 					\n\
 					PSInput vs_line(uint vertex_id : SV_VertexID)\n\
 					{\n\
-						uint4 line_data = dynamic_gpu_memory.Load4(data_offset + vertex_id * 16);\n\
+						GPULine debug_line = line_buffer[vertex_id / 2];\n\
+						float3 position = (vertex_id % 2 == 0) ? debug_line.a : debug_line.b;\n\
+						uint colour = (vertex_id % 2 == 0) ? debug_line.colour_a : debug_line.colour_b;\n\
 						PSInput ret;\n\
-						ret.view_position = mul(camera.view_projection_matrix, float4(asfloat(line_data.x), asfloat(line_data.y), asfloat(line_data.z), 1.f));\n\
-						ret.colour = float4(((line_data.w >> 0) & 0xFF) / 255.f, ((line_data.w >> 8) & 0xFF) / 255.f, ((line_data.w >> 16) & 0xFF) / 255.f, ((line_data.w >> 24) & 0xFF) / 255.f);\n\
+						ret.view_position = mul(camera.view_projection_matrix, float4(position, 1.f));\n\
+						ret.colour = float4(((colour >> 0) & 0xFF) / 255.f, ((colour >> 8) & 0xFF) / 255.f, ((colour >> 16) & 0xFF) / 255.f, ((colour >> 24) & 0xFF) / 255.f);\n\
 						return ret; \n\
 					}\n\
 					\n\
@@ -158,38 +209,25 @@ namespace render
 				pipeline_state_desc.antialiasing_lines = true;
 				pipeline_state_desc.primitive_topology_type = display::PrimitiveTopologyType::Line;
 
-				g_renderer->m_pipeline_state = display::CreatePipelineState(device, pipeline_state_desc, "Debug Primitives");
+				m_pipeline_state = display::CreatePipelineState(device, pipeline_state_desc, "Debug Primitives");
 			}
 			{
 				display::BufferDesc constant_buffer_desc = display::BufferDesc::CreateConstantBuffer(display::Access::Dynamic, sizeof(glm::mat4x4));
 
-				g_renderer->m_constant_buffer = display::CreateBuffer(device, constant_buffer_desc, "Debug Primitives Camera");
+				m_constant_buffer = display::CreateBuffer(device, constant_buffer_desc, "Debug Primitives Camera");
 			}
 		}
 
-		void SetViewProjectionMatrix(const glm::mat4x4& view_projection_matrix)
+		void Renderer::Shutdown()
 		{
-			g_renderer->m_view_projection_matrix[render::GetGameFrameIndex(g_renderer->m_render_system) % 2] = view_projection_matrix;
-		}
-
-		void Renderer::Shutdown(display::Device* device, System* system)
-		{
-			display::DestroyRootSignature(device, m_root_signature);
-			display::DestroyPipelineState(device, m_pipeline_state);
-			display::DestroyBuffer(device, m_constant_buffer);
-
-			assert(g_renderer);
-			g_renderer = nullptr;
+			display::DestroyRootSignature(m_device, m_root_signature);
+			display::DestroyPipelineState(m_device, m_pipeline_state);
+			display::DestroyBuffer(m_device, m_constant_buffer);
+			if (m_line_buffer.IsValid())
+			{
+				display::DestroyBuffer(m_device, m_line_buffer);
+			}
 		};
-		void Renderer::EndFrame(display::Device* device, System* system)
-		{
-			//Clean the frame
-			m_debug_primitives[render::GetRenderFrameIndex(system) % 2].Visit([&](DebugPrimitives& debug_primitives)
-				{
-					debug_primitives.last_segment_line_index = 0;
-					debug_primitives.segment_vector.clear();
-				});
-		}
 
 		void Renderer::DrawLine(const glm::vec3& a, const glm::vec3& b, const uint32_t colour_a, const uint32_t colour_b)
 		{
@@ -197,80 +235,102 @@ namespace render
 			if (m_device == nullptr) return;
 
 			//Check if there is space
-			auto& debug_primitives = g_renderer->m_debug_primitives[render::GetGameFrameIndex(m_render_system) % 2].Get();
+			auto& debug_primitives_frame = g_renderer->m_debug_primitives[render::GetGameFrameIndex(m_render_system) % 2].Get();
 
-			if (debug_primitives.segment_vector.empty() || debug_primitives.last_segment_line_index == g_renderer->m_gpu_memory_segment_size / sizeof(GPULine))
+			if (m_frame_slot == FrameSlot::Game)
 			{
-				//Needs a new segment
-				debug_primitives.segment_vector.push_back(reinterpret_cast<GPULine*>(g_renderer->m_gpu_memory_render_module->AllocDynamicSegmentGPUMemory(g_renderer->m_device, render::GetGameFrameIndex(g_renderer->m_render_system))));
-				debug_primitives.last_segment_line_index = 0;
+				debug_primitives_frame.update_debug_primitives.emplace_back(a, colour_a, b, colour_b);
 			}
-
-			//Add line (do not read)
-			GPULine& line = debug_primitives.segment_vector.back()[debug_primitives.last_segment_line_index];
-
-			line.a = a;
-			line.b = b;
-			line.colour_a = colour_a;
-			line.colour_b = colour_b;
-
-			debug_primitives.last_segment_line_index++;
+			else
+			{
+				debug_primitives_frame.render_debug_primitives.emplace_back(a, colour_a, b, colour_b);
+			}
 		}
 
 		void Renderer::Render(display::Device* device, render::System* render_system, display::Context* context)
 		{
+			//Calculate the size of the render
+			auto& debug_primitives_frame = g_renderer->m_debug_primitives[render::GetRenderFrameIndex(m_render_system) % 2].Get();
+
+			uint32_t num_lines = static_cast<uint32_t>(debug_primitives_frame.render_debug_primitives.size() + debug_primitives_frame.update_debug_primitives.size());
+
+			if (num_lines == 0)
+			{
+				//Nothing to do
+				return;
+			}
+
+			//Check if I need to resize my buffer
+			if (m_line_buffer_size < (num_lines * 2) || !m_line_buffer.IsValid())
+			{
+				//Resize to twice the number of lines
+				display::DestroyBuffer(m_device, m_line_buffer);
+				m_line_buffer = display::CreateBuffer(m_device, display::BufferDesc::CreateStructuredBuffer(display::Access::Dynamic, num_lines, sizeof(GPULine)), "Debug Primitives Line Buffer");
+			}
+
+			//Update the buffer with the lines
+			GPULine* dest_buffer = reinterpret_cast<GPULine*>(display::GetResourceMemoryBuffer(m_device, m_line_buffer));
+
+			if (debug_primitives_frame.update_debug_primitives.size() > 0)
+			{
+				memcpy(dest_buffer, debug_primitives_frame.update_debug_primitives.data(), debug_primitives_frame.update_debug_primitives.size() * sizeof(GPULine));
+			}
+			if (debug_primitives_frame.render_debug_primitives.size() > 0)
+			{
+				memcpy(dest_buffer + debug_primitives_frame.update_debug_primitives.size(), debug_primitives_frame.render_debug_primitives.data(), debug_primitives_frame.render_debug_primitives.size() * sizeof(GPULine));
+			}
+
 			context->SetRootSignature(display::Pipe::Graphics, m_root_signature);
 			context->SetPipelineState(m_pipeline_state);
-
 
 			//Update constant buffer
 			display::UpdateResourceBuffer(device, m_constant_buffer, &m_view_projection_matrix[render::GetRenderFrameIndex(m_render_system) % 2], sizeof(glm::mat4x4));
 
-			context->SetConstantBuffer(display::Pipe::Graphics, 1, m_constant_buffer);
-			context->SetShaderResource(display::Pipe::Graphics, 2, m_gpu_memory_render_module->GetDynamicGPUMemoryResource());
+			context->SetConstantBuffer(display::Pipe::Graphics, 0, m_constant_buffer);
+			context->SetShaderResource(display::Pipe::Graphics, 1, m_line_buffer);
 
-			//Generate a draw call for each segment filled in each worker thread
-			m_debug_primitives[render::GetRenderFrameIndex(render_system) % 2].Visit([&](DebugPrimitives& debug_primitives)
-				{
-					for (auto& segment : debug_primitives.segment_vector)
-					{
-						uint32_t num_lines = static_cast<uint32_t>((segment == debug_primitives.segment_vector.back()) ? debug_primitives.last_segment_line_index : m_gpu_memory_segment_size / sizeof(GPULine));
-
-						//Setup the offset
-						uint32_t data_offset = static_cast<uint32_t>(m_gpu_memory_render_module->GetDynamicGPUMemoryOffset(device, segment));
-						context->SetConstants(display::Pipe::Graphics, 0, &data_offset, 1);
-
-						//Add draw primitive
-						display::DrawDesc draw_desc;
-						draw_desc.primitive_topology = display::PrimitiveTopology::LineList;
-						draw_desc.start_vertex = 0;
-						draw_desc.vertex_count = num_lines * 2;
-						context->Draw(draw_desc);
-					}
-
-					debug_primitives.segment_vector.clear();
-					debug_primitives.last_segment_line_index = 0;
-				}
-			);
+			//Add draw primitive
+			display::DrawDesc draw_desc;
+			draw_desc.primitive_topology = display::PrimitiveTopology::LineList;
+			draw_desc.start_vertex = 0;
+			draw_desc.vertex_count = num_lines * 2;
+			context->Draw(draw_desc);
 		}
 
-		void RenderDebugPrimitivesPass::Render(RenderContext& render_context) const
+		//Capture the view projection matrix
+		void SetViewProjectionMatrix(const glm::mat4x4& view_projection_matrix)
 		{
-			m_renderer->Render(render_context.GetDevice(), render_context.GetRenderSystem(), render_context.GetContext());
+			if (g_renderer)
+			{
+				g_renderer->m_view_projection_matrix[render::GetGameFrameIndex(g_renderer->m_render_system) % 2] = view_projection_matrix;
+			}
 		}
-
 
 		//Debug primitives
 		void DrawLine(const glm::vec3& position_a, const glm::vec3& position_b, const Colour& colour)
 		{
-			g_renderer->DrawLine(position_a, position_b, colour.value, colour.value);
+			if (g_renderer)
+			{
+				g_renderer->DrawLine(position_a, position_b, colour.value, colour.value);
+			}
 		}
 
 		void DrawStar(const glm::vec3& position, const float size, const Colour& colour)
 		{
-			DrawLine(position - glm::vec3(1.f, 0.f, 0.f) * size, position + glm::vec3(1.f, 0.f, 0.f) * size, colour);
-			DrawLine(position - glm::vec3(0.f, 1.f, 0.f) * size, position + glm::vec3(0.f, 1.f, 0.f) * size, colour);
-			DrawLine(position - glm::vec3(0.f, 0.f, 1.f) * size, position + glm::vec3(0.f, 0.f, 1.f) * size, colour);
+			if (g_renderer)
+			{
+				DrawLine(position - glm::vec3(1.f, 0.f, 0.f) * size, position + glm::vec3(1.f, 0.f, 0.f) * size, colour);
+				DrawLine(position - glm::vec3(0.f, 1.f, 0.f) * size, position + glm::vec3(0.f, 1.f, 0.f) * size, colour);
+				DrawLine(position - glm::vec3(0.f, 0.f, 1.f) * size, position + glm::vec3(0.f, 0.f, 1.f) * size, colour);
+			}
+		}
+	}
+
+	void RenderDebugPrimitivesPass::Render(RenderContext& render_context) const
+	{
+		if (debug_primitives::g_renderer)
+		{
+			debug_primitives::g_renderer->Render(render_context.GetDevice(), render_context.GetRenderSystem(), render_context.GetContext());
 		}
 	}
 }

@@ -79,6 +79,10 @@ namespace
 			Clear();
 		}
 	};
+	
+	//Global list of platform modules
+	std::vector<platform::Module*> g_Modules;
+
 
 	struct Platform
 	{
@@ -294,6 +298,16 @@ namespace
 			{
 				m_show_cursor = visibility;
 				::ShowCursor(m_show_cursor);
+			}
+		}
+
+		//Execute to all modules
+		template<typename FUNCTION>
+		void ProcessModules(FUNCTION&& function)
+		{
+			for (auto* module : g_Modules)
+			{
+				function(module);
 			}
 		}
 	};
@@ -1011,6 +1025,12 @@ namespace platform
 		//Init callback
 		game->OnInit();
 
+		//Execute modules callbacks
+		g_Platform->ProcessModules([&](platform::Module* module)
+			{
+				module->OnInit(g_Platform->m_device, g_Platform->m_render_system);
+			});
+
 		//Calculate frecuency for timer
 		QueryPerformanceFrequency(&g_Platform->m_frequency);
 		QueryPerformanceCounter(&g_Platform->m_current_time);
@@ -1022,6 +1042,12 @@ namespace platform
 		// Main sample loop.
 		do 
 		{
+			//Execute modules callbacks
+			g_Platform->ProcessModules([&](platform::Module* module)
+				{
+					module->OnResetFrame();
+				});
+
 			//Update Control variables
 			core::UpdateControlVariablesMain();
 
@@ -1083,6 +1109,12 @@ namespace platform
 							PROFILE_SCOPE("Platform", 0xFFFF00FF, "GameLogic");
 							//Tick logic, with the logic time and the fixed frame lengh
 							game->OnLogic(g_Platform->m_logic_total_time, g_Platform->m_fixed_logic_frame_length);
+
+							//Execute modules callbacks
+							g_Platform->ProcessModules([&](platform::Module* module)
+								{
+									module->OnLogic(g_Platform->m_logic_total_time, g_Platform->m_fixed_logic_frame_length);
+								});
 						}
 
 						platform::FrameInterpolationControl::s_update_phase = false;
@@ -1117,6 +1149,12 @@ namespace platform
 						PROFILE_SCOPE("Platform", 0xFFFF00FF, "GameTick");
 						//Tick
 						game->OnTick(g_Platform->m_total_time, g_Platform->m_last_elapsed_time);
+
+						//Execute modules callbacks
+						g_Platform->ProcessModules([&](platform::Module* module)
+							{
+								module->OnTick(g_Platform->m_total_time, g_Platform->m_last_elapsed_time);
+							});
 					}
 					break;
 				case platform::UpdateType::LogicRender:
@@ -1135,6 +1173,12 @@ namespace platform
 
 						//Render
 						game->OnRender(g_Platform->m_total_time, g_Platform->m_last_elapsed_time);
+
+						//Execute modules callbacks
+						g_Platform->ProcessModules([&](platform::Module* module)
+							{
+								module->OnRender(g_Platform->m_total_time, g_Platform->m_last_elapsed_time);
+							});
 
 						LARGE_INTEGER end_render_tick;
 						QueryPerformanceCounter(&end_render_tick);
@@ -1163,7 +1207,6 @@ namespace platform
 				g_Platform->m_imgui_draw_data[g_Platform->m_update_frame_index % Platform::kNumImguiFrames].Capture();
 			}
 
-
 			//Flip profiler
 			core::FlipProfiler();
 
@@ -1174,6 +1217,12 @@ namespace platform
 
 		core::LogInfo("Closing game");
 
+		//Execute modules callbacks
+		g_Platform->ProcessModules([&](platform::Module* module)
+			{
+				module->OnPrepareDestroy();
+			});
+
 		//Sync jobs preparing to destroy
 		game->OnPrepareDestroy();
 
@@ -1183,9 +1232,14 @@ namespace platform
 		//Destroy all imgui resources
 		imgui_render::DestroyResources(g_Platform->m_device);
 
+		//Execute modules callbacks
+		g_Platform->ProcessModules([&](platform::Module* module)
+			{
+				module->OnDestroy();
+			});
+
 		//Destroy callback
 		game->OnDestroy();
-
 
 #ifdef _STRING_HASH_MAP_ENABLED_
 		core::DestroyStringHashMap();
@@ -1210,5 +1264,11 @@ namespace platform
 		);
 
 		return (msgboxID == IDYES);
+	}
+
+	//Register module
+	void RegisterModule(Module* module)
+	{
+		g_Modules.push_back(module);
 	}
 }

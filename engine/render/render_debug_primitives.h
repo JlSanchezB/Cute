@@ -5,6 +5,7 @@
 #define RENDER_DEBUG_PRIMITIVES_H_
 
 #include <ext/glm/glm.hpp>
+#include <render/render_common.h>
 
 namespace display
 {
@@ -13,8 +14,15 @@ namespace display
 
 namespace render
 {
-	struct System;
-	class GPUMemoryRenderModule;
+	//Render pass needed to decide where to render the draw primitives
+	//Needs to be register by the game
+	class RenderDebugPrimitivesPass : public Pass
+	{
+	public:
+		DECLARE_RENDER_CLASS("RenderDebugPrimitives");
+
+		void Render(RenderContext& render_context) const;
+	};
 
 	namespace debug_primitives
 	{
@@ -43,9 +51,6 @@ namespace render
 		constexpr Colour kOrange = Colour(0xFF, 0xA5, 0x00, 0xFF);
 		constexpr Colour kDeepPink = Colour(0xFF, 0x14, 0x96, 0xFF);
 		constexpr Colour kWhite = Colour(0xFF, 0xFF, 0xFF, 0xFF);
-
-		//Register interface
-		void Init(display::Device* device, System* system, GPUMemoryRenderModule* gpu_memory_render_module);
 
 		//Each frame needs to know the view projection matrix
 		void SetViewProjectionMatrix(const glm::mat4x4& view_projection_matrix);

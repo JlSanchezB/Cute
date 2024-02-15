@@ -206,6 +206,22 @@ namespace platform
 
 	//Show modal dialog, returns if yes/no was clicked
 	bool ShowModalDialog(const char* title, const char* message);
+
+	//Platform module
+	struct Module
+	{
+		virtual ~Module() {};
+		virtual void OnInit(display::Device* device, render::System* render_system) {};
+		virtual void OnPrepareDestroy() {}; //In case a job needs to be sync
+		virtual void OnDestroy() {};
+		virtual void OnResetFrame() {};
+		virtual void OnTick(double total_time, float elapsed_time) {};
+		virtual void OnLogic(double total_time, float elapsed_time) {};
+		virtual void OnRender(double total_time, float elapsed_time) {};
+	};
+
+	//Register a module for the platform, usually happens during global init
+	void RegisterModule(Module* module);
 }
 
 #endif PLATFORM_H_

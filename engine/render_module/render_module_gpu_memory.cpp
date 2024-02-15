@@ -358,7 +358,7 @@ namespace render
 	{
 		if (m_gpu_memory_render_module == nullptr)
 		{
-			m_gpu_memory_render_module = render::GetModule<GPUMemoryRenderModule>(render_context.GetRenderSystem(), "GPUMemory"_sh32);
+			m_gpu_memory_render_module = render::GetModule<GPUMemoryRenderModule>(render_context.GetRenderSystem());
 		}
 
 		m_gpu_memory_render_module->ExecuteGPUCopy(render::GetRenderFrameIndex(render_context.GetRenderSystem()), render_context.GetContext());
