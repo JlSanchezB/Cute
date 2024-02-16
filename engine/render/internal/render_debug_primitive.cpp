@@ -249,10 +249,15 @@ namespace render
 
 		void Renderer::Render(display::Device* device, render::System* render_system, display::Context* context)
 		{
+			uint32_t num_lines = 0;
 			//Calculate the size of the render
-			auto& debug_primitives_frame = g_renderer->m_debug_primitives[render::GetRenderFrameIndex(m_render_system) % 2].Get();
+			auto& debug_primitives_frame = g_renderer->m_debug_primitives[render::GetRenderFrameIndex(m_render_system) % 2];
 
-			uint32_t num_lines = static_cast<uint32_t>(debug_primitives_frame.render_debug_primitives.size() + debug_primitives_frame.update_debug_primitives.size());
+			debug_primitives_frame.Visit([&](DebugPrimitivesFrame& debug_primitives)
+				{
+					num_lines += static_cast<uint32_t>(debug_primitives.update_debug_primitives.size());
+					num_lines += static_cast<uint32_t>(debug_primitives.render_debug_primitives.size());
+				});
 
 			if (num_lines == 0)
 			{
@@ -265,20 +270,29 @@ namespace render
 			{
 				//Resize to twice the number of lines
 				display::DestroyBuffer(m_device, m_line_buffer);
-				m_line_buffer = display::CreateBuffer(m_device, display::BufferDesc::CreateStructuredBuffer(display::Access::Dynamic, num_lines, sizeof(GPULine)), "Debug Primitives Line Buffer");
+				m_line_buffer = display::CreateBuffer(m_device, display::BufferDesc::CreateStructuredBuffer(display::Access::Dynamic, (num_lines * 2), sizeof(GPULine)), "Debug Primitives Line Buffer");
+
+				m_line_buffer_size = (num_lines * 2);
 			}
 
 			//Update the buffer with the lines
 			GPULine* dest_buffer = reinterpret_cast<GPULine*>(display::GetResourceMemoryBuffer(m_device, m_line_buffer));
 
-			if (debug_primitives_frame.update_debug_primitives.size() > 0)
-			{
-				memcpy(dest_buffer, debug_primitives_frame.update_debug_primitives.data(), debug_primitives_frame.update_debug_primitives.size() * sizeof(GPULine));
-			}
-			if (debug_primitives_frame.render_debug_primitives.size() > 0)
-			{
-				memcpy(dest_buffer + debug_primitives_frame.update_debug_primitives.size(), debug_primitives_frame.render_debug_primitives.data(), debug_primitives_frame.render_debug_primitives.size() * sizeof(GPULine));
-			}
+			uint32_t upload_lines = 0;
+			debug_primitives_frame.Visit([&](DebugPrimitivesFrame& debug_primitives)
+				{
+					if (debug_primitives.update_debug_primitives.size() > 0)
+					{
+						memcpy(dest_buffer + upload_lines, debug_primitives.update_debug_primitives.data(), debug_primitives.update_debug_primitives.size() * sizeof(GPULine));
+						upload_lines += static_cast<uint32_t>(debug_primitives.update_debug_primitives.size());
+					}
+					if (debug_primitives.render_debug_primitives.size() > 0)
+					{
+						memcpy(dest_buffer + upload_lines, debug_primitives.render_debug_primitives.data(), debug_primitives.render_debug_primitives.size() * sizeof(GPULine));
+						upload_lines += static_cast<uint32_t>(debug_primitives.update_debug_primitives.size());
+					}
+				});
+			assert(upload_lines == num_lines);
 
 			context->SetRootSignature(display::Pipe::Graphics, m_root_signature);
 			context->SetPipelineState(m_pipeline_state);
