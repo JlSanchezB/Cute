@@ -66,12 +66,20 @@ namespace render
 				m_frame_slot = FrameSlot::Game;
 
 				//Clear debug primitives from update
+				m_debug_primitives[render::GetGameFrameIndex(m_render_system) % 2].Visit([&](DebugPrimitivesFrame& debug_primitives)
+					{
+						debug_primitives.update_debug_primitives.clear();
+					});
 			}
 			void ResetRenderFrame()
 			{
 				m_frame_slot = FrameSlot::Render;
 
 				//Clear debug primitives from render
+				m_debug_primitives[render::GetGameFrameIndex(m_render_system) % 2].Visit([&](DebugPrimitivesFrame& debug_primitives)
+					{
+						debug_primitives.render_debug_primitives.clear();
+					});
 			}
 
 		};
