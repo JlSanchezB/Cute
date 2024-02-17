@@ -215,9 +215,12 @@ namespace platform
 		virtual void OnPrepareDestroy() {}; //In case a job needs to be sync
 		virtual void OnDestroy() {};
 		virtual void OnResetFrame() {};
-		virtual void OnTick(double total_time, float elapsed_time) {};
-		virtual void OnLogic(double total_time, float elapsed_time) {};
-		virtual void OnRender(double total_time, float elapsed_time) {};
+		virtual void OnBeginTick(double total_time, float elapsed_time) {};
+		virtual void OnBeginLogic(double total_time, float elapsed_time) {};
+		virtual void OnBeginRender(double total_time, float elapsed_time) {};
+		virtual void OnEndTick(double total_time, float elapsed_time) {};
+		virtual void OnEndLogic(double total_time, float elapsed_time) {};
+		virtual void OnEndRender(double total_time, float elapsed_time) {};
 	};
 
 	//Register a module for the platform, usually happens during global init

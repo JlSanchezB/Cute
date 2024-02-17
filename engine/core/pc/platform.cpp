@@ -1107,13 +1107,20 @@ namespace platform
 
 						{
 							PROFILE_SCOPE("Platform", 0xFFFF00FF, "GameLogic");
+
+							//Execute modules callbacks
+							g_Platform->ProcessModules([&](platform::Module* module)
+								{
+									module->OnBeginLogic(g_Platform->m_logic_total_time, g_Platform->m_fixed_logic_frame_length);
+								});
+
 							//Tick logic, with the logic time and the fixed frame lengh
 							game->OnLogic(g_Platform->m_logic_total_time, g_Platform->m_fixed_logic_frame_length);
 
 							//Execute modules callbacks
 							g_Platform->ProcessModules([&](platform::Module* module)
 								{
-									module->OnLogic(g_Platform->m_logic_total_time, g_Platform->m_fixed_logic_frame_length);
+									module->OnEndLogic(g_Platform->m_logic_total_time, g_Platform->m_fixed_logic_frame_length);
 								});
 						}
 
@@ -1147,13 +1154,20 @@ namespace platform
 				case platform::UpdateType::Tick:
 					{
 						PROFILE_SCOPE("Platform", 0xFFFF00FF, "GameTick");
+
+						//Execute modules callbacks
+						g_Platform->ProcessModules([&](platform::Module* module)
+							{
+								module->OnBeginTick(g_Platform->m_total_time, g_Platform->m_last_elapsed_time);
+							});
+
 						//Tick
 						game->OnTick(g_Platform->m_total_time, g_Platform->m_last_elapsed_time);
 
 						//Execute modules callbacks
 						g_Platform->ProcessModules([&](platform::Module* module)
 							{
-								module->OnTick(g_Platform->m_total_time, g_Platform->m_last_elapsed_time);
+								module->OnEndTick(g_Platform->m_total_time, g_Platform->m_last_elapsed_time);
 							});
 					}
 					break;
@@ -1171,13 +1185,19 @@ namespace platform
 
 						PROFILE_SCOPE("Platform", 0xFFFF00FF, "GameRender");
 
+						//Execute modules callbacks
+						g_Platform->ProcessModules([&](platform::Module* module)
+							{
+								module->OnBeginRender(g_Platform->m_total_time, g_Platform->m_last_elapsed_time);
+							});
+
 						//Render
 						game->OnRender(g_Platform->m_total_time, g_Platform->m_last_elapsed_time);
 
 						//Execute modules callbacks
 						g_Platform->ProcessModules([&](platform::Module* module)
 							{
-								module->OnRender(g_Platform->m_total_time, g_Platform->m_last_elapsed_time);
+								module->OnEndRender(g_Platform->m_total_time, g_Platform->m_last_elapsed_time);
 							});
 
 						LARGE_INTEGER end_render_tick;

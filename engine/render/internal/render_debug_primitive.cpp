@@ -31,12 +31,12 @@ namespace render
 		{
 			struct DebugPrimitivesFrame
 			{
-				std::vector<GPULine> update_debug_primitives;
-				std::vector<GPULine> render_debug_primitives;
+				std::vector<GPULine> debug_primitives;
 			};
 
 			//Thread local storage with the collect debug primitives
-			job::ThreadData<DebugPrimitivesFrame> m_debug_primitives[2];
+			job::ThreadData<DebugPrimitivesFrame> m_render_debug_primitives[2];
+			job::ThreadData<DebugPrimitivesFrame> m_update_debug_primitives[2];
 
 			//View projection matrix
 			glm::mat4x4 m_view_projection_matrix[2];
@@ -55,31 +55,44 @@ namespace render
 			//current frame slot
 			FrameSlot m_frame_slot = FrameSlot::Game;
 
+			//Frame indexes
+			size_t m_update_frame_index = 0;
+			size_t m_render_frame_index = 0;
+
 			void Render(display::Device* device, render::System* render_system, display::Context* context);
 			void DrawLine(const glm::vec3& a, const glm::vec3& b, const uint32_t colour_a, const uint32_t colour_b);
 
 
 			void Init(display::Device* device, System* system);
 			void Shutdown();
-			void ResetGameFrame()
+			void BeginGameFrame()
 			{
 				m_frame_slot = FrameSlot::Game;
 
 				//Clear debug primitives from update
-				m_debug_primitives[render::GetGameFrameIndex(m_render_system) % 2].Visit([&](DebugPrimitivesFrame& debug_primitives)
+				m_update_debug_primitives[m_update_frame_index % 2].Visit([&](DebugPrimitivesFrame& debug_primitives_frame)
 					{
-						debug_primitives.update_debug_primitives.clear();
+						debug_primitives_frame.debug_primitives.clear();
 					});
 			}
-			void ResetRenderFrame()
+			void EndGameFrame()
+			{
+				m_update_frame_index++;
+			}
+			void BeginRenderFrame()
 			{
 				m_frame_slot = FrameSlot::Render;
 
 				//Clear debug primitives from render
-				m_debug_primitives[render::GetGameFrameIndex(m_render_system) % 2].Visit([&](DebugPrimitivesFrame& debug_primitives)
+				m_render_debug_primitives[m_render_frame_index % 2].Visit([&](DebugPrimitivesFrame& debug_primitives_frame)
 					{
-						debug_primitives.render_debug_primitives.clear();
+						debug_primitives_frame.debug_primitives.clear();
 					});
+			}
+
+			void EndRenderFrame()
+			{
+				m_render_frame_index++;
 			}
 
 		};
@@ -121,19 +134,47 @@ namespace render
 					g_renderer = nullptr;
 				}
 			};
-				
-			virtual void OnResetFrame()
+			virtual void OnBeginLogic(double total_time, float elapsed_time) override
 			{
 				if (g_renderer)
 				{
-					g_renderer->ResetGameFrame();
+					g_renderer->BeginGameFrame();
 				}
 			};
-			virtual void OnRender(double total_time, float elapsed_time)
+			virtual void OnBeginRender(double total_time, float elapsed_time) override
 			{
 				if (g_renderer)
 				{
-					g_renderer->ResetRenderFrame();
+					g_renderer->BeginRenderFrame();
+				}
+			};
+			virtual void OnBeginTick(double total_time, float elapsed_time) override
+			{
+				if (g_renderer)
+				{
+					g_renderer->BeginGameFrame();
+				}
+			};
+
+			virtual void OnEndLogic(double total_time, float elapsed_time) override
+			{
+				if (g_renderer)
+				{
+					g_renderer->EndGameFrame();
+				}
+			};
+			virtual void OnEndRender(double total_time, float elapsed_time) override
+			{
+				if (g_renderer)
+				{
+					g_renderer->EndRenderFrame();
+				}
+			};
+			virtual void OnEndTick(double total_time, float elapsed_time) override
+			{
+				if (g_renderer)
+				{
+					g_renderer->EndGameFrame();
 				}
 			};
 		};
@@ -239,33 +280,32 @@ namespace render
 
 		void Renderer::DrawLine(const glm::vec3& a, const glm::vec3& b, const uint32_t colour_a, const uint32_t colour_b)
 		{
-			//Check if it is inited
-			if (m_device == nullptr) return;
-
 			//Check if there is space
-			auto& debug_primitives_frame = g_renderer->m_debug_primitives[render::GetGameFrameIndex(m_render_system) % 2].Get();
+			auto& debug_primitives_frame = (m_frame_slot == FrameSlot::Game) ?
+				g_renderer->m_update_debug_primitives[m_update_frame_index % 2].Get() :
+				g_renderer->m_render_debug_primitives[m_render_frame_index % 2].Get();
 
-			if (m_frame_slot == FrameSlot::Game)
-			{
-				debug_primitives_frame.update_debug_primitives.emplace_back(a, colour_a, b, colour_b);
-			}
-			else
-			{
-				debug_primitives_frame.render_debug_primitives.emplace_back(a, colour_a, b, colour_b);
-			}
+
+			debug_primitives_frame.debug_primitives.emplace_back(a, colour_a, b, colour_b);
 		}
 
 		void Renderer::Render(display::Device* device, render::System* render_system, display::Context* context)
 		{
 			uint32_t num_lines = 0;
 			//Calculate the size of the render
-			auto& debug_primitives_frame = g_renderer->m_debug_primitives[render::GetRenderFrameIndex(m_render_system) % 2];
-
-			debug_primitives_frame.Visit([&](DebugPrimitivesFrame& debug_primitives)
+			auto& update_debug_primitives_frame = g_renderer->m_update_debug_primitives[(m_update_frame_index + 1) % 2];
+			update_debug_primitives_frame.Visit([&](DebugPrimitivesFrame& debug_primitives_frame)
 				{
-					num_lines += static_cast<uint32_t>(debug_primitives.update_debug_primitives.size());
-					num_lines += static_cast<uint32_t>(debug_primitives.render_debug_primitives.size());
+					num_lines += static_cast<uint32_t>(debug_primitives_frame.debug_primitives.size());
 				});
+
+			auto& render_debug_primitives_frame = g_renderer->m_render_debug_primitives[(m_render_frame_index + 1) % 2];
+			render_debug_primitives_frame.Visit([&](DebugPrimitivesFrame& debug_primitives_frame)
+				{
+					num_lines += static_cast<uint32_t>(debug_primitives_frame.debug_primitives.size());
+				});
+
+
 
 			if (num_lines == 0)
 			{
@@ -287,19 +327,25 @@ namespace render
 			GPULine* dest_buffer = reinterpret_cast<GPULine*>(display::GetResourceMemoryBuffer(m_device, m_line_buffer));
 
 			uint32_t upload_lines = 0;
-			debug_primitives_frame.Visit([&](DebugPrimitivesFrame& debug_primitives)
+
+			update_debug_primitives_frame.Visit([&](DebugPrimitivesFrame& debug_primitives_frame)
 				{
-					if (debug_primitives.update_debug_primitives.size() > 0)
+					if (debug_primitives_frame.debug_primitives.size() > 0)
 					{
-						memcpy(dest_buffer + upload_lines, debug_primitives.update_debug_primitives.data(), debug_primitives.update_debug_primitives.size() * sizeof(GPULine));
-						upload_lines += static_cast<uint32_t>(debug_primitives.update_debug_primitives.size());
-					}
-					if (debug_primitives.render_debug_primitives.size() > 0)
-					{
-						memcpy(dest_buffer + upload_lines, debug_primitives.render_debug_primitives.data(), debug_primitives.render_debug_primitives.size() * sizeof(GPULine));
-						upload_lines += static_cast<uint32_t>(debug_primitives.update_debug_primitives.size());
+						memcpy(dest_buffer + upload_lines, debug_primitives_frame.debug_primitives.data(), debug_primitives_frame.debug_primitives.size() * sizeof(GPULine));
+						upload_lines += static_cast<uint32_t>(debug_primitives_frame.debug_primitives.size());
 					}
 				});
+
+			render_debug_primitives_frame.Visit([&](DebugPrimitivesFrame& debug_primitives_frame)
+				{
+					if (debug_primitives_frame.debug_primitives.size() > 0)
+					{
+						memcpy(dest_buffer + upload_lines, debug_primitives_frame.debug_primitives.data(), debug_primitives_frame.debug_primitives.size() * sizeof(GPULine));
+						upload_lines += static_cast<uint32_t>(debug_primitives_frame.debug_primitives.size());
+					}
+				});
+
 			assert(upload_lines == num_lines);
 
 			context->SetRootSignature(display::Pipe::Graphics, m_root_signature);
