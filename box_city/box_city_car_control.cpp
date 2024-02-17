@@ -62,14 +62,15 @@ CONTROL_VARIABLE(float, c_car_camera_car_rotation_factor, 0.f, 10.f, 2.f, "Car C
 CONTROL_VARIABLE(float, c_car_ai_forward, 0.f, 1.f, 0.2f, "Car AI", "Camera AI foward");
 CONTROL_VARIABLE(float, c_car_ai_min_forward, 0.f, 1.f, 0.05f, "Car AI", "Camera AI min foward");
 CONTROL_VARIABLE(float, c_car_ai_avoidance_calculation_distance, 0.f, 10000.f, 1000.f, "Car AI", "Camera AI avoidance calculation distance");
-CONTROL_VARIABLE(float, c_car_ai_visibility_distance, 0.f, 10.f, 80.f, "Car AI", "Camera AI visibility distance");
-CONTROL_VARIABLE(float, c_car_ai_visibility_side_distance, 0.f, 10.f, 30.f, "Car AI", "Camera AI visibility side distance");
-CONTROL_VARIABLE(float, c_car_ai_avoidance_extra_distance, 0.f, 1000.f, 15.f, "Car AI", "Camera AI avoidance extra distance with building");
-CONTROL_VARIABLE(float, c_car_ai_avoidance_distance_expansion, 0.f, 1000.f, 20.f, "Car AI", "Camera AI avoidance extra expansion apply to buildings when far");
-CONTROL_VARIABLE(float, c_car_ai_avoidance_reaction_factor, 0.f, 10.f, 0.8f, "Car AI", "Car AI avoidance reaction factor");
+CONTROL_VARIABLE(float, c_car_ai_visibility_distance, 0.f, 10.f, 50.f, "Car AI", "Camera AI visibility distance");
+CONTROL_VARIABLE(float, c_car_ai_visibility_side_distance, 0.f, 10.f, 20.f, "Car AI", "Camera AI visibility side distance");
+CONTROL_VARIABLE(float, c_car_ai_avoidance_extra_distance, 0.f, 1000.f, 2.f, "Car AI", "Camera AI avoidance extra distance with building");
+CONTROL_VARIABLE(float, c_car_ai_avoidance_distance_expansion, 0.f, 1000.f, 2.f, "Car AI", "Camera AI avoidance extra expansion apply to buildings when far");
+CONTROL_VARIABLE(float, c_car_ai_avoidance_reaction_factor, 0.f, 10.f, 7.0f, "Car AI", "Car AI avoidance reaction factor");
 CONTROL_VARIABLE(float, c_car_ai_avoidance_reaction_power, 0.f, 10.f, 1.0f, "Car AI", "Car AI avoidance reaction power");
 CONTROL_VARIABLE(float, c_car_ai_avoidance_slow_factor, 0.f, 1.f, 0.0f, "Car AI", "Car AI avoidance slow factor");
 CONTROL_VARIABLE(float, c_car_ai_target_range, 1.f, 10000.f, 2000.f, "Car AI", "Car AI target range");
+CONTROL_VARIABLE(float, c_car_ai_target_reaction_factor, 1.f, 10.f, 4.f, "Car AI", "Car AI target reaction factor");
 CONTROL_VARIABLE(float, c_car_ai_min_target_range, 1.f, 10000.f, 500.f, "Car AI", "Car AI min target range");
 CONTROL_VARIABLE(float, c_car_ai_min_target_distance, 1.f, 10000.f, 50.f, "Car AI", "Car AI min target distance");
 CONTROL_VARIABLE(float, c_car_ai_close_target_distance, 1.f, 10000.f, 50.f, "Car AI", "Car AI close target distance");
@@ -230,7 +231,7 @@ namespace BoxCityCarControl
 		const glm::vec3 car_top = glm::row(car_matrix, 2);
 		const glm::vec3 car_left_flat = glm::normalize(glm::vec3(car_left.x, car_left.y, 0.f));
 		const float car_radius = glm::fastLength(car_settings.size);
-		const glm::vec3 car_top_flat = car_top - glm::dot(car_left_flat, car_top) * car_left_flat;
+		const glm::vec3 car_top_flat = car_top - glm::dot(car_left, car_top) * car_left;
 		//Calculate X and Y control for the car
 		car_control.foward = c_car_ai_forward;
 
@@ -358,7 +359,7 @@ namespace BoxCityCarControl
 
 		//Calculate if it needs retargetting
 		float target_distance2 = glm::length2(*car.position - car_target.target);
-		assert(!car_target.target_valid || target_distance2 < 2000.f * 2000.f);
+		//assert(!car_target.target_valid || target_distance2 < 2000.f * 2000.f);
 
 		if (target_distance2 < c_car_ai_min_target_distance * c_car_ai_min_target_distance || !car_target.target_valid)
 		{
@@ -370,25 +371,27 @@ namespace BoxCityCarControl
 
 		if (c_car_ai_targeting_enable && car_target.target_valid)
 		{
-			float avoidance_adjusted = (1.f - avoidance_factor);
+			float avoidance_adjusted = (1.f - avoidance_factor * 0.5f);
 
+			float target_pos = glm::clamp(glm::length(car_target.target - car_position) / glm::length(car_target.target - car_target.last_target), 0.f, 1.f);
+			float lerp_factor = glm::smoothstep(0.4f, 0.9f, target_pos);
 			//Calculate the angles between the car direction and they target
 			glm::vec3 car_in_target_line = helpers::CalculateClosestPointToSegment(car_position, car_target.last_target, car_target.target);
-			glm::vec3 car_target_direction = glm::normalize(glm::mix(car_target.target, car_in_target_line, 0.85f) - car_position);
+			glm::vec3 car_target_direction = glm::normalize(glm::mix(car_target.target, car_in_target_line, glm::mix(0.85f, 0.f, lerp_factor)) - car_position);
 
-			assert(glm::all(glm::isfinite(car_in_target_line)));
+			//assert(glm::all(glm::isfinite(car_in_target_line)));
 			
-			if (glm::dot(car_front, car_target_direction) < 0.f)
+			/*if (glm::dot(car_front, car_target_direction) < 0.f)
 			{
 				//It is behind, needs to rotate
-				target_x += ((glm::dot(car_target_direction, car_left_flat)) > 0.f ? -1.f : 1.f) * avoidance_adjusted;
+				target_x += ((glm::dot(car_target_direction, car_left_flat)) > 0.f ? -1.f : 1.f) * avoidance_adjusted * 10.f;
 				car_control.foward -= c_car_ai_close_target_distance_slow;
 			}
-			else
+			else*/
 			{
-				target_x += -glm::dot(car_target_direction, car_left_flat) * avoidance_adjusted;
+				target_x += -glm::dot(car_target_direction, car_left_flat) * avoidance_adjusted * c_car_ai_target_reaction_factor;
 			}
-			target_y += -glm::dot(car_target_direction, car_top_flat) * avoidance_adjusted;
+			target_y += -glm::dot(car_target_direction, car_top_flat) * avoidance_adjusted * c_car_ai_target_reaction_factor;
 
 			if (target_distance2 < c_car_ai_close_target_distance * c_car_ai_close_target_distance)
 			{
@@ -407,6 +410,13 @@ namespace BoxCityCarControl
 		car_control.X_target = glm::clamp(target_x, -c_car_X_range, c_car_X_range);
 		car_control.Y_target = glm::clamp(target_y, -c_car_Y_range, c_car_Y_range);
 		car_control.foward = glm::clamp(car_control.foward, 0.f, 1.f);
+
+		if (c_car_ai_debug_render && is_player_car)
+		{
+			render::debug_primitives::DrawLine(car_position, car_position + car_left * car_control.X_target, render::debug_primitives::kYellow);
+			render::debug_primitives::DrawLine(car_position, car_position + car_top * car_control.Y_target, render::debug_primitives::kYellow);
+			render::debug_primitives::DrawLine(car_position, car_position + car_front * car_control.foward, render::debug_primitives::kYellow);
+		}
 	}
 	void CalculateControlForces(Car& car, CarMovement& car_movement, CarSettings& car_settings, CarControl& car_control, float elapsed_time, glm::vec3& linear_forces, glm::vec3& angular_forces)
 	{
