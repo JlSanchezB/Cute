@@ -222,7 +222,7 @@ namespace BoxCityTileSystem
 
 			//Collide with a target position
 			bool collide = false;
-			constexpr float kTargetCleanRadius = 50.f;
+			constexpr float kTargetCleanRadius = 75.f;
 			for (auto& traffic_targets : m_traffic_targets)
 			{
 				auto& target_position = traffic_targets.position;

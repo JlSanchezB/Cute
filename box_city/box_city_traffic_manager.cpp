@@ -250,7 +250,7 @@ namespace BoxCityTrafficSystem
 	}
 
 	void Manager::SetupCar(Tile& tile, std::mt19937& random, float begin_tile_x, float begin_tile_y,
-		std::uniform_real_distribution<float>& position_range, std::uniform_real_distribution<float>& position_range_z, std::uniform_real_distribution<float>& size_range,
+		std::uniform_real_distribution<float>& position_range, std::uniform_real_distribution<float>& position_range_z, std::uniform_real_distribution<float>& size_range, std::normal_distribution<float>& speed_factor_range,
 		Car& car, CarMovement& car_movement, CarSettings& car_settings, OBBBox& obb_component, CarGPUIndex& car_gpu_index, CarBoxListOffset& car_box_list_offset)
 	{
 		glm::vec3 position(begin_tile_x + position_range(random), begin_tile_y + position_range(random), position_range_z(random));
@@ -271,6 +271,7 @@ namespace BoxCityTrafficSystem
 			1.f / (0.083f * mass * (car_size.z * car_size.z + car_size.y * car_size.y)),
 			1.f / (0.083f * mass * (car_size.x * car_size.x + car_size.z * car_size.z)),
 			1.f / (0.083f * mass * (car_size.x * car_size.x + car_size.y * car_size.y)));
+		car_settings.speed_factor = speed_factor_range(random);
 
 		obb_component.position = position;
 		obb_component.extents = car_size * 0.5f;
@@ -332,6 +333,7 @@ namespace BoxCityTrafficSystem
 					std::uniform_real_distribution<float> position_range(0.f, kTileSize);
 					std::uniform_real_distribution<float> position_range_z(BoxCityTileSystem::kTileHeightBottom, BoxCityTileSystem::kTileHeightTop);
 					std::uniform_real_distribution<float> size_range(1.f, 1.5f);
+					std::normal_distribution<float> speed_factor_range(1.f, 0.5f);
 
 					//Tile is getting deactivated or moved
 					if (tile.m_activated)
@@ -345,7 +347,7 @@ namespace BoxCityTrafficSystem
 						ecs::Process<GameDatabase, Car, CarMovement, CarSettings, CarTarget, OBBBox, CarGPUIndex, FlagBox, CarBoxListOffset>([&]
 						(const auto& instance_iterator, Car& car, CarMovement& car_movement, CarSettings& car_settings, CarTarget& car_target, OBBBox& obb_box_component, CarGPUIndex& car_gpu_index, FlagBox& flag_box, CarBoxListOffset& car_box_index_offset)
 							{
-								SetupCar(tile, random, begin_tile_x, begin_tile_y, position_range, position_range_z, size_range,
+								SetupCar(tile, random, begin_tile_x, begin_tile_y, position_range, position_range_z, size_range, speed_factor_range,
 								car, car_movement, car_settings, obb_box_component, car_gpu_index, car_box_index_offset);
 
 								BoxCityCarControl::SetupCarTarget(random, tile_manager, car, car_target, true);
@@ -380,7 +382,7 @@ namespace BoxCityTrafficSystem
 							//Alloc GPU slot
 							car_gpu_index.gpu_slot = static_cast<uint16_t>(tile.m_zone_index * kNumCars + i);
 
-							SetupCar(tile, random, begin_tile_x, begin_tile_y, position_range, position_range_z, size_range,
+							SetupCar(tile, random, begin_tile_x, begin_tile_y, position_range, position_range_z, size_range, speed_factor_range,
 								car, car_movement, car_settings, obb_box_component, car_gpu_index, car_box_list_offset);
 
 							CarTarget car_target;
